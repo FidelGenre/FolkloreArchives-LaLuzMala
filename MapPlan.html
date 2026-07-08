@@ -99,7 +99,7 @@ let nodes = [
   {id:'hunt',  name:'CAMPO DE CAZA',            varName:'HuntingField',     x:165, z:397},
   {id:'wrong', name:'MUERTE CAMINO EQUIVOCADO', varName:'WrongTurnDeath',   x:120, z:225},
   // ESTE
-  {id:'grave', name:'TUMBA',                    varName:'Grave',            x:710, z:608},
+  {id:'grave', name:'TUMBA',                    varName:'Grave',            x:1150,z:730},
   {id:'sec',   name:'CAMPAMENTO SECUNDARIO',    varName:'SecondaryCamp',    x:917, z:670},
   {id:'reh',   name:'REHENES',                  varName:'HostageArea',      x:980, z:540},
   {id:'crim',  name:'DELINCUENTES PRINCIPAL',   varName:'MainCriminalCamp', x:1105,z:455},
@@ -108,7 +108,7 @@ let nodes = [
   {id:'cabW',  name:'CABAÑA OESTE',             varName:'AbandonedCabin',   x:200, z:820},
   {id:'mirW',  name:'MIRADOR OESTE',            varName:'LakeLookout',      x:510, z:730},
   {id:'cabE',  name:'CABAÑA ESTE',              varName:'CabinEast',        x:1240,z:810},
-  {id:'mirE',  name:'MIRADOR ESTE',             varName:'LookoutEast',      x:1150,z:730},
+  {id:'mirE',  name:'MIRADOR ESTE',             varName:'LookoutEast',      x:710, z:608},
 ];
 // Caminos: cada pt es {node:'id'} (sigue a esa zona) o {x,z} (waypoint libre editable)
 let paths = [
@@ -119,7 +119,7 @@ let paths = [
   {id:'caminoA',name:'Camino A', cls:'', pts:[{node:'lakemt'},{node:'vieja'},{node:'camp'}]},
   {id:'c16', name:'CAMINO 16', cls:'', pts:[{node:'lakemt'},{x:200,z:520},{node:'hunt'}]},
   {id:'c10', name:'CAMINO 10', cls:'', pts:[{node:'hunt'},{x:290,z:430},{node:'camp'}]},
-  {id:'c12', name:'CAMINO 12', cls:'', pts:[{node:'vieja'},{x:560,z:600},{node:'grave'}]},
+  {id:'c12', name:'CAMINO 12', cls:'', pts:[{node:'vieja'},{x:560,z:600},{node:'mirE'}]},
   {id:'playaP', name:'Sendero playa', cls:'', pts:[{node:'camp'},{node:'playa'}]},
   {id:'st',  name:'Secundario–Tumba', cls:'', pts:[{node:'sec'},{node:'grave'}]},
   {id:'gc',  name:'Tumba–Delincuentes', cls:'', pts:[{node:'grave'},{x:900,z:490},{node:'crim'}]},
