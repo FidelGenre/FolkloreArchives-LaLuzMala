@@ -100,6 +100,9 @@ crashlytics-build.properties
 /_ConfigBackups/
 /.plastic/
 
+# Config local de Claude Code (permisos locales, no versionar)
+/.claude/
+
 # Sistema operativo / editores
 .DS_Store
 Thumbs.db
