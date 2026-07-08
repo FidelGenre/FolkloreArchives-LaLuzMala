@@ -83,13 +83,13 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 DirtTurnoff = new Vector2(331f, PavedRouteZAt(331f)); // desvío del plano (oeste)
         // Caminos que salen del campamento: ahora en S (curvas suaves Catmull-Rom con
         // puntos que zigzaguean) en vez de líneas rectas (pedido del owner).
-        public static readonly Vector2[] DirtRoad   = { DirtTurnoff, new Vector2(346, 251), Campsite }; // ruta de tierra: desvío → cabaña oeste → campamento
+        public static readonly Vector2[] DirtRoad   = Snake(new[] { DirtTurnoff, new Vector2(346, 251), Campsite }, 14f, 8f); // ruta de tierra en S
         // PathA = sendero VERDE (oeste, frondoso): Montaña y Lago → Vieja → Campamento.
-        public static readonly Vector2[] PathA      = BuildSmoothRoute(new[] { LakeMountain, OldLadyRanch, Campsite }, 12f);
+        public static readonly Vector2[] PathA      = Snake(new[] { LakeMountain, OldLadyRanch, Campsite }, 20f, 10f);
         // PathB = sendero de MIEDO (este, peligro): Tumba → Rehenes → Delincuentes.
-        public static readonly Vector2[] PathB      = BuildSmoothRoute(new[] { Grave, HostageArea, MainCriminalCamp }, 12f);
-        public static readonly Vector2[] GraveToCriminals     = { Grave, new Vector2(849, 437), MainCriminalCamp };
-        public static readonly Vector2[] CriminalsToSecondary = { MainCriminalCamp, new Vector2(1010, 518), SecondaryCamp };
+        public static readonly Vector2[] PathB      = Snake(new[] { Grave, HostageArea, MainCriminalCamp }, 20f, 10f);
+        public static readonly Vector2[] GraveToCriminals     = Snake(new[] { Grave, new Vector2(849, 437), MainCriminalCamp }, 18f, 8f);
+        public static readonly Vector2[] CriminalsToSecondary = Snake(new[] { MainCriminalCamp, new Vector2(1010, 518), SecondaryCamp }, 18f, 8f);
 
         // River runs along the east edge, next to the campsite. Smooth wavy
         // Catmull-Rom curve (same technique as the paved route) instead of a few
@@ -143,7 +143,14 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] Camino19 = { MainCriminalCamp, new Vector2(919, 453), HostageArea };     // cr: delincuentes → rehenes
         public static readonly Vector2[] Camino20 = { Grave, CabinEast, EscapePoint };                            // c15: tumba → cabaña este → escape
         public static readonly Vector2[] Camino21 = { MainCriminalCamp, new Vector2(808, 268), EscapePoint };     // c16e: delincuentes → escape
-        public static readonly Vector2[][] ExtraTrails = { Camino9, Camino10, Camino11, Camino12, Camino13, Camino14, Camino15, Camino16, Camino17, Camino18, Camino19, Camino20, Camino21 };
+        // Todos ondulados en S (no líneas rectas).
+        public static readonly Vector2[][] ExtraTrails = {
+            Snake(Camino9, 16f, 8f), Snake(Camino10, 16f, 8f), Snake(Camino11, 16f, 8f),
+            Snake(Camino12, 16f, 8f), Snake(Camino13, 16f, 8f), Snake(Camino14, 18f, 8f),
+            Snake(Camino15, 16f, 8f), Snake(Camino16, 16f, 8f), Snake(Camino17, 16f, 8f),
+            Snake(Camino18, 16f, 8f), Snake(Camino19, 14f, 8f), Snake(Camino20, 16f, 8f),
+            Snake(Camino21, 16f, 8f)
+        };
 
         // ===== ZONA CENTRAL: montañas + lago gigante (owner: unir Campo de Caza +
         // Montaña y Lago en una gran cuenca de montañas con un lago enorme, sin camino
@@ -200,6 +207,29 @@ namespace FolkloreArchives.MapGen
             }
             pts.Add(ctrl[ctrl.Length - 1]);
             return pts.ToArray();
+        }
+
+        // Ondula una polilínea: inserta un punto medio por segmento desplazado
+        // PERPENDICULAR (alternando lado) para que no sea recta, y luego la suaviza con
+        // Catmull-Rom → curvas en "S". `amp` = cuánto se desvía (m); `spacing` = fineza.
+        // Los extremos quedan fijos (siguen pegados a las zonas).
+        static Vector2[] Snake(Vector2[] pts, float amp, float spacing)
+        {
+            if (pts.Length < 2) return pts;
+            var wp = new List<Vector2>();
+            int sign = 1;
+            for (int i = 0; i < pts.Length - 1; i++)
+            {
+                wp.Add(pts[i]);
+                Vector2 a = pts[i], b = pts[i + 1];
+                Vector2 seg = b - a;
+                if (seg.sqrMagnitude < 1f) continue;
+                Vector2 perp = new Vector2(-seg.y, seg.x).normalized;
+                wp.Add((a + b) * 0.5f + perp * amp * sign);
+                sign = -sign;
+            }
+            wp.Add(pts[pts.Length - 1]);
+            return BuildSmoothRoute(wp.ToArray(), spacing);
         }
 
         static Vector2 CatmullRom(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)

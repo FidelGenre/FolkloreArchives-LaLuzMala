@@ -67,10 +67,13 @@ namespace FolkloreArchives.MapGen
             // rolling base: wide soft hills + medium detail + finer bumps. Boosted
             // for more mountain-slope relief (FtF Ironbark sits on a hillside), not a
             // flat plane. Paths/campsite/river get flattened again further down.
-            float a = 10f
-                + Mathf.PerlinNoise(wx * 0.003f + 1.3f, wz * 0.003f + 5.2f) * 11f
-                + Mathf.PerlinNoise(wx * 0.008f + 3.7f, wz * 0.008f + 9.1f) * 5f
-                + Mathf.PerlinNoise(wx * 0.02f + 6.1f, wz * 0.02f + 2.3f) * 1.8f;
+            // Relieve rodante MÁS marcado (owner: que no sea plano/lineal, pero sin
+            // exagerar): colinas amplias más altas + una capa extra de lomas medianas.
+            float a = 8f
+                + Mathf.PerlinNoise(wx * 0.0025f + 1.3f, wz * 0.0025f + 5.2f) * 17f   // colinas amplias
+                + Mathf.PerlinNoise(wx * 0.006f + 8.4f, wz * 0.006f + 4.7f) * 9f      // lomas medianas (nueva)
+                + Mathf.PerlinNoise(wx * 0.012f + 3.7f, wz * 0.012f + 9.1f) * 5f      // detalle medio
+                + Mathf.PerlinNoise(wx * 0.025f + 6.1f, wz * 0.025f + 2.3f) * 2.2f;   // bumps finos
 
             // hill under the main criminal camp (visible from afar, "el monte")
             float dm = Vector2.Distance(p, MapLayout.MainCriminalCamp);
