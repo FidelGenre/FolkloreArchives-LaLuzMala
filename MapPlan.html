@@ -87,34 +87,40 @@ function zoomCenter(f){ zoomAt(0.5,0.5,f); }
 function resetView(){ view={x:0,y:0,w:W,h:H}; applyView(); }
 
 // Zonas (world x, z) + nombre de variable en MapLayout.cs
+// Layout de DOS LADOS reconstruido del plano del owner: OESTE = humano, ESTE = peligro.
 let nodes = [
-  {id:'crim',  name:'DELINCUENTES PRINCIPAL', varName:'MainCriminalCamp', x:250, z:840},
-  {id:'grave', name:'TUMBA',                  varName:'Grave',            x:700, z:850},
-  {id:'vieja', name:'VIEJA',                  varName:'OldLadyRanch',     x:620, z:600},
-  {id:'sec',   name:'CAMPAMENTO SECUNDARIO',  varName:'SecondaryCamp',    x:200, z:560},
-  {id:'hunt',  name:'CAMPO DE CAZA',          varName:'HuntingField',     x:540, z:480},
-  {id:'reh',   name:'REHENES',                varName:'HostageArea',      x:330, z:790},
-  {id:'camp',  name:'CAMPAMENTO',             varName:'Campsite',         x:710, z:335},
-  {id:'playa', name:'PLAYA DE PESCA',         varName:'RiverBeach',       x:730, z:335},
-  {id:'desvio',name:'DESVÍO (ruta→tierra)',   varName:'DirtTurnoff',      x:620, z:82},
-  {id:'lakemt',name:'MONTAÑA Y LAGO',         varName:'LakeMountain',     x:461, z:672},
-  {id:'wrong', name:'MUERTE CAMINO EQUIVOCADO',varName:'WrongTurnDeath',  x:782, z:199},
+  // OESTE
+  {id:'desvio',name:'DESVÍO (ruta→tierra)',    varName:'DirtTurnoff',      x:425, z:70},
+  {id:'camp',  name:'CAMPAMENTO',               varName:'Campsite',         x:520, z:425},
+  {id:'playa', name:'PLAYA DE PESCA',           varName:'RiverBeach',       x:610, z:295},
+  {id:'vieja', name:'VIEJA',                    varName:'OldLadyRanch',     x:430, z:605},
+  {id:'lakemt',name:'MONTAÑA Y LAGO',           varName:'LakeMountain',     x:250, z:600},
+  {id:'hunt',  name:'CAMPO DE CAZA',            varName:'HuntingField',     x:255, z:400},
+  {id:'wrong', name:'MUERTE CAMINO EQUIVOCADO', varName:'WrongTurnDeath',   x:270, z:240},
+  // ESTE
+  {id:'grave', name:'TUMBA',                    varName:'Grave',            x:815, z:495},
+  {id:'sec',   name:'CAMPAMENTO SECUNDARIO',    varName:'SecondaryCamp',    x:865, z:710},
+  {id:'reh',   name:'REHENES',                  varName:'HostageArea',      x:1010,z:620},
+  {id:'crim',  name:'DELINCUENTES PRINCIPAL',   varName:'MainCriminalCamp', x:1210,z:630},
+  {id:'escape',name:'ESCAPE',                   varName:'EscapePoint',      x:1000,z:70},
 ];
 // Caminos: cada pt es {node:'id'} (sigue a esa zona) o {x,z} (waypoint libre editable)
 let paths = [
-  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{node:'desvio'},{x:650,z:200},{node:'camp'}]},
-  {id:'caminoA',name:'Camino A', cls:'', pts:[{node:'camp'},{x:670,z:450},{node:'vieja'},{x:660,z:720},{node:'grave'}]},
-  {id:'caminoB',name:'Camino B', cls:'', pts:[{node:'sec'},{x:330,z:480},{x:500,z:400},{node:'camp'}]},
-  {id:'gc',     name:'Tumba–Delincuentes', cls:'', pts:[{node:'grave'},{x:480,z:880},{node:'crim'}]},
-  {id:'cs',     name:'Delincuentes–Secundario', cls:'', pts:[{node:'crim'},{x:180,z:700},{node:'sec'}]},
+  {id:'ruta',   name:'RUTA (asfalto)', cls:'paved', pts:[{x:-20,z:75},{x:400,z:72},{x:690,z:60},{x:1000,z:68},{x:1420,z:72}]},
+  {id:'rio',    name:'RÍO', cls:'river', pts:[{x:700,z:-20},{x:690,z:300},{x:695,z:500},{x:690,z:760},{x:700,z:1020}]},
+  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{node:'desvio'},{x:480,z:230},{node:'camp'}]},
+  {id:'caminoA',name:'Camino A', cls:'', pts:[{node:'camp'},{node:'vieja'},{x:330,z:640},{node:'lakemt'}]},
+  {id:'c10', name:'CAMINO 10', cls:'', pts:[{node:'lakemt'},{node:'hunt'}]},
+  {id:'c16', name:'CAMINO 16', cls:'', pts:[{node:'hunt'},{x:390,z:430},{node:'camp'}]},
+  {id:'c11', name:'CAMINO 11', cls:'', pts:[{node:'sec'},{x:700,z:800},{x:430,z:760},{node:'lakemt'}]},
+  {id:'c12', name:'CAMINO 12', cls:'', pts:[{node:'vieja'},{x:690,z:560},{node:'grave'}]},
   {id:'playaP', name:'Sendero playa', cls:'', pts:[{node:'camp'},{node:'playa'}]},
-  {id:'ruta',   name:'RUTA (asfalto)', cls:'paved', pts:[{x:-20,z:88},{x:400,z:85},{x:800,z:78},{x:1200,z:88},{x:1420,z:80}]},
-  {id:'rio',    name:'RÍO', cls:'river', pts:[{x:820,z:-20},{x:800,z:250},{x:795,z:335},{x:815,z:545},{x:820,z:905},{x:820,z:1020}]},
-  {id:'c9',  name:'CAMINO 9',  cls:'', pts:[{node:'lakemt'},{x:549,z:630},{node:'vieja'}]},
-  {id:'c10', name:'CAMINO 10', cls:'', pts:[{node:'lakemt'},{x:536,z:483},{node:'camp'}]},
-  {id:'c11', name:'CAMINO 11', cls:'', pts:[{node:'sec'},{x:345,z:634},{node:'lakemt'}]},
-  {id:'c12', name:'CAMINO 12', cls:'', pts:[{node:'vieja'},{x:710,z:584},{x:818,z:541}]},
-  {id:'c13', name:'CAMINO 13', cls:'', pts:[{x:653,z:200},{x:713,z:190},{node:'wrong'}]},
+  {id:'cB',  name:'Camino B', cls:'', pts:[{node:'playa'},{x:700,z:250},{x:900,z:170},{node:'escape'}]},
+  {id:'c15', name:'CAMINO 15', cls:'', pts:[{node:'grave'},{x:960,z:300},{node:'escape'}]},
+  {id:'gc',  name:'Tumba–Delincuentes', cls:'', pts:[{node:'grave'},{x:1050,z:520},{node:'crim'}]},
+  {id:'cr',  name:'Rehenes', cls:'', pts:[{node:'crim'},{node:'reh'}]},
+  {id:'cs',  name:'Delincuentes–Secundario', cls:'', pts:[{node:'crim'},{x:1030,z:720},{node:'sec'}]},
+  {id:'c13', name:'CAMINO 13', cls:'', pts:[{node:'desvio'},{x:330,z:180},{node:'wrong'}]},
 ];
 
 let sel=null, dragging=null, panning=false, panStart=null;
