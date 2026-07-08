@@ -105,8 +105,8 @@ let nodes = [
   {id:'crim',  name:'DELINCUENTES PRINCIPAL',   varName:'MainCriminalCamp', x:1105,z:455},
   {id:'escape',name:'ESCAPE',                   varName:'EscapePoint',      x:854, z:35},
   // exploración: cabaña + mirador de cada lado
-  {id:'cabW',  name:'CABAÑA OESTE',             varName:'AbandonedCabin',   x:200, z:820},
-  {id:'mirW',  name:'MIRADOR OESTE',            varName:'LakeLookout',      x:510, z:730},
+  {id:'cabW',  name:'CABAÑA OESTE',             varName:'AbandonedCabin',   x:300, z:250},
+  {id:'mirW',  name:'MIRADOR OESTE',            varName:'LakeLookout',      x:270, z:530},
   {id:'cabE',  name:'CABAÑA ESTE',              varName:'CabinEast',        x:880, z:340},
   {id:'mirE',  name:'MIRADOR ESTE',             varName:'LookoutEast',      x:710, z:608},
 ];
@@ -115,7 +115,7 @@ let paths = [
   {id:'ruta',   name:'RUTA (asfalto)', cls:'paved', pts:[{x:-20,z:35},{x:300,z:32},{x:590,z:25},{x:854,z:32},{x:1420,z:38}]},
   {id:'rio',    name:'RÍO', cls:'river', pts:[{x:600,z:1080},{x:592,z:700},{x:595,z:440},{x:598,z:120},{x:592,z:-40}]},
   {id:'rio2',   name:'RÍO', cls:'river', pts:[{x:405,z:575},{x:440,z:455},{node:'playa'},{x:588,z:80}]},
-  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{node:'desvio'},{x:380,z:200},{node:'camp'}]},
+  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{node:'desvio'},{node:'cabW'},{node:'camp'}]},
   {id:'caminoA',name:'Camino A', cls:'', pts:[{node:'lakemt'},{node:'vieja'},{node:'camp'}]},
   {id:'c16', name:'CAMINO 16', cls:'', pts:[{node:'lakemt'},{x:200,z:520},{node:'hunt'}]},
   {id:'c10', name:'CAMINO 10', cls:'', pts:[{node:'hunt'},{x:290,z:430},{node:'camp'}]},
@@ -130,7 +130,6 @@ let paths = [
   {id:'c16e',name:'CAMINO 16', cls:'', pts:[{node:'crim'},{x:960,z:230},{node:'escape'}]},
   {id:'c13', name:'CAMINO 13', cls:'', pts:[{node:'wrong'},{x:200,z:130},{node:'desvio'}]},
   // senderos a cabañas y miradores
-  {id:'tCabW', name:'Sendero cabaña O', cls:'dirt', pts:[{node:'lakemt'},{x:165,z:740},{node:'cabW'}]},
   {id:'tMirW', name:'Subida mirador O', cls:'dirt', pts:[{node:'vieja'},{x:450,z:700},{node:'mirW'}]},
   {id:'tMirE', name:'Subida mirador E', cls:'dirt', pts:[{node:'sec'},{x:1030,z:715},{node:'mirE'}]},
 ];
