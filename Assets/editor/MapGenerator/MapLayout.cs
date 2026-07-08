@@ -33,26 +33,31 @@ namespace FolkloreArchives.MapGen
         // ------------- Key locations (x, z) — matches the hand-drawn plan -------------
         // (DirtTurnoff is derived from the smooth paved route further down, so it always
         //  sits exactly on the road wherever the road is at x=620.)
-        public static readonly Vector2 Campsite         = new Vector2(710, 335);  // players' camp, right beside the river
-        public static readonly Vector2 OldLadyRanch     = new Vector2(620, 600);  // "VIEJA" — on Path A
-        public static readonly Vector2 HuntingField     = new Vector2(540, 480);  // open dry-grass field (Act 2 hunting)
-        public static readonly Vector2 Grave            = new Vector2(700, 850);  // "TUMBA" — top right
-        public static readonly Vector2 MainCriminalCamp = new Vector2(250, 840);  // "DELINCUENTES PRINCIPAL" — top left, on a hill
-        public static readonly Vector2 SecondaryCamp    = new Vector2(200, 560);  // "CAMPAMENTO SECUNDARIO" — mid left
-        public static readonly Vector2 HostageArea      = new Vector2(330, 790);  // tied-up NPC companions (Act 3)
-        // Nuevas zonas del owner (editor de plano):
-        public static readonly Vector2 LakeMountain     = new Vector2(461, 672);  // "MONTAÑA Y LAGO" — zona del lago gigante
-        public static readonly Vector2 WrongTurnDeath   = new Vector2(782, 199);  // "MUERTE CAMINO EQUIVOCADO" — cerca ruta de tierra/río
-        public static readonly Vector2 LakeLookout      = new Vector2(602, 700);  // mirador sobre el lago (en un pico)
-        public static readonly Vector2 AbandonedCabin   = new Vector2(360, 360);  // cabaña abandonada, bosque oeste
+        // Coordenadas del PLANO FINAL del owner (MapPlan.html). Layout de dos lados:
+        // OESTE = humano, ESTE = peligro, río al medio (~x595).
+        public static readonly Vector2 Campsite         = new Vector2(410, 442);  // campamento (oeste, cerca del río)
+        public static readonly Vector2 OldLadyRanch     = new Vector2(398, 625);  // "VIEJA"
+        public static readonly Vector2 HuntingField     = new Vector2(165, 397);  // "CAMPO DE CAZA" (oeste)
+        public static readonly Vector2 Grave            = new Vector2(775, 475);  // "TUMBA" — este, frente al Mirador Este
+        public static readonly Vector2 MainCriminalCamp = new Vector2(905, 395);  // "DELINCUENTES PRINCIPAL" (este)
+        public static readonly Vector2 SecondaryCamp    = new Vector2(942, 597);  // "CAMPAMENTO SECUNDARIO" (este)
+        public static readonly Vector2 HostageArea      = new Vector2(917, 495);  // "REHENES" (este)
+        public static readonly Vector2 LakeMountain     = new Vector2(135, 645);  // "MONTAÑA Y LAGO" — lago (oeste lejano)
+        public static readonly Vector2 WrongTurnDeath   = new Vector2(186, 222);  // "MUERTE CAMINO EQUIVOCADO" (oeste, spur)
+        public static readonly Vector2 LakeLookout      = new Vector2(270, 530);  // "MIRADOR OESTE" (centro del cuarteto oeste)
+        public static readonly Vector2 AbandonedCabin   = new Vector2(373, 253);  // "CABAÑA OESTE" — antes del campamento
+        // Zonas NUEVAS del plano de dos lados:
+        public static readonly Vector2 EscapePoint      = new Vector2(803, 42);   // "ESCAPE" — sureste, sobre la ruta
+        public static readonly Vector2 CabinEast        = new Vector2(683, 327);  // "CABAÑA ESTE" — bajando de la Tumba al Escape
+        public static readonly Vector2 LookoutEast      = new Vector2(698, 609);  // "MIRADOR ESTE" — orilla este del río
 
         // ------------- Lote de la casa de la vieja (HouseBuilder) -------------
         // Bounds en world XZ del cerco (deben coincidir con la valla de HouseBuilder:
         // grupo en OldLadyRanch-(7,6), valla local x[-6..30] z[-7..19] → world abajo).
         // TerrainBuilder aplana este rectángulo a OldLadyLotHeight y ForestBuilder no
         // pone árboles adentro (+ un margen). Ajustar si cambia la valla.
-        public static readonly Vector2 OldLadyLotMin = new Vector2(607f, 587f);
-        public static readonly Vector2 OldLadyLotMax = new Vector2(643f, 613f);
+        public static readonly Vector2 OldLadyLotMin = new Vector2(385f, 612f);
+        public static readonly Vector2 OldLadyLotMax = new Vector2(421f, 638f);
         public const float OldLadyLotHeight = 25.5f;   // nivel plano del lote (≈ altura natural ahí)
 
         // ------------- Paths (polylines, x/z) -------------
@@ -78,11 +83,13 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 DirtTurnoff = new Vector2(620f, PavedRouteZAt(620f));
         // Caminos que salen del campamento: ahora en S (curvas suaves Catmull-Rom con
         // puntos que zigzaguean) en vez de líneas rectas (pedido del owner).
-        public static readonly Vector2[] DirtRoad   = { DirtTurnoff, new Vector2(650, 200), Campsite };
-        public static readonly Vector2[] PathA      = BuildSmoothRoute(new[] { Campsite, new Vector2(795, 405), new Vector2(628, 452), new Vector2(720, 535), OldLadyRanch, new Vector2(510, 665), new Vector2(705, 715), new Vector2(598, 795), Grave }, 12f);
-        public static readonly Vector2[] GraveToCriminals     = { Grave, new Vector2(480, 880), MainCriminalCamp };
-        public static readonly Vector2[] CriminalsToSecondary = { MainCriminalCamp, new Vector2(180, 700), SecondaryCamp };
-        public static readonly Vector2[] PathB      = BuildSmoothRoute(new[] { SecondaryCamp, new Vector2(290, 505), new Vector2(410, 468), new Vector2(470, 405), new Vector2(615, 400), new Vector2(668, 345), Campsite }, 12f);
+        public static readonly Vector2[] DirtRoad   = { DirtTurnoff, new Vector2(346, 251), Campsite }; // ruta de tierra: desvío → cabaña oeste → campamento
+        // PathA = sendero VERDE (oeste, frondoso): Montaña y Lago → Vieja → Campamento.
+        public static readonly Vector2[] PathA      = BuildSmoothRoute(new[] { LakeMountain, OldLadyRanch, Campsite }, 12f);
+        // PathB = sendero de MIEDO (este, peligro): Tumba → Rehenes → Delincuentes.
+        public static readonly Vector2[] PathB      = BuildSmoothRoute(new[] { Grave, HostageArea, MainCriminalCamp }, 12f);
+        public static readonly Vector2[] GraveToCriminals     = { Grave, new Vector2(849, 437), MainCriminalCamp };
+        public static readonly Vector2[] CriminalsToSecondary = { MainCriminalCamp, new Vector2(1010, 518), SecondaryCamp };
 
         // River runs along the east edge, next to the campsite. Smooth wavy
         // Catmull-Rom curve (same technique as the paved route) instead of a few
@@ -104,29 +111,38 @@ namespace FolkloreArchives.MapGen
 
         // Mini playa de pesca + sendero desde el campamento hasta el agua (pedido del
         // owner: caminito corto del campamento a una playita donde se pueda pescar).
-        public static readonly Vector2 RiverBeach   = new Vector2(730, 335);
+        public static readonly Vector2 RiverBeach   = new Vector2(524, 361);
         public static readonly Vector2[] BeachPath  = { Campsite, RiverBeach };
 
         // Caminos nuevos del owner (editor de plano) — senderos a pie que conectan la
         // zona central "MONTAÑA Y LAGO" con el resto, más el desvío a "MUERTE CAMINO
         // EQUIVOCADO". Se tratan como senderos (limpian árboles + pasto corto), como PathA.
-        public static readonly Vector2[] Camino9  = { LakeMountain, new Vector2(549, 630), OldLadyRanch };
-        public static readonly Vector2[] Camino10 = { LakeMountain, new Vector2(536, 483), Campsite };
-        public static readonly Vector2[] Camino11 = { SecondaryCamp, new Vector2(345, 634), LakeMountain };
-        public static readonly Vector2[] Camino12 = { OldLadyRanch, new Vector2(710, 584), new Vector2(818, 541) };
-        public static readonly Vector2[] Camino13 = { new Vector2(653, 200), new Vector2(713, 190), WrongTurnDeath };
-        public static readonly Vector2[][] ExtraTrails = { Camino9, Camino10, Camino11, Camino12, Camino13 };
+        public static readonly Vector2[] Camino9  = { HuntingField, new Vector2(290, 430), Campsite };            // c10: campo de caza → campamento
+        public static readonly Vector2[] Camino10 = { LakeMountain, new Vector2(200, 520), HuntingField };        // c16: lago → campo de caza
+        public static readonly Vector2[] Camino11 = { OldLadyRanch, new Vector2(312, 560), LakeLookout };         // tMirW: vieja → mirador oeste
+        public static readonly Vector2[] Camino12 = { LakeLookout, new Vector2(403, 449), Campsite };             // c20: mirador oeste → campamento
+        public static readonly Vector2[] Camino13 = { WrongTurnDeath, new Vector2(247, 187), DirtTurnoff };       // c13: muerte camino equivocado → desvío
+        // Cruce del río + red del ESTE (peligro):
+        public static readonly Vector2[] Camino14 = { OldLadyRanch, new Vector2(560, 600), LookoutEast };         // c12: vieja → (cruza el río) → mirador este
+        public static readonly Vector2[] Camino15 = { Campsite, new Vector2(534, 542), LookoutEast };             // c21: campamento → mirador este
+        public static readonly Vector2[] Camino16 = { LookoutEast, new Vector2(775, 625), Grave };                // mt: mirador este → tumba
+        public static readonly Vector2[] Camino17 = { SecondaryCamp, new Vector2(881, 619), Grave };              // st: secundario → tumba
+        public static readonly Vector2[] Camino18 = { SecondaryCamp, new Vector2(780, 473), LookoutEast };        // tMirE: secundario → mirador este
+        public static readonly Vector2[] Camino19 = { MainCriminalCamp, new Vector2(919, 453), HostageArea };     // cr: delincuentes → rehenes
+        public static readonly Vector2[] Camino20 = { Grave, CabinEast, EscapePoint };                            // c15: tumba → cabaña este → escape
+        public static readonly Vector2[] Camino21 = { MainCriminalCamp, new Vector2(808, 268), EscapePoint };     // c16e: delincuentes → escape
+        public static readonly Vector2[][] ExtraTrails = { Camino9, Camino10, Camino11, Camino12, Camino13, Camino14, Camino15, Camino16, Camino17, Camino18, Camino19, Camino20, Camino21 };
 
         // ===== ZONA CENTRAL: montañas + lago gigante (owner: unir Campo de Caza +
         // Montaña y Lago en una gran cuenca de montañas con un lago enorme, sin camino
         // entre ellas — se cruza el terreno natural). Todo tuneable acá.
-        public static readonly Vector2 CentralLakeCenter = new Vector2(485, 605);
+        public static readonly Vector2 CentralLakeCenter = new Vector2(135, 645); // = "Montaña y Lago" (oeste lejano)
         public const float CentralLakeRadius = 65f;   // lago (radio pedido por el owner)
         public const float CentralLakeLevel  = 11f;   // altura del plano de agua
         public const float CentralLakeBed    = 3f;    // fondo carvado (bajo el agua)
         public const float CentralLakeShore  = 45f;   // ancho de la orilla que sube del fondo al terreno
         // Picos de montaña que rodean el lago (deben estar FUERA del radio del lago).
-        public static readonly Vector2[] CentralPeaks = { new Vector2(350, 550), new Vector2(605, 700), new Vector2(470, 775) };
+        public static readonly Vector2[] CentralPeaks = { new Vector2(60, 730), new Vector2(235, 700), new Vector2(120, 545) };
         public const float CentralPeakHeight = 92f;   // picos ALTOS con nieve (antes 46)
         public const float CentralPeakSigma  = 44f;   // más puntiagudos (antes 56)
         public const float SnowLine          = 82f;   // altura donde empieza la nieve en los picos
