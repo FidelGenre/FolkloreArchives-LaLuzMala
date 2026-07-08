@@ -17,9 +17,11 @@ namespace FolkloreArchives.MapGen
         const string Dir = "Assets/HQP STUDIOS/Rocks and Terrains Pack - Low Poly/Prefabs/Terrains/Mountains/LOD/";
         const int    Count      = 48;    // cuántas montañas en el anillo
         const float  RingMargin = 90f;   // metros más allá del borde del mapa
-        const float  BaseY      = -8f;   // base (un poco hundida para que no flote)
-        const float  ScaleMin   = 3.0f;  // ← subí/bajá esto si quedan chicas/grandes
-        const float  ScaleMax   = 5.5f;
+        const float  BaseY      = -12f;  // base (un poco hundida para que no flote)
+        const float  ScaleMin   = 3.5f;  // ← ancho/base (subí/bajá si quedan chicas/grandes)
+        const float  ScaleMax   = 6.0f;
+        const float  HeightMin  = 1.9f;  // ← ALTURA (multiplica el ancho): más alto = picos más altos
+        const float  HeightMax  = 2.8f;
 
         public static void Build(Transform parent, Terrain terrain)
         {
@@ -48,20 +50,23 @@ namespace FolkloreArchives.MapGen
                 float z = cz + Mathf.Sin(ang) * rz * rr;
                 var pos = new Vector2(x, z);
 
-                // NO encima de la ruta/túnel ni de los ríos → dejo el valle/boca abiertos.
-                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 120f) continue;
+                // Ríos: boca abierta (salteo cualquiera cerca del agua del río).
                 if (BuilderUtils.DistToRivers(pos) < 100f) continue;
-                // Si pisa el lago (está pegado al borde oeste), la EMPUJO hacia afuera para
-                // que quede DETRÁS del lago (orilla lejana), no encima.
+                // Ruta/túnel y lago: EMPUJO la montaña hacia afuera hasta despejar (así
+                // quedan DETRÁS, no encima). La ruta necesita bastante margen.
                 int guard = 0;
-                while (Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear && guard++ < 6)
+                while ((BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 190f ||
+                        Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear) && guard++ < 8)
                 {
                     rr += 0.14f;
                     x = cx + Mathf.Cos(ang) * rx * rr;
                     z = cz + Mathf.Sin(ang) * rz * rr;
                     pos = new Vector2(x, z);
                 }
-                if (Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear) continue; // no se pudo despejar → salteo
+                // Si aun así sigue pegada a la ruta (ej. la boca oeste, donde la ruta se
+                // va del mapa) o al lago → salteo (valle abierto).
+                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 140f) continue;
+                if (Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear) continue;
 
                 var pf = prefabs[Random.Range(0, prefabs.Count)];
                 var m = (GameObject)PrefabUtility.InstantiatePrefab(pf, group.transform);
@@ -69,7 +74,7 @@ namespace FolkloreArchives.MapGen
                 float yaw = Mathf.Atan2(cx - x, cz - z) * Mathf.Rad2Deg + Random.Range(-25f, 25f); // mirando al centro + variación
                 m.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
                 float s = Random.Range(ScaleMin, ScaleMax);
-                m.transform.localScale = new Vector3(s, s * Random.Range(0.85f, 1.35f), s);
+                m.transform.localScale = new Vector3(s, s * Random.Range(HeightMin, HeightMax), s); // Y más alto = picos altos
                 m.isStatic = true;
                 placed++;
             }
