@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
     {
         const string Dir = "Assets/HQP STUDIOS/Rocks and Terrains Pack - Low Poly/Prefabs/Terrains/Mountains/LOD/";
         const int    Count      = 48;    // cuántas montañas en el anillo
-        const float  RingMargin = 90f;   // metros más allá del borde del mapa
+        const float  RingMargin = 350f;  // metros más allá del borde del mapa (alejadas del área jugable)
         const float  BaseY      = -12f;  // base (un poco hundida para que no flote)
         const float  ScaleMin   = 3.5f;  // ← ancho/base (subí/bajá si quedan chicas/grandes)
         const float  ScaleMax   = 6.0f;
