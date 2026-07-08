@@ -138,25 +138,44 @@ namespace FolkloreArchives.MapGen
             water.isStatic = true;
             Object.DestroyImmediate(water.GetComponent<Collider>());
 
-            // SEGUNDO RÍO (tributario lago → río principal): plano rotado alineado al
-            // cauce (rotación/escala calculadas desde los extremos de River2).
-            var r2 = MapLayout.River2;
-            Vector2 a2 = r2[0], b2 = r2[r2.Length - 1];
-            Vector2 mid2 = (a2 + b2) * 0.5f;
-            Vector2 dir2 = b2 - a2;
-            var water2 = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            water2.name = "River2_Water";
-            water2.transform.SetParent(parent);
-            water2.transform.position = new Vector3(mid2.x, 9.8f, mid2.y);
-            water2.transform.rotation = Quaternion.Euler(0f, Mathf.Atan2(dir2.x, dir2.y) * Mathf.Rad2Deg, 0f);
-            water2.transform.localScale = new Vector3(7f, 1f, (dir2.magnitude + 90f) / 10f); // ancho ~70, largo = cauce + margen
-            var w2mat = BuilderUtils.Mat("lakewater", new Color(0.05f, 0.11f, 0.16f), 0.2f);
-            if (w2mat.HasProperty("_Cull")) w2mat.SetFloat("_Cull", 0f);
-            w2mat.doubleSidedGI = true;
-            water2.GetComponent<Renderer>().sharedMaterial = w2mat;
-            water2.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
-            water2.isStatic = true;
-            Object.DestroyImmediate(water2.GetComponent<Collider>());
+            // SEGUNDO RÍO (tributario lago → río principal): agua como CINTA (mesh) que
+            // SIGUE el cauce curvo. Un plano recto no cubría la curva (se desviaba ~55m)
+            // y el agua quedaba al costado → no se veía. El ribbon la sigue punto a punto.
+            {
+                var r2 = MapLayout.River2;
+                var verts = new System.Collections.Generic.List<Vector3>();
+                var tris  = new System.Collections.Generic.List<int>();
+                const float halfW = 22f, wy2 = 9.8f;
+                for (int i = 0; i < r2.Length; i++)
+                {
+                    Vector2 fwd = (i < r2.Length - 1) ? r2[i + 1] - r2[i] : r2[i] - r2[i - 1];
+                    if (fwd.sqrMagnitude < 1e-4f) fwd = Vector2.up;
+                    fwd.Normalize();
+                    Vector2 perp = new Vector2(-fwd.y, fwd.x) * halfW;
+                    Vector2 lft = r2[i] + perp, rgt = r2[i] - perp;
+                    verts.Add(new Vector3(lft.x, wy2, lft.y));
+                    verts.Add(new Vector3(rgt.x, wy2, rgt.y));
+                }
+                for (int i = 0; i < r2.Length - 1; i++)
+                {
+                    int a = i * 2;
+                    tris.Add(a); tris.Add(a + 2); tris.Add(a + 1);
+                    tris.Add(a + 1); tris.Add(a + 2); tris.Add(a + 3);
+                }
+                var m2 = new Mesh { name = "River2_WaterMesh" };
+                m2.SetVertices(verts); m2.SetTriangles(tris, 0);
+                m2.RecalculateNormals(); m2.RecalculateBounds();
+                var water2 = new GameObject("River2_Water");
+                water2.transform.SetParent(parent);
+                water2.AddComponent<MeshFilter>().sharedMesh = m2;
+                var w2mat = BuilderUtils.Mat("lakewater", new Color(0.05f, 0.11f, 0.16f), 0.2f);
+                if (w2mat.HasProperty("_Cull")) w2mat.SetFloat("_Cull", 0f);
+                w2mat.doubleSidedGI = true;
+                var mr2 = water2.AddComponent<MeshRenderer>();
+                mr2.sharedMaterial = w2mat;
+                mr2.shadowCastingMode = ShadowCastingMode.Off;
+                water2.isStatic = true;
+            }
 
             // LAGO GIGANTE CENTRAL (owner): plano de agua sobre la cuenca carvada.
             var lake = GameObject.CreatePrimitive(PrimitiveType.Plane);
