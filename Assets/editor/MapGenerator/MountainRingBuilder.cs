@@ -38,12 +38,30 @@ namespace FolkloreArchives.MapGen
             float rx = MapLayout.MapSizeX * 0.5f + RingMargin;
             float rz = MapLayout.MapSize * 0.5f + RingMargin;
 
+            float lakeClear = MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore + 140f;
+            int placed = 0;
             for (int i = 0; i < Count; i++)
             {
                 float ang = (i / (float)Count) * Mathf.PI * 2f + Random.Range(-0.04f, 0.04f);
                 float rr  = Random.Range(0.97f, 1.15f); // jitter radial → no un óvalo perfecto
                 float x = cx + Mathf.Cos(ang) * rx * rr;
                 float z = cz + Mathf.Sin(ang) * rz * rr;
+                var pos = new Vector2(x, z);
+
+                // NO encima de la ruta/túnel ni de los ríos → dejo el valle/boca abiertos.
+                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 120f) continue;
+                if (BuilderUtils.DistToRivers(pos) < 100f) continue;
+                // Si pisa el lago (está pegado al borde oeste), la EMPUJO hacia afuera para
+                // que quede DETRÁS del lago (orilla lejana), no encima.
+                int guard = 0;
+                while (Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear && guard++ < 6)
+                {
+                    rr += 0.14f;
+                    x = cx + Mathf.Cos(ang) * rx * rr;
+                    z = cz + Mathf.Sin(ang) * rz * rr;
+                    pos = new Vector2(x, z);
+                }
+                if (Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear) continue; // no se pudo despejar → salteo
 
                 var pf = prefabs[Random.Range(0, prefabs.Count)];
                 var m = (GameObject)PrefabUtility.InstantiatePrefab(pf, group.transform);
@@ -53,8 +71,9 @@ namespace FolkloreArchives.MapGen
                 float s = Random.Range(ScaleMin, ScaleMax);
                 m.transform.localScale = new Vector3(s, s * Random.Range(0.85f, 1.35f), s);
                 m.isStatic = true;
+                placed++;
             }
-            Debug.Log("MountainRing: " + Count + " montañas low-poly alrededor del mapa.");
+            Debug.Log("MountainRing: " + placed + " montañas low-poly alrededor del mapa (con exclusiones ruta/lago/río).");
         }
     }
 }
