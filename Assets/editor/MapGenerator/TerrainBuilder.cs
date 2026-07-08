@@ -131,6 +131,10 @@ namespace FolkloreArchives.MapGen
             float dr = BuilderUtils.DistToPolyline(p, MapLayout.River);
             if (dr < 34f) a = Mathf.Lerp(3.5f, a, Mathf.SmoothStep(0f, 1f, (dr - 14f) / 20f));
 
+            // segundo río (tributario del lago) — canal algo más angosto
+            float dr2 = BuilderUtils.DistToPolyline(p, MapLayout.River2);
+            if (dr2 < 26f) a = Mathf.Lerp(4.5f, a, Mathf.SmoothStep(0f, 1f, (dr2 - 10f) / 16f));
+
             // LAGO GIGANTE CENTRAL: cuenca carvada bajo la línea de agua. Min() = solo
             // baja el terreno, nunca sube (las montañas de alrededor quedan; adentro
             // gana el lago). Orilla irregular con ruido para que no sea un círculo perfecto.

@@ -138,6 +138,26 @@ namespace FolkloreArchives.MapGen
             water.isStatic = true;
             Object.DestroyImmediate(water.GetComponent<Collider>());
 
+            // SEGUNDO RÍO (tributario lago → río principal): plano rotado alineado al
+            // cauce (rotación/escala calculadas desde los extremos de River2).
+            var r2 = MapLayout.River2;
+            Vector2 a2 = r2[0], b2 = r2[r2.Length - 1];
+            Vector2 mid2 = (a2 + b2) * 0.5f;
+            Vector2 dir2 = b2 - a2;
+            var water2 = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            water2.name = "River2_Water";
+            water2.transform.SetParent(parent);
+            water2.transform.position = new Vector3(mid2.x, 9.8f, mid2.y);
+            water2.transform.rotation = Quaternion.Euler(0f, Mathf.Atan2(dir2.x, dir2.y) * Mathf.Rad2Deg, 0f);
+            water2.transform.localScale = new Vector3(7f, 1f, (dir2.magnitude + 90f) / 10f); // ancho ~70, largo = cauce + margen
+            var w2mat = BuilderUtils.Mat("lakewater", new Color(0.05f, 0.11f, 0.16f), 0.2f);
+            if (w2mat.HasProperty("_Cull")) w2mat.SetFloat("_Cull", 0f);
+            w2mat.doubleSidedGI = true;
+            water2.GetComponent<Renderer>().sharedMaterial = w2mat;
+            water2.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+            water2.isStatic = true;
+            Object.DestroyImmediate(water2.GetComponent<Collider>());
+
             // LAGO GIGANTE CENTRAL (owner): plano de agua sobre la cuenca carvada.
             var lake = GameObject.CreatePrimitive(PrimitiveType.Plane);
             lake.name = "Central_Lake_Water";

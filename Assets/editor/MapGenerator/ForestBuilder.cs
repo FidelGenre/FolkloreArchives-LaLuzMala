@@ -182,7 +182,7 @@ namespace FolkloreArchives.MapGen
                 for (float z = 30f; z < MapLayout.MapSize - 30f; z += step)
                 {
                     var p = new Vector2(x + Random.Range(-step * 0.4f, step * 0.4f), z + Random.Range(-step * 0.4f, step * 0.4f));
-                    if (BuilderUtils.DistToPolyline(p, MapLayout.River) < 26f) continue;
+                    if (BuilderUtils.DistToRivers(p) < 26f) continue;
                     if (Random.value > MapLayout.PuddleForestChance) continue;
                     PlacePuddle(root, terrain, mat, p, Random.Range(1.0f, 2.6f), Random.Range(0.6f, 1.0f));
                     placed++;
@@ -289,7 +289,7 @@ namespace FolkloreArchives.MapGen
                     if (MapLayout.PavedRouteZAt(p.x) - p.y > 5f) continue; // lakeside embankment/water
                     if (BuilderUtils.DistToPolyline(p, MapLayout.DirtRoad) < 4f) continue;
                     if (BuilderUtils.DistToPolyline(p, MapLayout.PathA) < 3f) continue;
-                    if (BuilderUtils.DistToPolyline(p, MapLayout.River) < 26f) continue;
+                    if (BuilderUtils.DistToRivers(p) < 26f) continue;
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 4f) continue;
                     if (Vector2.Distance(p, MapLayout.RiverBeach) < 14f) continue;
                     if (Vector2.Distance(p, MapLayout.Campsite) < 10f) continue;
@@ -377,7 +377,7 @@ namespace FolkloreArchives.MapGen
                     float dScary = BuilderUtils.DistToScaryPaths(p);
                     float dExtra = BuilderUtils.DistToExtraTrails(p); // caminos nuevos del owner
                     if (dRoad < 3.5f || dA < 3.5f || dScary < 3f || dExtra < 3.5f) continue;
-                    if (BuilderUtils.DistToPolyline(p, MapLayout.River) < 28f) continue;
+                    if (BuilderUtils.DistToRivers(p) < 28f) continue;
                     // despejar el caminito a la playa y la playa misma
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 5f) continue;
                     if (Vector2.Distance(p, MapLayout.RiverBeach) < 15f) continue;
@@ -777,6 +777,7 @@ namespace FolkloreArchives.MapGen
             {
                 var m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
                 if (m == null) continue;
+                if (m.isVariant) continue; // no se puede setear shader en un Material Variant (hereda del padre)
                 string ln = m.name.ToLowerInvariant();
                 if (ln.Contains("skybox") || ln.Contains("plane mat")) continue;
 
@@ -997,7 +998,7 @@ namespace FolkloreArchives.MapGen
                     float dA = BuilderUtils.DistToPolyline(p, MapLayout.PathA);
                     float dScary = BuilderUtils.DistToScaryPaths(p);
                     if (dRoad < 3f || dA < 3f || dScary < 2.5f) continue;
-                    if (BuilderUtils.DistToPolyline(p, MapLayout.River) < 22f) continue;
+                    if (BuilderUtils.DistToRivers(p) < 22f) continue;
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 4f) continue;
                     if (Vector2.Distance(p, MapLayout.RiverBeach) < 13f) continue;
                     if (Vector2.Distance(p, MapLayout.Campsite) < 12f) continue;
@@ -1692,7 +1693,7 @@ namespace FolkloreArchives.MapGen
                     if (BuilderUtils.DistToPolyline(p, MapLayout.DirtRoad) < 5f) continue;
                     if (BuilderUtils.DistToPolyline(p, MapLayout.PathA) < 5f) continue;
                     if (BuilderUtils.DistToScaryPaths(p) < 4f) continue;
-                    if (BuilderUtils.DistToPolyline(p, MapLayout.River) < 18f) continue;
+                    if (BuilderUtils.DistToRivers(p) < 18f) continue;
 
                     float df = Vector2.Distance(p, MapLayout.HuntingField);
                     float dm = Vector2.Distance(p, MapLayout.MainCriminalCamp);

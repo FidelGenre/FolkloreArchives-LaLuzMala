@@ -110,6 +110,17 @@ namespace FolkloreArchives.MapGen
         };
         public static readonly Vector2[] River = BuildSmoothRoute(RiverControls, 18f);
 
+        // Segundo río (tributario): baja del lago "Montaña y Lago" (oeste) y desemboca
+        // en el río principal. Del plano del owner (rio2).
+        static readonly Vector2[] River2Controls = {
+            new Vector2(175, 640),   // sale del lago
+            new Vector2(300, 555),
+            new Vector2(453, 479),
+            new Vector2(554, 356),
+            new Vector2(600, 285)    // desemboca en el río principal
+        };
+        public static readonly Vector2[] River2 = BuildSmoothRoute(River2Controls, 18f);
+
         // Mini playa de pesca + sendero desde el campamento hasta el agua (pedido del
         // owner: caminito corto del campamento a una playita donde se pueda pescar).
         public static readonly Vector2 RiverBeach   = new Vector2(524, 361);

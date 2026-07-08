@@ -306,6 +306,13 @@ namespace FolkloreArchives.MapGen
             return min;
         }
 
+        // Distancia al río más cercano (principal + tributario del lago). Para mantener
+        // árboles/pasto fuera de AMBOS ríos con un solo check.
+        public static float DistToRivers(Vector2 p)
+        {
+            return Mathf.Min(DistToPolyline(p, MapLayout.River), DistToPolyline(p, MapLayout.River2));
+        }
+
         // Distancia al camino nuevo más cercano (senderos del editor de plano del owner).
         public static float DistToExtraTrails(Vector2 p)
         {
