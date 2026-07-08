@@ -87,34 +87,47 @@ function zoomCenter(f){ zoomAt(0.5,0.5,f); }
 function resetView(){ view={x:0,y:0,w:W,h:H}; applyView(); }
 
 // Zonas (world x, z) + nombre de variable en MapLayout.cs
+// Layout de DOS LADOS: OESTE = lo humano, ESTE = el peligro, río al medio.
 let nodes = [
-  {id:'crim',  name:'DELINCUENTES PRINCIPAL', varName:'MainCriminalCamp', x:250, z:840},
-  {id:'grave', name:'TUMBA',                  varName:'Grave',            x:700, z:850},
-  {id:'vieja', name:'VIEJA',                  varName:'OldLadyRanch',     x:620, z:600},
-  {id:'sec',   name:'CAMPAMENTO SECUNDARIO',  varName:'SecondaryCamp',    x:200, z:560},
-  {id:'hunt',  name:'CAMPO DE CAZA',          varName:'HuntingField',     x:540, z:480},
-  {id:'reh',   name:'REHENES',                varName:'HostageArea',      x:330, z:790},
-  {id:'camp',  name:'CAMPAMENTO',             varName:'Campsite',         x:710, z:335},
-  {id:'playa', name:'PLAYA DE PESCA',         varName:'RiverBeach',       x:730, z:335},
-  {id:'desvio',name:'DESVÍO (ruta→tierra)',   varName:'DirtTurnoff',      x:620, z:82},
-  {id:'lakemt',name:'MONTAÑA Y LAGO',         varName:'LakeMountain',     x:461, z:672},
-  {id:'wrong', name:'MUERTE CAMINO EQUIVOCADO',varName:'WrongTurnDeath',  x:782, z:199},
+  // ===== OESTE — lo humano / conocido =====
+  {id:'desvio',name:'DESVÍO (ruta→tierra)',    varName:'DirtTurnoff',      x:430, z:95},
+  {id:'auto',  name:'AUTO (inicio)',            varName:'PlayerCarStart',   x:470, z:160},
+  {id:'camp',  name:'CAMPAMENTO',               varName:'Campsite',         x:610, z:430},
+  {id:'playa', name:'PLAYA DE PESCA',           varName:'RiverBeach',       x:700, z:340},
+  {id:'vieja', name:'VIEJA',                    varName:'OldLadyRanch',     x:360, z:640},
+  {id:'lakemt',name:'MONTAÑA Y LAGO',           varName:'LakeMountain',     x:180, z:650},
+  {id:'hunt',  name:'CAMPO DE CAZA',            varName:'HuntingField',     x:170, z:460},
+  {id:'wrong', name:'MUERTE CAMINO EQUIVOCADO', varName:'WrongTurnDeath',   x:250, z:300},
+  {id:'luzlago',name:'LUZ MALA (sobre el lago)',varName:'LuzMalaLake',      x:270, z:745},
+  // ===== EL CRUCE (punto de no retorno) =====
+  {id:'puente',name:'PUENTE (cruce)',           varName:'RiverCrossing',    x:800, z:490},
+  // ===== ESTE — lo salvaje / peligro =====
+  {id:'grave', name:'TUMBA',                    varName:'Grave',            x:960, z:560},
+  {id:'sec',   name:'CAMPAMENTO SECUNDARIO',    varName:'SecondaryCamp',    x:1050,z:730},
+  {id:'reh',   name:'REHENES',                  varName:'HostageArea',      x:1140,z:630},
+  {id:'crim',  name:'DELINCUENTES PRINCIPAL',   varName:'MainCriminalCamp', x:1280,z:650},
+  {id:'luzconf',name:'LUZ MALA (confrontación)',varName:'LuzMalaConfront',  x:1270,z:380},
+  {id:'escape',name:'ESCAPE',                   varName:'EscapePoint',      x:1150,z:95},
 ];
 // Caminos: cada pt es {node:'id'} (sigue a esa zona) o {x,z} (waypoint libre editable)
 let paths = [
-  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{node:'desvio'},{x:650,z:200},{node:'camp'}]},
-  {id:'caminoA',name:'Camino A', cls:'', pts:[{node:'camp'},{x:670,z:450},{node:'vieja'},{x:660,z:720},{node:'grave'}]},
-  {id:'caminoB',name:'Camino B', cls:'', pts:[{node:'sec'},{x:330,z:480},{x:500,z:400},{node:'camp'}]},
-  {id:'gc',     name:'Tumba–Delincuentes', cls:'', pts:[{node:'grave'},{x:480,z:880},{node:'crim'}]},
-  {id:'cs',     name:'Delincuentes–Secundario', cls:'', pts:[{node:'crim'},{x:180,z:700},{node:'sec'}]},
+  // base: ruta asfalto (abajo, cruza el río) + río (vertical al centro)
+  {id:'ruta',   name:'RUTA (asfalto)', cls:'paved', pts:[{x:-20,z:90},{x:400,z:92},{x:800,z:80},{x:1150,z:88},{x:1420,z:82}]},
+  {id:'rio',    name:'RÍO', cls:'river', pts:[{x:825,z:-20},{x:805,z:250},{x:800,z:490},{x:812,z:720},{x:815,z:1020}]},
+  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{node:'desvio'},{x:520,z:250},{node:'camp'}]},
+  // ── OESTE ──
+  {id:'caminoA',name:'Camino A', cls:'', pts:[{node:'camp'},{x:470,z:560},{node:'vieja'},{x:250,z:660},{node:'lakemt'}]},
+  {id:'cHunt',  name:'Camino Campo', cls:'', pts:[{node:'lakemt'},{node:'hunt'}]},
+  {id:'cWrong', name:'Camino equivocado', cls:'dirt', pts:[{node:'camp'},{x:430,z:360},{node:'wrong'}]},
   {id:'playaP', name:'Sendero playa', cls:'', pts:[{node:'camp'},{node:'playa'}]},
-  {id:'ruta',   name:'RUTA (asfalto)', cls:'paved', pts:[{x:-20,z:88},{x:400,z:85},{x:800,z:78},{x:1200,z:88},{x:1420,z:80}]},
-  {id:'rio',    name:'RÍO', cls:'river', pts:[{x:820,z:-20},{x:800,z:250},{x:795,z:335},{x:815,z:545},{x:820,z:905},{x:820,z:1020}]},
-  {id:'c9',  name:'CAMINO 9',  cls:'', pts:[{node:'lakemt'},{x:549,z:630},{node:'vieja'}]},
-  {id:'c10', name:'CAMINO 10', cls:'', pts:[{node:'lakemt'},{x:536,z:483},{node:'camp'}]},
-  {id:'c11', name:'CAMINO 11', cls:'', pts:[{node:'sec'},{x:345,z:634},{node:'lakemt'}]},
-  {id:'c12', name:'CAMINO 12', cls:'', pts:[{node:'vieja'},{x:710,z:584},{x:818,z:541}]},
-  {id:'c13', name:'CAMINO 13', cls:'', pts:[{x:653,z:200},{x:713,z:190},{node:'wrong'}]},
+  // ── EL CRUCE: puente central (campamento → puente → tumba) ──
+  {id:'cruce',  name:'Puente central', cls:'', pts:[{node:'camp'},{node:'puente'},{node:'grave'}]},
+  // ── ESTE ──
+  {id:'eTumSec', name:'Tumba–Secundario', cls:'', pts:[{node:'grave'},{x:1010,z:650},{node:'sec'}]},
+  {id:'eSecCrim',name:'Secundario–Delincuentes', cls:'', pts:[{node:'sec'},{x:1210,z:710},{node:'crim'}]},
+  {id:'eCrimReh',name:'Delincuentes–Rehenes', cls:'', pts:[{node:'crim'},{node:'reh'}]},
+  {id:'c15',     name:'Camino 15', cls:'', pts:[{node:'grave'},{x:1010,z:320},{node:'escape'}]},
+  {id:'cB',      name:'Camino B', cls:'', pts:[{node:'reh'},{x:1220,z:340},{node:'escape'}]},
 ];
 
 let sel=null, dragging=null, panning=false, panStart=null;
