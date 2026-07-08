@@ -123,7 +123,7 @@ namespace FolkloreArchives.MapGen
             var water = GameObject.CreatePrimitive(PrimitiveType.Plane);
             water.name = "River_Water";
             water.transform.SetParent(parent);
-            water.transform.position = new Vector3(800f, 9.6f, 500f);  // Y hand-tuned by owner
+            water.transform.position = new Vector3(595f, 9.6f, 500f);  // río movido al centro (plano final del owner)
             water.transform.localScale = new Vector3(18f, 1f, 120f);
             // Share the SAME material as the lake (mat_lakewater) so the river and
             // lake read as one body of water instead of two slightly-different tones.

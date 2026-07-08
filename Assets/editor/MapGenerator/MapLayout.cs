@@ -47,7 +47,7 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 LakeLookout      = new Vector2(270, 530);  // "MIRADOR OESTE" (centro del cuarteto oeste)
         public static readonly Vector2 AbandonedCabin   = new Vector2(373, 253);  // "CABAÑA OESTE" — antes del campamento
         // Zonas NUEVAS del plano de dos lados:
-        public static readonly Vector2 EscapePoint      = new Vector2(803, 42);   // "ESCAPE" — sureste, sobre la ruta
+        public static readonly Vector2 EscapePoint      = new Vector2(803, 76);   // "ESCAPE" — sobre la ruta (z de la ruta a x803)
         public static readonly Vector2 CabinEast        = new Vector2(683, 327);  // "CABAÑA ESTE" — bajando de la Tumba al Escape
         public static readonly Vector2 LookoutEast      = new Vector2(698, 609);  // "MIRADOR ESTE" — orilla este del río
 
@@ -80,7 +80,7 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] PavedRoute = BuildSmoothRoute(PavedControls, 22f);
 
         // Where the dirt road leaves the paved route - kept exactly on the curve.
-        public static readonly Vector2 DirtTurnoff = new Vector2(620f, PavedRouteZAt(620f));
+        public static readonly Vector2 DirtTurnoff = new Vector2(331f, PavedRouteZAt(331f)); // desvío del plano (oeste)
         // Caminos que salen del campamento: ahora en S (curvas suaves Catmull-Rom con
         // puntos que zigzaguean) en vez de líneas rectas (pedido del owner).
         public static readonly Vector2[] DirtRoad   = { DirtTurnoff, new Vector2(346, 251), Campsite }; // ruta de tierra: desvío → cabaña oeste → campamento
@@ -95,17 +95,18 @@ namespace FolkloreArchives.MapGen
         // Catmull-Rom curve (same technique as the paved route) instead of a few
         // straight segments, with pronounced S-bends. Swings WEST toward the
         // campsite at z=335 so the fishing beach sits right beside camp.
+        // Río del PLANO: vertical al centro (~x595), separa OESTE (humano) de ESTE
+        // (peligro). Hace una curva al oeste en z~361 para pasar por la playa de pesca.
         static readonly Vector2[] RiverControls = {
-            new Vector2(825, -60),
-            new Vector2(800, 120),
-            new Vector2(768, 250),
-            new Vector2(756, 335),   // acercamiento máximo al campamento — playa de pesca aquí
-            new Vector2(772, 430),
-            new Vector2(815, 545),
-            new Vector2(828, 665),
-            new Vector2(800, 785),
-            new Vector2(820, 905),
-            new Vector2(805, 1060)
+            new Vector2(605, -60),
+            new Vector2(600, 180),
+            new Vector2(575, 300),
+            new Vector2(545, 361),   // curva a la playa de pesca (orilla oeste)
+            new Vector2(575, 450),
+            new Vector2(600, 600),
+            new Vector2(602, 760),
+            new Vector2(596, 905),
+            new Vector2(600, 1080)
         };
         public static readonly Vector2[] River = BuildSmoothRoute(RiverControls, 18f);
 

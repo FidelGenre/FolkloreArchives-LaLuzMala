@@ -26,7 +26,7 @@ namespace FolkloreArchives.MapGen
     public static class BridgeBuilder
     {
         // ── Placement (tune to the crossing) ─────────────────────────────────
-        const float CenterX = 800f;   // river crossing (road is over water here)
+        const float CenterX = 600f;   // river crossing (río movido al centro, plano final)
         const float Span    = 120f;   // length along the road (was 90 — owner wanted bigger)
 
         // Road edges (match RoadsideBuilder's paved-road cross-section).
