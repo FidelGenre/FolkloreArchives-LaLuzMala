@@ -17,11 +17,11 @@ namespace FolkloreArchives.MapGen
         {
             BuildWater(parent);
             SetupNight(parent);
-            // niebla baja sobre el agua (owner): tapa la orilla de enfrente y el pop-in
-            // de las cosas al spawnear, sin tocar la niebla global. Look patagónico.
-            BuildWaterMist(parent, new Vector3(805f, 15f, 500f), new Vector3(70f, 14f, 1080f), 34f);        // río (manto de niebla alto)
-            BuildWaterMist(parent, new Vector3(MapLayout.CentralLakeCenter.x, MapLayout.CentralLakeLevel + 6f, MapLayout.CentralLakeCenter.y),
-                           new Vector3(MapLayout.CentralLakeRadius * 2f + 40f, 14f, MapLayout.CentralLakeRadius * 2f + 40f), 30f); // lago central
+            // niebla del agua DESACTIVADA (owner: quitar la niebla del río y el lago).
+            // Para reactivarla, descomentar estas dos líneas.
+            // BuildWaterMist(parent, new Vector3(805f, 15f, 500f), new Vector3(70f, 14f, 1080f), 34f);        // río
+            // BuildWaterMist(parent, new Vector3(MapLayout.CentralLakeCenter.x, MapLayout.CentralLakeLevel + 6f, MapLayout.CentralLakeCenter.y),
+            //                new Vector3(MapLayout.CentralLakeRadius * 2f + 40f, 14f, MapLayout.CentralLakeRadius * 2f + 40f), 30f); // lago central
         }
 
         // Sistema de partículas de niebla flotando bajo sobre el agua. Muchas partículas

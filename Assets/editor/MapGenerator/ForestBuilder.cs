@@ -1233,8 +1233,8 @@ namespace FolkloreArchives.MapGen
             // el multiplicador de altura a 2.5–4.0 → pasto de ~1.6–2.6m. Ancho moderado
             // para que no engorde. Con la textura alpha real del pack se ve como briznas
             // altas, no bloques.
-            var grassGreen = lp ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 4.0f, 6.0f)    : PackDetail("Grass_B", 0.9f, 1.7f, 4.8f, 7.8f);
-            var grassDry   = lp ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 4.2f, 6.3f)    : PackDetail("GrassDry_B", 1.0f, 1.9f, 5.1f, 8.4f);
+            var grassGreen = lp ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 3.0f, 4.5f)    : PackDetail("Grass_B", 0.9f, 1.7f, 4.8f, 7.8f);
+            var grassDry   = lp ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 3.2f, 4.7f)    : PackDetail("GrassDry_B", 1.0f, 1.9f, 5.1f, 8.4f);
             // Pasto de caminos/senderos: BAJO (owner) — misma malla pero corta.
             var grassShort = lp ? LowPolyDetail(LP_HighGrass, 0.8f, 1.1f, 1.0f, 1.6f)    : PackDetail("Grass_B", 0.8f, 1.3f, 1.4f, 2.3f);
             var fern       = lp ? LowPolyDetail(LP_ShrubGreen, 0.9f, 1.15f, 0.9f, 1.15f): PackDetail("Fern_A", 0.9f, 1.6f, 1.1f, 1.8f);
