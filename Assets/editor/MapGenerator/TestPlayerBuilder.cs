@@ -32,20 +32,20 @@ namespace FolkloreArchives.MapGen
             player.transform.rotation = Quaternion.Euler(0f, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg, 0f);
 
             var cc = player.AddComponent<CharacterController>();
-            cc.height = 1.8f;
+            cc.height = 2.0f;                        // jugador de 2 m
             cc.radius = 0.35f;
-            cc.center = new Vector3(0f, 0.9f, 0f);
+            cc.center = new Vector3(0f, 1.0f, 0f);   // centro = altura/2 (pies en el suelo)
 
             var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.name = "Body";
             body.transform.SetParent(player.transform);
-            body.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-            body.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
+            body.transform.localPosition = new Vector3(0f, 1.0f, 0f);
+            body.transform.localScale = new Vector3(0.7f, 1.0f, 0.7f); // capsule primitive = 2u alto → 2 m
             Object.DestroyImmediate(body.GetComponent<Collider>());
 
             var camGO = new GameObject("Camera");
             camGO.transform.SetParent(player.transform);
-            camGO.transform.localPosition = new Vector3(0f, 1.80f, 0f);
+            camGO.transform.localPosition = new Vector3(0f, 1.85f, 0f); // ojos a 1.85 (15cm bajo la coronilla)
             var cam = camGO.AddComponent<Camera>();
             cam.tag = "MainCamera";
             cam.clearFlags = CameraClearFlags.Skybox; // dusk sky so trees silhouette against it
