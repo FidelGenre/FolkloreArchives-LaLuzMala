@@ -49,6 +49,7 @@
   <div class="tools">
     <button class="primary" id="add">+ Agregar punto</button>
     <button class="primary" id="addPath">+ Agregar camino</button>
+    <button class="primary" id="addRiver">+ Agregar río</button>
     <button id="del">Borrar seleccionado</button>
     <button id="copy">Copiar coords</button>
     <button class="primary" id="copyPlan">📋 Copiar plano (para Claude)</button>
@@ -241,6 +242,13 @@ document.getElementById('addPath').onclick=()=>{
   const cx=Math.round(view.x+view.w/2), cz=Math.round(H-(view.y+view.h/2));
   const id='p'+Date.now();
   paths.push({id, name:'CAMINO '+(paths.length+1), cls:'', pts:[{x:cx-140,z:cz},{x:cx,z:cz+70},{x:cx+140,z:cz}]});
+  sel={kind:'wp',pid:id,idx:1}; render();
+};
+document.getElementById('addRiver').onclick=()=>{
+  const cx=Math.round(view.x+view.w/2), cz=Math.round(H-(view.y+view.h/2));
+  const id='r'+Date.now();
+  // río vertical (norte-sur) editable con los puntitos amarillos
+  paths.push({id, name:'RÍO', cls:'river', pts:[{x:cx,z:cz+200},{x:cx+25,z:cz},{x:cx,z:cz-200}]});
   sel={kind:'wp',pid:id,idx:1}; render();
 };
 document.getElementById('del').onclick=()=>{
