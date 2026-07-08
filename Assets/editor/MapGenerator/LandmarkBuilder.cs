@@ -168,6 +168,33 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Label(cabin, "CABAÑA ABANDONADA", cabin.position + Vector3.up * 7f);
             Shack(cabin, t, MapLayout.AbandonedCabin.x, MapLayout.AbandonedCabin.y, 30f, clothMat, metalMat);
 
+            // Zonas del plano de dos lados (lado ESTE + escape):
+            var mirE = BuilderUtils.Group(poi, "LookoutEast", BuilderUtils.Ground(t, MapLayout.LookoutEast));
+            BuilderUtils.Label(mirE, "MIRADOR ESTE", mirE.position + Vector3.up * 7f);
+            var cabE = BuilderUtils.Group(poi, "CabinEast", BuilderUtils.Ground(t, MapLayout.CabinEast));
+            BuilderUtils.Label(cabE, "CABAÑA ESTE", cabE.position + Vector3.up * 7f);
+            Shack(cabE, t, MapLayout.CabinEast.x, MapLayout.CabinEast.y, 200f, clothMat, metalMat);
+            var esc = BuilderUtils.Group(poi, "EscapePoint", BuilderUtils.Ground(t, MapLayout.EscapePoint));
+            BuilderUtils.Label(esc, "ESCAPE", esc.position + Vector3.up * 8f);
+
+            // PUENTE PEATONAL sobre el cruce del río (vieja/campamento ↔ mirador este),
+            // así el cruce a pie no queda bloqueado por agua. Se apoya en la altura de
+            // las orillas (sampleada) para no flotar. Cruce ~ (598, 590).
+            {
+                float bx = 598f, bz = 590f, halfLen = 42f;
+                float wy = t.SampleHeight(new Vector3(bx - halfLen, 0f, bz));
+                float ey = t.SampleHeight(new Vector3(bx + halfLen, 0f, bz));
+                float deckY = Mathf.Max(wy, ey) + 0.15f;
+                var fb = BuilderUtils.Group(poi, "FootBridge", new Vector3(bx, deckY, bz));
+                BuilderUtils.Label(fb, "PUENTE PEATONAL", new Vector3(bx, deckY + 4f, bz));
+                BuilderUtils.Prim(PrimitiveType.Cube, "Deck", fb, new Vector3(bx, deckY, bz),
+                    new Vector3(halfLen * 2f, 0.4f, 4.5f), woodMat);
+                BuilderUtils.Prim(PrimitiveType.Cube, "RailN", fb, new Vector3(bx, deckY + 0.65f, bz + 2.1f),
+                    new Vector3(halfLen * 2f, 1.1f, 0.15f), woodMat);
+                BuilderUtils.Prim(PrimitiveType.Cube, "RailS", fb, new Vector3(bx, deckY + 0.65f, bz - 2.1f),
+                    new Vector3(halfLen * 2f, 1.1f, 0.15f), woodMat);
+            }
+
             // a warm lantern at the player's campsite so it reads as a safe, lit haven
             WarmLight(camp, BuilderUtils.Ground(t, MapLayout.Campsite.x - 3f, MapLayout.Campsite.y + 6f) + Vector3.up * 1.6f, 10f, 2.2f);
 
