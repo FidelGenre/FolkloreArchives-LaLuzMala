@@ -107,7 +107,7 @@ let nodes = [
   // exploración: cabaña + mirador de cada lado
   {id:'cabW',  name:'CABAÑA OESTE',             varName:'AbandonedCabin',   x:200, z:820},
   {id:'mirW',  name:'MIRADOR OESTE',            varName:'LakeLookout',      x:510, z:730},
-  {id:'cabE',  name:'CABAÑA ESTE',              varName:'CabinEast',        x:1240,z:810},
+  {id:'cabE',  name:'CABAÑA ESTE',              varName:'CabinEast',        x:880, z:340},
   {id:'mirE',  name:'MIRADOR ESTE',             varName:'LookoutEast',      x:710, z:608},
 ];
 // Caminos: cada pt es {node:'id'} (sigue a esa zona) o {x,z} (waypoint libre editable)
@@ -126,13 +126,12 @@ let paths = [
   {id:'gc',  name:'Tumba–Delincuentes', cls:'', pts:[{node:'grave'},{x:900,z:490},{node:'crim'}]},
   {id:'cs',  name:'Delincuentes–Secundario', cls:'', pts:[{node:'crim'},{x:1030,z:580},{node:'sec'}]},
   {id:'cr',  name:'Rehenes', cls:'', pts:[{node:'crim'},{node:'reh'}]},
-  {id:'c15', name:'CAMINO 15', cls:'', pts:[{node:'grave'},{x:760,z:300},{node:'escape'}]},
+  {id:'c15', name:'CAMINO 15', cls:'', pts:[{node:'grave'},{node:'cabE'},{node:'escape'}]},
   {id:'c16e',name:'CAMINO 16', cls:'', pts:[{node:'crim'},{x:960,z:230},{node:'escape'}]},
   {id:'c13', name:'CAMINO 13', cls:'', pts:[{node:'wrong'},{x:200,z:130},{node:'desvio'}]},
   // senderos a cabañas y miradores
   {id:'tCabW', name:'Sendero cabaña O', cls:'dirt', pts:[{node:'lakemt'},{x:165,z:740},{node:'cabW'}]},
   {id:'tMirW', name:'Subida mirador O', cls:'dirt', pts:[{node:'vieja'},{x:450,z:700},{node:'mirW'}]},
-  {id:'tCabE', name:'Sendero cabaña E', cls:'dirt', pts:[{node:'crim'},{x:1200,z:640},{node:'cabE'}]},
   {id:'tMirE', name:'Subida mirador E', cls:'dirt', pts:[{node:'sec'},{x:1030,z:715},{node:'mirE'}]},
 ];
 
