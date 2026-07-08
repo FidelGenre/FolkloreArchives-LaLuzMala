@@ -1,0 +1,108 @@
+# ============================================================
+#  Unity project .gitignore — LA LUZ MALA
+# ============================================================
+
+# Carpetas generadas por Unity (se regeneran solas; NO versionar)
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Asset meta-data solo debe existir si el asset existe
+!/[Aa]ssets/**/*.meta
+
+# Autogenerados
+/[Aa]ssets/[Aa]ssetStoreTools*
+/[Aa]ssets/[Pp]lugins/[Ee]ditor/JetBrains*
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity3D generated meta files
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Unity3D generated file on crash reports
+sysinfo.txt
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
+# …pero SÍ versionar los .unitypackage que trae el asset pack dentro de Assets
+# (ej. PT_Nature_Free_URP_17 — lo usamos para importar los shaders URP)
+!/[Aa]ssets/**/*.unitypackage
+
+# Crashlytics generated file
+crashlytics-build.properties
+
+# Packed Addressables
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+
+# Temporary auto-generated Android Assets
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Salida del generador procedural de mapa (se regenera con
+# Tools > Folklore Archives > Generate Greybox Map). Enorme y cambia en cada
+# generación → no versionar. Al clonar, regenerás y listo.
+/[Aa]ssets/_FolkloreArchives/[Gg]enerated/
+
+# Asset abandonado y pesado (>90MB) — reemplazado por Conifers BOTD / Polytope.
+# GitHub rechaza archivos >100MB; sin git-LFS esto rompería el push.
+/[Aa]ssets/ExternalAssets/ForestPack/ForestPack.fbx
+
+# Build compilado del juego (output, no fuente — se recompila desde Unity)
+/build and run/
+/[Bb]uild and [Rr]un/
+
+# Backups de herramientas (EasyRoads splatmap.backup, etc.)
+*.backup
+
+# ============================================================
+#  CODE-ONLY: versiono solo MI código + config del proyecto.
+#  Los asset packs de terceros (Asset Store) NO se versionan —
+#  reimportarlos según el README.
+# ============================================================
+# Ignoro todo Assets…
+/[Aa]ssets/*
+# …salvo mis carpetas de código/config (y sus .meta)
+!/[Aa]ssets/Scripts/
+!/[Aa]ssets/Scripts.meta
+!/[Aa]ssets/editor/
+!/[Aa]ssets/editor.meta
+!/[Aa]ssets/Editor/
+!/[Aa]ssets/Editor.meta
+!/[Aa]ssets/Settings/
+!/[Aa]ssets/Settings.meta
+
+# Carpetas/paquetes de terceros fuera de Assets
+/EasyRoads3Dv3/
+/_ConfigBackups/
+/.plastic/
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vs/
+.vscode/
