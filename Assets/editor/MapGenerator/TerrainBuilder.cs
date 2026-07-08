@@ -162,7 +162,14 @@ namespace FolkloreArchives.MapGen
             float lotDZ = Mathf.Max(0f, Mathf.Max(MapLayout.OldLadyLotMin.y - wz, wz - MapLayout.OldLadyLotMax.y));
             float lotDist = Mathf.Sqrt(lotDX * lotDX + lotDZ * lotDZ);   // 0 = dentro del lote
             if (lotDist < 12f)
-                a = Mathf.Lerp(MapLayout.OldLadyLotHeight, a, Mathf.SmoothStep(0f, 1f, lotDist / 12f));
+            {
+                // altura natural del terreno justo AFUERA del lote (fuera del radio de
+                // aplanado, así no recursiona) → la casa se asienta sola donde esté la
+                // vieja, sin depender de una constante hardcodeada.
+                float lotGrade = HeightAt(MapLayout.OldLadyLotMax.x + 20f,
+                                          (MapLayout.OldLadyLotMin.y + MapLayout.OldLadyLotMax.y) * 0.5f);
+                a = Mathf.Lerp(lotGrade, a, Mathf.SmoothStep(0f, 1f, lotDist / 12f));
+            }
 
             return a;
         }
