@@ -45,7 +45,7 @@ namespace FolkloreArchives.MapGen
 
             var camGO = new GameObject("Camera");
             camGO.transform.SetParent(player.transform);
-            camGO.transform.localPosition = new Vector3(0f, 1.85f, 0f); // ojos a 1.85 (15cm bajo la coronilla)
+            camGO.transform.localPosition = new Vector3(0f, 1.90f, 0f); // ojos a 1.90
             var cam = camGO.AddComponent<Camera>();
             cam.tag = "MainCamera";
             cam.clearFlags = CameraClearFlags.Skybox; // dusk sky so trees silhouette against it
