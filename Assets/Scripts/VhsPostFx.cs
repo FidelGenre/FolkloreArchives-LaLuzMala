@@ -70,13 +70,13 @@ namespace FolkloreArchives
             var color = AddOrGet<ColorAdjustments>(profile);
             color.saturation.Override(-12f);       // más lavado/viejo
             color.contrast.Override(-4f);
-            color.postExposure.Override(-0.25f);   // menos oscuro (de noche no se veía nada)
+            color.postExposure.Override(-0.42f);   // oscuro pero navegable (equilibrio)
             color.colorFilter.Override(new Color(1.0f, 0.93f, 0.78f)); // tinte ÁMBAR/amarillento
 
             // ── Tirar los BLANCOS hacia abajo específicamente (cielo/niebla) sin
             //    oscurecer tanto las sombras: baja la ganancia de las altas.
             var lgg = AddOrGet<LiftGammaGain>(profile);
-            lgg.lift.Override(new Vector4(1f, 1f, 1f, 0.055f)); // LEVANTA los negros → penumbra visible (no se aplasta a negro con el posterizado)
+            lgg.lift.Override(new Vector4(1f, 1f, 1f, 0.018f)); // levanta los negros MUY poco (no aplastar a negro, sin lavar)
             lgg.gamma.Override(new Vector4(1f, 1f, 1f, 0f));
             lgg.gain.Override(new Vector4(1f, 1f, 1f, -0.18f));  // altas un poco más bajas
 
