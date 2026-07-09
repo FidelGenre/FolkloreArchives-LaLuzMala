@@ -52,23 +52,22 @@ namespace FolkloreArchives.MapGen
                 float z = cz + Mathf.Sin(ang) * rz * rr;
                 var pos = new Vector2(x, z);
 
-                // Ríos: boca abierta (salteo cualquiera cerca del agua del río).
+                // Ríos y RUTA: corredor/boca abiertos → salteo cualquiera cerca (no las
+                // quiero pegadas a la carretera).
                 if (BuilderUtils.DistToRivers(pos) < 100f) continue;
-                // Ruta/túnel y lago: EMPUJO la montaña hacia afuera hasta despejar (así
-                // quedan DETRÁS, no encima). La ruta necesita bastante margen.
+                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 240f) continue;
+                // Lago: EMPUJO la montaña hacia afuera hasta despejar (queda DETRÁS del
+                // lago, orilla lejana, no encima).
                 int guard = 0;
-                while ((BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 190f ||
-                        Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear) && guard++ < 8)
+                while (Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear && guard++ < 8)
                 {
                     rr += 0.14f;
                     x = cx + Mathf.Cos(ang) * rx * rr;
                     z = cz + Mathf.Sin(ang) * rz * rr;
                     pos = new Vector2(x, z);
                 }
-                // Si aun así sigue pegada a la ruta (ej. la boca oeste, donde la ruta se
-                // va del mapa) o al lago → salteo (valle abierto).
-                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 140f) continue;
                 if (Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear) continue;
+                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 240f) continue; // por si el empuje la acercó
 
                 var pf = prefabs[Random.Range(0, prefabs.Count)];
                 var m = (GameObject)PrefabUtility.InstantiatePrefab(pf, group.transform);
