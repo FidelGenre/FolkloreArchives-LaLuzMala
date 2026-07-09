@@ -76,7 +76,7 @@ namespace FolkloreArchives
             // ── Tirar los BLANCOS hacia abajo específicamente (cielo/niebla) sin
             //    oscurecer tanto las sombras: baja la ganancia de las altas.
             var lgg = AddOrGet<LiftGammaGain>(profile);
-            lgg.lift.Override(new Vector4(1f, 1f, 1f, 0.018f)); // levanta los negros MUY poco (no aplastar a negro, sin lavar)
+            lgg.lift.Override(new Vector4(1f, 1f, 1f, 0f));    // sin lift (ya no hay posterizado que aplaste)
             lgg.gamma.Override(new Vector4(1f, 1f, 1f, 0f));
             lgg.gain.Override(new Vector4(1f, 1f, 1f, -0.18f));  // altas un poco más bajas
 
@@ -87,9 +87,9 @@ namespace FolkloreArchives
 
             // ── Ruido fino de sensor barato (no el grano grueso de cinta) ─────────
             var grain = AddOrGet<FilmGrain>(profile);
-            grain.type.Override(FilmGrainLookup.Medium1); // grano más marcado (VHS)
-            grain.intensity.Override(0.38f);
-            grain.response.Override(0.8f);
+            grain.type.Override(FilmGrainLookup.Thin1);   // grano fino y sutil (no estática)
+            grain.intensity.Override(0.18f);
+            grain.response.Override(0.75f);
 
             // ── Viñeta (un poco más marcada para el look viejo) ──────────────────
             var vig = AddOrGet<Vignette>(profile);
