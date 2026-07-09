@@ -34,8 +34,12 @@ namespace FolkloreArchives
                 vol.sharedProfile = profile;
             }
 
-            // ── Apagar efectos que daban el look VHS ─────────────────────────────
-            Disable<SplitToning>(profile);
+            // ── Split toning CÁLIDO (FtF viejo/amarillento): altas ámbar, sombras
+            //    apenas cálidas → tinte de video viejo.
+            var split = AddOrGet<SplitToning>(profile);
+            split.balance.Override(12f);
+            split.shadows.Override(new Color(0.42f, 0.40f, 0.34f));
+            split.highlights.Override(new Color(0.85f, 0.72f, 0.42f));
 
             // ── Distorsión de lente leve (lente barata de celular) ───────────────
             //  Es el efecto principal que pediste: "levemente distorsionada".
@@ -46,7 +50,7 @@ namespace FolkloreArchives
             lens.scale.Override(1.0f);
 
             // ── Aberración cromática SUTIL solo en los bordes (radial, no RGB split)
-            AddOrGet<ChromaticAberration>(profile).intensity.Override(0.16f);
+            AddOrGet<ChromaticAberration>(profile).intensity.Override(0.24f); // fringe VHS un toque más
 
             // ── Motion blur sutil (toque cinematográfico, sin marear) ────────────
             var mb = AddOrGet<MotionBlur>(profile);
@@ -56,18 +60,18 @@ namespace FolkloreArchives
 
             // ── Bloom apagado (el halo era lo que más lavaba a blanco) ───────────
             var bloom = AddOrGet<Bloom>(profile);
-            bloom.threshold.Override(2.0f);   // umbral altísimo → prácticamente no brilla nada
-            bloom.intensity.Override(0.05f);
-            bloom.scatter.Override(0.5f);
-            bloom.tint.Override(Color.white);
+            bloom.threshold.Override(1.1f);   // FtF: glow suave (el "compositor pass with bloom")
+            bloom.intensity.Override(0.22f);
+            bloom.scatter.Override(0.6f);
+            bloom.tint.Override(new Color(1f, 0.93f, 0.78f)); // halo cálido
 
             // ── Color: bajo la exposición y COMPRIMO las altas (contraste negativo)
             //    para que el cielo/niebla dejen de reventar a blanco.
             var color = AddOrGet<ColorAdjustments>(profile);
-            color.saturation.Override(-6f);
-            color.contrast.Override(-6f);          // negativo = baja las zonas claras
-            color.postExposure.Override(-0.6f);    // oscurece el conjunto
-            color.colorFilter.Override(Color.white);
+            color.saturation.Override(-12f);       // más lavado/viejo
+            color.contrast.Override(-4f);
+            color.postExposure.Override(-0.55f);
+            color.colorFilter.Override(new Color(1.0f, 0.93f, 0.78f)); // tinte ÁMBAR/amarillento
 
             // ── Tirar los BLANCOS hacia abajo específicamente (cielo/niebla) sin
             //    oscurecer tanto las sombras: baja la ganancia de las altas.
@@ -78,23 +82,22 @@ namespace FolkloreArchives
 
             // ── Balance de blancos apenas cálido (casi neutro) ───────────────────
             var wb = AddOrGet<WhiteBalance>(profile);
-            wb.temperature.Override(5f);
-            wb.tint.Override(0f);
+            wb.temperature.Override(22f);  // cálido → amarillo/viejo
+            wb.tint.Override(6f);          // levísimo verde → VHS "enfermizo"
 
             // ── Ruido fino de sensor barato (no el grano grueso de cinta) ─────────
             var grain = AddOrGet<FilmGrain>(profile);
-            grain.type.Override(FilmGrainLookup.Thin1);
-            grain.intensity.Override(0.22f);
-            grain.response.Override(0.7f);
+            grain.type.Override(FilmGrainLookup.Medium1); // grano más marcado (VHS)
+            grain.intensity.Override(0.38f);
+            grain.response.Override(0.8f);
 
-            // ── Viñeta suave ─────────────────────────────────────────────────────
+            // ── Viñeta (un poco más marcada para el look viejo) ──────────────────
             var vig = AddOrGet<Vignette>(profile);
-            vig.intensity.Override(0.2f);
-            vig.smoothness.Override(0.65f);
+            vig.intensity.Override(0.3f);
+            vig.smoothness.Override(0.7f);
 
-            Debug.Log("<color=cyan>Look 'cámara digital berreta' aplicado.</color> " +
-                      "Post Processing ON en el Game view. " +
-                      "Revertir: _ConfigBackups/vhs_2026-07-07/RESTORE.txt");
+            Debug.Log("<color=cyan>Look Fears-to-Fathom (VHS cálido/amarillento) aplicado.</color> " +
+                      "Post Processing ON en el Game view.");
         }
 
         static T AddOrGet<T>(VolumeProfile p) where T : VolumeComponent
