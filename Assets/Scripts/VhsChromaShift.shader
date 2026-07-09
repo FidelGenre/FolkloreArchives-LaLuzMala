@@ -73,13 +73,17 @@ Shader "Hidden/Folklore/VhsChromaShift"
                     col *= 1.0 - _ScanlineStrength * s;
                 }
 
-                // PSX: DITHER Bayer + POSTERIZAR (bandas de color retro PS1/PS2)
+                // PSX: DITHER Bayer + POSTERIZAR (bandas de color retro PS1/PS2).
+                // Se hace en espacio PERCEPTUAL (sqrt) para que los oscuros tengan más
+                // niveles y NO se aplasten a negro (de noche si no, no se ve nada).
                 if (_PosterizeLevels > 1.5)
                 {
                     int2 pix = int2(fmod(input.positionCS.xy, 4.0)); // coord de pixel en pantalla
                     float d = _BayerP[pix.y * 4 + pix.x] - 0.5;      // -0.5 .. +0.5
-                    col = saturate(col + d * (_DitherStrength / _PosterizeLevels));
-                    col = floor(col * _PosterizeLevels + 0.5) / _PosterizeLevels;
+                    half3 p = sqrt(saturate(col));
+                    p = saturate(p + d * (_DitherStrength / _PosterizeLevels));
+                    p = floor(p * _PosterizeLevels + 0.5) / _PosterizeLevels;
+                    col = p * p;
                 }
 
                 return half4(col, 1.0);
