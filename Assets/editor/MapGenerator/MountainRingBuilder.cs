@@ -15,8 +15,8 @@ namespace FolkloreArchives.MapGen
     public static class MountainRingBuilder
     {
         const string Dir = "Assets/HQP STUDIOS/Rocks and Terrains Pack - Low Poly/Prefabs/Terrains/Mountains/LOD/";
-        const int    Count      = 48;    // cuántas montañas en el anillo
-        const float  RingMargin = 350f;  // metros más allá del borde del mapa (alejadas del área jugable)
+        const int    Count      = 30;    // cuántas montañas en el anillo (menos = más FPS)
+        const float  RingMargin = 160f;  // metros más allá del borde del mapa
         const float  BaseY      = -12f;  // base (un poco hundida para que no flote)
         const float  ScaleMin   = 3.5f;  // ← ancho/base (subí/bajá si quedan chicas/grandes)
         const float  ScaleMax   = 6.0f;
@@ -76,6 +76,9 @@ namespace FolkloreArchives.MapGen
                 float s = Random.Range(ScaleMin, ScaleMax);
                 m.transform.localScale = new Vector3(s, s * Random.Range(HeightMin, HeightMax), s); // Y más alto = picos altos
                 m.isStatic = true;
+                // sin sombras (decorado lejano) → ahorra en Scene view / si entran en vista
+                foreach (var r in m.GetComponentsInChildren<Renderer>())
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 placed++;
             }
             Debug.Log("MountainRing: " + placed + " montañas low-poly alrededor del mapa (con exclusiones ruta/lago/río).");
