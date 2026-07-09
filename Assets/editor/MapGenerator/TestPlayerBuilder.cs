@@ -65,6 +65,14 @@ namespace FolkloreArchives.MapGen
             camGO.AddComponent<FolkloreArchives.VhsPostFx>();  // FtF-style filmic grade: grain + bloom + subtle CA + vignette
             // no scanlines - Fears to Fathom is a clean sharp image, not a scanline CRT look
 
+            // Cámara de FONDO: dibuja el anillo de montañas (capa "Backdrop") detrás del
+            // mundo y SIN niebla, para que se vean en el horizonte sobre el cielo aunque
+            // la niebla tape lo cercano. BackdropCamera.Start configura ambas cámaras.
+            var bgCamGO = new GameObject("BackdropCamera");
+            bgCamGO.transform.SetParent(camGO.transform, false);
+            bgCamGO.AddComponent<Camera>().tag = "Untagged";
+            bgCamGO.AddComponent<FolkloreArchives.BackdropCamera>();
+
             // Flashlight: warm YELLOW beam (Fears-to-Fathom lantern look). More
             // saturated than before because the VHS grade (desaturate + teal shadows)
             // was washing the yellow out toward white.

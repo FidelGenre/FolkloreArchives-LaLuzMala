@@ -35,6 +35,8 @@ namespace FolkloreArchives.MapGen
 
             var group = new GameObject("MountainRing");
             group.transform.SetParent(parent);
+            int backdropLayer = LayerMask.NameToLayer("Backdrop");
+            if (backdropLayer < 0) backdropLayer = 6;
 
             float cx = MapLayout.MapSizeX * 0.5f, cz = MapLayout.MapSize * 0.5f;
             float rx = MapLayout.MapSizeX * 0.5f + RingMargin;
@@ -79,9 +81,16 @@ namespace FolkloreArchives.MapGen
                 // sin sombras (decorado lejano) → ahorra en Scene view / si entran en vista
                 foreach (var r in m.GetComponentsInChildren<Renderer>())
                     r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                SetLayerRecursive(m, backdropLayer); // capa "Backdrop" → la dibuja la cámara de fondo
                 placed++;
             }
             Debug.Log("MountainRing: " + placed + " montañas low-poly alrededor del mapa (con exclusiones ruta/lago/río).");
+        }
+
+        static void SetLayerRecursive(GameObject go, int layer)
+        {
+            go.layer = layer;
+            foreach (Transform c in go.transform) SetLayerRecursive(c.gameObject, layer);
         }
     }
 }
