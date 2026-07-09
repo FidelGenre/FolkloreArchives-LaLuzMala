@@ -55,7 +55,7 @@ namespace FolkloreArchives.MapGen
                 // Ríos y RUTA: corredor/boca abiertos → salteo cualquiera cerca (no las
                 // quiero pegadas a la carretera).
                 if (BuilderUtils.DistToRivers(pos) < 100f) continue;
-                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 240f) continue;
+                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 380f) continue;
                 // Lago: EMPUJO la montaña hacia afuera hasta despejar (queda DETRÁS del
                 // lago, orilla lejana, no encima).
                 int guard = 0;
@@ -67,7 +67,7 @@ namespace FolkloreArchives.MapGen
                     pos = new Vector2(x, z);
                 }
                 if (Vector2.Distance(pos, MapLayout.CentralLakeCenter) < lakeClear) continue;
-                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 240f) continue; // por si el empuje la acercó
+                if (BuilderUtils.DistToPolyline(pos, MapLayout.PavedRoute) < 380f) continue; // por si el empuje la acercó
 
                 var pf = prefabs[Random.Range(0, prefabs.Count)];
                 var m = (GameObject)PrefabUtility.InstantiatePrefab(pf, group.transform);
