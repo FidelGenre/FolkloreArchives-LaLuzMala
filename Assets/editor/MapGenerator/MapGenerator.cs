@@ -75,7 +75,8 @@ namespace FolkloreArchives.MapGen
             BridgeBuilder.Build(root.transform, terrain);   // steel-girder bridge over the water crossing
             TunnelBuilder.Build(root.transform, terrain);   // west-end drivable tunnel (game start)
             LandmarkBuilder.Build(root.transform, terrain);
-            MountainRingBuilder.Build(root.transform, terrain); // anillo de montañas low-poly (horizonte)
+            SilhouetteMountainBuilder.Build(root.transform); // montañas de fondo (silueta pintada, no reales)
+            // MountainRingBuilder.Build(root.transform, terrain); // (montañas 3D reales HQP — reemplazadas por la silueta)
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
             StoryTriggerBuilder.Build(root.transform, terrain);
             TestPlayerBuilder.Build(root.transform, terrain);
