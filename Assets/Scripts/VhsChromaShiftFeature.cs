@@ -33,6 +33,12 @@ namespace FolkloreArchives
         [Tooltip("Per-scanline horizontal wobble/jitter (UV units). 0 = stable image.")]
         [Range(0f, 0.01f)] public float jitter = 0.0015f;
 
+        [Tooltip("PSX: niveles de color por canal (bandas retro). 0/1 = OFF. 24-40 = look PS1/PS2.")]
+        [Range(0f, 64f)] public float posterizeLevels = 32f;
+
+        [Tooltip("PSX: fuerza del dither Bayer (patrón de puntitos que suaviza las bandas). 0 = off.")]
+        [Range(0f, 1.5f)] public float ditherStrength = 0.8f;
+
         [Tooltip("When to run, relative to the rest of the frame.")]
         public RenderPassEvent injectionPoint = RenderPassEvent.AfterRenderingPostProcessing;
 
@@ -62,6 +68,8 @@ namespace FolkloreArchives
             _material.SetFloat("_ScanlineStrength", scanlineStrength);
             _material.SetFloat("_ScanlineCount", scanlineCount);
             _material.SetFloat("_Jitter", jitter);
+            _material.SetFloat("_PosterizeLevels", posterizeLevels);
+            _material.SetFloat("_DitherStrength", ditherStrength);
             renderer.EnqueuePass(_pass);
         }
 
