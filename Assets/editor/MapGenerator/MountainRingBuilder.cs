@@ -45,7 +45,7 @@ namespace FolkloreArchives.MapGen
             for (int i = 0; i < Count; i++)
             {
                 float ang = (i / (float)Count) * Mathf.PI * 2f + Random.Range(-0.04f, 0.04f);
-                float rr  = Random.Range(0.97f, 1.15f); // jitter radial → no un óvalo perfecto
+                float rr  = Random.Range(0.99f, 1.04f); // casi uniforme → pared pareja (todas a la misma lejanía)
                 float x = cx + Mathf.Cos(ang) * rx * rr;
                 float z = cz + Mathf.Sin(ang) * rz * rr;
                 var pos = new Vector2(x, z);
