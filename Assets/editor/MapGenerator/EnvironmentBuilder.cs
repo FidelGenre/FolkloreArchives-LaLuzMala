@@ -238,6 +238,9 @@ namespace FolkloreArchives.MapGen
         //  Cold Night (azul oscuro). Cambiá la ruta acá para probar otro cielo de AllSky.
         public static Material DaySkybox()
         {
+            // 1º: skybox de montañas generado por SkyboxMountainBaker (si se corrió).
+            var mtn = AssetDatabase.LoadAssetAtPath<Material>(SkyboxMountainBaker.MatPath);
+            if (mtn != null) return mtn;
             var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Epic_GloriousPink/Epic_GloriousPink.mat");
             if (sky != null) return sky;
             return AssetDatabase.LoadAssetAtPath<Material>(MapLayout.GeneratedFolder + "/mat_daysky.mat") ?? BuildDaySky();
