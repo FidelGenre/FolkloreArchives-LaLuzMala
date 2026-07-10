@@ -27,30 +27,28 @@ namespace FolkloreArchives.MapGen
         // pintan ENCIMA de estos cielos, así no los reemplazan (antes el baker pintaba
         // su propio degradé y por eso pisaba al AllSky).
         // OJO con los nombres del pack, engañan:
-        //   "Overcast Low" → nublado gris/brumoso            = nuestro DÍA
-        //   "Cold Sunset"  → cielo AZUL con nubes y sol bajo = nuestro ATARDECER
-        //   "Cold Night"   → azul oscuro                     = NOCHE
-        // Descartados: "Deep Dusk" y "Epic_GloriousPink" (el naranja/rojo, no lo quiere).
-        const string BaseSkyDay   = "Assets/AllSkyFree/Overcast Low/AllSky_Overcast4_Low.png";
-        const string BaseSkyDusk  = "Assets/AllSkyFree/Cold Sunset/Cold Sunset Equirect.png";
+        //   "Cold Sunset"      → azul con nubes deshilachadas y sol grande = nuestro DÍA
+        //   "Epic_BlueSunset"  → azul profundo, cúmulos, sol chico bajo    = ATARDECER
+        //   "Cold Night"       → azul oscuro                               = NOCHE
+        // Descartados: "Deep Dusk" y "Epic_GloriousPink" (naranja/rojo) y "Overcast Low"
+        // (el gris no tiene color propio: el grade VHS ámbar se lo comía y salía naranja).
+        const string BaseSkyDay   = "Assets/AllSkyFree/Cold Sunset/Cold Sunset Equirect.png";
+        const string BaseSkyDusk  = "Assets/AllSkyFree/Epic_BlueSunset/Epic_BlueSunset_EquiRect_flat.png";
         const string BaseSkyNight = "Assets/AllSkyFree/Cold Night/Cold Night Equirect.png";
 
         // Exposición del material Skybox/Panoramic por fase (1 = tal cual el archivo).
-        // Los equirect de AllSky vienen bastante oscuros; el Overcast necesita bastante
-        // levante para leerse como el blanco brumoso de las fotos del store.
-        const float DayExposure   = 2.1f;
+        const float DayExposure   = 1.15f;
         const float DuskExposure  = 1.0f;
         const float NightExposure = 1.0f;
 
         // ── colores tuneables ──
-        // DÍA (nublado): OJO, estos valores son PRE-exposición y el material multiplica
-        // todo por DayExposure (2.1). Por eso van bajos. Bruma alta: en un día nublado
-        // la cadena lejana casi se funde con el cielo.
-        static readonly Color MtnFar   = new Color(0.19f, 0.20f, 0.24f); // cadena lejana
-        static readonly Color MtnNear  = new Color(0.095f, 0.10f, 0.13f); // cadena cercana (más oscura)
-        static readonly Color Ground   = new Color(0.048f, 0.048f, 0.060f); // bajo el horizonte
-        const float FarHaze  = 0.68f;   // cuánto se mezcla la cadena lejana con el cielo (bruma)
-        const float NearHaze = 0.22f;   // la cercana casi no se mezcla
+        // DÍA: montañas azuladas por perspectiva atmosférica. Son valores PRE-exposición
+        // (el material multiplica todo por DayExposure).
+        static readonly Color MtnFar   = new Color(0.36f, 0.38f, 0.50f); // cadena lejana
+        static readonly Color MtnNear  = new Color(0.18f, 0.19f, 0.28f); // cadena cercana (más oscura)
+        static readonly Color Ground   = new Color(0.090f, 0.090f, 0.125f); // bajo el horizonte
+        const float FarHaze  = 0.55f;   // cuánto se mezcla la cadena lejana con el cielo (bruma)
+        const float NearHaze = 0.18f;   // la cercana casi no se mezcla
 
         // ATARDECER (Cold Sunset, cielo azul con sol bajo): montañas azuladas por
         // perspectiva atmosférica, un poco más oscuras que las del día.

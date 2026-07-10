@@ -47,19 +47,19 @@ namespace FolkloreArchives
             switch (_phase)
             {
                 case Phase.Day:
-                    // Día NUBLADO (Overcast). La luz de un cielo cubierto es difusa: el
-                    // sol pierde fuerza y gana el ambiente, y las sombras se ablandan.
-                    // Un sol duro y ámbar contra un cielo gris se lee como error.
+                    // Día de cielo azul con nubes (Cold Sunset). Sol pleno, sombras duras.
+                    // La niebla va gris-azulada, NO rosada: un tinte cálido acá se suma al
+                    // grade VHS ámbar y el día entero se va a naranja.
                     if (sun != null)
                     {
-                        sun.intensity = 0.62f;
-                        sun.color     = new Color(0.94f, 0.94f, 0.96f);
-                        sun.shadows   = LightShadows.Soft;
+                        sun.intensity = 1.0f;
+                        sun.color     = new Color(1f, 0.96f, 0.88f);
+                        sun.shadows   = LightShadows.Hard;
                     }
                     if (daySkybox != null) RenderSettings.skybox = daySkybox;
-                    RenderSettings.ambientLight = new Color(0.38f, 0.38f, 0.42f);
+                    RenderSettings.ambientLight = new Color(0.30f, 0.30f, 0.36f);
                     RenderSettings.fogMode  = FogMode.Linear;
-                    RenderSettings.fogColor = new Color(0.70f, 0.70f, 0.73f);
+                    RenderSettings.fogColor = new Color(0.62f, 0.64f, 0.70f);
                     Shader.SetGlobalColor("_GrassTintMul", new Color(0.34f, 0.42f, 0.20f)); // verde oscuro/quemado
                     break;
 
