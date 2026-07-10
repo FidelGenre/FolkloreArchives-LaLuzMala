@@ -49,16 +49,16 @@ namespace FolkloreArchives.MapGen
         static readonly Color MtnFar   = new Color(0.36f, 0.38f, 0.50f); // cadena lejana
         static readonly Color MtnNear  = new Color(0.18f, 0.19f, 0.28f); // cadena cercana (más oscura)
         static readonly Color Ground   = new Color(0.090f, 0.090f, 0.125f); // bajo el horizonte
-        const float FarHaze  = 0.55f;   // cuánto se mezcla la cadena lejana con el cielo (bruma)
-        const float NearHaze = 0.18f;   // la cercana casi no se mezcla
+        const float FarHaze  = 0.66f;   // cuánto se mezcla la cadena lejana con el cielo (bruma)
+        const float NearHaze = 0.10f;   // la cercana casi no se mezcla → silueta oscura
 
         // ATARDECER (Cold Sunset, cielo azul con sol bajo): montañas azuladas por
         // perspectiva atmosférica, un poco más oscuras que las del día.
         static readonly Color DuskMtnFar  = new Color(0.34f, 0.36f, 0.48f);
         static readonly Color DuskMtnNear = new Color(0.16f, 0.17f, 0.26f);
         static readonly Color DuskGround  = new Color(0.075f, 0.075f, 0.105f);
-        const float DuskFarHaze  = 0.55f;
-        const float DuskNearHaze = 0.18f;
+        const float DuskFarHaze  = 0.62f;
+        const float DuskNearHaze = 0.11f;
 
         // NOCHE: siluetas casi negras, apenas azuladas. Menos bruma (de noche el aire
         // no dispersa luz), si no las montañas se "comen" las estrellas del cielo.
@@ -73,8 +73,11 @@ namespace FolkloreArchives.MapGen
         // O sea: elevación_máx ≈ (base + amplitud) * 180°. Con los valores de abajo las
         // cimas llegan a ~23°, que es lo que hace falta para que ASOMEN por encima de
         // los pinos (un pino de 12m a 20m tapa ~31°, así que con 15° no se veían).
-        const float FarBase  = 0.030f, FarAmp  = 0.095f;  // cadena lejana → cima ≈ 0.625 (~22.5°)
-        const float NearBase = 0.000f, NearAmp = 0.130f;  // cadena cercana → cima ≈ 0.630 (~23.4°)
+        // Las dos cadenas tienen que estar CLARAMENTE separadas en altura. Si comparten
+        // rango (antes: lejana 0.53-0.625, cercana 0.50-0.630) la lejana asoma justo
+        // detrás de la cercana y se lee como un calco/eco, no como profundidad.
+        const float FarBase  = 0.055f, FarAmp  = 0.115f;  // lejana: alta y hacia atrás → cima ≈ 0.670 (~30°)
+        const float NearBase = 0.000f, NearAmp = 0.075f;  // cercana: baja y oscura     → cima ≈ 0.575 (~13.5°)
 
         [MenuItem("Tools/Folklore Archives/Generar Skybox de Montañas")]
         public static void Bake()
