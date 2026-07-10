@@ -251,10 +251,12 @@ namespace FolkloreArchives.MapGen
         }
         public static Material NightSkybox()
         {
-            // 1º: skybox de noche PSX (StarkCrafts).
-            var psx = PanoramicSkybox("Assets/StarkCrafts/PSX_Nightsky_HDRI/PSX_NIGHTSKY.hdr",
-                                      "Assets/Settings/PSX_NightSky.mat");
-            if (psx != null) return psx;
+            // HDRI de noche PSX (StarkCrafts) DESACTIVADO: el dueño prefiere el cielo
+            // nocturno de antes (AllSky Free "Cold Night"). El PSX de día sigue activo.
+            // Para volver al PSX de noche, descomentá estas tres líneas:
+            //   var psx = PanoramicSkybox("Assets/StarkCrafts/PSX_Nightsky_HDRI/PSX_NIGHTSKY.hdr",
+            //                             "Assets/Settings/PSX_NightSky.mat");
+            //   if (psx != null) return psx;
             var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Cold Night/Cold Night.mat");
             if (sky != null) return sky;
             var proc = AssetDatabase.LoadAssetAtPath<Material>(MapLayout.GeneratedFolder + "/mat_nightsky.mat");
