@@ -53,8 +53,9 @@ namespace FolkloreArchives.Net
             try
             {
                 var options = new SessionOptions { MaxPlayers = maxPlayers }
-                    .WithDistributedAuthorityNetwork();
+                    .WithRelayNetwork();   // host-client (el que crea = host)
                 _session = await MultiplayerService.Instance.CreateSessionAsync(options);
+                OnConnected();
                 _status = "SALA CREADA\nCódigo: " + _session.Code + "\n(pasáselo al otro jugador)";
             }
             catch (System.Exception e) { _status = "Error al crear: " + e.Message; }
@@ -69,6 +70,7 @@ namespace FolkloreArchives.Net
             {
                 _session = await MultiplayerService.Instance
                     .JoinSessionByCodeAsync(code.Trim().ToUpperInvariant());
+                OnConnected();
                 _status = "CONECTADO a " + _session.Code;
             }
             catch (System.Exception e) { _status = "Error al unirse: " + e.Message; }
@@ -83,6 +85,17 @@ namespace FolkloreArchives.Net
                 _session = null;
             }
             _status = "Desconectado";
+        }
+
+        // Al entrar a una sala, apagar el jugador single-player (su cámara/AudioListener
+        // chocarían con los jugadores en red). El cielo/grade ya quedaron aplicados por
+        // sus componentes al arrancar, así que se mantienen aunque lo apaguemos.
+        static void OnConnected()
+        {
+            var tp = GameObject.Find("TEST_PLAYER");
+            if (tp != null) tp.SetActive(false);
+            var dog = GameObject.Find("DOG");
+            if (dog != null) dog.SetActive(false); // el perro single-player; en red se spawnea aparte
         }
 
         static string Short(string id) => string.IsNullOrEmpty(id) ? "?" :

@@ -90,13 +90,9 @@ namespace FolkloreArchives.MapGen
             StoryTriggerBuilder.Build(root.transform, terrain);
             TestPlayerBuilder.Build(root.transform, terrain);
 
-            // Panel de conexión online (co-op). Root propio "NET" (no bajo el mapa) para
-            // que el NetworkManager de la etapa 1b sobreviva a los regenerados.
-            if (GameObject.Find("NET") == null)
-            {
-                var net = new GameObject("NET");
-                net.AddComponent<FolkloreArchives.Net.NetworkBootstrap>();
-            }
+            // Red (co-op): NET con NetworkManager + transporte + panel de conexión +
+            // prefab de jugador de prueba. Idempotente; persiste entre regenerados.
+            NetworkBuilder.EnsureNet();
 
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene()); // salva el .unity para que el Build incluya el mapa
