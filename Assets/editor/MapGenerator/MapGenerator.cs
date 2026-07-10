@@ -67,6 +67,12 @@ namespace FolkloreArchives.MapGen
 
             var root = new GameObject(MapLayout.RootName);
 
+            // Hornea los 3 skybox (día/atardecer/noche) con las montañas ANTES de que
+            // EnvironmentBuilder los busque. Antes era un menú aparte y era un pie de
+            // fuego: si no lo corrías, el mapa se generaba con los .mat viejos y no
+            // había ninguna señal de que estabas viendo un cielo de hace dos versiones.
+            SkyboxMountainBaker.Bake();
+
             Terrain terrain = TerrainBuilder.Build(root.transform);
             EnvironmentBuilder.Build(root.transform);
             EnvironmentBuilder.BuildDaySky(); // pre-genera mat_daysky.mat para el DayNightController
