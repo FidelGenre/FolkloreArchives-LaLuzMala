@@ -1,18 +1,42 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
-//  HouseBuilder.cs — "la casa de la vieja" en OldLadyRanch (620,600).
-//  FASE 1: cáscara de la casa (estilo casa de campo patagónica:
-//  base de canto rodado + columnas de piedra, paredes revoque
-//  verde-oliva, techo de chapa a poca pendiente, chimenea de piedra,
-//  galería/porche) + valla de madera perimetral con 2 portones.
-//  FASE 2 (aparte): muebles de Poly Haven adentro.
+//  HouseBuilder.cs — "la casa de la vieja" en OldLadyRanch (398,625).
+//  Rediseño en PLANTA EN "L" (opción A del owner), estilo casa de
+//  campo patagónica: base de canto rodado + revoque verde-oliva,
+//  techos de chapa a DOS AGUAS que se cruzan a distinta altura,
+//  chimenea de piedra, y galería techada abrigada en el codo interior.
 //
-//  Layout según el esquema del owner (planta, mirando desde arriba;
-//  +X = este/derecha = galería+entrada+camino, +Z = norte/arriba):
-//    Norte (fondo):  Baño (NO)   | Dormitorio 1 cama simple (NE)
-//    Centro:         Living (O)  | Cocina (C) | Comedor (E, junto a galería)
-//    Sur (frente):   Dormitorio 2 cama doble
-//    Chimenea en la pared oeste. Galería sobresale al este.
+//  Volumetría (planta desde arriba; +X = este/derecha = patio+entrada,
+//  +Z = norte/arriba). Bounding box 16 (x) × 14 (z):
+//
+//     x0 ─────── x8 ──────── x16
+//   z14 ┌─────────┬───────────┐
+//       │  BAÑO   │           │
+//       │ ┌───────┤           │   ← ala NORESTE = GALERÍA techada
+//       │ │ DORM2 │  galería  │     (abierta al este y al norte,
+//   z10 ├─┴───────┤  (codo)   │      columnas de piedra + deck)
+//       │         │           │
+//       │ LIVING  ╞═══════════╡  ← entrada por la galería al living
+//    z7 │ (chim.  ├───────────┤
+//       │  oeste) │           │
+//    z5 ├─────────┤  COCINA-  │   ← ala ESTE (cuerpo perpendicular)
+//       │  DORM   │  COMEDOR  │
+//       │ PRINC.  │           │
+//    z0 └─────────┴───────────┘
+//     cuerpo principal (N-S)   ala este (E-W)
+//
+//  El cuerpo principal (x0..8) lleva un dos aguas con cumbrera N-S
+//  (más alto). El ala este (x8..16, z0..7) lleva un dos aguas con
+//  cumbrera E-W (más bajo) → se cruzan y dan la silueta rica. La
+//  galería (x8..16, z7..14) tiene techo a un agua sobre columnas.
+//  Chimenea de piedra saliente en la pared oeste, sube sobre la
+//  cumbrera. Valla de madera perimetral con 2 portones al este.
+//
+//  MUEBLES: Kenney Furniture Kit (CC0, low-poly) en
+//  Assets/ExternalAssets/HouseFurniture_Kenney/. El kit no trae textura;
+//  cada submalla usa un material de color plano por nombre (wood/metal/
+//  carpet/…). Se remapean por NOMBRE a materiales URP propios (paleta de
+//  15 colores) para no salir rosa en URP. Ver BuildFurnitureKenney.
 // ============================================================
 using System.Collections.Generic;
 using UnityEditor;
@@ -23,13 +47,20 @@ namespace FolkloreArchives.MapGen
     public static class HouseBuilder
     {
         // ── Dimensiones ──────────────────────────────────────────────────────
-        const float W = 14f;      // ancho casa (x, oeste→este)
-        const float D = 12f;      // profundidad casa (z, sur→norte)
-        const float H = 2.7f;     // altura de pared
+        const float BW = 16f;     // ancho del bounding box (x, oeste→este)
+        const float BD = 14f;     // profundidad del bounding box (z, sur→norte)
+        const float MBx1 = 8f;    // borde este del cuerpo principal / oeste del ala
+        const float Wz  = 7f;     // borde norte del ala este / sur de la galería
+        const float H = 2.7f;     // altura de pared (alero)
         const float SB = 1.0f;    // altura de la base de piedra
         const float T = 0.25f;    // espesor de pared
         const float DoorH = 2.05f;
         const float WinSill = 1.0f, WinHead = 1.85f;
+
+        // Alturas de cumbrera (los dos aguas se cruzan a distinta altura)
+        const float MainRidgeY = 4.6f;   // cumbrera del cuerpo principal (N-S), más alta
+        const float WingRidgeY = 3.95f;  // cumbrera del ala este (E-W), más baja
+        const float GalHiY = 2.7f, GalLoY = 2.3f;   // techo a un agua de la galería
 
         const string TexDir = "Assets/ExternalAssets/HouseTextures/";
 
@@ -37,10 +68,10 @@ namespace FolkloreArchives.MapGen
         {
             var group = BuilderUtils.Group(parent, "OldLadyHouse", Vector3.zero);
 
-            // Posición: centro de la casa en OldLadyRanch, apoyada en el terreno.
+            // Posición: bounding box centrado en OldLadyRanch, apoyado en el terreno.
             Vector2 c = MapLayout.OldLadyRanch;
             float gy = terrain != null ? terrain.SampleHeight(new Vector3(c.x, 0f, c.y)) : 20f;
-            group.position = new Vector3(c.x - W * 0.5f, gy + 0.05f, c.y - D * 0.5f);
+            group.position = new Vector3(c.x - BW * 0.5f, gy + 0.05f, c.y - BD * 0.5f);
 
             var stone   = HouseMat("house_stone",   "PavingStones146", new Color(0.80f, 0.76f, 0.70f), 0.15f, 1.4f);
             var plaster = HouseMat("house_plaster",  "PaintedPlaster017", new Color(0.42f, 0.47f, 0.40f), 0.10f, 1.1f); // verde-oliva
@@ -54,99 +85,170 @@ namespace FolkloreArchives.MapGen
             var roofCI  = new List<CombineInstance>();
             var woodCI  = new List<CombineInstance>();
 
-            // ── Piso ──
+            // ── Piso (losa completa del bounding box; la galería lleva deck de madera) ──
             BuildSlab(group, "HouseFloor", cube, floor,
-                new Vector3(W * 0.5f, -0.05f, D * 0.5f), new Vector3(W, 0.1f, D));
+                new Vector3(BW * 0.5f, -0.05f, BD * 0.5f), new Vector3(BW, 0.1f, BD));
+            woodCI.Add(CI(cube, new Vector3((MBx1 + BW) * 0.5f, 0.02f, (Wz + BD) * 0.5f),
+                          Quaternion.identity, new Vector3(BW - MBx1, 0.06f, BD - Wz)));  // deck galería
 
-            // ── Paredes exteriores (con aberturas) ──
-            // Sur (z=0): ventana del dormitorio 2
-            Wall(stoneCI, plasCI, cube, 'x', 0f, W, 0f,
-                 new[] { Win(W * 0.5f, 1.6f) });
-            // Norte (z=D): ventanas baño + dormitorio 1
-            Wall(stoneCI, plasCI, cube, 'x', 0f, W, D,
-                 new[] { Win(2.5f, 0.9f), Win(9.5f, 1.6f) });
-            // Oeste (x=0): ventana del living (la chimenea se le pega por fuera)
-            Wall(stoneCI, plasCI, cube, 'z', 0f, D, 0f,
-                 new[] { Win(6f, 1.4f) });
-            // Este (x=W): puerta de entrada (detrás de la galería) + ventana comedor
-            Wall(stoneCI, plasCI, cube, 'z', 0f, D, W,
-                 new[] { Door(6.5f, 1.1f), Win(9.5f, 1.4f), Win(2.5f, 1.4f) });
+            // ── Paredes exteriores del perímetro en L (con aberturas) ────────────
+            // Sur (z=0, x0..16): ventana dorm. principal + ventana cocina
+            Wall(stoneCI, plasCI, cube, 'x', 0f, BW, 0f,
+                 new[] { Win(2.5f, 1.6f), Win(12f, 1.4f) });
+            // Este del ala (x=16, z0..7): ventana del comedor al patio
+            Wall(stoneCI, plasCI, cube, 'z', 0f, Wz, BW,
+                 new[] { Win(3.5f, 1.4f) });
+            // Norte del ala / sur de la galería (z=7, x8..16): puerta galería→cocina
+            Wall(stoneCI, plasCI, cube, 'x', MBx1, BW, Wz,
+                 new[] { Door(12f, 1.0f) });
+            // Este del cuerpo principal, frente a la galería (x=8, z7..14):
+            //   PUERTA DE ENTRADA (al living, z=8.5) + ventana
+            Wall(stoneCI, plasCI, cube, 'z', Wz, BD, MBx1,
+                 new[] { Door(8.5f, 1.1f), Win(12f, 1.2f) });
+            // Norte (z=14, x0..8): ventana baño + ventana dorm2
+            Wall(stoneCI, plasCI, cube, 'x', 0f, MBx1, BD,
+                 new[] { Win(1.8f, 0.8f), Win(5.5f, 1.4f) });
+            // Oeste (x=0, z0..14): ventana dorm. principal + ventana dorm2 (chimenea aparte)
+            Wall(stoneCI, plasCI, cube, 'z', 0f, BD, 0f,
+                 new[] { Win(2.5f, 1.4f), Win(11.5f, 1.4f) });
 
-            // ── Paredes interiores (definen los ambientes) ──
-            // Divisoria horizontal fondo/centro (z=8): puertas a baño, dorm1
-            Wall(stoneCI, plasCI, cube, 'x', 0f, W, 8f,
-                 new[] { Door(2.5f, 0.9f), Door(9.5f, 0.9f) }, interior: true);
-            // Divisoria horizontal centro/sur (z=4): puerta al dormitorio 2
-            Wall(stoneCI, plasCI, cube, 'x', 0f, W, 4f,
-                 new[] { Door(7f, 0.9f) }, interior: true);
-            // Vertical baño|dorm1 y living|cocina (x=5, z=4..D): puertas
-            Wall(stoneCI, plasCI, cube, 'z', 4f, D, 5f,
-                 new[] { Door(6.2f, 0.9f), Door(10.5f, 0.9f) }, interior: true);
-            // Vertical cocina|comedor (x=9.5, z=4..8)
-            Wall(stoneCI, plasCI, cube, 'z', 4f, 8f, 9.5f,
-                 new[] { Door(6f, 0.9f) }, interior: true);
+            // ── Paredes interiores (definen los ambientes) ───────────────────────
+            // Divisoria cuerpo principal | ala este (x=8, z0..7): puerta living→cocina
+            Wall(stoneCI, plasCI, cube, 'z', 0f, Wz, MBx1,
+                 new[] { Door(6f, 1.0f) }, interior: true);
+            // Dorm. principal (S) | living (z=5, x0..8): puerta
+            Wall(stoneCI, plasCI, cube, 'x', 0f, MBx1, 5f,
+                 new[] { Door(4f, 1.0f) }, interior: true);
+            // Living | ambientes norte (z=10, x0..8): puerta
+            Wall(stoneCI, plasCI, cube, 'x', 0f, MBx1, 10f,
+                 new[] { Door(5.5f, 1.0f) }, interior: true);
+            // Baño (O) | dorm2 (E) (x=3.5, z10..14): puerta
+            Wall(stoneCI, plasCI, cube, 'z', 10f, BD, 3.5f,
+                 new[] { Door(11f, 0.85f) }, interior: true);
 
-            // ── Galería / porche al este ──
-            BuildPorch(group, cube, stoneCI, roofCI, woodCI);
+            // ── Chimenea de piedra saliente en la pared oeste (living) ───────────
+            AddBox(stoneCI, cube, 'z', 6.7f, 8.3f, 0f, MainRidgeY + 1.0f, 1.0f, cz: -0.1f);
 
-            // ── Chimenea de piedra en la pared oeste ──
-            AddBox(stoneCI, cube, 'x', -0.6f, 0.9f, 0f, H + 1.6f, 2.0f, cz: 6f); // cuerpo saliente + sube sobre el techo
+            // ── Galería en el codo NE: columnas de piedra + viga + deck ya puesto ─
+            BuildGallery(group, cube, stoneCI, woodCI);
 
-            // ── Techo de chapa (dos faldones a poca pendiente, con alero) ──
-            BuildRoof(group, cube, roof);
+            // ── Techos a dos aguas (cuerpo principal + ala) + hastiales + galería ─
+            BuildRoofs(group, cube, roof, plasCI, roofCI);
 
             // ── Materiales combinados ──
             BuilderUtils.BuildCombinedStatic(group, "House_Stone",   stoneCI, stone,   addCollider: true);
             BuilderUtils.BuildCombinedStatic(group, "House_Plaster", plasCI,  plaster, addCollider: true);
             BuilderUtils.BuildCombinedStatic(group, "House_Wood",    woodCI,  wood,    addCollider: false);
-            BuilderUtils.BuildCombinedStatic(group, "House_RoofExtra", roofCI, roof,   addCollider: false);
+            BuilderUtils.BuildCombinedStatic(group, "House_Roof",    roofCI,  roof,    addCollider: false);
 
             // ── Valla de madera perimetral + 2 portones ──
             BuildFence(group, cube, wood);
 
             // BuildCombinedStatic pone cada hijo en world (0,0,0); como el grupo está
-            // desplazado a OldLadyRanch y la geometría se armó en frame LOCAL (0..W),
+            // desplazado a OldLadyRanch y la geometría se armó en frame LOCAL (0..BW),
             // hay que resetear el localPosition de cada hijo a cero para que la casa
             // quede bajo el grupo (si no, aparece en el origen del mapa, junto al túnel).
             foreach (Transform child in group) child.localPosition = Vector3.zero;
 
-            // ── FASE 2: muebles de Poly Haven adentro ──
-            BuildFurniture(group, group.position.y);
+            // ── Muebles low-poly (Kenney). Va DESPUÉS del reset: sus localPosition
+            //    son relativas al grupo (piso local y=0), no hay que resetearlas.
+            BuildFurnitureKenney(group, group.position.y);
 
             BuilderUtils.MarkStaticRecursive(group);
-            Debug.Log("<color=lime>Casa de la vieja (Fase 1: cáscara + valla) construida en OldLadyRanch.</color>");
+            Debug.Log("<color=lime>Casa de la vieja (planta en L + muebles Kenney) construida en OldLadyRanch.</color>");
         }
 
-        // ── Galería/porche (columnas de piedra + techo + piso) al este ──
-        static void BuildPorch(Transform group, Mesh cube, List<CombineInstance> stoneCI,
-                               List<CombineInstance> roofCI, List<CombineInstance> woodCI)
+        // ── Galería del codo NE (x8..16, z7..14): abierta al este y al norte ─────
+        static void BuildGallery(Transform group, Mesh cube, List<CombineInstance> stoneCI,
+                                 List<CombineInstance> woodCI)
         {
-            float px0 = W, px1 = W + 3.2f;   // sobresale 3.2m al este
-            float pz0 = 4.5f, pz1 = 9.5f, pzc = (pz0 + pz1) * 0.5f;
-            // piso de la galería (losa de madera, borde este de la casa)
-            woodCI.Add(CI(cube, new Vector3((px0 + px1) * 0.5f, -0.04f, pzc),
-                          Quaternion.identity, new Vector3(px1 - px0, 0.08f, pz1 - pz0)));
-            // 3 columnas de piedra en el borde exterior de la galería
-            foreach (float cz in new[] { pz0 + 0.4f, pzc, pz1 - 0.4f })
-                AddBox(stoneCI, cube, 'z', cz - 0.25f, cz + 0.25f, 0f, H, 0.5f, cz: px1 - 0.4f);
-            // viga superior de madera al frente
-            AddBox(woodCI, cube, 'z', pz0, pz1, H - 0.25f, H, 0.3f, cz: px1 - 0.4f);
-            // techo de la galería (chapa a poca pendiente, más bajo que el principal)
-            roofCI.Add(CI(cube, new Vector3((px0 + px1) * 0.5f, H + 0.15f, pzc),
-                          Quaternion.Euler(0f, 0f, -4f), new Vector3(3.6f, 0.12f, pz1 - pz0 + 0.6f)));
+            const float postH = 2.5f, postW = 0.4f;
+            void Post(float px, float pz) =>
+                stoneCI.Add(CI(cube, new Vector3(px, postH * 0.5f, pz), Quaternion.identity,
+                               new Vector3(postW, postH, postW)));
+            // columnas en los bordes abiertos (este x=16, norte z=14)
+            Post(BW, Wz + 0.5f); Post(BW, 10.5f); Post(BW, BD);
+            Post(12f, BD);
+            // vigas de madera sobre las columnas (borde este y borde norte)
+            AddBox(woodCI, cube, 'z', Wz + 0.5f, BD, postH - 0.2f, postH, 0.28f, cz: BW);
+            AddBox(woodCI, cube, 'x', MBx1, BW, postH - 0.2f, postH, 0.28f, cz: BD);
         }
 
-        // ── Techo principal de chapa (dos faldones a poca pendiente) ──
-        static void BuildRoof(Transform group, Mesh cube, Material roof)
+        // ── Techos a dos aguas + hastiales (triángulos) + techo de galería ───────
+        static void BuildRoofs(Transform group, Mesh cube, Material roof,
+                               List<CombineInstance> plasCI, List<CombineInstance> roofCI)
         {
-            var ci = new List<CombineInstance>();
-            // faldón oeste (cubre x 0..8) y este (x 6..14), leve pendiente y solape,
-            // con alero de 0.5m por lado. Ligeramente a distinta altura (como la foto).
-            ci.Add(CI(cube, new Vector3(4.0f, H + 0.55f, D * 0.5f),
-                      Quaternion.Euler(0f, 0f, 3f), new Vector3(9f, 0.14f, D + 1f)));
-            ci.Add(CI(cube, new Vector3(10.5f, H + 0.30f, D * 0.5f),
-                      Quaternion.Euler(0f, 0f, -3f), new Vector3(8f, 0.14f, D + 1f)));
-            BuilderUtils.BuildCombinedStatic(group, "House_Roof", ci, roof, addCollider: false);
+            // Cuerpo principal: dos aguas con cumbrera N-S en x=4 (centro de 0..8).
+            //   Faldón oeste (x-0.5..4.2) y este (x3.8..8.5), leve solape en la cumbrera.
+            AddSlope(roofCI, cube, 'x', -0.5f, GalHiY - 0.24f, 4.2f, MainRidgeY + 0.1f,
+                     zc: BD * 0.5f, depth: BD + 1f);
+            AddSlope(roofCI, cube, 'x', 8.5f, GalHiY - 0.24f, 3.8f, MainRidgeY + 0.1f,
+                     zc: BD * 0.5f, depth: BD + 1f);
+            // Hastiales (triángulos de revoque) del cuerpo principal: sur (z=0) y norte (z=14)
+            AddGable(plasCI, 'x', 0f,  0f, MBx1, H, 4f, MainRidgeY);
+            AddGable(plasCI, 'x', BD,  0f, MBx1, H, 4f, MainRidgeY);
+
+            // Ala este: dos aguas con cumbrera E-W en z=3.5 (centro de 0..7).
+            //   Faldón sur (z-0.5..3.7) y norte (z3.3..7.5).
+            AddSlope(roofCI, cube, 'z', -0.5f, GalHiY - 0.18f, 3.7f, WingRidgeY + 0.07f,
+                     zc: (MBx1 + BW) * 0.5f, depth: BW - MBx1 + 1f);   // "zc/depth" = eje X aquí
+            AddSlope(roofCI, cube, 'z', 7.5f, GalHiY - 0.18f, 3.3f, WingRidgeY + 0.07f,
+                     zc: (MBx1 + BW) * 0.5f, depth: BW - MBx1 + 1f);
+            // Hastial del ala mirando al patio (x=16); el otro extremo (x=8) muere contra
+            // el cuerpo principal, no lleva triángulo visible.
+            AddGable(plasCI, 'z', BW,  0f, Wz, H, 3.5f, WingRidgeY);
+
+            // Galería: techo a un agua, cae del cuerpo principal (x=8, alto) al este (x=16).
+            AddSlope(roofCI, cube, 'x', MBx1 - 0.3f, GalHiY + 0.05f, BW + 0.6f, GalLoY,
+                     zc: (Wz + BD) * 0.5f, depth: BD - Wz + 0.8f);
+        }
+
+        // Faldón de techo como caja fina inclinada entre dos puntos (eje-lo, eje-hi) en
+        // el plano correspondiente. axis 'x' → inclina en X (cumbrera N-S), depth va en Z.
+        // axis 'z' → inclina en Z (cumbrera E-W), "zc"/"depth" son el centro/ancho en X.
+        static void AddSlope(List<CombineInstance> ci, Mesh cube, char axis,
+                             float t0, float y0, float t1, float y1, float zc, float depth)
+        {
+            Vector2 lo = new Vector2(t0, y0), hi = new Vector2(t1, y1);
+            Vector2 mid = (lo + hi) * 0.5f;
+            float len = Vector2.Distance(lo, hi);
+            float ang = Mathf.Atan2(hi.y - lo.y, hi.x - lo.x) * Mathf.Rad2Deg;
+            const float thick = 0.14f;
+            if (axis == 'x')
+                ci.Add(CI(cube, new Vector3(mid.x, mid.y, zc), Quaternion.Euler(0f, 0f, ang),
+                          new Vector3(len, thick, depth)));
+            else // 'z': inclina en Z; el faldón se extiende en X (centro zc, ancho depth)
+                ci.Add(CI(cube, new Vector3(zc, mid.y, mid.x), Quaternion.Euler(-ang, 0f, 0f),
+                          new Vector3(depth, thick, len)));
+        }
+
+        // Hastial: prisma triangular (relleno de revoque bajo el dos aguas) como malla.
+        // plane 'x' → triángulo en el plano X-Y a z=fixedC, extruido en Z por 'thick'.
+        // plane 'z' → triángulo en el plano Z-Y a x=fixedC, extruido en X por 'thick'.
+        static void AddGable(List<CombineInstance> ci, char plane, float fixedC,
+                             float a, float b, float baseY, float apexT, float apexY)
+        {
+            const float thick = T;
+            float h = thick * 0.5f;
+            Vector3 P(float t, float y, float off) =>
+                plane == 'x' ? new Vector3(t, y, fixedC + off) : new Vector3(fixedC + off, y, t);
+            var v = new[] {
+                P(a, baseY, -h), P(b, baseY, -h), P(apexT, apexY, -h),   // 0,1,2 cara frontal
+                P(a, baseY,  h), P(b, baseY,  h), P(apexT, apexY,  h),   // 3,4,5 cara trasera
+            };
+            var uv = new Vector2[6];
+            for (int i = 0; i < 6; i++) uv[i] = plane == 'x' ? new Vector2(v[i].x, v[i].y)
+                                                              : new Vector2(v[i].z, v[i].y);
+            var tris = new List<int>();
+            void Tri(int i0, int i1, int i2) { tris.Add(i0); tris.Add(i1); tris.Add(i2);
+                                               tris.Add(i0); tris.Add(i2); tris.Add(i1); } // doble cara
+            void Quad(int i0, int i1, int i2, int i3) { Tri(i0, i1, i2); Tri(i0, i2, i3); }
+            Tri(0, 1, 2); Tri(3, 4, 5);       // triángulos de las dos caras
+            Quad(0, 1, 4, 3);                 // base
+            Quad(1, 2, 5, 4); Quad(2, 0, 3, 5); // los dos faldones
+            var m = new Mesh { vertices = v, uv = uv, triangles = tris.ToArray() };
+            m.RecalculateNormals();
+            ci.Add(new CombineInstance { mesh = m, transform = Matrix4x4.identity });
         }
 
         // ── Valla de madera perimetral + 2 portones ──
@@ -247,7 +349,7 @@ namespace FolkloreArchives.MapGen
             ci.Add(CI(cube, pos, Quaternion.identity, scl));
         }
 
-        // Caja genérica (para chimenea/porche): along axis con y0..y1.
+        // Caja genérica (para chimenea/columnas/vigas): along axis con y0..y1.
         static void AddBox(List<CombineInstance> ci, Mesh cube, char axis, float a, float b,
                            float y0, float y1, float thick, float cz = 0f)
         {
@@ -267,74 +369,200 @@ namespace FolkloreArchives.MapGen
         static CombineInstance CI(Mesh m, Vector3 pos, Quaternion rot, Vector3 scale) =>
             new CombineInstance { mesh = m, transform = Matrix4x4.TRS(pos, rot, scale) };
 
-        // ── Muebles (FASE 2, Poly Haven FBX) ─────────────────────────────────
-        const string FurnDir = "Assets/ExternalAssets/HouseFurniture/";
+        // ── Muebles low-poly (Kenney Furniture Kit, CC0) ─────────────────────
+        // El kit NO trae textura: cada submalla usa un material de color plano
+        // (wood/metal/carpet/…) definido en el FBX. En URP esos materiales
+        // importados salen ROSA, así que remapeo cada submaterial por NOMBRE a un
+        // material URP propio con el color del kit (paleta de 15). Un material por
+        // color → buen batching y nada de rosa.
+        const string KFurnDir = "Assets/ExternalAssets/HouseFurniture_Kenney/";
+        // PS1 Kitchen Pack (Dazed Crow Games, licencia FREE con atribución — NO CC0;
+        // no subir los .fbx/.png a un repo público). Un atlas 256² compartido.
+        const string KFurnPS1Dir = "Assets/ExternalAssets/HouseFurniture_PS1/";
 
-        static void BuildFurniture(Transform group, float floorWorldY)
+        static readonly Dictionary<string, Color> KPalette = new Dictionary<string, Color>
         {
-            // (modelo, x local, z local, rotación Y, altura objetivo en metros).
-            // Coords locales de la casa: x 0..14 (O→E), z 0..12 (S→N), piso en y=0.
-            var items = new (string m, float x, float z, float ry, float h)[]
+            { "wood",         new Color(0.896f, 0.602f, 0.393f) },
+            { "woodDark",     new Color(0.678f, 0.456f, 0.299f) },
+            { "metal",        new Color(0.741f, 0.823f, 0.840f) },
+            { "metalDark",    new Color(0.306f, 0.388f, 0.388f) },
+            { "metalMedium",  new Color(0.369f, 0.467f, 0.467f) },
+            { "metalLight",   new Color(0.937f, 0.980f, 0.957f) },
+            { "carpet",       new Color(0.943f, 0.367f, 0.343f) },
+            { "carpetWhite",  new Color(0.900f, 0.905f, 0.880f) },
+            { "carpetBlue",   new Color(0.356f, 0.517f, 0.868f) },
+            { "carpetDarker", new Color(0.608f, 0.298f, 0.285f) },
+            { "glass",        new Color(0.698f, 0.827f, 0.769f) },
+            { "lamp",         new Color(1.000f, 0.914f, 0.588f) },
+            { "plant",        new Color(0.182f, 0.700f, 0.400f) },
+            { "fur",          new Color(0.647f, 0.459f, 0.298f) },
+            { "_defaultMat",  new Color(0.780f, 0.780f, 0.780f) },
+        };
+
+        // Tabla de muebles (modelo, x local, z local, yaw, alturaObjetivo[m], baseY[m]).
+        // Coords locales (planta en L): x 0..16 (O→E), z 0..14 (S→N), piso y=0.
+        // baseY>0 = colgado de la pared (alacenas altas, campana, espejo).
+        // El ÍNDICE de cada fila es el ID ESTABLE del mueble (nombre "Furn_##_modelo")
+        // que usa FurniturePersistence para guardar/restaurar ediciones manuales.
+        // ⚠ Si REORDENÁS o INSERTÁS filas, los IDs cambian y el furniture_layout.json
+        //   guardado se desalinea → volvé a "Save Furniture Layout" después de editar.
+        // ⚠ Posiciones/rotaciones/alturas son 1er pase estimado → mover a mano en la
+        //   escena y guardar con el menú (el "facing" nativo de los modelos varía).
+        public static readonly (string m, float x, float z, float ry, float h, float by)[] FurnitureItems =
+        {
+                // ── DORMITORIO PRINCIPAL (x0..8, z0..5) ──
+                ("bedDouble",           4.0f,  1.5f,   0f, 0.85f, 0f),
+                ("cabinetBed",          1.1f,  0.5f,   0f, 0.45f, 0f),
+                ("cabinetBed",          6.9f,  0.5f,   0f, 0.45f, 0f),
+                ("bookcaseClosedDoors", 7.3f,  3.9f, -90f, 1.80f, 0f),
+                ("sideTableDrawers",    0.7f,  3.9f,  90f, 0.75f, 0f),
+                // ── LIVING (x0..8, z5..10; chimenea O, entrada E) ──
+                ("rugRectangle",        4.0f,  7.6f,   0f, 0.03f, 0f),
+                ("loungeSofa",          6.1f,  7.6f,  90f, 0.75f, 0f),
+                ("loungeChair",         2.4f,  9.0f, 200f, 0.75f, 0f),
+                ("tableCoffee",         4.2f,  7.6f,   0f, 0.40f, 0f),
+                ("radio",               4.7f,  7.6f,   0f, 0.20f, 0.40f),
+                ("bookcaseOpen",        2.4f,  9.6f, 180f, 1.80f, 0f),
+                ("lampRoundFloor",      7.4f,  9.4f,   0f, 1.50f, 0f),
+                ("cabinetTelevision",   0.7f,  6.4f,  90f, 0.50f, 0f),
+                ("televisionVintage",   0.85f, 6.4f,  90f, 0.45f, 0.50f),
+                // ── COCINA-COMEDOR (ala este, x8..16, z0..7) ──
+                //    mesada/alacenas/mesa/sillas = PS1 Kitchen Pack (texturizado).
+                //    bacha/cocina/campana/heladera siguen Kenney hasta bajar más PS1.
+                ("PS1_Cabinet_Base",    9.6f,  0.6f,   0f, 0.90f, 0f),
+                ("kitchenSink",        11.0f,  0.6f,   0f, 0.90f, 0f),
+                ("kitchenStove",       12.4f,  0.6f,   0f, 0.90f, 0f),
+                ("PS1_Cabinet_Base",   13.8f,  0.6f,   0f, 0.90f, 0f),
+                ("PS1_Cabinet_Upper",   9.6f,  0.5f,   0f, 0.70f, 1.55f),
+                ("PS1_Cabinet_Upper",  13.8f,  0.5f,   0f, 0.70f, 1.55f),
+                ("hoodLarge",          12.4f,  0.45f,  0f, 0.55f, 1.55f),
+                ("kitchenFridgeSmall", 15.3f,  1.4f, -90f, 1.25f, 0f),
+                ("PS1_Table",          11.5f,  4.4f,   0f, 0.75f, 0f),
+                ("PS1_Chair",          10.4f,  4.4f,  90f, 0.90f, 0f),
+                ("PS1_Chair",          12.6f,  4.4f, -90f, 0.90f, 0f),
+                ("PS1_Chair",          11.5f,  3.4f,   0f, 0.90f, 0f),
+                ("PS1_Chair",          11.5f,  5.4f, 180f, 0.90f, 0f),
+                // ── DORMITORIO 2 (simple, x3.5..8, z10..14) ──
+                ("bedSingle",           6.0f, 12.9f, 180f, 0.80f, 0f),
+                ("cabinetBed",          4.3f, 13.4f,   0f, 0.45f, 0f),
+                ("bookcaseClosedDoors", 7.4f, 11.0f, -90f, 1.70f, 0f),
+                // ── BAÑO (x0..3.5, z10..14) ──
+                ("toilet",              0.8f, 13.3f,  90f, 0.70f, 0f),
+                ("bathroomSink",        0.8f, 11.2f,  90f, 0.80f, 0f),
+                ("bathroomMirror",      0.35f,11.2f,  90f, 0.55f, 1.15f),
+                ("bathtub",             2.8f, 12.4f, -90f, 0.55f, 0f),
+                // ── GALERÍA (codo NE, x8..16, z7..14) ──
+                ("bench",              14.6f,  8.2f, -90f, 0.50f, 0f),
+                ("loungeChair",        12.6f, 12.2f,  40f, 0.75f, 0f),
+                ("sideTable",          13.7f, 11.4f,   0f, 0.55f, 0f),
+                ("pottedPlant",        15.3f, 13.3f,   0f, 0.90f, 0f),
+                ("coatRackStanding",    8.7f,  7.6f,   0f, 1.70f, 0f),
+        };
+
+        static void BuildFurnitureKenney(Transform group, float floorWorldY)
+        {
+            FurniturePersistence.Load();   // carga overrides manuales guardados (si hay)
+            for (int i = 0; i < FurnitureItems.Length; i++)
             {
-                // LIVING (x0..5, z4..8)
-                ("Sofa_01",              1.0f, 6.0f,  90f, 0.85f),
-                ("ArmChair_01",          3.6f, 4.8f, 210f, 0.90f),
-                ("ArmChair_01",          3.6f, 7.2f, 150f, 0.90f),
-                ("CoffeeTable_01",       2.3f, 6.0f,   0f, 0.42f),
-                // COMEDOR (x9.5..14, z4..8)
-                ("WoodenTable_02",      11.7f, 6.0f,   0f, 0.75f),
-                ("WoodenChair_01",      10.5f, 6.0f,  90f, 0.92f),
-                ("WoodenChair_01",      12.9f, 6.0f, -90f, 0.92f),
-                ("WoodenChair_01",      11.7f, 4.9f,   0f, 0.92f),
-                ("WoodenChair_01",      11.7f, 7.1f, 180f, 0.92f),
-                // DORMITORIO 1 - cama simple (x5..14, z8..12)
-                ("GothicBed_01",         8.0f,10.2f,   0f, 1.00f),
-                ("ClassicNightstand_01", 5.8f,11.0f,   0f, 0.55f),
-                // DORMITORIO 2 - cama doble (x0..14, z0..4)
-                ("GothicBed_01",         7.0f, 1.9f, 180f, 1.10f),
-                ("GothicCommode_01",     1.6f, 0.8f,   0f, 0.90f),
-                ("ClassicNightstand_01", 4.4f, 0.7f,   0f, 0.55f),
-                // GALERÍA (este)
-                ("Rockingchair_01",     15.5f, 7.0f, -90f, 1.00f),
-            };
-            foreach (var it in items)
-                PlaceFurniture(group, it.m, it.x, it.z, it.ry, it.h, floorWorldY);
+                var it = FurnitureItems[i];
+                PlaceFurniture(group, i, it.m, it.x, it.z, it.ry, it.h, it.by, floorWorldY);
+            }
         }
 
-        static void PlaceFurniture(Transform group, string model, float lx, float lz,
-                                   float rotY, float targetH, float floorWorldY)
+        static void PlaceFurniture(Transform group, int id, string model, float lx, float lz,
+                                   float rotY, float targetH, float baseY, float floorWorldY)
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(FurnDir + model + "/" + model + ".fbx");
+            // Ediciones manuales guardadas: si este mueble fue BORRADO a mano, no lo creo.
+            if (FurniturePersistence.IsDeleted(id)) return;
+
+            bool isPs1 = model.StartsWith("PS1_");
+            string dir = isPs1 ? KFurnPS1Dir : KFurnDir;
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(dir + model + ".fbx");
             if (prefab == null) { Debug.LogWarning("[HouseBuilder] falta mueble: " + model); return; }
 
-            // Holder: se rota/escala el HOLDER, NO el FBX. Los FBX de Poly Haven (Blender
-            // Z-up) traen su propia rotación de eje; si la piso seteando la rotación
-            // directo, el mueble se acuesta. Envolviéndolo, queda parado y sólo lo yaweo.
-            var holder = new GameObject("Furn_" + model);
-            holder.transform.SetParent(group, false);
-
+            // El objeto "Furn_##_modelo" ES el FBX (no un holder vacío): así, al clickearlo
+            // en la escena, Unity lo selecciona directo → lo que movés/rotás es lo que se
+            // guarda. Se preserva la rotación/escala de eje propia del import (r0/s0) y
+            // sólo se le compone el yaw, así el modelo queda parado igual que con holder.
             var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-            inst.transform.SetParent(holder.transform, false);   // conserva rotación propia (parado)
+            inst.name = $"Furn_{id:D2}_{model}";
+            inst.transform.SetParent(group, false);
+            Quaternion r0 = inst.transform.localRotation;   // rotación de eje del import
+            Vector3    s0 = inst.transform.localScale;       // escala del import
 
-            // material único (Poly Haven usa UN atlas por modelo): Diffuse + Normal
-            var mat = FurnitureMat(model);
+            // Materiales: PS1 = un atlas texturizado compartido; Kenney = remapeo por
+            // NOMBRE a color plano de la paleta.
+            Material ps1 = isPs1 ? Ps1Mat() : null;
             foreach (var r in inst.GetComponentsInChildren<MeshRenderer>(true))
             {
-                var mats = new Material[Mathf.Max(1, r.sharedMaterials.Length)];
-                for (int i = 0; i < mats.Length; i++) mats[i] = mat;
-                r.sharedMaterials = mats;
+                var src = r.sharedMaterials;
+                var outMats = new Material[Mathf.Max(1, src.Length)];
+                for (int i = 0; i < outMats.Length; i++)
+                    outMats[i] = isPs1 ? ps1
+                        : KenneyMat(i < src.Length && src[i] != null ? src[i].name : null);
+                r.sharedMaterials = outMats;
             }
 
-            // escalar a la altura real objetivo (antes de rotar; alto = eje Y del modelo parado)
-            Bounds b = FurnitureBounds(holder);
-            if (b.size.y > 0.001f) holder.transform.localScale = Vector3.one * (targetH / b.size.y);
+            // Si hay override manual guardado, lo aplico TAL CUAL y salteo la colocación
+            // procedural (el transform guardado ya es la ubicación final deseada).
+            if (FurniturePersistence.TryGetTransform(id, out var pos, out var euler, out var scale))
+            {
+                inst.transform.localScale    = scale;
+                inst.transform.localRotation = Quaternion.Euler(euler);
+                inst.transform.localPosition = pos;
+                return;
+            }
 
-            holder.transform.localRotation = Quaternion.Euler(0f, rotY, 0f);
-            holder.transform.localPosition = new Vector3(lx, 0f, lz);
+            // Colocación procedural (1er pase): yaw (preservando r0), escala a la altura
+            // objetivo (preservando s0), y asentar la base en el piso.
+            inst.transform.localRotation = Quaternion.Euler(0f, rotY, 0f) * r0;
+            Bounds b = FurnitureBounds(inst);
+            if (b.size.y > 0.001f) inst.transform.localScale = s0 * (targetH / b.size.y);
 
-            // asentar la base en el piso (mide bounds ya rotado/escalado)
-            b = FurnitureBounds(holder);
-            holder.transform.localPosition += Vector3.up * (floorWorldY - b.min.y);
+            inst.transform.localPosition = new Vector3(lx, 0f, lz);
+            b = FurnitureBounds(inst);   // ya rotado/escalado
+            inst.transform.localPosition += Vector3.up * (floorWorldY + baseY - b.min.y);
+        }
+
+        // Material único del PS1 Kitchen Pack: atlas 256² compartido, filtrado POINT +
+        // sin mipmaps para el crunch retro PS1 (fuerza el import una vez).
+        static Material _ps1Mat;
+        static Material Ps1Mat()
+        {
+            if (_ps1Mat != null) return _ps1Mat;
+            string texPath = KFurnPS1Dir + "stove_atlas.png";
+            if (AssetImporter.GetAtPath(texPath) is TextureImporter imp &&
+                (imp.filterMode != FilterMode.Point || imp.mipmapEnabled))
+            {
+                imp.filterMode = FilterMode.Point;
+                imp.mipmapEnabled = false;
+                imp.textureCompression = TextureImporterCompression.Uncompressed;
+                imp.SaveAndReimport();
+            }
+            var atlas = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            _ps1Mat = atlas != null
+                ? BuilderUtils.MatTextured("ps1_kitchen", atlas, Color.white, 0.05f)
+                : BuilderUtils.Mat("ps1_kitchen_fallback", new Color(0.6f, 0.55f, 0.5f));
+            return _ps1Mat;
+        }
+
+        // Mapea el nombre de material importado del FBX Kenney → material URP de la paleta.
+        static Material KenneyMat(string rawName)
+        {
+            string key = "_defaultMat";
+            if (!string.IsNullOrEmpty(rawName))
+            {
+                // el import puede venir como "wood", "wood (Instance)", "metalDark 1"…
+                // → elegir la clave de paleta MÁS LARGA contenida en el nombre.
+                string n = rawName.ToLowerInvariant();
+                int best = -1;
+                foreach (var kv in KPalette)
+                {
+                    string k = kv.Key.ToLowerInvariant();
+                    if (n.Contains(k) && k.Length > best) { key = kv.Key; best = k.Length; }
+                }
+            }
+            return BuilderUtils.Mat("kfurn_" + key, KPalette[key], key == "lamp" ? 0.5f : 0f);
         }
 
         static Bounds FurnitureBounds(GameObject go)
@@ -344,15 +572,6 @@ namespace FolkloreArchives.MapGen
             Bounds b = rs[0].bounds;
             for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
             return b;
-        }
-
-        static Material FurnitureMat(string model)
-        {
-            string dir = FurnDir + model + "/";
-            var diff = AssetDatabase.LoadAssetAtPath<Texture2D>(dir + model + "_diff.jpg");
-            var nor  = BuilderUtils.LoadAsNormalMap(dir + model + "_nor.jpg");
-            if (diff == null) return BuilderUtils.Mat("furn_" + model, new Color(0.55f, 0.48f, 0.4f), 0f);
-            return BuilderUtils.MatTextured("furn_" + model, diff, Color.white, 0.18f, nor);
         }
 
         static Material HouseMat(string name, string folder, Color tint, float smoothness, float tiling)

@@ -92,6 +92,69 @@ namespace FolkloreArchives.MapGen
             dnc.daySkybox   = EnvironmentBuilder.DaySkybox();   // AllSky si está, si no procedural
             dnc.duskSkybox  = EnvironmentBuilder.DuskSkybox();  // atardecer (Deep Dusk)
             dnc.nightSkybox = EnvironmentBuilder.NightSkybox();
+
+            // ── PERRO + party (modo Solo: persona 1ª persona, perro te sigue; G alterna) ──
+            BuildDogAndParty(player, camGO, spawnXZ, t);
+        }
+
+        // Spawnea el perro (modelo PS1 real) con CharacterController, su cámara de 3ª
+        // persona (apagada al inicio) y el DogController en modo Follow. Cuelga el
+        // PartyController en la persona para poder alternar el control con G.
+        static void BuildDogAndParty(GameObject player, GameObject personCamGO, Vector2 playerXZ, Terrain t)
+        {
+            const string glbPath = "Assets/ExternalAssets/Dog/PS1_Dog.glb";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(glbPath);
+            if (prefab == null)
+            {
+                Debug.LogWarning("Perro: no encontré/importé " + glbPath +
+                    " (¿instalaste glTFast y le diste foco a Unity para importar?). Sigo sin perro.");
+                return;
+            }
+
+            // raíz del perro con su collider/controller
+            var dog = new GameObject("DOG");
+            dog.transform.SetParent(player.transform.parent); // hermano del jugador, bajo FOLKLORE_MAP
+            Vector2 dogXZ = playerXZ + new Vector2(1.6f, -1.2f);            // al lado y un poco atrás
+            dog.transform.position = BuilderUtils.Ground(t, dogXZ.x, dogXZ.y) + Vector3.up * 0.2f;
+            dog.transform.rotation = player.transform.rotation;
+
+            var dcc = dog.AddComponent<CharacterController>();
+            dcc.height = 0.8f; dcc.radius = 0.3f; dcc.center = new Vector3(0f, 0.4f, 0f);
+
+            // modelo visual (glTFast). Escala/orientación TENTATIVAS — se afinan al verlo.
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            model.name = "Model";
+            model.transform.SetParent(dog.transform);
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one;   // si sale gigante/enano, tocar acá
+
+            var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
+            dogCtrl.followTarget = player.transform;
+            dogCtrl.mode = FolkloreArchives.DogController.Mode.Follow;
+
+            // cámara 3ª persona del perro (detrás y arriba), apagada hasta que tomes control
+            var dogCamGO = new GameObject("DogCamera");
+            dogCamGO.transform.SetParent(dog.transform);
+            dogCamGO.transform.localPosition = new Vector3(0f, 1.8f, -3.2f);
+            dogCamGO.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
+            var dogCam = dogCamGO.AddComponent<Camera>();
+            dogCam.tag = "MainCamera";
+            dogCam.clearFlags = CameraClearFlags.Skybox;
+            dogCam.farClipPlane = MapLayout.CameraFarClip;
+            dogCamGO.AddComponent<AudioListener>();
+            var dogCamData = dogCam.GetUniversalAdditionalCameraData();
+            dogCamData.renderPostProcessing = true;
+            dogCamData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            dogCamData.antialiasingQuality = AntialiasingQuality.High;
+            dogCamGO.AddComponent<FolkloreArchives.VhsPostFx>();
+            dogCamGO.SetActive(false); // arranca controlando la persona
+
+            var party = player.AddComponent<FolkloreArchives.PartyController>();
+            party.person    = player.GetComponent<FolkloreArchives.MapExplorer>();
+            party.dog       = dogCtrl;
+            party.personCam = personCamGO.GetComponent<Camera>();
+            party.dogCam    = dogCam;
         }
     }
 }

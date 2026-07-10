@@ -72,11 +72,12 @@ namespace FolkloreArchives.MapGen
 
         // ------------- Lote de la casa de la vieja (HouseBuilder) -------------
         // Bounds en world XZ del cerco (deben coincidir con la valla de HouseBuilder:
-        // grupo en OldLadyRanch-(7,6), valla local x[-6..30] z[-7..19] → world abajo).
-        // TerrainBuilder aplana este rectángulo a OldLadyLotHeight y ForestBuilder no
-        // pone árboles adentro (+ un margen). Ajustar si cambia la valla.
-        public static readonly Vector2 OldLadyLotMin = new Vector2(385f, 612f);
-        public static readonly Vector2 OldLadyLotMax = new Vector2(421f, 638f);
+        // grupo en OldLadyRanch-(8,7) [casa en L, bounding 16×14], valla local
+        // x[-6..30] z[-7..19] → world abajo). TerrainBuilder aplana este rectángulo a
+        // OldLadyLotHeight y ForestBuilder no pone árboles adentro (+ un margen).
+        // Ajustar si cambia la valla o el centrado de la casa.
+        public static readonly Vector2 OldLadyLotMin = new Vector2(384f, 611f);
+        public static readonly Vector2 OldLadyLotMax = new Vector2(420f, 637f);
         public const float OldLadyLotHeight = 25.5f;   // nivel plano del lote (≈ altura natural ahí)
 
         // ------------- Paths (polylines, x/z) -------------

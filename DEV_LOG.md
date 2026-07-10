@@ -7,6 +7,151 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-09 — Persistencia de ediciones de muebles (mover/rotar/borrar sobrevive al regenerar)
+
+El owner pidió poder mover/rotar/borrar muebles a mano y que no se pierdan al
+regenerar el mapa (mismo problema que el terreno). Nuevo `FurniturePersistence.cs`
+(análogo a `TerrainEditPersistence`):
+
+- **ID estable por mueble:** cada mueble ahora se llama `Furn_##_modelo`, donde `##`
+  es su ÍNDICE en `HouseBuilder.FurnitureItems` (la tabla pasó a ser un campo
+  `public static readonly`). Ese ID es la clave para guardar/restaurar.
+- **Menú `Tools > Folklore Archives > Save Furniture Layout`:** busca el grupo
+  `OldLadyHouse`, recorre los hijos `Furn_##_*`, y guarda pos/rot/escala LOCAL de
+  cada uno + marca como `deleted` los IDs de la tabla que ya no están en la escena.
+  Se escribe a `Assets/_FolkloreArchives/furniture_layout.json` (fuera de Generated,
+  se versiona). También `Clear Furniture Layout` para borrar el archivo y volver a
+  la colocación por código.
+- **Aplicación:** `BuildFurnitureKenney` llama `FurniturePersistence.Load()` y
+  `PlaceFurniture` consulta por ID: si está `deleted` → no lo crea; si tiene
+  transform guardado → lo aplica TAL CUAL y saltea la colocación procedural.
+- **Cambio importante en PlaceFurniture:** se ELIMINÓ el "holder" vacío. Ahora el
+  objeto `Furn_##` ES el FBX (instancia de prefab), porque al clickear en la escena
+  Unity selecciona el prefab, no un padre vacío → así lo que el owner mueve/rota es
+  exactamente lo que se persiste. Para que el modelo siga parado se preserva la
+  rotación/escala de eje del import (`r0`/`s0`) y sólo se le compone el yaw:
+  `localRotation = Euler(0,yaw,0) * r0`, `localScale = s0 * (targetH/altura)`.
+- **Semántica:** una vez guardado, el JSON es AUTORITATIVO para todos los IDs que
+  contiene (la tabla de código sólo aplica a IDs nuevos que no estén en el archivo).
+  Si se REORDENA/INSERTA filas en `FurnitureItems`, los IDs se desalinean → volver a
+  Save. Flujo owner: generar → mover a mano → Save Furniture Layout → regenerar.
+- **Necesita regenerar** (para que los muebles tomen los nombres `Furn_##`), después
+  ya se puede empezar a acomodar y guardar.
+
+---
+
+## 2026-07-09 — Cocina: swap a assets PS1 texturizados (los Kenney se veían muy lisos)
+
+Al owner no le gustaron los Kenney (color plano, muy "lisos"); quiere estilo PS1
+texturizado. Dejó un pack en Downloads: **PS1 Kitchen Pack (Free) de Dazed Crow
+Games**. La versión FREE trae solo **4 FBX** (`PS1_Cabinet_Base`, `PS1_Cabinet_Upper`,
+`PS1_Chair`, `PS1_Table`) + **un atlas 256²** compartido (`stove_atlas.png`). Copiados
+a `Assets/ExternalAssets/HouseFurniture_PS1/` (+ LICENSE/README).
+
+- **Reemplazos en la cocina-comedor:** mesada base (×2), alacena alta (×2), mesa y
+  4 sillas del comedor → PS1. Siguen Kenney (hasta bajar más PS1): bacha
+  (`kitchenSink`), cocina (`kitchenStove`), campana (`hoodLarge`), heladera
+  (`kitchenFridgeSmall`). El resto de la casa sigue Kenney por ahora.
+- **Material** (`HouseBuilder.Ps1Mat`): a diferencia de Kenney (color plano por
+  nombre), los PS1 usan UV sobre un atlas único → un solo `MatTextured("ps1_kitchen",
+  atlas)` para todas las submallas. Se fuerza el import del atlas a **FilterMode.Point
+  + sin mipmaps + sin compresión** (una vez) para el crunch retro PS1.
+- `PlaceFurniture` ahora ramifica por prefijo `PS1_`: carga del dir PS1 y aplica el
+  atlas; si no, comportamiento Kenney (remapeo de color por nombre). Mismo holder/
+  escala-por-altura/asiento. Los PS1 son Y-up, `Rotation=0/Scale=1` (README).
+- ⚠️ **LICENCIA (no CC0):** Free con **atribución obligatoria** ("Assets by Tyler at
+  (Dazed Crow Games)" en créditos) y **prohibido subir los .fbx/.png fuente a repos
+  públicos**. OK si el Plastic es privado + se acredita. Anotarlo en los créditos del
+  juego.
+- **Pendiente:** el owner va a bajar más packs PS1 para reemplazar el resto de los
+  muebles (living, dormitorios, baño). Posiciones/rotaciones de la cocina PS1 pueden
+  necesitar ajuste (facing nativo distinto al Kenney) → revisar en captura de DÍA.
+
+---
+
+## 2026-07-09 — Amueblado de la casa con Kenney Furniture Kit (CC0, low-poly)
+
+El owner pidió amueblar la casa en L con assets estilo PSX/low-poly. Elegido
+**Kenney Furniture Kit (CC0)** — un solo kit low-poly que cubre TODO, incluido
+cocina y baño (que Poly Haven no tenía). Bajado de kenney.nl, copiados 30 FBX a
+`Assets/ExternalAssets/HouseFurniture_Kenney/` (+ License.txt).
+
+- **Materiales:** el kit NO trae textura; cada submalla usa un material de color
+  plano por NOMBRE (`wood`, `metal`, `metalDark`, `carpet`, `glass`, `lamp`, …
+  15 en total). En URP esos materiales importados del FBX salen ROSA. Fix
+  (`HouseBuilder.KenneyMat`): recreo los 15 colores del kit como materiales URP
+  propios (`BuilderUtils.Mat("kfurn_"+color)`) y en `PlaceFurniture` REMAPEO cada
+  submaterial por nombre (match de la clave de paleta más larga contenida en el
+  nombre importado, case-insensitive) → conserva el multicolor (patas de madera +
+  almohadón, etc.), un material por color = buen batching, nada de rosa. Paleta
+  `KPalette` hardcodeada (colores Kd leídos de los .mtl del kit). `lamp` lleva
+  emisión 0.5. Fallback `_defaultMat` gris si un nombre no matchea.
+- **Colocación** (`BuildFurnitureKenney`): tabla (modelo, x, z, yaw, alturaObjetivo,
+  baseY). Mismo patrón que Poly Haven: holder que se rota/escala (los Kenney son
+  Y-up → quedan parados), escala midiendo bounds a la altura objetivo, asienta la
+  base en `floorWorldY + baseY`. Nuevo param **baseY** para colgar de la pared
+  (alacenas altas de cocina 1.55, campana 1.55, espejo de baño 1.15). Se llama
+  DESPUÉS del reset de localPosition (las coords de muebles son relativas al grupo).
+- **Qué va en cada ambiente:** Dorm. principal → cama doble + 2 mesas de luz +
+  ropero + cómoda. Living → sofá + sillón + mesa ratona + alfombra + biblioteca +
+  lámpara de pie + mueble con TV vintage + radio. Cocina-comedor → mesada
+  (alacena+bacha+cocina+alacena) + alacenas altas + campana + heladera chica +
+  mesa + 4 sillas. Dorm2 → cama simple + mesa de luz + ropero. Baño → inodoro +
+  lavamanos + espejo + bañadera. Galería → banco + sillón + mesita + planta +
+  perchero.
+- Se reemplazó el `BuildFurniture` viejo (Poly Haven) por el de Kenney. Los FBX de
+  Poly Haven en `Assets/ExternalAssets/HouseFurniture/` quedan huérfanos (se pueden
+  borrar). No se llama nada de eso.
+- **Riesgo/pendiente:** (1) el remapeo depende de que Unity preserve el NOMBRE del
+  material del FBX; si el importer no crea materiales, todo cae al fallback gris (no
+  rosa) → si el owner ve muebles monocromos, pasar a parsear el .mtl por submalla.
+  (2) Posiciones/rotaciones/alturas son 1er pase estimado (no se conoce el facing
+  nativo de los modelos) → **afinar con captura en modo DÍA**.
+- **Necesita regenerar** + visto del owner.
+
+---
+
+## 2026-07-09 — Casa de la vieja REDISEÑADA en planta "L" (sin muebles)
+
+Al owner no le gustó cómo quedó la casa (caja rectangular 14×12 simétrica con techo
+casi plano → silueta genérica). Le gustó el ESTILO (piedra + revoque verde-oliva +
+chapa + chimenea + galería), así que se rehízo solo la volumetría/planta. Se le
+mostraron 3 opciones (A planta en L, B rectangular con dos aguas + galería corrida,
+C dos cuerpos escalonados) y eligió **A — planta en L**.
+
+`HouseBuilder.cs` reescrito casi entero. Bounding box ahora **16 (x) × 14 (z)**,
+centrado en `OldLadyRanch (398,625)` (antes 14×12 → el grupo se corrió ~1-2m; se
+actualizó `MapLayout.OldLadyLotMin (384,611)` / `OldLadyLotMax (420,637)` para el
+aplanado del terreno y la exclusión de árboles/valla).
+
+- **Planta en L:** cuerpo principal N-S (x0..8, z0..14: dorm. principal S, living
+  centro con chimenea O, baño+dorm2 al N) + ala este perpendicular (x8..16, z0..7:
+  cocina-comedor). Galería techada en el codo NE (x8..16, z7..14), abierta al este y
+  al norte, con columnas de piedra + viga + deck de madera. **Entrada** por la
+  galería al living (puerta en x=8, z8.5). El piso sigue siendo losa completa del
+  bounding box (la L la hacen las paredes/techos, no el piso).
+- **Techos a DOS AGUAS que se cruzan a distinta altura** (esto es lo que arregla la
+  silueta): cuerpo principal con cumbrera N-S en x=4, `MainRidgeY=4.6` (más alto);
+  ala este con cumbrera E-W en z=3.5, `WingRidgeY=3.95` (más bajo). Faldones =
+  cajas finas inclinadas (`AddSlope`, calcula ángulo/centro entre punto-alero y
+  punto-cumbrera). Galería = techo a un agua que cae del muro O (x8) al este (x16).
+- **Hastiales (triángulos de revoque)** bajo cada dos aguas como prisma triangular
+  de malla propia (`AddGable`, doble cara + UVs planas): sur y norte del cuerpo
+  principal, y el frente del ala al patio (x=16). El extremo x=8 del ala muere
+  contra el cuerpo, no lleva triángulo.
+- **Chimenea** de piedra saliente en la pared oeste del living, sube sobre la
+  cumbrera (`AddBox` 'z', y 0..MainRidgeY+1). Valla + 2 portones al este: sin cambios.
+- **SIN muebles** (a pedido). `BuildFurniture`/`PlaceFurniture` quedan en el archivo
+  pero NO se llaman; sus coords son de la planta vieja (14×12 en grilla) → rehacer la
+  tabla cuando el owner quiera amueblar la L.
+- **Simplificaciones greybox conocidas:** donde el dos aguas del ala se cruza con el
+  faldón este del cuerpo principal hay solape de mallas (valle sin recortar) — lee
+  bien de afuera pero puede haber leve z-fighting en la junta. Los faldones y
+  columnas son cajas (UV estirable). Afinar ángulos/aleros con captura en modo DÍA.
+- **Necesita regenerar** (`Tools > Folklore Archives > Generate…`) + visto del owner.
+
+---
+
 ## 2026-07-07 — FIX muebles acostados (rotación de eje del FBX)
 
 Los muebles quedaban "mal puestos"/acostados: los FBX de Poly Haven (Blender Z-up,
@@ -1171,3 +1316,11 @@ Iterated on the look with the project owner. Net state after this session:
 **Para verificar tras regenerar**
 - Que el agua siga cubierta por el plano (río min x=756, plano cubre 710-890).
 - Que la playa quede caminable (rampa campamento 12m → playa 8.2m → agua 7m).
+
+---
+
+## Créditos de assets (atribución obligatoria)
+
+- **PS1 Dog** by *Jo_Zinn5632* — licencia **CC-BY (Creative Commons Attribution)**.
+  Fuente: Sketchfab. Uso comercial permitido **acreditando al autor**. El crédito
+  debe figurar en los créditos del juego (Steam). Archivo: `Assets/ExternalAssets/Dog/PS1_Dog.glb`.
