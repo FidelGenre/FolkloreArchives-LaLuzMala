@@ -84,12 +84,13 @@ namespace FolkloreArchives.MapGen
             player.AddComponent<FolkloreArchives.MapExplorer>();
             player.AddComponent<FolkloreArchives.SettingsMenu>(); // menú de opciones (Esc): motion blur, AA, render scale
 
-            // DayNightController: toggle Tab en Play mode
+            // DayNightController: Tab cicla Día → Atardecer → Noche en Play mode
             var dnc = player.AddComponent<FolkloreArchives.DayNightController>();
             var moonGO = GameObject.Find("Moon");
             dnc.sun     = moonGO != null ? moonGO.GetComponent<Light>() : null;
             dnc.terrain = t;
             dnc.daySkybox   = EnvironmentBuilder.DaySkybox();   // AllSky si está, si no procedural
+            dnc.duskSkybox  = EnvironmentBuilder.DuskSkybox();  // atardecer (Deep Dusk)
             dnc.nightSkybox = EnvironmentBuilder.NightSkybox();
         }
     }

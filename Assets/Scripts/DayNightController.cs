@@ -12,15 +12,22 @@ namespace FolkloreArchives
 {
     public class DayNightController : MonoBehaviour
     {
+        // Tres momentos del día. Tab cicla Día → Atardecer → Noche → Día.
+        public enum Phase { Day, Dusk, Night }
+
         [Header("Skyboxes (asignados por TestPlayerBuilder)")]
         public Material daySkybox;
+        public Material duskSkybox;
         public Material nightSkybox;
 
         [Header("Referencias de escena")]
         public Light sun;
         public Terrain terrain;
 
-        bool _isDay = false;
+        Phase _phase = Phase.Night;
+
+        // Compatibilidad: el resto del código (MapGenerator) sigue pensando en día/noche.
+        public bool IsDay => _phase == Phase.Day;
 
         void Update()
         {
@@ -28,39 +35,59 @@ namespace FolkloreArchives
                 Toggle();
         }
 
-        void Toggle() => SetDay(!_isDay);
+        void Toggle() => SetPhase((Phase)(((int)_phase + 1) % 3));
 
-        public void SetDay(bool day)
+        // Wrapper viejo: SetDay(true) = día, SetDay(false) = noche.
+        public void SetDay(bool day) => SetPhase(day ? Phase.Day : Phase.Night);
+
+        public void SetPhase(Phase phase)
         {
-            _isDay = day;
+            _phase = phase;
 
-            if (_isDay)
+            switch (_phase)
             {
-                if (sun != null)
-                {
-                    sun.intensity = 1.0f;
-                    sun.color     = new Color(1f, 0.92f, 0.72f);
-                    sun.shadows   = LightShadows.Hard;
-                }
-                if (daySkybox != null) RenderSettings.skybox = daySkybox;
-                RenderSettings.ambientLight = new Color(0.30f, 0.26f, 0.32f);
-                RenderSettings.fogMode  = FogMode.Linear;
-                RenderSettings.fogColor = new Color(0.68f, 0.54f, 0.58f);
-                Shader.SetGlobalColor("_GrassTintMul", new Color(0.34f, 0.42f, 0.20f)); // verde oscuro/quemado
-            }
-            else
-            {
-                if (sun != null)
-                {
-                    sun.intensity = 0.16f;
-                    sun.color     = new Color(0.42f, 0.52f, 0.78f);
-                    sun.shadows   = LightShadows.Hard;
-                }
-                if (nightSkybox != null) RenderSettings.skybox = nightSkybox;
-                RenderSettings.ambientLight = new Color(0.016f, 0.026f, 0.052f);
-                RenderSettings.fogMode  = FogMode.ExponentialSquared;
-                RenderSettings.fogColor = new Color(0.035f, 0.055f, 0.105f);
-                Shader.SetGlobalColor("_GrassTintMul", Color.white); // de noche va normal
+                case Phase.Day:
+                    if (sun != null)
+                    {
+                        sun.intensity = 1.0f;
+                        sun.color     = new Color(1f, 0.92f, 0.72f);
+                        sun.shadows   = LightShadows.Hard;
+                    }
+                    if (daySkybox != null) RenderSettings.skybox = daySkybox;
+                    RenderSettings.ambientLight = new Color(0.30f, 0.26f, 0.32f);
+                    RenderSettings.fogMode  = FogMode.Linear;
+                    RenderSettings.fogColor = new Color(0.68f, 0.54f, 0.58f);
+                    Shader.SetGlobalColor("_GrassTintMul", new Color(0.34f, 0.42f, 0.20f)); // verde oscuro/quemado
+                    break;
+
+                case Phase.Dusk:
+                    // Sol bajo y rojizo, casi rasante. Ambiente cálido pero ya apagado.
+                    if (sun != null)
+                    {
+                        sun.intensity = 0.45f;
+                        sun.color     = new Color(1f, 0.58f, 0.36f);
+                        sun.shadows   = LightShadows.Hard;
+                    }
+                    if (duskSkybox != null) RenderSettings.skybox = duskSkybox;
+                    RenderSettings.ambientLight = new Color(0.12f, 0.085f, 0.10f);
+                    RenderSettings.fogMode  = FogMode.ExponentialSquared;
+                    RenderSettings.fogColor = new Color(0.22f, 0.13f, 0.13f);
+                    Shader.SetGlobalColor("_GrassTintMul", new Color(0.42f, 0.34f, 0.22f)); // pasto quemado por la última luz
+                    break;
+
+                default: // Phase.Night
+                    if (sun != null)
+                    {
+                        sun.intensity = 0.16f;
+                        sun.color     = new Color(0.42f, 0.52f, 0.78f);
+                        sun.shadows   = LightShadows.Hard;
+                    }
+                    if (nightSkybox != null) RenderSettings.skybox = nightSkybox;
+                    RenderSettings.ambientLight = new Color(0.016f, 0.026f, 0.052f);
+                    RenderSettings.fogMode  = FogMode.ExponentialSquared;
+                    RenderSettings.fogColor = new Color(0.035f, 0.055f, 0.105f);
+                    Shader.SetGlobalColor("_GrassTintMul", Color.white); // de noche va normal
+                    break;
             }
 
             ApplyGraphics(); // distancias/niebla con los multiplicadores de GameSettings
@@ -72,7 +99,7 @@ namespace FolkloreArchives
         {
             var cam = GetComponentInChildren<Camera>();
 
-            if (_isDay)
+            if (_phase == Phase.Day)
             {
                 RenderSettings.fogStartDistance = 30f * GameSettings.FogNearMul;
                 RenderSettings.fogEndDistance   = 115f * GameSettings.FogFarMul;
@@ -94,19 +121,24 @@ namespace FolkloreArchives
             }
             else
             {
-                // niebla nocturna: exp². "Más lejos" = menos densidad.
-                RenderSettings.fogDensity = 0.05f / Mathf.Max(0.3f, GameSettings.FogFarMul);
-                float grassDist = 15f * GameSettings.GrassDistanceMul;
+                // Atardecer y noche comparten niebla exp². El atardecer va a mitad de
+                // camino: menos densa y más distancia de vista que la noche cerrada
+                // (si no, en el atardecer no se ven ni las montañas del skybox).
+                bool dusk = _phase == Phase.Dusk;
+
+                // niebla: exp². "Más lejos" = menos densidad.
+                RenderSettings.fogDensity = (dusk ? 0.026f : 0.05f) / Mathf.Max(0.3f, GameSettings.FogFarMul);
+                float grassDist = (dusk ? 32f : 15f) * GameSettings.GrassDistanceMul;
                 if (terrain != null)
                 {
                     terrain.detailObjectDistance = grassDist;
-                    terrain.treeDistance         = 55f * GameSettings.TreeDistanceMul;
+                    terrain.treeDistance         = (dusk ? 85f : 55f) * GameSettings.TreeDistanceMul;
                     // night: dense fog + short flashlight, billboards even closer (~22m)
-                    terrain.treeBillboardDistance = 22f * GameSettings.TreeBillboardMul;
-                    terrain.detailObjectDensity  = 0.28f * GameSettings.GrassDensityMul;
+                    terrain.treeBillboardDistance = (dusk ? 30f : 22f) * GameSettings.TreeBillboardMul;
+                    terrain.detailObjectDensity  = (dusk ? 0.24f : 0.28f) * GameSettings.GrassDensityMul;
                     terrain.Flush(); // reconstruye pasto/árboles YA (no de a poco al cambiar preset)
                 }
-                if (cam != null) cam.farClipPlane = 85f * GameSettings.ViewDistanceMul;
+                if (cam != null) cam.farClipPlane = (dusk ? 120f : 85f) * GameSettings.ViewDistanceMul;
                 Shader.SetGlobalFloat("_GrassFadeEnd", grassDist);
                 Shader.SetGlobalFloat("_GrassFadeStart", Mathf.Max(0f, grassDist - 4f));
             }

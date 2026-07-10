@@ -17,14 +17,19 @@ namespace FolkloreArchives.MapGen
     {
         // rutas ESTABLES (fuera de Generated) para que sobrevivan al regenerar
         public const string MatPath      = "Assets/Settings/MountainSkybox.mat";        // DÍA
+        public const string DuskMatPath  = "Assets/Settings/MountainSkyboxDusk.mat";    // ATARDECER
         public const string NightMatPath = "Assets/Settings/MountainSkyboxNight.mat";   // NOCHE
         const string TexPath      = "Assets/Settings/MountainSkybox_Tex.asset";
+        const string DuskTexPath  = "Assets/Settings/MountainSkyboxDusk_Tex.asset";
         const string NightTexPath = "Assets/Settings/MountainSkyboxNight_Tex.asset";
 
         // Cielos BASE: los equirect de AllSky Free que usa el juego. Las montañas se
         // pintan ENCIMA de estos cielos, así no los reemplazan (antes el baker pintaba
         // su propio degradé y por eso pisaba al AllSky).
-        const string BaseSkyDay   = "Assets/AllSkyFree/Epic_GloriousPink/Epic_GloriousPink_EquiRect.png";
+        // OJO con los nombres del pack: "Cold Sunset" es en realidad un cielo AZUL con
+        // nubes (= nuestro DÍA) y "Deep Dusk" es el atardecer rojo oscuro.
+        const string BaseSkyDay   = "Assets/AllSkyFree/Cold Sunset/Cold Sunset Equirect.png";
+        const string BaseSkyDusk  = "Assets/AllSkyFree/Deep Dusk/Deep Dusk Equirect.png";
         const string BaseSkyNight = "Assets/AllSkyFree/Cold Night/Cold Night Equirect.png";
 
         // ── colores tuneables ──
@@ -34,6 +39,13 @@ namespace FolkloreArchives.MapGen
         static readonly Color Ground   = new Color(0.10f, 0.10f, 0.14f); // bajo el horizonte
         const float FarHaze  = 0.55f;   // cuánto se mezcla la cadena lejana con el cielo (bruma)
         const float NearHaze = 0.18f;   // la cercana casi no se mezcla
+
+        // ATARDECER: siluetas oscuras a contraluz, con un dejo cálido del sol poniente.
+        static readonly Color DuskMtnFar  = new Color(0.16f, 0.13f, 0.17f);
+        static readonly Color DuskMtnNear = new Color(0.07f, 0.055f, 0.08f);
+        static readonly Color DuskGround  = new Color(0.030f, 0.025f, 0.038f);
+        const float DuskFarHaze  = 0.40f;
+        const float DuskNearHaze = 0.12f;
 
         // NOCHE: siluetas casi negras, apenas azuladas. Menos bruma (de noche el aire
         // no dispersa luz), si no las montañas se "comen" las estrellas del cielo.
@@ -56,10 +68,13 @@ namespace FolkloreArchives.MapGen
         {
             bool day = BakeOne(BaseSkyDay, MatPath, TexPath,
                                MtnFar, MtnNear, Ground, FarHaze, NearHaze, applyNow: true);
+            bool dusk = BakeOne(BaseSkyDusk, DuskMatPath, DuskTexPath,
+                                DuskMtnFar, DuskMtnNear, DuskGround, DuskFarHaze, DuskNearHaze, applyNow: false);
             bool night = BakeOne(BaseSkyNight, NightMatPath, NightTexPath,
                                  NightMtnFar, NightMtnNear, NightGround, NightFarHaze, NightNearHaze, applyNow: false);
             AssetDatabase.SaveAssets();
-            Debug.Log($"<color=lime>Skybox de montañas generado</color> — día: {(day ? "OK" : "FALLÓ")}, noche: {(night ? "OK" : "FALLÓ")}. " +
+            Debug.Log($"<color=lime>Skybox de montañas generado</color> — día: {(day ? "OK" : "FALLÓ")}, " +
+                      $"atardecer: {(dusk ? "OK" : "FALLÓ")}, noche: {(night ? "OK" : "FALLÓ")}. " +
                       "Ahora regenerá el mapa. Tuneá alturas/colores en SkyboxMountainBaker.cs.");
         }
 

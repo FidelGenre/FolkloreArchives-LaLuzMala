@@ -245,15 +245,26 @@ namespace FolkloreArchives.MapGen
             //   if (psx != null) return psx;
 
             // 1º: skybox de montañas. Ya NO reemplaza al AllSky: el baker hornea las
-            // montañas ENCIMA del equirect de Epic_GloriousPink, así tenés las dos cosas.
+            // montañas ENCIMA del equirect del cielo, así tenés las dos cosas.
             // Se genera con Tools > Folklore Archives > Generar Skybox de Montañas.
             var mtn = AssetDatabase.LoadAssetAtPath<Material>(SkyboxMountainBaker.MatPath);
             if (mtn != null) return mtn;
-            // 2º: el AllSky pelado (si nunca se corrió el baker).
-            var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Epic_GloriousPink/Epic_GloriousPink.mat");
+            // 2º: el AllSky pelado (si nunca se corrió el baker). "Cold Sunset" es, pese
+            // al nombre, el cielo AZUL con nubes del pack — nuestro día.
+            var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Cold Sunset/Cold Sunset.mat");
             if (sky != null) return sky;
             return AssetDatabase.LoadAssetAtPath<Material>(MapLayout.GeneratedFolder + "/mat_daysky.mat") ?? BuildDaySky();
         }
+        // ATARDECER: "Deep Dusk" de AllSky (rojo oscuro), con montañas horneadas.
+        public static Material DuskSkybox()
+        {
+            var mtn = AssetDatabase.LoadAssetAtPath<Material>(SkyboxMountainBaker.DuskMatPath);
+            if (mtn != null) return mtn;
+            var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Deep Dusk/Deep Dusk.mat");
+            if (sky != null) return sky;
+            return DaySkybox();
+        }
+
         public static Material NightSkybox()
         {
             // HDRI de noche PSX (StarkCrafts) DESACTIVADO: el dueño prefiere el cielo
