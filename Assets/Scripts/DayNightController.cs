@@ -24,10 +24,16 @@ namespace FolkloreArchives
         public Light sun;
         public Terrain terrain;
 
-        Phase _phase = Phase.Night;
+        Phase _phase = Phase.Night;   // el juego arranca de noche
 
         // Compatibilidad: el resto del código (MapGenerator) sigue pensando en día/noche.
         public bool IsDay => _phase == Phase.Day;
+
+        // Aplica la fase inicial al entrar en Play. Sin esto, _phase decía "Night" pero
+        // el cielo/sol/niebla de la escena quedaban como los dejó la generación (o el
+        // toggle "Pasar a Día" del editor): el primer Tab llevaba a Day y no se veía
+        // ningún cambio, como si Tab se hubiera saltado un paso.
+        void Start() => SetPhase(_phase);
 
         void Update()
         {
