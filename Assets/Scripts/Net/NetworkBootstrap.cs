@@ -1,0 +1,118 @@
+// ============================================================
+//  FOLKLORE ARCHIVES - LA LUZ MALA
+//  NetworkBootstrap.cs — conexión online 2 jugadores por CÓDIGO.
+//  Distributed Authority + Relay vía la Sessions API de
+//  com.unity.services.multiplayer (2.2.4). NGO 2.13.
+//
+//  Host: "Crear sala" → muestra un código. El otro pega el código
+//  en "Unirse". Sin abrir puertos ni compartir IP (Relay).
+//
+//  ETAPA 1a: solo la conexión + UI. El spawn de personajes en red
+//  (persona = host, perro = cliente) y los controladores por-dueño
+//  vienen en la etapa 1b (necesitan el NetworkManager en la escena).
+// ============================================================
+using System.Threading.Tasks;
+using Unity.Services.Authentication;
+using Unity.Services.Core;
+using Unity.Services.Multiplayer;
+using UnityEngine;
+
+namespace FolkloreArchives.Net
+{
+    public class NetworkBootstrap : MonoBehaviour
+    {
+        public int maxPlayers = 2;
+
+        ISession _session;
+        string _status = "Iniciando servicios…";
+        string _joinCode = "";
+        bool _busy;
+        GUIStyle _box;
+
+        async void Awake()
+        {
+            try
+            {
+                if (UnityServices.State != ServicesInitializationState.Initialized)
+                    await UnityServices.InitializeAsync();
+                if (!AuthenticationService.Instance.IsSignedIn)
+                    await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                _status = "Listo. ID: " + Short(AuthenticationService.Instance.PlayerId);
+            }
+            catch (System.Exception e)
+            {
+                _status = "Error de servicios: " + e.Message +
+                          "\n(¿activaste Relay + Authentication anónima en el dashboard?)";
+            }
+        }
+
+        async Task Host()
+        {
+            if (_busy) return;
+            _busy = true; _status = "Creando sala…";
+            try
+            {
+                var options = new SessionOptions { MaxPlayers = maxPlayers }
+                    .WithDistributedAuthorityNetwork();
+                _session = await MultiplayerService.Instance.CreateSessionAsync(options);
+                _status = "SALA CREADA\nCódigo: " + _session.Code + "\n(pasáselo al otro jugador)";
+            }
+            catch (System.Exception e) { _status = "Error al crear: " + e.Message; }
+            _busy = false;
+        }
+
+        async Task Join(string code)
+        {
+            if (_busy || string.IsNullOrWhiteSpace(code)) return;
+            _busy = true; _status = "Uniéndose…";
+            try
+            {
+                _session = await MultiplayerService.Instance
+                    .JoinSessionByCodeAsync(code.Trim().ToUpperInvariant());
+                _status = "CONECTADO a " + _session.Code;
+            }
+            catch (System.Exception e) { _status = "Error al unirse: " + e.Message; }
+            _busy = false;
+        }
+
+        async Task Leave()
+        {
+            if (_session != null)
+            {
+                try { await _session.LeaveAsync(); } catch { /* ya cerrada */ }
+                _session = null;
+            }
+            _status = "Desconectado";
+        }
+
+        static string Short(string id) => string.IsNullOrEmpty(id) ? "?" :
+            (id.Length > 6 ? id.Substring(0, 6) : id);
+
+        void OnGUI()
+        {
+            if (_box == null) _box = new GUIStyle(GUI.skin.box) { richText = true, alignment = TextAnchor.UpperLeft, wordWrap = true };
+            const float w = 280f;
+            GUILayout.BeginArea(new Rect(Screen.width - w - 12f, 12f, w, 220f), _box);
+            GUILayout.Label("<b>ONLINE (co-op)</b>");
+            GUILayout.Label(_status);
+            GUILayout.Space(6);
+            if (_session == null)
+            {
+                GUI.enabled = !_busy;
+                if (GUILayout.Button("Crear sala (HOST)")) _ = Host();
+                GUILayout.Space(4);
+                GUILayout.Label("Código para unirse:");
+                GUILayout.BeginHorizontal();
+                _joinCode = GUILayout.TextField(_joinCode ?? "", 10);
+                if (GUILayout.Button("Unirse", GUILayout.Width(70))) _ = Join(_joinCode);
+                GUILayout.EndHorizontal();
+                GUI.enabled = true;
+            }
+            else
+            {
+                if (GUILayout.Button("Salir de la sala")) _ = Leave();
+            }
+            GUILayout.EndArea();
+        }
+    }
+}
