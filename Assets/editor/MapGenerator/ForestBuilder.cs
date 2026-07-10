@@ -836,15 +836,10 @@ namespace FolkloreArchives.MapGen
             if (fbx == null) { Debug.LogWarning("PSX: FBX no importado (" + PsxForestHelper.FbxPath + ") — caigo a low-poly/BOTD."); return null; }
 
             const float target = 6f; // altura objetivo en metros
-            // material de VERTEX-COLOR (los PSX no traen textura, colorean por vértice)
-            Material vcMat = null;
-            var vcShader = Shader.Find("Folklore/LowPolyVertexColor");
-            if (vcShader != null)
-            {
-                vcMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Settings/PSX_VertexColor.mat");
-                if (vcMat == null) { vcMat = new Material(vcShader); AssetDatabase.CreateAsset(vcMat, "Assets/Settings/PSX_VertexColor.mat"); }
-                else vcMat.shader = vcShader;
-            }
+            // El pack PSX trae los materiales BLANCOS (sin textura ni vertex-color).
+            // Creo materiales planos coloreados por tipo: COPA=verde, TRONCO=marrón.
+            Material crown = PsxMat("PSX_Crown", new Color(0.17f, 0.29f, 0.12f));
+            Material trunk = PsxMat("PSX_Trunk", new Color(0.27f, 0.18f, 0.10f));
 
             var results = new List<GameObject>();
             foreach (var name in PsxTreeNames)
@@ -859,13 +854,15 @@ namespace FolkloreArchives.MapGen
                 root.transform.localScale = Vector3.one * (target / nativeH); // ~6m
                 root.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
                 var nmr = root.AddComponent<MeshRenderer>();
-                if (vcMat != null)
+                // color por submesh: material "...crown..." = copa (verde); si no = tronco (marrón)
+                var src = mr.sharedMaterials;
+                var mats = new Material[Mathf.Max(1, mf.sharedMesh.subMeshCount)];
+                for (int i = 0; i < mats.Length; i++)
                 {
-                    var mats = new Material[Mathf.Max(1, mf.sharedMesh.subMeshCount)];
-                    for (int i = 0; i < mats.Length; i++) mats[i] = vcMat; // vertex-color en todos los submeshes
-                    nmr.sharedMaterials = mats;
+                    string mn = (i < src.Length && src[i] != null) ? src[i].name.ToLowerInvariant() : "";
+                    mats[i] = mn.Contains("crown") ? crown : trunk;
                 }
-                else nmr.sharedMaterials = mr.sharedMaterials;
+                nmr.sharedMaterials = mats;
                 var col = root.AddComponent<CapsuleCollider>();
                 col.center = mf.sharedMesh.bounds.center;
                 col.height = nativeH;              // (se escala con el root → ~8m)
@@ -887,6 +884,24 @@ namespace FolkloreArchives.MapGen
             foreach (var t in root.GetComponentsInChildren<Transform>(true))
                 if (t.name == name) return t;
             return null;
+        }
+
+        // material URP/Lit plano y matte, cacheado como asset (para los árboles PSX,
+        // que vienen blancos). Colorea copa/tronco.
+        static Material PsxMat(string name, Color col)
+        {
+            string path = "Assets/Settings/" + name + ".mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m == null)
+            {
+                m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(m, path);
+            }
+            if (m.HasProperty("_BaseColor"))  m.SetColor("_BaseColor", col);
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.05f);
+            if (m.HasProperty("_Metallic"))   m.SetFloat("_Metallic", 0f);
+            EditorUtility.SetDirty(m);
+            return m;
         }
 
         static readonly string[] LowPolyTreeNames = { "PT_Pine_Tree_03_green" };
