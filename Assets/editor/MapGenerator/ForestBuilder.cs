@@ -1469,10 +1469,19 @@ namespace FolkloreArchives.MapGen
             // el multiplicador de altura a 2.5–4.0 → pasto de ~1.6–2.6m. Ancho moderado
             // para que no engorde. Con la textura alpha real del pack se ve como briznas
             // altas, no bloques.
-            var grassGreen = lp ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 3.0f, 4.5f)    : PackDetail("Grass_B", 0.9f, 1.7f, 4.8f, 7.8f);
-            var grassDry   = lp ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 3.2f, 4.7f)    : PackDetail("GrassDry_B", 1.0f, 1.9f, 5.1f, 8.4f);
-            // Pasto de caminos/senderos: BAJO (owner) — misma malla pero corta.
-            var grassShort = lp ? LowPolyDetail(LP_HighGrass, 0.8f, 1.1f, 1.0f, 1.6f)    : PackDetail("Grass_B", 0.8f, 1.3f, 1.4f, 2.3f);
+            // PSX (billboards de textura, lo más liviano) tiene prioridad sobre low-poly.
+            // healthyColor/dryColor tintan la textura: verde apagado y pajizo/seco.
+            bool psx = MapLayout.UsePsxGrass;
+            var psxHealthy = new Color(0.68f, 0.74f, 0.48f);
+            var psxDry     = new Color(0.62f, 0.56f, 0.32f);
+
+            var grassGreen = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 0.9f, 1.5f, 1.0f, 1.8f, psxHealthy, psxDry)
+                           : lp  ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 3.0f, 4.5f)    : PackDetail("Grass_B", 0.9f, 1.7f, 4.8f, 7.8f);
+            var grassDry   = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 0.9f, 1.5f, 0.9f, 1.7f, psxDry, psxDry)
+                           : lp  ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 3.2f, 4.7f)    : PackDetail("GrassDry_B", 1.0f, 1.9f, 5.1f, 8.4f);
+            // Pasto de caminos/senderos: BAJO (owner) — misma textura/malla pero corta.
+            var grassShort = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 0.7f, 1.0f, 0.35f, 0.6f, psxHealthy, psxDry)
+                           : lp  ? LowPolyDetail(LP_HighGrass, 0.8f, 1.1f, 1.0f, 1.6f)    : PackDetail("Grass_B", 0.8f, 1.3f, 1.4f, 2.3f);
             var fern       = lp ? LowPolyDetail(LP_ShrubGreen, 0.9f, 1.15f, 0.9f, 1.15f): PackDetail("Fern_A", 0.9f, 1.6f, 1.1f, 1.8f);
             var dryBush    = lp ? LowPolyDetail(LP_ShrubDead, 0.9f, 1.15f, 0.9f, 1.15f) : PackDetail("BushDry_A", 0.9f, 1.6f, 0.9f, 1.6f);
 
@@ -1620,6 +1629,31 @@ namespace FolkloreArchives.MapGen
 
         // Detail prototype a partir de un prefab low-poly (sin darken/fade shader: usa
         // su material URP ya convertido). Los tamaños son estimados — se tunean a ojo.
+        // PASTO PSX: detalle basado en TEXTURA (grass billboard), no en malla. Es el
+        // modo más barato del sistema de detalles del terrain — Unity los dibuja como
+        // quads que miran a la cámara, sin instanciar mallas. La textura sale del FBX
+        // de StarkCrafts (PSX_ExtractedTex), así que pega con los pinos PSX.
+        // OJO: PSX_Grass_128px es un ATLAS (juncos + lavanda + pasto). Para el billboard
+        // uso PSX_GrassBlade_128px, que es solo la franja de pasto recortada de ese atlas.
+        static DetailPrototype PsxGrassDetail(string texName, float minW, float maxW,
+                                              float minH, float maxH, Color healthy, Color dry)
+        {
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(PsxTexDir + texName + ".png");
+            if (tex == null) { Debug.LogWarning("PSX grass: textura no encontrada " + PsxTexDir + texName + ".png"); return null; }
+            return new DetailPrototype
+            {
+                usePrototypeMesh = false,          // ← textura, no malla
+                prototypeTexture = tex,
+                renderMode = DetailRenderMode.GrassBillboard,
+                useInstancing = false,             // instancing solo aplica a detalles de malla
+                minWidth = minW, maxWidth = maxW,
+                minHeight = minH, maxHeight = maxH,
+                noiseSpread = 0.3f,
+                healthyColor = healthy,
+                dryColor = dry
+            };
+        }
+
         static DetailPrototype LowPolyDetail(string prefabPath, float minW, float maxW, float minH, float maxH)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);

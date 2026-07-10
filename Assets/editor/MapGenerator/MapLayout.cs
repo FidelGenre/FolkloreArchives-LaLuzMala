@@ -38,6 +38,12 @@ namespace FolkloreArchives.MapGen
         // El pasto/detalles siguen con Polytope por ahora.
         public const bool UsePsxTrees = true;
 
+        // PSX grass: usa la textura PSX_Grass_128px (extraída del FBX de StarkCrafts)
+        // como DETALLE DE TEXTURA (grass billboard) en vez de las mallas instanciadas
+        // de Polytope. Mucho más liviano (el pasto era lo más caro del terreno) y pega
+        // con los pinos PSX. Poné false para volver al pasto low-poly de mallas.
+        public const bool UsePsxGrass = true;
+
         // ------------- Key locations (x, z) — matches the hand-drawn plan -------------
         // (DirtTurnoff is derived from the smooth paved route further down, so it always
         //  sits exactly on the road wherever the road is at x=620.)
