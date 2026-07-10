@@ -119,15 +119,18 @@ namespace FolkloreArchives.MapGen
             dog.transform.rotation = player.transform.rotation;
 
             var dcc = dog.AddComponent<CharacterController>();
-            dcc.height = 0.8f; dcc.radius = 0.3f; dcc.center = new Vector3(0f, 0.4f, 0f);
+            dcc.height = 0.6f; dcc.radius = 0.22f; dcc.center = new Vector3(0f, 0.3f, 0f);
 
-            // modelo visual (glTFast). Escala/orientación TENTATIVAS — se afinan al verlo.
+            // modelo visual (glTFast). El PS1 Dog viene ENORME a escala 1 → lo achico a
+            // ~perro real (~0.6 m al lomo). Y gira 180° en Y porque su "adelante" apunta
+            // al revés que el controlador (por eso se veía de espaldas al seguir).
+            const float DogScale = 0.18f;   // ← si queda muy chico/grande, tocar acá
             var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             model.name = "Model";
             model.transform.SetParent(dog.transform);
             model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.identity;
-            model.transform.localScale = Vector3.one;   // si sale gigante/enano, tocar acá
+            model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            model.transform.localScale = Vector3.one * DogScale;
 
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;
