@@ -26,10 +26,13 @@ namespace FolkloreArchives.MapGen
         // Cielos BASE: los equirect de AllSky Free que usa el juego. Las montañas se
         // pintan ENCIMA de estos cielos, así no los reemplazan (antes el baker pintaba
         // su propio degradé y por eso pisaba al AllSky).
-        // OJO con los nombres del pack: "Cold Sunset" es en realidad un cielo AZUL con
-        // nubes (= nuestro DÍA) y "Deep Dusk" es el atardecer rojo oscuro.
+        // OJO con los nombres del pack, engañan:
+        //   "Cold Sunset"        → cielo AZUL con nubes y sol bajo  = nuestro DÍA
+        //   "Epic_GloriousPink"  → pastel rosa/violeta; bajo el grade VHS ámbar sale
+        //                          NARANJA                          = nuestro ATARDECER
+        //   "Deep Dusk"          → rojo oscuro. Descartado: demasiado rojo (owner).
         const string BaseSkyDay   = "Assets/AllSkyFree/Cold Sunset/Cold Sunset Equirect.png";
-        const string BaseSkyDusk  = "Assets/AllSkyFree/Deep Dusk/Deep Dusk Equirect.png";
+        const string BaseSkyDusk  = "Assets/AllSkyFree/Epic_GloriousPink/Epic_GloriousPink_EquiRect.png";
         const string BaseSkyNight = "Assets/AllSkyFree/Cold Night/Cold Night Equirect.png";
 
         // ── colores tuneables ──
@@ -40,12 +43,14 @@ namespace FolkloreArchives.MapGen
         const float FarHaze  = 0.55f;   // cuánto se mezcla la cadena lejana con el cielo (bruma)
         const float NearHaze = 0.18f;   // la cercana casi no se mezcla
 
-        // ATARDECER: siluetas oscuras a contraluz, con un dejo cálido del sol poniente.
-        static readonly Color DuskMtnFar  = new Color(0.16f, 0.13f, 0.17f);
-        static readonly Color DuskMtnNear = new Color(0.07f, 0.055f, 0.08f);
-        static readonly Color DuskGround  = new Color(0.030f, 0.025f, 0.038f);
-        const float DuskFarHaze  = 0.40f;
-        const float DuskNearHaze = 0.12f;
+        // ATARDECER: el cielo base es CLARO (pastel), así que las montañas van como
+        // siluetas a contraluz pero con bastante bruma, si no quedan como un manchón
+        // negro pegado contra un cielo brillante.
+        static readonly Color DuskMtnFar  = new Color(0.30f, 0.26f, 0.36f);
+        static readonly Color DuskMtnNear = new Color(0.14f, 0.115f, 0.18f);
+        static readonly Color DuskGround  = new Color(0.055f, 0.045f, 0.070f);
+        const float DuskFarHaze  = 0.52f;
+        const float DuskNearHaze = 0.16f;
 
         // NOCHE: siluetas casi negras, apenas azuladas. Menos bruma (de noche el aire
         // no dispersa luz), si no las montañas se "comen" las estrellas del cielo.

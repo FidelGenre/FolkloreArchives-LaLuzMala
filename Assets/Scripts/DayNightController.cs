@@ -61,17 +61,19 @@ namespace FolkloreArchives
                     break;
 
                 case Phase.Dusk:
-                    // Sol bajo y rojizo, casi rasante. Ambiente cálido pero ya apagado.
+                    // Sol bajo y cálido, casi rasante. El cielo (Epic_GloriousPink) es
+                    // pastel y CLARO, así que la escena no puede quedar casi negra:
+                    // ambiente y niebla van bastante más arriba que de noche.
                     if (sun != null)
                     {
-                        sun.intensity = 0.45f;
-                        sun.color     = new Color(1f, 0.58f, 0.36f);
+                        sun.intensity = 0.62f;
+                        sun.color     = new Color(1f, 0.66f, 0.44f);
                         sun.shadows   = LightShadows.Hard;
                     }
                     if (duskSkybox != null) RenderSettings.skybox = duskSkybox;
-                    RenderSettings.ambientLight = new Color(0.12f, 0.085f, 0.10f);
+                    RenderSettings.ambientLight = new Color(0.21f, 0.165f, 0.20f);
                     RenderSettings.fogMode  = FogMode.ExponentialSquared;
-                    RenderSettings.fogColor = new Color(0.22f, 0.13f, 0.13f);
+                    RenderSettings.fogColor = new Color(0.42f, 0.29f, 0.30f);
                     Shader.SetGlobalColor("_GrassTintMul", new Color(0.42f, 0.34f, 0.22f)); // pasto quemado por la última luz
                     break;
 
@@ -127,7 +129,7 @@ namespace FolkloreArchives
                 bool dusk = _phase == Phase.Dusk;
 
                 // niebla: exp². "Más lejos" = menos densidad.
-                RenderSettings.fogDensity = (dusk ? 0.026f : 0.05f) / Mathf.Max(0.3f, GameSettings.FogFarMul);
+                RenderSettings.fogDensity = (dusk ? 0.018f : 0.05f) / Mathf.Max(0.3f, GameSettings.FogFarMul);
                 float grassDist = (dusk ? 32f : 15f) * GameSettings.GrassDistanceMul;
                 if (terrain != null)
                 {
