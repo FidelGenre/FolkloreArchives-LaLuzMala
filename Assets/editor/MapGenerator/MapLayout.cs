@@ -44,6 +44,11 @@ namespace FolkloreArchives.MapGen
         // con los pinos PSX. Poné false para volver al pasto low-poly de mallas.
         public const bool UsePsxGrass = true;
 
+        // PSX ground: las 7 texturas seamless de 128px que trae el pack de StarkCrafts
+        // (PSX_ForestGround_Tex) como capas del terreno, con filtro Point → pixelado PS1.
+        // El asfalto de la ruta y la nieve de los picos NO se tocan (el pack no los trae).
+        public const bool UsePsxGround = true;
+
         // ------------- Key locations (x, z) — matches the hand-drawn plan -------------
         // (DirtTurnoff is derived from the smooth paved route further down, so it always
         //  sits exactly on the road wherever the road is at x=620.)

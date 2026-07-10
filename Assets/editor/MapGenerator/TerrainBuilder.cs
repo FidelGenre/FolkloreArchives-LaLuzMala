@@ -183,14 +183,23 @@ namespace FolkloreArchives.MapGen
 
         static void PaintTextures(TerrainData td)
         {
-            // Real textures from the Terrain Sample Asset Pack, with procedural fallback
+            // Real textures from the Terrain Sample Asset Pack, with procedural fallback.
+            // Con UsePsxGround, las capas naturales (pasto/tierra/sendero/arena) usan las
+            // texturas seamless 128px del pack PSX. La RUTA ASFALTADA y la NIEVE siguen
+            // como estaban: el pack PSX no trae asfalto ni nieve.
+            bool psx = MapLayout.UsePsxGround;
             var layers = new TerrainLayer[7];
-            layers[0] = PackLayer("Grass_A_TerrainLayer",  "grass",    new Color(0.16f, 0.30f, 0.12f));
-            layers[1] = MuddyDirtLayer();
-            layers[2] = PavedRoadLayer();
-            layers[3] = PackLayer("Grass_Dry_TerrainLayer","drygrass", new Color(0.55f, 0.50f, 0.25f));
-            layers[4] = TrailLayer();
-            layers[5] = PackLayer("Sand_TerrainLayer",     "sand",     new Color(0.76f, 0.70f, 0.50f));
+            layers[0] = (psx ? PsxLayer("PSX_Seamless_WildForestGrass_128px",   6f) : null)
+                        ?? PackLayer("Grass_A_TerrainLayer",  "grass",    new Color(0.16f, 0.30f, 0.12f));
+            layers[1] = (psx ? PsxLayer("PSX_Seamless_ForestEarthGround_128px", 5f) : null)
+                        ?? MuddyDirtLayer();
+            layers[2] = PavedRoadLayer();   // asfalto: sin equivalente PSX
+            layers[3] = (psx ? PsxLayer("PSX_Seamless_ForestDryGround_128px",   6f) : null)
+                        ?? PackLayer("Grass_Dry_TerrainLayer","drygrass", new Color(0.55f, 0.50f, 0.25f));
+            layers[4] = (psx ? PsxLayer("PSX_Seamless_ForestWildGround_128px",  5f) : null)
+                        ?? TrailLayer();
+            layers[5] = (psx ? PsxLayer("PSX_Seamless_ForestGravel_Ground_128px", 5f) : null)
+                        ?? PackLayer("Sand_TerrainLayer",     "sand",     new Color(0.76f, 0.70f, 0.50f));
             layers[6] = CreateLayer("snow", new Color(0.92f, 0.94f, 0.98f)); // nieve de los picos
             td.terrainLayers = layers;
 
@@ -430,6 +439,44 @@ namespace FolkloreArchives.MapGen
             // looked right, as the north shoulder widened from 12m to 14m), y=9
             // (along-road dash spacing, ~matches the original pack design).
             layer.tileSize = new Vector2(29f, 9f);
+            EditorUtility.SetDirty(layer);
+            return layer;
+        }
+
+        // ── Capas de terreno PSX (StarkCrafts) ──────────────────────────────
+        // Texturas seamless de 128px que vienen con el pack. El look PS1 no sale de la
+        // geometría (el terreno es un mesh, no hay "low poly" que valga) sino de la
+        // textura de baja resolución SIN suavizar: por eso les fuerzo filterMode = Point.
+        // Los mipmaps quedan ENCENDIDOS: sin ellos el piso hace ruido/aliasing horrible
+        // a la distancia, que es peor que el pixelado que buscamos.
+        const string PsxGroundDir = "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_ForestGround_Tex/";
+
+        static TerrainLayer PsxLayer(string texName, float tile)
+        {
+            string texPath = PsxGroundDir + texName + ".png";
+            var imp = AssetImporter.GetAtPath(texPath) as TextureImporter;
+            if (imp != null && imp.filterMode != FilterMode.Point)
+            {
+                imp.filterMode = FilterMode.Point;   // ← el pixelado PS1
+                imp.mipmapEnabled = true;            // sin mips el piso lejano titila
+                imp.SaveAndReimport();
+            }
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            if (tex == null) { Debug.LogWarning("PSX ground: falta " + texPath); return null; }
+
+            string path = MapLayout.GeneratedFolder + "/psxlayer_" + texName + ".terrainlayer";
+            var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(path);
+            if (layer == null)
+            {
+                layer = new TerrainLayer();
+                AssetDatabase.CreateAsset(layer, path);
+            }
+            layer.diffuseTexture = tex;
+            layer.normalMapTexture = null;
+            layer.tileSize = new Vector2(tile, tile);
+            layer.specular = Color.black;   // el piso PSX es mate, sin brillos
+            layer.metallic = 0f;
+            layer.smoothness = 0f;
             EditorUtility.SetDirty(layer);
             return layer;
         }
