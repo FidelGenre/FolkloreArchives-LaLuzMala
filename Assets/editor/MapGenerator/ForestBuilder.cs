@@ -423,7 +423,9 @@ namespace FolkloreArchives.MapGen
                     // lower so we don't get absurd 25m+ giants (native Tall x 2.4).
                     // low-poly: un poco más altos (owner: "más altos pero no tanto");
                     // BOTD queda con su tuning nativo.
-                    float s = MapLayout.UseLowPolyTrees ? Random.Range(0.55f, 2.0f) : Random.Range(0.4f, 1.6f);
+                    float s = MapLayout.UsePsxTrees ? Random.Range(0.7f, 1.35f)          // PSX: escala más contenida (no gigantes)
+                            : MapLayout.UseLowPolyTrees ? Random.Range(0.55f, 2.0f)
+                            : Random.Range(0.4f, 1.6f);
                     float tint = Random.Range(0.72f, 1.08f); // breaks the "identical clones" look
                     trees.Add(new TreeInstance
                     {
@@ -833,7 +835,17 @@ namespace FolkloreArchives.MapGen
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(PsxForestHelper.FbxPath);
             if (fbx == null) { Debug.LogWarning("PSX: FBX no importado (" + PsxForestHelper.FbxPath + ") — caigo a low-poly/BOTD."); return null; }
 
-            const float target = 8f; // altura objetivo en metros
+            const float target = 6f; // altura objetivo en metros
+            // material de VERTEX-COLOR (los PSX no traen textura, colorean por vértice)
+            Material vcMat = null;
+            var vcShader = Shader.Find("Folklore/LowPolyVertexColor");
+            if (vcShader != null)
+            {
+                vcMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Settings/PSX_VertexColor.mat");
+                if (vcMat == null) { vcMat = new Material(vcShader); AssetDatabase.CreateAsset(vcMat, "Assets/Settings/PSX_VertexColor.mat"); }
+                else vcMat.shader = vcShader;
+            }
+
             var results = new List<GameObject>();
             foreach (var name in PsxTreeNames)
             {
@@ -844,9 +856,16 @@ namespace FolkloreArchives.MapGen
 
                 float nativeH = Mathf.Max(0.001f, mf.sharedMesh.bounds.size.y);
                 var root = new GameObject(name);
-                root.transform.localScale = Vector3.one * (target / nativeH); // ~8m
+                root.transform.localScale = Vector3.one * (target / nativeH); // ~6m
                 root.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
-                root.AddComponent<MeshRenderer>().sharedMaterials = mr.sharedMaterials;
+                var nmr = root.AddComponent<MeshRenderer>();
+                if (vcMat != null)
+                {
+                    var mats = new Material[Mathf.Max(1, mf.sharedMesh.subMeshCount)];
+                    for (int i = 0; i < mats.Length; i++) mats[i] = vcMat; // vertex-color en todos los submeshes
+                    nmr.sharedMaterials = mats;
+                }
+                else nmr.sharedMaterials = mr.sharedMaterials;
                 var col = root.AddComponent<CapsuleCollider>();
                 col.center = mf.sharedMesh.bounds.center;
                 col.height = nativeH;              // (se escala con el root → ~8m)
