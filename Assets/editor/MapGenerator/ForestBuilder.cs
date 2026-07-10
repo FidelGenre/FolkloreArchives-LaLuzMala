@@ -1480,7 +1480,7 @@ namespace FolkloreArchives.MapGen
             var grassDry   = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 1.2f, 2.0f, 2.6f, 3.9f, psxDry, psxDry)
                            : lp  ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 3.2f, 4.7f)    : PackDetail("GrassDry_B", 1.0f, 1.9f, 5.1f, 8.4f);
             // Pasto de caminos/senderos: BAJO (owner) — misma textura/malla pero corta.
-            var grassShort = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 0.8f, 1.1f, 0.6f, 1.0f, psxHealthy, psxDry)
+            var grassShort = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 0.9f, 1.4f, 1.2f, 1.9f, psxHealthy, psxDry)
                            : lp  ? LowPolyDetail(LP_HighGrass, 0.8f, 1.1f, 1.0f, 1.6f)    : PackDetail("Grass_B", 0.8f, 1.3f, 1.4f, 2.3f);
             var fern       = lp ? LowPolyDetail(LP_ShrubGreen, 0.9f, 1.15f, 0.9f, 1.15f): PackDetail("Fern_A", 0.9f, 1.6f, 1.1f, 1.8f);
             var dryBush    = lp ? LowPolyDetail(LP_ShrubDead, 0.9f, 1.15f, 0.9f, 1.15f) : PackDetail("BushDry_A", 0.9f, 1.6f, 0.9f, 1.6f);
