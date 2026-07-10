@@ -34,8 +34,10 @@ namespace FolkloreArchives.MapGen
             // rendering), which we can now enable because there are no baked broadleaf
             // trees left in the mix to render broken as billboards. Used raw (not
             // baked) so the CTI shader keeps its wind + LODs + billboards.
-            // Árboles: PSX (StarkCrafts, FtF) > low-poly Polytope > Conifers BOTD.
-            GameObject[] psxTrees = MapLayout.UsePsxTrees ? BuildPsxTreePrototypes() : null;
+            // Árboles: PINOS BILLBOARD (plano texturizado, look FtF) > low-poly Polytope > Conifers BOTD.
+            // Los meshes PSX del pack no tienen textura (cartones), así que en su lugar
+            // uso planos cruzados con la textura de pino fotográfico MyPineTree04.
+            GameObject[] psxTrees = MapLayout.UsePsxTrees ? BuildBillboardPineTrees() : null;
             if (psxTrees != null)
             {
                 realTreeList.AddRange(psxTrees);
@@ -894,6 +896,80 @@ namespace FolkloreArchives.MapGen
             if (results.Count == 0) { Debug.LogWarning("PSX: no encontré PSX_Tree1..4 en el FBX."); return null; }
             Debug.Log(report.ToString());
             return results.ToArray();
+        }
+
+        // ── PINOS BILLBOARD (planos) ─────────────────────────────────────────
+        // Los árboles del pack PSX vienen SIN textura (cartones lisos). El dueño
+        // quiere pinos que se vean como la foto: un pino recortado sobre fondo
+        // transparente = un BILLBOARD. Uso la textura MyPineTree04.png (pino
+        // fotográfico con alpha, de Kajaman's Roads) sobre planos cruzados. Look
+        // Fears-to-Fathom: plano, barato, pero se lee como pino de verdad.
+        const string PineBillboardTex = "Assets/KajamansRoads/Textures/MyPineTree04.png";
+        static GameObject[] BuildBillboardPineTrees()
+        {
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(PineBillboardTex);
+            if (tex == null) { Debug.LogWarning("Pino billboard: no encontré " + PineBillboardTex + " — caigo a BOTD."); return null; }
+
+            // material recorte-alpha, doble cara, color base BLANCO (que se vea la textura tal cual)
+            Material pineMat = PsxMat("PSX_BillboardPine", Color.white, PineBillboardTex, cutout: true);
+
+            const float H = 9f;              // altura del pino en metros
+            const float W = H * 0.5f;        // ancho (la textura es 1:2)
+            Mesh mesh = BuildCrossedBillboardMesh(W, H, 3,   // 3 planos a 0/60/120°
+                                                  MapLayout.GeneratedFolder + "/PSX_BillboardPine_mesh.asset");
+
+            var root = new GameObject("BillboardPine");
+            root.AddComponent<MeshFilter>().sharedMesh = mesh;
+            root.AddComponent<MeshRenderer>().sharedMaterial = pineMat;
+            var col = root.AddComponent<CapsuleCollider>();
+            col.center = new Vector3(0f, H * 0.45f, 0f);
+            col.height = H * 0.9f;
+            col.radius = 0.5f;
+
+            string path = MapLayout.GeneratedFolder + "/PSX_BillboardPine.prefab";
+            AssetDatabase.DeleteAsset(path);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            if (prefab == null) return null;
+            Debug.Log("Pino billboard: prototipo creado (" + PineBillboardTex + ").");
+            return new[] { prefab };
+        }
+
+        // Malla de N planos verticales cruzados (billboard 3D). Base en y=0, centrada
+        // en XZ. Normales apuntando hacia AFUERA+ARRIBA para que reciban luz pareja
+        // (evita cards oscuros). UV completa 0..1 en cada plano.
+        static Mesh BuildCrossedBillboardMesh(float width, float height, int planes, string path)
+        {
+            float hw = width * 0.5f;
+            var verts = new List<Vector3>();
+            var norms = new List<Vector3>();
+            var uvs   = new List<Vector2>();
+            var tris  = new List<int>();
+            for (int p = 0; p < planes; p++)
+            {
+                float ang = Mathf.PI * p / planes;         // 0..180° repartido
+                Vector3 dir = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)); // eje del ancho
+                Vector3 nrm = (Vector3.up * 0.6f + Vector3.Cross(Vector3.up, dir) * 0.4f).normalized;
+                int b = verts.Count;
+                verts.Add(-dir * hw + Vector3.up * 0f);      // left-bottom
+                verts.Add( dir * hw + Vector3.up * 0f);      // right-bottom
+                verts.Add( dir * hw + Vector3.up * height);  // right-top
+                verts.Add(-dir * hw + Vector3.up * height);  // left-top
+                uvs.Add(new Vector2(0, 0)); uvs.Add(new Vector2(1, 0));
+                uvs.Add(new Vector2(1, 1)); uvs.Add(new Vector2(0, 1));
+                for (int k = 0; k < 4; k++) norms.Add(nrm);
+                tris.Add(b + 0); tris.Add(b + 3); tris.Add(b + 2); // front
+                tris.Add(b + 0); tris.Add(b + 2); tris.Add(b + 1);
+            }
+            var m = new Mesh { name = System.IO.Path.GetFileNameWithoutExtension(path) };
+            m.SetVertices(verts);
+            m.SetNormals(norms);
+            m.SetUVs(0, uvs);
+            m.SetTriangles(tris, 0);
+            m.RecalculateBounds();
+            AssetDatabase.DeleteAsset(path);
+            AssetDatabase.CreateAsset(m, path);
+            return m;
         }
 
         static Transform FindChildByName(Transform root, string name)

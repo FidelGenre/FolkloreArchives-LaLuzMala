@@ -33,6 +33,9 @@ namespace FolkloreArchives.MapGen
         // PSX (StarkCrafts): usar los árboles PSX_Tree1..4 del FBX como árboles del
         // bosque (look Fears-to-Fathom). Si el FBX no está importado, cae a low-poly/BOTD.
         // El pasto/detalles siguen con Polytope por ahora.
+        // PSX (StarkCrafts): usar los árboles PSX_Tree1..4 del FBX como árboles del
+        // bosque (look Fears-to-Fathom). Si el FBX no está importado, cae a low-poly/BOTD.
+        // El pasto/detalles siguen con Polytope por ahora.
         public const bool UsePsxTrees = true;
 
         // ------------- Key locations (x, z) — matches the hand-drawn plan -------------
