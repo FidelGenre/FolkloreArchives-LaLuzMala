@@ -19,6 +19,7 @@ namespace FolkloreArchives.Net
         public float mouseSensitivity = 0.08f;
 
         Camera cam;
+        float _logTimer;
 
         void Awake() => cam = GetComponentInChildren<Camera>(true);
 
@@ -35,6 +36,7 @@ namespace FolkloreArchives.Net
                 float z = 440f;
                 transform.position = OnGround(new Vector3(x, 0f, z));
             }
+            Debug.Log($"[NET] Cápsula spawn — IsOwner={IsOwner} clientId={OwnerClientId} pos={transform.position}");
         }
 
         void Update()
@@ -52,8 +54,17 @@ namespace FolkloreArchives.Net
             Vector3 move = transform.forward * v + transform.right * h;
             if (move.sqrMagnitude > 1f) move.Normalize();
 
+            Vector3 before = transform.position;
             Vector3 p = transform.position + move * speed * Time.deltaTime;
             transform.position = OnGround(p);
+
+            // log 1/seg: ¿lee WASD? ¿cambia la posición de verdad?
+            _logTimer += Time.deltaTime;
+            if (_logTimer >= 1f)
+            {
+                _logTimer = 0f;
+                Debug.Log($"[NET] owner input h={h} v={v} | movió {(transform.position - before).magnitude:0.000} m | pos={transform.position}");
+            }
         }
 
         // pega la posición al terreno (sin CharacterController: para la prueba alcanza)

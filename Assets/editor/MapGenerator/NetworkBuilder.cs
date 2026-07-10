@@ -58,7 +58,8 @@ namespace FolkloreArchives.MapGen
 
             var camGO = new GameObject("Camera");
             camGO.transform.SetParent(root.transform);
-            camGO.transform.localPosition = new Vector3(0f, 1.8f, 0f);
+            camGO.transform.localPosition = new Vector3(0f, 3f, -5f);   // 3ª persona (ver la cápsula moverse)
+            camGO.transform.localRotation = Quaternion.Euler(20f, 0f, 0f);
             var cam = camGO.AddComponent<Camera>();
             cam.tag = "MainCamera";
             cam.farClipPlane = MapLayout.CameraFarClip;
