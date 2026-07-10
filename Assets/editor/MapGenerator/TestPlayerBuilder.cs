@@ -121,16 +121,35 @@ namespace FolkloreArchives.MapGen
             var dcc = dog.AddComponent<CharacterController>();
             dcc.height = 0.6f; dcc.radius = 0.22f; dcc.center = new Vector3(0f, 0.3f, 0f);
 
-            // modelo visual (glTFast). El PS1 Dog viene ENORME a escala 1 → lo achico a
-            // ~perro real (~0.6 m al lomo). Y gira 180° en Y porque su "adelante" apunta
-            // al revés que el controlador (por eso se veía de espaldas al seguir).
-            const float DogScale = 0.18f;   // ← si queda muy chico/grande, tocar acá
+            // modelo visual (glTFast). El PS1 Dog viene ENORME a escala 1 (glb en otra
+            // unidad), así que NO uso un número fijo: mido su altura real y lo escalo a
+            // DogTargetHeight. Gira 180° en Y porque su "adelante" apunta al revés que el
+            // controlador (por eso se veía de espaldas al seguir).
+            const float DogTargetHeight = 0.7f;   // alto al lomo, en metros
             var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             model.name = "Model";
             model.transform.SetParent(dog.transform);
             model.transform.localPosition = Vector3.zero;
             model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            model.transform.localScale = Vector3.one * DogScale;
+            model.transform.localScale = Vector3.one;
+
+            var rends = model.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                Bounds b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                float h = Mathf.Max(0.0001f, b.size.y);
+                float s = DogTargetHeight / h;                       // factor para llegar al alto objetivo
+                model.transform.localScale = Vector3.one * s;
+                // reapoyar las patas en y=0 (según dónde quedó la base tras escalar)
+                Bounds b2 = model.GetComponentInChildren<Renderer>().bounds;
+                var all = model.GetComponentsInChildren<Renderer>();
+                for (int i = 0; i < all.Length; i++) b2.Encapsulate(all[i].bounds);
+                float bottomLocal = b2.min.y - dog.transform.position.y;
+                model.transform.localPosition = new Vector3(0f, -bottomLocal, 0f);
+                Debug.Log($"Rufus: alto nativo {h:0.00} → escala {s:0.000} (objetivo {DogTargetHeight} m).");
+            }
+            else Debug.LogWarning("Rufus: el modelo no tiene Renderers para medir — queda a escala 1.");
 
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;
