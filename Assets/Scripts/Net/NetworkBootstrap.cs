@@ -16,6 +16,7 @@ using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Multiplayer;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace FolkloreArchives.Net
 {
@@ -27,7 +28,28 @@ namespace FolkloreArchives.Net
         string _status = "Iniciando servicios…";
         string _joinCode = "";
         bool _busy;
+        bool _cursorFree;   // F9 libera el mouse para poder clickear el panel
         GUIStyle _box;
+
+        void Update()
+        {
+            var kb = Keyboard.current;
+            if (kb != null && kb.f9Key.wasPressedThisFrame)
+                SetCursorFree(!_cursorFree);
+            // mientras esté libre, forzarlo (el jugador re-bloquea si no)
+            if (_cursorFree)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+        }
+
+        void SetCursorFree(bool free)
+        {
+            _cursorFree = free;
+            Cursor.lockState = free ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = free;
+        }
 
         async void Awake()
         {
@@ -90,12 +112,13 @@ namespace FolkloreArchives.Net
         // Al entrar a una sala, apagar el jugador single-player (su cámara/AudioListener
         // chocarían con los jugadores en red). El cielo/grade ya quedaron aplicados por
         // sus componentes al arrancar, así que se mantienen aunque lo apaguemos.
-        static void OnConnected()
+        void OnConnected()
         {
             var tp = GameObject.Find("TEST_PLAYER");
             if (tp != null) tp.SetActive(false);
             var dog = GameObject.Find("DOG");
             if (dog != null) dog.SetActive(false); // el perro single-player; en red se spawnea aparte
+            SetCursorFree(false); // a jugar: mouse capturado para el jugador en red
         }
 
         static string Short(string id) => string.IsNullOrEmpty(id) ? "?" :
@@ -105,8 +128,9 @@ namespace FolkloreArchives.Net
         {
             if (_box == null) _box = new GUIStyle(GUI.skin.box) { richText = true, alignment = TextAnchor.UpperLeft, wordWrap = true };
             const float w = 280f;
-            GUILayout.BeginArea(new Rect(Screen.width - w - 12f, 12f, w, 220f), _box);
-            GUILayout.Label("<b>ONLINE (co-op)</b>");
+            GUILayout.BeginArea(new Rect(Screen.width - w - 12f, 12f, w, 240f), _box);
+            GUILayout.Label("<b>ONLINE (co-op)</b>   <size=10>[F9: mouse]</size>");
+            if (!_cursorFree) GUILayout.Label("<color=yellow>Apretá F9 para liberar el mouse y clickear</color>");
             GUILayout.Label(_status);
             GUILayout.Space(6);
             if (_session == null)
