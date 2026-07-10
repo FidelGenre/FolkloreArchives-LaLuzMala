@@ -34,10 +34,11 @@ namespace FolkloreArchives.MapGen
             // rendering), which we can now enable because there are no baked broadleaf
             // trees left in the mix to render broken as billboards. Used raw (not
             // baked) so the CTI shader keeps its wind + LODs + billboards.
-            // Árboles: PINOS BILLBOARD (plano texturizado, look FtF) > low-poly Polytope > Conifers BOTD.
-            // Los meshes PSX del pack no tienen textura (cartones), así que en su lugar
-            // uso planos cruzados con la textura de pino fotográfico MyPineTree04.
-            GameObject[] psxTrees = MapLayout.UsePsxTrees ? BuildBillboardPineTrees() : null;
+            // Árboles: PINOS PSX (StarkCrafts) con sus texturas REALES extraídas del FBX.
+            // Las texturas venían embebidas en el FBX y Unity no las extrajo (por eso
+            // salían blancos). Ya extraídas a PSX_ExtractedTex, uso los dos pinos del
+            // pack (PSX_Tree1 y PSX_Tree4) con su textura de aguja + corteza.
+            GameObject[] psxTrees = MapLayout.UsePsxTrees ? BuildPsxTreePrototypes() : null;
             if (psxTrees != null)
             {
                 realTreeList.AddRange(psxTrees);
@@ -831,24 +832,22 @@ namespace FolkloreArchives.MapGen
         // troncos cortados → owner: "todos con hojas". La variedad la da la escala/tinte
         // aleatorio por instancia.
         // ── PSX (StarkCrafts): árboles del FBX como prototipos de terrain-tree ──
-        static readonly string[] PsxTreeNames = { "PSX_Tree1", "PSX_Tree2", "PSX_Tree3", "PSX_Tree4" };
+        // Solo los dos PINOS del pack: PSX_Tree1 (copa=TreeCrown1, aguja) y
+        // PSX_Tree4 (copa=TreeCrown4_Tex, aguja). Tree2/Tree3 son frondosos (los que
+        // el dueño NO quiere). Verificado abriendo las texturas embebidas del FBX.
+        static readonly string[] PsxTreeNames = { "PSX_Tree1", "PSX_Tree4" };
+        const string PsxTexDir = "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_ExtractedTex/";
         static GameObject[] BuildPsxTreePrototypes()
         {
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(PsxForestHelper.FbxPath);
             if (fbx == null) { Debug.LogWarning("PSX: FBX no importado (" + PsxForestHelper.FbxPath + ") — caigo a low-poly/BOTD."); return null; }
 
-            const float target = 6f; // altura objetivo en metros
-            // El pack PSX trae los materiales BLANCOS (sin textura ni vertex-color).
-            // Creo materiales planos coloreados por tipo: COPA=verde, TRONCO=marrón.
-            // COPA: textura de follaje (con alpha) → hojas en vez de triángulo sólido.
-            Material crown = PsxMat("PSX_Crown", new Color(0.75f, 0.85f, 0.65f),
-                                    "Assets/NatureStarterKit2/Textures/branch01.tga", cutout: true);
-            // TRONCO: textura de corteza.
-            Material trunk = PsxMat("PSX_Trunk", new Color(0.65f, 0.55f, 0.45f),
-                                    "Assets/ExternalAssets/ForestPack/Texture/Bark Texture/Bark02/bark2col.png");
+            const float target = 8f; // altura objetivo en metros (pino alto)
+            // TRONCO: corteza real del pack (PSX_Bark2). Compartida por los dos pinos.
+            Material trunk = PsxMat("PSX_PineTrunk", Color.white, PsxTexDir + "PSX_Bark2_128px.png");
 
             var results = new List<GameObject>();
-            var report = new System.Text.StringBuilder("PSX árboles:\n");
+            var report = new System.Text.StringBuilder("PSX pinos:\n");
             foreach (var name in PsxTreeNames)
             {
                 Transform child = FindChildByName(fbx.transform, name);
@@ -857,21 +856,24 @@ namespace FolkloreArchives.MapGen
                 if (mf == null || mf.sharedMesh == null || mr == null) continue;
                 Mesh mesh = mf.sharedMesh;
 
-                // El FBX es Z-up (Blender): la ALTURA de todos los árboles es Z. Roto
-                // -90° en X (Z→Y) FIJO para todos (el auto-detect fallaba en Tree2, que
-                // es casi tan ancho como alto → quedaba de tronco pelado acostado).
+                // COPA: la textura de aguja REAL de este pino (con alpha → recorte).
+                //   PSX_Tree1 → PSX_TreeCrown1_128px ; PSX_Tree4 → PSX_TreeCrown4_Tex_128px
+                Material crown = PsxMat("PSX_PineCrown_" + name, Color.white,
+                                        PineCrownTexFor(name), cutout: true);
+
+                // El FBX es Z-up (Blender): la ALTURA es Z. Roto -90° en X (Z→Y) FIJO.
                 Vector3 sz = mesh.bounds.size;
                 Quaternion orient = Quaternion.Euler(-90f, 0f, 0f);
                 float hExt = Mathf.Max(0.001f, sz.z);
                 report.AppendLine($"  {name}: bounds=({sz.x:0.00},{sz.y:0.00},{sz.z:0.00}) alturaZ={sz.z:0.00}");
 
-                // color por submesh: "...crown..." = copa (verde); si no = tronco (marrón)
+                // material por submesh: "...crown/corwn..." = copa (aguja); si no = tronco (corteza)
                 var src = mr.sharedMaterials;
                 var mats = new Material[Mathf.Max(1, mesh.subMeshCount)];
                 for (int i = 0; i < mats.Length; i++)
                 {
                     string mn = (i < src.Length && src[i] != null) ? src[i].name.ToLowerInvariant() : "";
-                    mats[i] = mn.Contains("crown") ? crown : trunk;
+                    mats[i] = (mn.Contains("crown") || mn.Contains("corwn")) ? crown : trunk;
                 }
 
                 // HORNEAR la rotación+escala+centrado DENTRO de la malla (los terrain-trees
@@ -970,6 +972,18 @@ namespace FolkloreArchives.MapGen
             AssetDatabase.DeleteAsset(path);
             AssetDatabase.CreateAsset(m, path);
             return m;
+        }
+
+        // Textura de aguja (copa) que corresponde a cada pino, según el material
+        // original del mesh. Extraídas del FBX a PSX_ExtractedTex.
+        static string PineCrownTexFor(string treeName)
+        {
+            switch (treeName)
+            {
+                case "PSX_Tree1": return PsxTexDir + "PSX_TreeCrown1_128px.png";       // pino chico
+                case "PSX_Tree4": return PsxTexDir + "PSX_TreeCrown4_Tex_128px.png";   // pino alto/esbelto
+                default:          return PsxTexDir + "PSX_TreeCrown1_128px.png";
+            }
         }
 
         static Transform FindChildByName(Transform root, string name)
