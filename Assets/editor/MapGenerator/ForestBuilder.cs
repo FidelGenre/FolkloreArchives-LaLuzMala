@@ -426,7 +426,7 @@ namespace FolkloreArchives.MapGen
                     // lower so we don't get absurd 25m+ giants (native Tall x 2.4).
                     // low-poly: un poco más altos (owner: "más altos pero no tanto");
                     // BOTD queda con su tuning nativo.
-                    float s = MapLayout.UsePsxTrees ? Random.Range(0.8f, 1.3f)           // PSX pinos: 9.6m a 15.6m (owner: "más altos")
+                    float s = MapLayout.UsePsxTrees ? Random.Range(0.7f, 1.35f)          // PSX: escala más contenida (no gigantes)
                             : MapLayout.UseLowPolyTrees ? Random.Range(0.55f, 2.0f)
                             : Random.Range(0.4f, 1.6f);
                     float tint = Random.Range(0.72f, 1.08f); // breaks the "identical clones" look
@@ -832,18 +832,17 @@ namespace FolkloreArchives.MapGen
         // troncos cortados → owner: "todos con hojas". La variedad la da la escala/tinte
         // aleatorio por instancia.
         // ── PSX (StarkCrafts): árboles del FBX como prototipos de terrain-tree ──
-        // PINOS del pack. PSX_Tree4 (copa=TreeCrown4_Tex) es el pino alto y frondoso.
-        // PSX_Tree1 también es pino pero tiene solo 24 triángulos → se veía pelado
-        // ("a algunos les faltan hojas"), así que queda afuera. Tree2/Tree3 son
-        // frondosos (broadleaf), tampoco. Verificado con las texturas del FBX.
-        static readonly string[] PsxTreeNames = { "PSX_Tree4" };
+        // Solo los dos PINOS del pack: PSX_Tree1 (copa=TreeCrown1, aguja) y
+        // PSX_Tree4 (copa=TreeCrown4_Tex, aguja). Tree2/Tree3 son frondosos (los que
+        // el dueño NO quiere). Verificado abriendo las texturas embebidas del FBX.
+        static readonly string[] PsxTreeNames = { "PSX_Tree1", "PSX_Tree4" };
         const string PsxTexDir = "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_ExtractedTex/";
         static GameObject[] BuildPsxTreePrototypes()
         {
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(PsxForestHelper.FbxPath);
             if (fbx == null) { Debug.LogWarning("PSX: FBX no importado (" + PsxForestHelper.FbxPath + ") — caigo a low-poly/BOTD."); return null; }
 
-            const float target = 12f; // altura objetivo en metros (owner: "más altos")
+            const float target = 8f; // altura objetivo en metros (pino alto)
             // TRONCO: corteza real del pack (PSX_Bark2). Compartida por los dos pinos.
             Material trunk = PsxMat("PSX_PineTrunk", Color.white, PsxTexDir + "PSX_Bark2_128px.png");
 
@@ -860,7 +859,7 @@ namespace FolkloreArchives.MapGen
                 // COPA: la textura de aguja REAL de este pino (con alpha → recorte).
                 //   PSX_Tree1 → PSX_TreeCrown1_128px ; PSX_Tree4 → PSX_TreeCrown4_Tex_128px
                 Material crown = PsxMat("PSX_PineCrown_" + name, Color.white,
-                                        PineCrownTexFor(name), cutout: true, cutoff: 0.22f);
+                                        PineCrownTexFor(name), cutout: true);
 
                 // El FBX es Z-up (Blender): la ALTURA es Z. Roto -90° en X (Z→Y) FIJO.
                 Vector3 sz = mesh.bounds.size;
@@ -1027,7 +1026,7 @@ namespace FolkloreArchives.MapGen
 
         // material URP/Lit para los árboles PSX (que vienen blancos). Opcional: textura
         // (_BaseMap) y recorte alpha (para el follaje = hojas con transparencia).
-        static Material PsxMat(string name, Color col, string texPath = null, bool cutout = false, float cutoff = 0.4f)
+        static Material PsxMat(string name, Color col, string texPath = null, bool cutout = false)
         {
             string path = "Assets/Settings/" + name + ".mat";
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -1047,10 +1046,9 @@ namespace FolkloreArchives.MapGen
             if (cutout)
             {
                 // hojas: alpha cutout + doble cara (para que el card se vea de ambos lados)
-                // cutoff BAJO = sobreviven más agujas semitransparentes → copa más poblada
                 m.SetFloat("_AlphaClip", 1f);
                 m.EnableKeyword("_ALPHATEST_ON");
-                if (m.HasProperty("_Cutoff")) m.SetFloat("_Cutoff", cutoff);
+                if (m.HasProperty("_Cutoff")) m.SetFloat("_Cutoff", 0.4f);
                 if (m.HasProperty("_Cull"))   m.SetFloat("_Cull", 0f);
                 m.renderQueue = 2450; // AlphaTest
             }
