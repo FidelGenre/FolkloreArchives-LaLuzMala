@@ -238,7 +238,11 @@ namespace FolkloreArchives.MapGen
         //  Cold Night (azul oscuro). Cambiá la ruta acá para probar otro cielo de AllSky.
         public static Material DaySkybox()
         {
-            // 1º: skybox de montañas generado por SkyboxMountainBaker (si se corrió).
+            // 1º: skybox PSX (StarkCrafts) — el más FtF.
+            var psx = PanoramicSkybox("Assets/StarkCrafts/PSX_Daysky_HDRI/DAYSKY.hdr",
+                                      "Assets/Settings/PSX_DaySky.mat");
+            if (psx != null) return psx;
+            // 2º: skybox de montañas generado por SkyboxMountainBaker (si se corrió).
             var mtn = AssetDatabase.LoadAssetAtPath<Material>(SkyboxMountainBaker.MatPath);
             if (mtn != null) return mtn;
             var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Epic_GloriousPink/Epic_GloriousPink.mat");
@@ -247,10 +251,35 @@ namespace FolkloreArchives.MapGen
         }
         public static Material NightSkybox()
         {
+            // 1º: skybox de noche PSX (StarkCrafts).
+            var psx = PanoramicSkybox("Assets/StarkCrafts/PSX_Nightsky_HDRI/PSX_NIGHTSKY.hdr",
+                                      "Assets/Settings/PSX_NightSky.mat");
+            if (psx != null) return psx;
             var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Cold Night/Cold Night.mat");
             if (sky != null) return sky;
             var proc = AssetDatabase.LoadAssetAtPath<Material>(MapLayout.GeneratedFolder + "/mat_nightsky.mat");
             return proc != null ? proc : BuildDuskSky();
+        }
+
+        // Crea (y cachea) un material Skybox/Panoramic a partir de un HDRI equirect.
+        // Devuelve null si el HDRI todavía no está importado.
+        static Material PanoramicSkybox(string hdrPath, string matPath)
+        {
+            var tex = AssetDatabase.LoadAssetAtPath<Texture>(hdrPath);
+            if (tex == null) return null;
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                mat = new Material(Shader.Find("Skybox/Panoramic"));
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+            mat.SetTexture("_MainTex", tex);
+            if (mat.HasProperty("_Mapping"))   mat.SetFloat("_Mapping", 1);   // Latitude Longitude
+            if (mat.HasProperty("_ImageType")) mat.SetFloat("_ImageType", 0); // 360
+            if (mat.HasProperty("_Exposure"))  mat.SetFloat("_Exposure", 1f);
+            EditorUtility.SetDirty(mat);
+            AssetDatabase.SaveAssets();
+            return mat;
         }
 
         // Warm golden-hour / late-afternoon sky: FtF style — orange at the horizon,
