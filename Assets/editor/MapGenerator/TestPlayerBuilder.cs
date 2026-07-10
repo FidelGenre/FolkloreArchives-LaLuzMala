@@ -119,13 +119,13 @@ namespace FolkloreArchives.MapGen
             dog.transform.rotation = player.transform.rotation;
 
             var dcc = dog.AddComponent<CharacterController>();
-            dcc.height = 0.6f; dcc.radius = 0.22f; dcc.center = new Vector3(0f, 0.3f, 0f);
+            dcc.height = 1.1f; dcc.radius = 0.35f; dcc.center = new Vector3(0f, 0.55f, 0f);
 
             // modelo visual (glTFast). El PS1 Dog viene ENORME a escala 1 (glb en otra
             // unidad), así que NO uso un número fijo: mido su altura real y lo escalo a
             // DogTargetHeight. Gira 180° en Y porque su "adelante" apunta al revés que el
             // controlador (por eso se veía de espaldas al seguir).
-            const float DogTargetHeight = 0.7f;   // alto al lomo, en metros
+            const float DogTargetHeight = 1.4f;   // alto al lomo, en metros (owner: el doble)
             var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             model.name = "Model";
             model.transform.SetParent(dog.transform);
