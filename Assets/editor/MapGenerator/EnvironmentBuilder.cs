@@ -238,13 +238,15 @@ namespace FolkloreArchives.MapGen
         //  Cold Night (azul oscuro). Cambiá la ruta acá para probar otro cielo de AllSky.
         public static Material DaySkybox()
         {
-            // 1º: skybox PSX (StarkCrafts) — el más FtF.
-            var psx = PanoramicSkybox("Assets/StarkCrafts/PSX_Daysky_HDRI/DAYSKY.hdr",
-                                      "Assets/Settings/PSX_DaySky.mat");
-            if (psx != null) return psx;
-            // 2º: skybox de montañas generado por SkyboxMountainBaker (si se corrió).
-            var mtn = AssetDatabase.LoadAssetAtPath<Material>(SkyboxMountainBaker.MatPath);
-            if (mtn != null) return mtn;
+            // HDRI de día PSX (StarkCrafts) y skybox de montañas DESACTIVADOS: el dueño
+            // prefiere los cielos de antes (AllSky Free), igual que en la noche.
+            // Para volver al PSX de día, descomentá:
+            //   var psx = PanoramicSkybox("Assets/StarkCrafts/PSX_Daysky_HDRI/DAYSKY.hdr",
+            //                             "Assets/Settings/PSX_DaySky.mat");
+            //   if (psx != null) return psx;
+            // Para volver al skybox de montañas (SkyboxMountainBaker), descomentá:
+            //   var mtn = AssetDatabase.LoadAssetAtPath<Material>(SkyboxMountainBaker.MatPath);
+            //   if (mtn != null) return mtn;
             var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Epic_GloriousPink/Epic_GloriousPink.mat");
             if (sky != null) return sky;
             return AssetDatabase.LoadAssetAtPath<Material>(MapLayout.GeneratedFolder + "/mat_daysky.mat") ?? BuildDaySky();
