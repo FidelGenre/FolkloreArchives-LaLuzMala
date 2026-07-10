@@ -1,33 +1,34 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
-//  NetworkBuilder.cs — arma la infraestructura de red en la escena:
+//  NetworkBuilder.cs — infraestructura de red en la escena:
 //   - root "NET" (persiste entre regenerados)
-//   - NetworkManager + UnityTransport
-//   - NetworkBootstrap (UI de conexión por código)
-//   - prefab de jugador de prueba (cápsula) asignado como PlayerPrefab
-//  Todo idempotente: se puede llamar en cada Generate sin duplicar.
+//   - NetworkManager + UnityTransport + NetworkBootstrap (UI/código)
+//   - NetGameSpawner (spawnea persona/perro según la elección)
+//   - prefabs de PERSONA y PERRO en red (owner-aware)
+//  Idempotente: se puede llamar en cada Generate.
 // ============================================================
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace FolkloreArchives.MapGen
 {
     public static class NetworkBuilder
     {
-        const string CapsulePrefabPath = "Assets/_FolkloreArchives/Generated/NetCapsulePlayer.prefab";
+        const string PersonPrefabPath = "Assets/_FolkloreArchives/Generated/NetPerson.prefab";
+        const string DogPrefabPath    = "Assets/_FolkloreArchives/Generated/NetDog.prefab";
+        const string DogGlb           = "Assets/ExternalAssets/Dog/PS1_Dog.glb";
 
         public static void EnsureNet()
         {
             var net = GameObject.Find("NET");
             if (net == null) net = new GameObject("NET");
 
-            // panel de conexión (crea/une por código)
             if (net.GetComponent<FolkloreArchives.Net.NetworkBootstrap>() == null)
                 net.AddComponent<FolkloreArchives.Net.NetworkBootstrap>();
 
-            // NetworkManager + transporte
             var nm = net.GetComponent<NetworkManager>();
             if (nm == null) nm = net.AddComponent<NetworkManager>();
             var utp = net.GetComponent<UnityTransport>();
@@ -35,40 +36,127 @@ namespace FolkloreArchives.MapGen
 
             if (nm.NetworkConfig == null) nm.NetworkConfig = new NetworkConfig();
             nm.NetworkConfig.NetworkTransport = utp;
-            nm.NetworkConfig.PlayerPrefab = BuildCapsulePrefab();
-            nm.NetworkConfig.ConnectionApproval = false;
+            nm.NetworkConfig.PlayerPrefab = null;          // spawn manual por elección
+            nm.NetworkConfig.ConnectionApproval = true;    // cada cliente manda su elección
+
+            var person = BuildPersonPrefab();
+            var dog = BuildDogPrefab();
+
+            var spawner = net.GetComponent<FolkloreArchives.Net.NetGameSpawner>();
+            if (spawner == null) spawner = net.AddComponent<FolkloreArchives.Net.NetGameSpawner>();
+            spawner.personPrefab = person;
+            spawner.dogPrefab = dog;
 
             EditorUtility.SetDirty(nm);
+            EditorUtility.SetDirty(spawner);
         }
 
-        // Prefab de jugador de prueba: cápsula + cámara 1ª persona (apagada, la prende
-        // el dueño) + NetworkObject + OwnerNetworkTransform + NetPlayerSimple.
-        static GameObject BuildCapsulePrefab()
+        // ── PERSONA en red: rig 1ª persona (cámara + linterna + MapExplorer) ──
+        static GameObject BuildPersonPrefab()
         {
-            var root = new GameObject("NetCapsulePlayer");
+            var root = new GameObject("NetPerson");
             root.AddComponent<NetworkObject>();
             root.AddComponent<FolkloreArchives.Net.OwnerNetworkTransform>();
-            root.AddComponent<FolkloreArchives.Net.NetPlayerSimple>();
+            root.AddComponent<FolkloreArchives.Net.NetOwnerGate>();
+            var cc = root.AddComponent<CharacterController>();
+            cc.height = 2.4f; cc.radius = 0.35f; cc.center = new Vector3(0f, 1.2f, 0f);
+            var explorer = root.AddComponent<FolkloreArchives.MapExplorer>();
+            explorer.enabled = false; // el gate lo prende para el dueño
 
-            var vis = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            vis.name = "Capsule";
-            vis.transform.SetParent(root.transform);
-            vis.transform.localPosition = new Vector3(0f, 1f, 0f);
-            Object.DestroyImmediate(vis.GetComponent<Collider>());
+            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            body.name = "Body";
+            body.transform.SetParent(root.transform);
+            body.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+            body.transform.localScale = new Vector3(0.7f, 1.2f, 0.7f);
+            Object.DestroyImmediate(body.GetComponent<Collider>());
 
             var camGO = new GameObject("Camera");
             camGO.transform.SetParent(root.transform);
-            camGO.transform.localPosition = new Vector3(0f, 3f, -5f);   // 3ª persona (ver la cápsula moverse)
-            camGO.transform.localRotation = Quaternion.Euler(20f, 0f, 0f);
+            camGO.transform.localPosition = new Vector3(0f, 2.3f, 0f);
             var cam = camGO.AddComponent<Camera>();
             cam.tag = "MainCamera";
+            cam.clearFlags = CameraClearFlags.Skybox;
             cam.farClipPlane = MapLayout.CameraFarClip;
             camGO.AddComponent<AudioListener>();
-            camGO.SetActive(false); // el dueño la prende en OnNetworkSpawn
+            var camData = cam.GetUniversalAdditionalCameraData();
+            camData.renderPostProcessing = true;
+            camData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            camData.antialiasingQuality = AntialiasingQuality.High;
+            camGO.AddComponent<FolkloreArchives.VhsPostFx>();
 
-            var prefab = PrefabUtility.SaveAsPrefabAsset(root, CapsulePrefabPath);
+            var flashGO = new GameObject("Flashlight");
+            flashGO.transform.SetParent(camGO.transform);
+            flashGO.transform.localPosition = new Vector3(0.25f, -0.2f, 0.1f);
+            var fl = flashGO.AddComponent<Light>();
+            fl.type = LightType.Spot; fl.range = MapLayout.FlashlightRange;
+            fl.spotAngle = MapLayout.FlashlightSpotAngle; fl.intensity = 28f;
+            fl.color = new Color(1f, 0.78f, 0.38f); fl.shadows = LightShadows.None;
+
+            camGO.SetActive(false); // gate lo prende para el dueño
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, PersonPrefabPath);
             Object.DestroyImmediate(root);
             return prefab;
+        }
+
+        // ── PERRO en red: modelo PS1 + DogController + cámara 3ª persona ──
+        static GameObject BuildDogPrefab()
+        {
+            var root = new GameObject("NetDog");
+            root.AddComponent<NetworkObject>();
+            root.AddComponent<FolkloreArchives.Net.OwnerNetworkTransform>();
+            root.AddComponent<FolkloreArchives.Net.NetOwnerGate>();
+            var cc = root.AddComponent<CharacterController>();
+            cc.height = 1.1f; cc.radius = 0.35f; cc.center = new Vector3(0f, 0.55f, 0f);
+            var dogCtrl = root.AddComponent<FolkloreArchives.DogController>();
+            dogCtrl.enabled = false;
+
+            BuildDogVisual(root.transform);
+
+            var camGO = new GameObject("Camera");
+            camGO.transform.SetParent(root.transform);
+            camGO.transform.localPosition = new Vector3(0f, 1.8f, -3.2f);
+            camGO.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
+            var cam = camGO.AddComponent<Camera>();
+            cam.tag = "MainCamera";
+            cam.clearFlags = CameraClearFlags.Skybox;
+            cam.farClipPlane = MapLayout.CameraFarClip;
+            camGO.AddComponent<AudioListener>();
+            var camData = cam.GetUniversalAdditionalCameraData();
+            camData.renderPostProcessing = true;
+            camData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            camData.antialiasingQuality = AntialiasingQuality.High;
+            camGO.AddComponent<FolkloreArchives.VhsPostFx>();
+            camGO.SetActive(false);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, DogPrefabPath);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        // Carga el glb, lo escala a ~1.4 m y lo gira 180° (mismo criterio que el single-player).
+        static void BuildDogVisual(Transform parent)
+        {
+            var glb = AssetDatabase.LoadAssetAtPath<GameObject>(DogGlb);
+            if (glb == null) { Debug.LogWarning("NetDog: no encontré " + DogGlb + " — perro sin modelo."); return; }
+            const float target = 1.4f;
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(glb);
+            model.name = "Model";
+            model.transform.SetParent(parent);
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            model.transform.localScale = Vector3.one;
+            var rends = model.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                Bounds b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                float h = Mathf.Max(0.0001f, b.size.y);
+                model.transform.localScale = Vector3.one * (target / h);
+                Bounds b2 = model.GetComponentInChildren<Renderer>().bounds;
+                foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
+                model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y), 0f);
+            }
         }
     }
 }

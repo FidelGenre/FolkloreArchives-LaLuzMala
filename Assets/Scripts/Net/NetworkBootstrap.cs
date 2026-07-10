@@ -30,7 +30,16 @@ namespace FolkloreArchives.Net
         string _joinCode = "";
         bool _busy;
         bool _cursorFree;   // F9 libera el mouse para poder clickear el panel
+        int _role;          // 0 = persona, 1 = perro (elección antes de entrar)
         GUIStyle _box;
+
+        // pasa la elección (1 byte) al servidor por la ConnectionData; el NetGameSpawner
+        // la lee en el Connection Approval y spawnea persona o perro.
+        void SendRole()
+        {
+            if (NetworkManager.Singleton != null)
+                NetworkManager.Singleton.NetworkConfig.ConnectionData = new byte[] { (byte)_role };
+        }
 
         void Update()
         {
@@ -86,6 +95,7 @@ namespace FolkloreArchives.Net
             _busy = true; _status = "Creando sala…";
             try
             {
+                SendRole();
                 var options = new SessionOptions { MaxPlayers = maxPlayers }
                     .WithRelayNetwork();   // host-client (el que crea = host)
                 _session = await MultiplayerService.Instance.CreateSessionAsync(options);
@@ -103,6 +113,7 @@ namespace FolkloreArchives.Net
             _busy = true; _status = "Uniéndose…";
             try
             {
+                SendRole();
                 _session = await MultiplayerService.Instance
                     .JoinSessionByCodeAsync(code.Trim().ToUpperInvariant());
                 OnConnected();
@@ -148,6 +159,14 @@ namespace FolkloreArchives.Net
             GUILayout.Space(6);
             if (_session == null)
             {
+                // elección de personaje ANTES de entrar
+                GUILayout.Label("Jugar como:");
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Toggle(_role == 0, " Persona", GUILayout.Width(120))) _role = 0;
+                if (GUILayout.Toggle(_role == 1, " Perro")) _role = 1;
+                GUILayout.EndHorizontal();
+                GUILayout.Space(4);
+
                 GUI.enabled = !_busy;
                 if (GUILayout.Button("Crear sala (HOST)")) _ = Host();
                 GUILayout.Space(4);
