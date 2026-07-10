@@ -12,6 +12,7 @@
 //  vienen en la etapa 1b (necesitan el NetworkManager en la escena).
 // ============================================================
 using System.Threading.Tasks;
+using Unity.Netcode;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Multiplayer;
@@ -68,9 +69,20 @@ namespace FolkloreArchives.Net
             }
         }
 
+        static bool NetReady(out string err)
+        {
+            if (NetworkManager.Singleton == null)
+            { err = "Falta el NetworkManager en la escena.\nRegenerá el mapa (Tools > Folklore Archives > Generate)."; return false; }
+            if (NetworkManager.Singleton.NetworkConfig == null ||
+                NetworkManager.Singleton.NetworkConfig.NetworkTransport == null)
+            { err = "NetworkManager sin transporte configurado.\nRegenerá el mapa."; return false; }
+            err = null; return true;
+        }
+
         async Task Host()
         {
             if (_busy) return;
+            if (!NetReady(out var nerr)) { _status = nerr; return; }
             _busy = true; _status = "Creando sala…";
             try
             {
@@ -80,13 +92,14 @@ namespace FolkloreArchives.Net
                 OnConnected();
                 _status = "SALA CREADA\nCódigo: " + _session.Code + "\n(pasáselo al otro jugador)";
             }
-            catch (System.Exception e) { _status = "Error al crear: " + e.Message; }
+            catch (System.Exception e) { _status = "Error al crear: " + e.Message; Debug.LogException(e); }
             _busy = false;
         }
 
         async Task Join(string code)
         {
             if (_busy || string.IsNullOrWhiteSpace(code)) return;
+            if (!NetReady(out var nerr)) { _status = nerr; return; }
             _busy = true; _status = "Uniéndose…";
             try
             {
@@ -95,7 +108,7 @@ namespace FolkloreArchives.Net
                 OnConnected();
                 _status = "CONECTADO a " + _session.Code;
             }
-            catch (System.Exception e) { _status = "Error al unirse: " + e.Message; }
+            catch (System.Exception e) { _status = "Error al unirse: " + e.Message; Debug.LogException(e); }
             _busy = false;
         }
 
