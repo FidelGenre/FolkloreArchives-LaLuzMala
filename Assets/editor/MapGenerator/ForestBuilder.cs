@@ -841,20 +841,23 @@ namespace FolkloreArchives.MapGen
             Material crown = PsxMat("PSX_Crown", new Color(0.17f, 0.29f, 0.12f));
             Material trunk = PsxMat("PSX_Trunk", new Color(0.27f, 0.18f, 0.10f));
 
+            // INSTANCIO el FBX (ahí los árboles están PARADOS y con su orientación
+            // correcta) y extraigo cada uno preservando la rotación → si no, quedaban
+            // acostados (el FBX es Z-up de Blender).
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
+            inst.transform.position = Vector3.zero;
+            inst.transform.rotation = Quaternion.identity;
+            inst.transform.localScale = Vector3.one;
+
             var results = new List<GameObject>();
             foreach (var name in PsxTreeNames)
             {
-                Transform child = FindChildByName(fbx.transform, name);
+                Transform child = FindChildByName(inst.transform, name);
                 var mf = child != null ? child.GetComponent<MeshFilter>() : null;
                 var mr = child != null ? child.GetComponent<MeshRenderer>() : null;
                 if (mf == null || mf.sharedMesh == null || mr == null) continue;
 
-                float nativeH = Mathf.Max(0.001f, mf.sharedMesh.bounds.size.y);
-                var root = new GameObject(name);
-                root.transform.localScale = Vector3.one * (target / nativeH); // ~6m
-                root.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
-                var nmr = root.AddComponent<MeshRenderer>();
-                // color por submesh: material "...crown..." = copa (verde); si no = tronco (marrón)
+                // color por submesh: "...crown..." = copa (verde); si no = tronco (marrón)
                 var src = mr.sharedMaterials;
                 var mats = new Material[Mathf.Max(1, mf.sharedMesh.subMeshCount)];
                 for (int i = 0; i < mats.Length; i++)
@@ -862,11 +865,21 @@ namespace FolkloreArchives.MapGen
                     string mn = (i < src.Length && src[i] != null) ? src[i].name.ToLowerInvariant() : "";
                     mats[i] = mn.Contains("crown") ? crown : trunk;
                 }
-                nmr.sharedMaterials = mats;
+                mr.sharedMaterials = mats;
+
+                // extraer el hijo preservando su transform (world), a un root nuevo
+                var root = new GameObject(name);
+                root.transform.position = Vector3.zero;
+                child.SetParent(root.transform, true); // mantiene orientación/escala del FBX
+                // base al piso (y=0) y centrado en XZ, usando los bounds YA orientados
+                Bounds b = mr.bounds;
+                child.position -= new Vector3(b.center.x, b.min.y, b.center.z);
+                float h = Mathf.Max(0.001f, b.size.y);     // altura REAL (parado)
+                root.transform.localScale = Vector3.one * (target / h);
                 var col = root.AddComponent<CapsuleCollider>();
-                col.center = mf.sharedMesh.bounds.center;
-                col.height = nativeH;              // (se escala con el root → ~8m)
-                col.radius = nativeH * 0.12f;
+                col.center = new Vector3(0f, h * 0.5f, 0f);
+                col.height = h;
+                col.radius = h * 0.12f;
 
                 string path = MapLayout.GeneratedFolder + "/PSX_" + name + ".prefab";
                 AssetDatabase.DeleteAsset(path);
@@ -874,8 +887,9 @@ namespace FolkloreArchives.MapGen
                 Object.DestroyImmediate(root);
                 if (prefab != null) results.Add(prefab);
             }
+            Object.DestroyImmediate(inst);
             if (results.Count == 0) { Debug.LogWarning("PSX: no encontré PSX_Tree1..4 en el FBX."); return null; }
-            Debug.Log("PSX: " + results.Count + " árboles PSX cargados como prototipos.");
+            Debug.Log("PSX: " + results.Count + " árboles PSX cargados como prototipos (orientados).");
             return results.ToArray();
         }
 
