@@ -838,8 +838,12 @@ namespace FolkloreArchives.MapGen
             const float target = 6f; // altura objetivo en metros
             // El pack PSX trae los materiales BLANCOS (sin textura ni vertex-color).
             // Creo materiales planos coloreados por tipo: COPA=verde, TRONCO=marrón.
-            Material crown = PsxMat("PSX_Crown", new Color(0.17f, 0.29f, 0.12f));
-            Material trunk = PsxMat("PSX_Trunk", new Color(0.27f, 0.18f, 0.10f));
+            // COPA: textura de follaje (con alpha) → hojas en vez de triángulo sólido.
+            Material crown = PsxMat("PSX_Crown", new Color(0.75f, 0.85f, 0.65f),
+                                    "Assets/NatureStarterKit2/Textures/branch01.tga", cutout: true);
+            // TRONCO: textura de corteza.
+            Material trunk = PsxMat("PSX_Trunk", new Color(0.65f, 0.55f, 0.45f),
+                                    "Assets/ExternalAssets/ForestPack/Texture/Bark Texture/Bark02/bark2col.png");
 
             var results = new List<GameObject>();
             var report = new System.Text.StringBuilder("PSX árboles:\n");
@@ -930,9 +934,9 @@ namespace FolkloreArchives.MapGen
             return m;
         }
 
-        // material URP/Lit plano y matte, cacheado como asset (para los árboles PSX,
-        // que vienen blancos). Colorea copa/tronco.
-        static Material PsxMat(string name, Color col)
+        // material URP/Lit para los árboles PSX (que vienen blancos). Opcional: textura
+        // (_BaseMap) y recorte alpha (para el follaje = hojas con transparencia).
+        static Material PsxMat(string name, Color col, string texPath = null, bool cutout = false)
         {
             string path = "Assets/Settings/" + name + ".mat";
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -944,6 +948,20 @@ namespace FolkloreArchives.MapGen
             if (m.HasProperty("_BaseColor"))  m.SetColor("_BaseColor", col);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.05f);
             if (m.HasProperty("_Metallic"))   m.SetFloat("_Metallic", 0f);
+            if (texPath != null)
+            {
+                var t = AssetDatabase.LoadAssetAtPath<Texture>(texPath);
+                if (t != null && m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", t);
+            }
+            if (cutout)
+            {
+                // hojas: alpha cutout + doble cara (para que el card se vea de ambos lados)
+                m.SetFloat("_AlphaClip", 1f);
+                m.EnableKeyword("_ALPHATEST_ON");
+                if (m.HasProperty("_Cutoff")) m.SetFloat("_Cutoff", 0.4f);
+                if (m.HasProperty("_Cull"))   m.SetFloat("_Cull", 0f);
+                m.renderQueue = 2450; // AlphaTest
+            }
             EditorUtility.SetDirty(m);
             return m;
         }
