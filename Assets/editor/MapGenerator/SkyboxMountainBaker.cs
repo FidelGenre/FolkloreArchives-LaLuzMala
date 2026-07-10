@@ -73,11 +73,10 @@ namespace FolkloreArchives.MapGen
         // O sea: elevación_máx ≈ (base + amplitud) * 180°. Con los valores de abajo las
         // cimas llegan a ~23°, que es lo que hace falta para que ASOMEN por encima de
         // los pinos (un pino de 12m a 20m tapa ~31°, así que con 15° no se veían).
-        // Las dos cadenas tienen que estar CLARAMENTE separadas en altura. Si comparten
-        // rango (antes: lejana 0.53-0.625, cercana 0.50-0.630) la lejana asoma justo
-        // detrás de la cercana y se lee como un calco/eco, no como profundidad.
-        const float FarBase  = 0.055f, FarAmp  = 0.115f;  // lejana: alta y hacia atrás → cima ≈ 0.670 (~30°)
-        const float NearBase = 0.000f, NearAmp = 0.075f;  // cercana: baja y oscura     → cima ≈ 0.575 (~13.5°)
+        // UNA sola cadena. Antes eran dos (lejana + cercana) y, por más que las separara
+        // en altura y bruma, la de atrás se seguía leyendo como un calco de la de
+        // adelante en vez de como profundidad.
+        const float RidgeBase = 0.020f, RidgeAmp = 0.135f;  // cima ≈ 0.655 (~28° de elevación)
 
         [MenuItem("Tools/Folklore Archives/Generar Skybox de Montañas")]
         public static void Bake()
@@ -89,6 +88,19 @@ namespace FolkloreArchives.MapGen
             bool night = BakeOne(BaseSkyNight, NightMatPath, NightTexPath,
                                  NightMtnFar, NightMtnNear, NightGround, NightFarHaze, NightNearHaze, NightExposure, applyNow: false);
             AssetDatabase.SaveAssets();
+
+            // Si ya hay un mapa generado en la escena, reapuntar sus skyboxes a los
+            // materiales recién horneados. Cuando el baker se corre desde el menú
+            // (con el mapa ya hecho) esto es lo que evita que Tab quede sin cielos.
+            var dnc = Object.FindFirstObjectByType<FolkloreArchives.DayNightController>();
+            if (dnc != null)
+            {
+                dnc.daySkybox   = EnvironmentBuilder.DaySkybox();
+                dnc.duskSkybox  = EnvironmentBuilder.DuskSkybox();
+                dnc.nightSkybox = EnvironmentBuilder.NightSkybox();
+                EditorUtility.SetDirty(dnc);
+            }
+
             if (day && dusk && night)
                 Debug.Log("<color=lime>Skybox de montañas: día OK, atardecer OK, noche OK.</color>");
             else
@@ -110,7 +122,12 @@ namespace FolkloreArchives.MapGen
             }
 
             const int W = 2048, H = 1024;
-            var tex = new Texture2D(W, H, TextureFormat.RGBA32, false, false);
+            // Reusar el asset de textura si ya existe (NO borrarlo): el DayNightController
+            // de la escena guarda referencias a estos assets, y borrarlos se las deja en
+            // null → Tab dejaba de cambiar el cielo.
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            bool newTex = tex == null || tex.width != W || tex.height != H;
+            if (newTex) tex = new Texture2D(W, H, TextureFormat.RGBA32, false, false);
             var px = new Color[W * H];
 
             for (int y = 0; y < H; y++)
@@ -120,17 +137,15 @@ namespace FolkloreArchives.MapGen
                 {
                     float u = x / (float)(W - 1);             // longitud (envuelve)
                     Color sky = baseSky.GetPixelBilinear(u, v);   // ← cielo REAL de AllSky
-                    // dos cadenas de montañas (altura del horizonte por columna).
-                    // MISMO ruido/semilla que el de día → las montañas coinciden entre
-                    // día y noche (si no, al amanecer "saltarían" de lugar).
-                    float far  = 0.5f + FarBase  + Mtn(u, 2.0f, 11f) * FarAmp;
-                    float near = 0.5f + NearBase + Mtn(u, 3.6f, 47f) * NearAmp;
+                    // UNA sola cadena (el dueño veía la segunda como un calco encima).
+                    // MISMO ruido/semilla en las 3 fases → las montañas no "saltan" de
+                    // lugar al pasar de día a atardecer a noche.
+                    float ridge = 0.5f + RidgeBase + Mtn(u, 2.4f, 11f) * RidgeAmp;
 
                     Color c;
-                    if (v >= far && v >= near)      c = sky;                                    // cielo AllSky intacto
-                    else if (v >= near)             c = Color.Lerp(mtnFar,  sky, farHaze);      // cadena lejana (con bruma del cielo)
-                    else if (v >= 0.5f)             c = Color.Lerp(mtnNear, sky, nearHaze);     // cadena cercana
-                    else                            c = Color.Lerp(mtnNear, ground, (0.5f - v) / 0.5f); // bajo el horizonte
+                    if (v >= ridge)      c = sky;                                          // cielo AllSky intacto
+                    else if (v >= 0.5f)  c = Color.Lerp(mtnNear, sky, nearHaze);           // la montaña
+                    else                 c = Color.Lerp(mtnNear, ground, (0.5f - v) / 0.5f); // bajo el horizonte
 
                     c.a = 1f;
                     px[y * W + x] = c;
@@ -140,19 +155,24 @@ namespace FolkloreArchives.MapGen
             tex.wrapModeU = TextureWrapMode.Repeat;   // envuelve horizontal (seamless)
             tex.wrapModeV = TextureWrapMode.Clamp;
             tex.Apply(false, false);
+            if (newTex) AssetDatabase.CreateAsset(tex, texPath);
+            else        EditorUtility.SetDirty(tex);   // mismo asset, píxeles nuevos
 
-            // guardar textura como asset
-            AssetDatabase.DeleteAsset(texPath);
-            AssetDatabase.CreateAsset(tex, texPath);
-
-            // material Skybox/Panoramic (equirect, Latitude-Longitude)
-            var mat = new Material(Shader.Find("Skybox/Panoramic"));
+            // material Skybox/Panoramic (equirect, Latitude-Longitude). Se REUSA el
+            // asset si ya existe: borrarlo dejaba en null las referencias que guarda el
+            // DayNightController de la escena, y Tab dejaba de cambiar el cielo.
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (mat == null)
+            {
+                mat = new Material(Shader.Find("Skybox/Panoramic"));
+                AssetDatabase.CreateAsset(mat, matPath);
+            }
+            mat.shader = Shader.Find("Skybox/Panoramic");
             mat.SetTexture("_MainTex", tex);
             if (mat.HasProperty("_Mapping")) mat.SetFloat("_Mapping", 1);   // 1 = Latitude Longitude Layout
             if (mat.HasProperty("_ImageType")) mat.SetFloat("_ImageType", 0); // 360
             if (mat.HasProperty("_Exposure")) mat.SetFloat("_Exposure", exposure);
-            AssetDatabase.DeleteAsset(matPath);
-            AssetDatabase.CreateAsset(mat, matPath);
+            EditorUtility.SetDirty(mat);
 
             if (applyNow) RenderSettings.skybox = mat; // previsualizar el de día
             return true;
