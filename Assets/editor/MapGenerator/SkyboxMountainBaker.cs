@@ -43,6 +43,14 @@ namespace FolkloreArchives.MapGen
         const float NightFarHaze  = 0.22f;
         const float NightNearHaze = 0.06f;
 
+        // ── ALTURA de las cadenas (en fracción de la vertical del equirect) ──
+        // v = 0.5 es el horizonte (0° de elevación); v = 1.0 es el cenit (90°).
+        // O sea: elevación_máx ≈ (base + amplitud) * 180°. Con los valores de abajo las
+        // cimas llegan a ~23°, que es lo que hace falta para que ASOMEN por encima de
+        // los pinos (un pino de 12m a 20m tapa ~31°, así que con 15° no se veían).
+        const float FarBase  = 0.030f, FarAmp  = 0.095f;  // cadena lejana → cima ≈ 0.625 (~22.5°)
+        const float NearBase = 0.000f, NearAmp = 0.130f;  // cadena cercana → cima ≈ 0.630 (~23.4°)
+
         [MenuItem("Tools/Folklore Archives/Generar Skybox de Montañas")]
         public static void Bake()
         {
@@ -81,8 +89,8 @@ namespace FolkloreArchives.MapGen
                     // dos cadenas de montañas (altura del horizonte por columna).
                     // MISMO ruido/semilla que el de día → las montañas coinciden entre
                     // día y noche (si no, al amanecer "saltarían" de lugar).
-                    float far  = 0.5f + 0.02f + Mtn(u, 2.0f, 11f) * 0.055f; // ← subí el 0.055 = más altas
-                    float near = 0.5f + 0.00f + Mtn(u, 3.6f, 47f) * 0.085f;
+                    float far  = 0.5f + FarBase  + Mtn(u, 2.0f, 11f) * FarAmp;
+                    float near = 0.5f + NearBase + Mtn(u, 3.6f, 47f) * NearAmp;
 
                     Color c;
                     if (v >= far && v >= near)      c = sky;                                    // cielo AllSky intacto
