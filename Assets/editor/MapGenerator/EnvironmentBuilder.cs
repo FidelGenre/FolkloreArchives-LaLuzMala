@@ -255,13 +255,14 @@ namespace FolkloreArchives.MapGen
             if (sky != null) return sky;
             return AssetDatabase.LoadAssetAtPath<Material>(MapLayout.GeneratedFolder + "/mat_daysky.mat") ?? BuildDaySky();
         }
-        // ATARDECER: "Epic_GloriousPink" de AllSky (pastel; con el grade VHS ámbar sale
-        // naranja), con montañas horneadas. "Deep Dusk" quedó descartado: muy rojo.
+        // ATARDECER: "Deep Dusk" de AllSky, con montañas horneadas y exposición levantada
+        // (el equirect viene casi negro). Antes salía rojo sangre no por el cielo sino por
+        // la niebla roja + el grade VHS; ambos corregidos.
         public static Material DuskSkybox()
         {
             var mtn = AssetDatabase.LoadAssetAtPath<Material>(SkyboxMountainBaker.DuskMatPath);
             if (mtn != null) return mtn;
-            var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Epic_GloriousPink/Epic_GloriousPink.mat");
+            var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Deep Dusk/Deep Dusk.mat");
             if (sky != null) return sky;
             return DaySkybox();
         }

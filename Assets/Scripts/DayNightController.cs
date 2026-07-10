@@ -61,19 +61,19 @@ namespace FolkloreArchives
                     break;
 
                 case Phase.Dusk:
-                    // Sol bajo y cálido, casi rasante. El cielo (Epic_GloriousPink) es
-                    // pastel y CLARO, así que la escena no puede quedar casi negra:
-                    // ambiente y niebla van bastante más arriba que de noche.
+                    // Sol bajo y cálido, casi rasante. La niebla va MALVA/GRIS, no roja:
+                    // el rojo saturado de antes se sumaba al grade VHS ámbar y teñía toda
+                    // la escena de sangre. El calor lo pone el sol y el cielo, no la niebla.
                     if (sun != null)
                     {
                         sun.intensity = 0.62f;
-                        sun.color     = new Color(1f, 0.66f, 0.44f);
+                        sun.color     = new Color(1f, 0.70f, 0.50f);
                         sun.shadows   = LightShadows.Hard;
                     }
                     if (duskSkybox != null) RenderSettings.skybox = duskSkybox;
-                    RenderSettings.ambientLight = new Color(0.21f, 0.165f, 0.20f);
+                    RenderSettings.ambientLight = new Color(0.20f, 0.175f, 0.21f);
                     RenderSettings.fogMode  = FogMode.ExponentialSquared;
-                    RenderSettings.fogColor = new Color(0.42f, 0.29f, 0.30f);
+                    RenderSettings.fogColor = new Color(0.34f, 0.30f, 0.34f);
                     Shader.SetGlobalColor("_GrassTintMul", new Color(0.42f, 0.34f, 0.22f)); // pasto quemado por la última luz
                     break;
 

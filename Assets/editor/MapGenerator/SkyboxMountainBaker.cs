@@ -27,13 +27,19 @@ namespace FolkloreArchives.MapGen
         // pintan ENCIMA de estos cielos, así no los reemplazan (antes el baker pintaba
         // su propio degradé y por eso pisaba al AllSky).
         // OJO con los nombres del pack, engañan:
-        //   "Cold Sunset"        → cielo AZUL con nubes y sol bajo  = nuestro DÍA
-        //   "Epic_GloriousPink"  → pastel rosa/violeta; bajo el grade VHS ámbar sale
-        //                          NARANJA                          = nuestro ATARDECER
-        //   "Deep Dusk"          → rojo oscuro. Descartado: demasiado rojo (owner).
+        //   "Cold Sunset"  → cielo AZUL con nubes y sol bajo = nuestro DÍA
+        //   "Deep Dusk"    → techo de nubes + resplandor cálido en el horizonte = ATARDECER
+        //   "Cold Night"   → azul oscuro = NOCHE
+        // El equirect de Deep Dusk es MUY oscuro (por eso antes salía un rojo apagado);
+        // se compensa con DuskExposure en el material del skybox.
         const string BaseSkyDay   = "Assets/AllSkyFree/Cold Sunset/Cold Sunset Equirect.png";
-        const string BaseSkyDusk  = "Assets/AllSkyFree/Epic_GloriousPink/Epic_GloriousPink_EquiRect.png";
+        const string BaseSkyDusk  = "Assets/AllSkyFree/Deep Dusk/Deep Dusk Equirect.png";
         const string BaseSkyNight = "Assets/AllSkyFree/Cold Night/Cold Night Equirect.png";
+
+        // Exposición del material Skybox/Panoramic por fase (1 = tal cual el archivo).
+        const float DayExposure   = 1.0f;
+        const float DuskExposure  = 1.9f;   // levanta el Deep Dusk, que viene casi negro
+        const float NightExposure = 1.0f;
 
         // ── colores tuneables ──
         // DÍA: montañas azuladas por perspectiva atmosférica.
@@ -43,14 +49,14 @@ namespace FolkloreArchives.MapGen
         const float FarHaze  = 0.55f;   // cuánto se mezcla la cadena lejana con el cielo (bruma)
         const float NearHaze = 0.18f;   // la cercana casi no se mezcla
 
-        // ATARDECER: el cielo base es CLARO (pastel), así que las montañas van como
-        // siluetas a contraluz pero con bastante bruma, si no quedan como un manchón
-        // negro pegado contra un cielo brillante.
-        static readonly Color DuskMtnFar  = new Color(0.30f, 0.26f, 0.36f);
-        static readonly Color DuskMtnNear = new Color(0.14f, 0.115f, 0.18f);
-        static readonly Color DuskGround  = new Color(0.055f, 0.045f, 0.070f);
-        const float DuskFarHaze  = 0.52f;
-        const float DuskNearHaze = 0.16f;
+        // ATARDECER: siluetas a contraluz contra el resplandor del horizonte. OJO: estos
+        // valores son PRE-exposición — el material multiplica todo por DuskExposure
+        // (1.9), así que en pantalla el "far" termina en ~0.30, no en 0.16.
+        static readonly Color DuskMtnFar  = new Color(0.16f, 0.135f, 0.185f);
+        static readonly Color DuskMtnNear = new Color(0.070f, 0.058f, 0.090f);
+        static readonly Color DuskGround  = new Color(0.028f, 0.023f, 0.036f);
+        const float DuskFarHaze  = 0.45f;
+        const float DuskNearHaze = 0.14f;
 
         // NOCHE: siluetas casi negras, apenas azuladas. Menos bruma (de noche el aire
         // no dispersa luz), si no las montañas se "comen" las estrellas del cielo.
@@ -72,11 +78,11 @@ namespace FolkloreArchives.MapGen
         public static void Bake()
         {
             bool day = BakeOne(BaseSkyDay, MatPath, TexPath,
-                               MtnFar, MtnNear, Ground, FarHaze, NearHaze, applyNow: true);
+                               MtnFar, MtnNear, Ground, FarHaze, NearHaze, DayExposure, applyNow: true);
             bool dusk = BakeOne(BaseSkyDusk, DuskMatPath, DuskTexPath,
-                                DuskMtnFar, DuskMtnNear, DuskGround, DuskFarHaze, DuskNearHaze, applyNow: false);
+                                DuskMtnFar, DuskMtnNear, DuskGround, DuskFarHaze, DuskNearHaze, DuskExposure, applyNow: false);
             bool night = BakeOne(BaseSkyNight, NightMatPath, NightTexPath,
-                                 NightMtnFar, NightMtnNear, NightGround, NightFarHaze, NightNearHaze, applyNow: false);
+                                 NightMtnFar, NightMtnNear, NightGround, NightFarHaze, NightNearHaze, NightExposure, applyNow: false);
             AssetDatabase.SaveAssets();
             Debug.Log($"<color=lime>Skybox de montañas generado</color> — día: {(day ? "OK" : "FALLÓ")}, " +
                       $"atardecer: {(dusk ? "OK" : "FALLÓ")}, noche: {(night ? "OK" : "FALLÓ")}. " +
@@ -86,7 +92,7 @@ namespace FolkloreArchives.MapGen
         // Hornea UN skybox: cielo base equirect + dos cadenas de montañas encima.
         static bool BakeOne(string basePath, string matPath, string texPath,
                             Color mtnFar, Color mtnNear, Color ground,
-                            float farHaze, float nearHaze, bool applyNow)
+                            float farHaze, float nearHaze, float exposure, bool applyNow)
         {
             var baseSky = LoadReadable(basePath);
             if (baseSky == null)
@@ -136,7 +142,7 @@ namespace FolkloreArchives.MapGen
             mat.SetTexture("_MainTex", tex);
             if (mat.HasProperty("_Mapping")) mat.SetFloat("_Mapping", 1);   // 1 = Latitude Longitude Layout
             if (mat.HasProperty("_ImageType")) mat.SetFloat("_ImageType", 0); // 360
-            if (mat.HasProperty("_Exposure")) mat.SetFloat("_Exposure", 1f);
+            if (mat.HasProperty("_Exposure")) mat.SetFloat("_Exposure", exposure);
             AssetDatabase.DeleteAsset(matPath);
             AssetDatabase.CreateAsset(mat, matPath);
 
