@@ -841,45 +841,50 @@ namespace FolkloreArchives.MapGen
             Material crown = PsxMat("PSX_Crown", new Color(0.17f, 0.29f, 0.12f));
             Material trunk = PsxMat("PSX_Trunk", new Color(0.27f, 0.18f, 0.10f));
 
-            // INSTANCIO el FBX (ahí los árboles están PARADOS y con su orientación
-            // correcta) y extraigo cada uno preservando la rotación → si no, quedaban
-            // acostados (el FBX es Z-up de Blender).
-            var inst = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
-            inst.transform.position = Vector3.zero;
-            inst.transform.rotation = Quaternion.identity;
-            inst.transform.localScale = Vector3.one;
-
             var results = new List<GameObject>();
             foreach (var name in PsxTreeNames)
             {
-                Transform child = FindChildByName(inst.transform, name);
+                Transform child = FindChildByName(fbx.transform, name);
                 var mf = child != null ? child.GetComponent<MeshFilter>() : null;
                 var mr = child != null ? child.GetComponent<MeshRenderer>() : null;
                 if (mf == null || mf.sharedMesh == null || mr == null) continue;
+                Mesh mesh = mf.sharedMesh;
+
+                // EJE MÁS LARGO de la malla = altura del árbol → lo roto a +Y para que
+                // quede PARADO (los PSX vienen acostados en otro eje).
+                Vector3 sz = mesh.bounds.size;
+                Quaternion orient; float hExt;
+                if (sz.y >= sz.x && sz.y >= sz.z)      { orient = Quaternion.identity;          hExt = sz.y; }
+                else if (sz.z >= sz.x)                 { orient = Quaternion.Euler(-90f, 0f, 0f); hExt = sz.z; }
+                else                                   { orient = Quaternion.Euler(0f, 0f, 90f);  hExt = sz.x; }
+                hExt = Mathf.Max(0.001f, hExt);
 
                 // color por submesh: "...crown..." = copa (verde); si no = tronco (marrón)
                 var src = mr.sharedMaterials;
-                var mats = new Material[Mathf.Max(1, mf.sharedMesh.subMeshCount)];
+                var mats = new Material[Mathf.Max(1, mesh.subMeshCount)];
                 for (int i = 0; i < mats.Length; i++)
                 {
                     string mn = (i < src.Length && src[i] != null) ? src[i].name.ToLowerInvariant() : "";
                     mats[i] = mn.Contains("crown") ? crown : trunk;
                 }
-                mr.sharedMaterials = mats;
 
-                // extraer el hijo preservando su transform (world), a un root nuevo
                 var root = new GameObject(name);
-                root.transform.position = Vector3.zero;
-                child.SetParent(root.transform, true); // mantiene orientación/escala del FBX
-                // base al piso (y=0) y centrado en XZ, usando los bounds YA orientados
-                Bounds b = mr.bounds;
-                child.position -= new Vector3(b.center.x, b.min.y, b.center.z);
-                float h = Mathf.Max(0.001f, b.size.y);     // altura REAL (parado)
-                root.transform.localScale = Vector3.one * (target / h);
+                var meshGO = new GameObject("mesh");
+                meshGO.transform.SetParent(root.transform, false);
+                meshGO.transform.localRotation = orient;
+                meshGO.AddComponent<MeshFilter>().sharedMesh = mesh;
+                meshGO.AddComponent<MeshRenderer>().sharedMaterials = mats;
+
+                float S = target / hExt;
+                root.transform.localScale = Vector3.one * S;
+                // base al piso (y=0) + centrado XZ, usando los bounds YA rotados/escalados
+                Bounds wb = meshGO.GetComponent<MeshRenderer>().bounds; // world (root en origen)
+                meshGO.transform.localPosition -= new Vector3(wb.center.x, wb.min.y, wb.center.z) / S;
+
                 var col = root.AddComponent<CapsuleCollider>();
-                col.center = new Vector3(0f, h * 0.5f, 0f);
-                col.height = h;
-                col.radius = h * 0.12f;
+                col.center = new Vector3(0f, hExt * 0.5f, 0f);
+                col.height = hExt;
+                col.radius = hExt * 0.1f;
 
                 string path = MapLayout.GeneratedFolder + "/PSX_" + name + ".prefab";
                 AssetDatabase.DeleteAsset(path);
@@ -887,9 +892,8 @@ namespace FolkloreArchives.MapGen
                 Object.DestroyImmediate(root);
                 if (prefab != null) results.Add(prefab);
             }
-            Object.DestroyImmediate(inst);
             if (results.Count == 0) { Debug.LogWarning("PSX: no encontré PSX_Tree1..4 en el FBX."); return null; }
-            Debug.Log("PSX: " + results.Count + " árboles PSX cargados como prototipos (orientados).");
+            Debug.Log("PSX: " + results.Count + " árboles PSX cargados (auto-orientados).");
             return results.ToArray();
         }
 
