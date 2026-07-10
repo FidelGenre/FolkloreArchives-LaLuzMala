@@ -36,7 +36,8 @@ namespace FolkloreArchives.MapGen
                 string mats = "";
                 if (mr != null) foreach (var m in mr.sharedMaterials)
                     mats += (m != null ? m.name + "[" + (m.shader != null ? m.shader.name : "?") + "]" : "null") + " ";
-                sb.AppendLine($"  - {mf.gameObject.name}  tris≈{tris}  vertexColors={nCol}  subMesh={mesh.subMeshCount}  mats: {mats}");
+                var sz = mesh.bounds.size;
+                sb.AppendLine($"  - {mf.gameObject.name}  bounds=({sz.x:0.000},{sz.y:0.000},{sz.z:0.000})  tris≈{tris}  vColors={nCol}  subMesh={mesh.subMeshCount}  mats: {mats}");
             }
             // color del primer vértice del primer árbol (si hay)
             var t1 = FindT("PSX_Tree1", fbx);
