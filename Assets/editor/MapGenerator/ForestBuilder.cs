@@ -851,14 +851,13 @@ namespace FolkloreArchives.MapGen
                 if (mf == null || mf.sharedMesh == null || mr == null) continue;
                 Mesh mesh = mf.sharedMesh;
 
-                // EJE MÁS LARGO de la malla = altura del árbol → lo roto a +Y (parado).
+                // El FBX es Z-up (Blender): la ALTURA de todos los árboles es Z. Roto
+                // -90° en X (Z→Y) FIJO para todos (el auto-detect fallaba en Tree2, que
+                // es casi tan ancho como alto → quedaba de tronco pelado acostado).
                 Vector3 sz = mesh.bounds.size;
-                Quaternion orient; float hExt;
-                if (sz.y >= sz.x && sz.y >= sz.z)      { orient = Quaternion.identity;           hExt = sz.y; }
-                else if (sz.z >= sz.x)                 { orient = Quaternion.Euler(-90f, 0f, 0f); hExt = sz.z; }
-                else                                   { orient = Quaternion.Euler(0f, 0f, 90f);  hExt = sz.x; }
-                hExt = Mathf.Max(0.001f, hExt);
-                report.AppendLine($"  {name}: bounds=({sz.x:0.00},{sz.y:0.00},{sz.z:0.00}) → eje alto usado, orient={orient.eulerAngles}");
+                Quaternion orient = Quaternion.Euler(-90f, 0f, 0f);
+                float hExt = Mathf.Max(0.001f, sz.z);
+                report.AppendLine($"  {name}: bounds=({sz.x:0.00},{sz.y:0.00},{sz.z:0.00}) alturaZ={sz.z:0.00}");
 
                 // color por submesh: "...crown..." = copa (verde); si no = tronco (marrón)
                 var src = mr.sharedMaterials;
