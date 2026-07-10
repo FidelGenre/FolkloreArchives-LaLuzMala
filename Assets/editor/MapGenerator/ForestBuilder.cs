@@ -842,6 +842,7 @@ namespace FolkloreArchives.MapGen
             Material trunk = PsxMat("PSX_Trunk", new Color(0.27f, 0.18f, 0.10f));
 
             var results = new List<GameObject>();
+            var report = new System.Text.StringBuilder("PSX árboles:\n");
             foreach (var name in PsxTreeNames)
             {
                 Transform child = FindChildByName(fbx.transform, name);
@@ -850,14 +851,14 @@ namespace FolkloreArchives.MapGen
                 if (mf == null || mf.sharedMesh == null || mr == null) continue;
                 Mesh mesh = mf.sharedMesh;
 
-                // EJE MÁS LARGO de la malla = altura del árbol → lo roto a +Y para que
-                // quede PARADO (los PSX vienen acostados en otro eje).
+                // EJE MÁS LARGO de la malla = altura del árbol → lo roto a +Y (parado).
                 Vector3 sz = mesh.bounds.size;
                 Quaternion orient; float hExt;
-                if (sz.y >= sz.x && sz.y >= sz.z)      { orient = Quaternion.identity;          hExt = sz.y; }
+                if (sz.y >= sz.x && sz.y >= sz.z)      { orient = Quaternion.identity;           hExt = sz.y; }
                 else if (sz.z >= sz.x)                 { orient = Quaternion.Euler(-90f, 0f, 0f); hExt = sz.z; }
                 else                                   { orient = Quaternion.Euler(0f, 0f, 90f);  hExt = sz.x; }
                 hExt = Mathf.Max(0.001f, hExt);
+                report.AppendLine($"  {name}: bounds=({sz.x:0.00},{sz.y:0.00},{sz.z:0.00}) → eje alto usado, orient={orient.eulerAngles}");
 
                 // color por submesh: "...crown..." = copa (verde); si no = tronco (marrón)
                 var src = mr.sharedMaterials;
@@ -868,23 +869,18 @@ namespace FolkloreArchives.MapGen
                     mats[i] = mn.Contains("crown") ? crown : trunk;
                 }
 
+                // HORNEAR la rotación+escala+centrado DENTRO de la malla (los terrain-trees
+                // ignoran las transforms anidadas → hay que dejar la malla ya parada).
+                Mesh baked = BakeMesh(mesh, orient, target / hExt,
+                                      MapLayout.GeneratedFolder + "/PSX_" + name + "_mesh.asset");
+
                 var root = new GameObject(name);
-                var meshGO = new GameObject("mesh");
-                meshGO.transform.SetParent(root.transform, false);
-                meshGO.transform.localRotation = orient;
-                meshGO.AddComponent<MeshFilter>().sharedMesh = mesh;
-                meshGO.AddComponent<MeshRenderer>().sharedMaterials = mats;
-
-                float S = target / hExt;
-                root.transform.localScale = Vector3.one * S;
-                // base al piso (y=0) + centrado XZ, usando los bounds YA rotados/escalados
-                Bounds wb = meshGO.GetComponent<MeshRenderer>().bounds; // world (root en origen)
-                meshGO.transform.localPosition -= new Vector3(wb.center.x, wb.min.y, wb.center.z) / S;
-
+                root.AddComponent<MeshFilter>().sharedMesh = baked;
+                root.AddComponent<MeshRenderer>().sharedMaterials = mats;
                 var col = root.AddComponent<CapsuleCollider>();
-                col.center = new Vector3(0f, hExt * 0.5f, 0f);
-                col.height = hExt;
-                col.radius = hExt * 0.1f;
+                col.center = new Vector3(0f, target * 0.5f, 0f);
+                col.height = target;
+                col.radius = target * 0.1f;
 
                 string path = MapLayout.GeneratedFolder + "/PSX_" + name + ".prefab";
                 AssetDatabase.DeleteAsset(path);
@@ -893,7 +889,7 @@ namespace FolkloreArchives.MapGen
                 if (prefab != null) results.Add(prefab);
             }
             if (results.Count == 0) { Debug.LogWarning("PSX: no encontré PSX_Tree1..4 en el FBX."); return null; }
-            Debug.Log("PSX: " + results.Count + " árboles PSX cargados (auto-orientados).");
+            Debug.Log(report.ToString());
             return results.ToArray();
         }
 
@@ -902,6 +898,37 @@ namespace FolkloreArchives.MapGen
             foreach (var t in root.GetComponentsInChildren<Transform>(true))
                 if (t.name == name) return t;
             return null;
+        }
+
+        // Hornea una malla: rota + escala los vértices y baja la base a y=0 (centrada en
+        // XZ). Devuelve una malla NUEVA guardada como asset (los terrain-trees usan la
+        // malla cruda, ignoran las transforms del prefab → hay que dejarla ya parada).
+        static Mesh BakeMesh(Mesh src, Quaternion rot, float scale, string path)
+        {
+            var verts = src.vertices;
+            var norms = src.normals;
+            for (int i = 0; i < verts.Length; i++) verts[i] = (rot * verts[i]) * scale;
+            for (int i = 0; i < norms.Length; i++) norms[i] = rot * norms[i];
+            // bounds tras rotar/escalar → offset para base en y=0 y centrado XZ
+            if (verts.Length > 0)
+            {
+                var b = new Bounds(verts[0], Vector3.zero);
+                for (int i = 1; i < verts.Length; i++) b.Encapsulate(verts[i]);
+                var off = new Vector3(b.center.x, b.min.y, b.center.z);
+                for (int i = 0; i < verts.Length; i++) verts[i] -= off;
+            }
+            var m = new Mesh { name = System.IO.Path.GetFileNameWithoutExtension(path) };
+            m.indexFormat = src.indexFormat;
+            m.vertices = verts;
+            if (norms.Length == verts.Length) m.normals = norms;
+            var uv = src.uv; if (uv != null && uv.Length == verts.Length) m.uv = uv;
+            m.subMeshCount = src.subMeshCount;
+            for (int s = 0; s < src.subMeshCount; s++) m.SetTriangles(src.GetTriangles(s), s);
+            if (norms.Length != verts.Length) m.RecalculateNormals();
+            m.RecalculateBounds();
+            AssetDatabase.DeleteAsset(path);
+            AssetDatabase.CreateAsset(m, path);
+            return m;
         }
 
         // material URP/Lit plano y matte, cacheado como asset (para los árboles PSX,
