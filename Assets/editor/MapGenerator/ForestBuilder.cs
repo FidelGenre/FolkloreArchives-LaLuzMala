@@ -1475,9 +1475,9 @@ namespace FolkloreArchives.MapGen
             var psxHealthy = new Color(0.68f, 0.74f, 0.48f);
             var psxDry     = new Color(0.62f, 0.56f, 0.32f);
 
-            var grassGreen = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 1.1f, 1.8f, 2.0f, 3.1f, psxHealthy, psxDry)
+            var grassGreen = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 1.2f, 2.0f, 2.7f, 4.0f, psxHealthy, psxDry)
                            : lp  ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 3.0f, 4.5f)    : PackDetail("Grass_B", 0.9f, 1.7f, 4.8f, 7.8f);
-            var grassDry   = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 1.1f, 1.8f, 1.9f, 3.0f, psxDry, psxDry)
+            var grassDry   = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 1.2f, 2.0f, 2.6f, 3.9f, psxDry, psxDry)
                            : lp  ? LowPolyDetail(LP_HighGrass, 1.0f, 1.5f, 3.2f, 4.7f)    : PackDetail("GrassDry_B", 1.0f, 1.9f, 5.1f, 8.4f);
             // Pasto de caminos/senderos: BAJO (owner) — misma textura/malla pero corta.
             var grassShort = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 0.8f, 1.1f, 0.6f, 1.0f, psxHealthy, psxDry)
