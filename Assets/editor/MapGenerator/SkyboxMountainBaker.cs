@@ -27,18 +27,20 @@ namespace FolkloreArchives.MapGen
         // pintan ENCIMA de estos cielos, así no los reemplazan (antes el baker pintaba
         // su propio degradé y por eso pisaba al AllSky).
         // OJO con los nombres del pack, engañan:
-        //   "Cold Sunset"      → azul con nubes deshilachadas y sol grande = nuestro DÍA
-        //   "Epic_BlueSunset"  → azul profundo, cúmulos, sol chico bajo    = ATARDECER
+        //   "Epic_BlueSunset"  → azul profundo, cúmulos, sol chico bajo    = nuestro DÍA
+        //   "Cold Sunset"      → azul con nubes deshilachadas y sol grande = ATARDECER
         //   "Cold Night"       → azul oscuro                               = NOCHE
         // Descartados: "Deep Dusk" y "Epic_GloriousPink" (naranja/rojo) y "Overcast Low"
         // (el gris no tiene color propio: el grade VHS ámbar se lo comía y salía naranja).
-        const string BaseSkyDay   = "Assets/AllSkyFree/Cold Sunset/Cold Sunset Equirect.png";
-        const string BaseSkyDusk  = "Assets/AllSkyFree/Epic_BlueSunset/Epic_BlueSunset_EquiRect_flat.png";
+        const string BaseSkyDay   = "Assets/AllSkyFree/Epic_BlueSunset/Epic_BlueSunset_EquiRect_flat.png";
+        const string BaseSkyDusk  = "Assets/AllSkyFree/Cold Sunset/Cold Sunset Equirect.png";
         const string BaseSkyNight = "Assets/AllSkyFree/Cold Night/Cold Night Equirect.png";
 
         // Exposición del material Skybox/Panoramic por fase (1 = tal cual el archivo).
-        const float DayExposure   = 1.15f;
-        const float DuskExposure  = 1.0f;
+        // Cada valor va atado a SU imagen, así que al intercambiar los cielos se
+        // intercambian también: el Cold Sunset necesita 1.15, el BlueSunset 1.0.
+        const float DayExposure   = 1.0f;
+        const float DuskExposure  = 1.15f;
         const float NightExposure = 1.0f;
 
         // ── colores tuneables ──

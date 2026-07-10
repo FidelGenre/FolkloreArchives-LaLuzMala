@@ -24,7 +24,7 @@ namespace FolkloreArchives
         public Light sun;
         public Terrain terrain;
 
-        Phase _phase = Phase.Night;   // el juego arranca de noche
+        Phase _phase = Phase.Day;   // el juego arranca de día
 
         // Compatibilidad: el resto del código (MapGenerator) sigue pensando en día/noche.
         public bool IsDay => _phase == Phase.Day;

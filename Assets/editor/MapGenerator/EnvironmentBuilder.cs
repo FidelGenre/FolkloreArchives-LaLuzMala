@@ -249,19 +249,18 @@ namespace FolkloreArchives.MapGen
             // Se genera con Tools > Folklore Archives > Generar Skybox de Montañas.
             var mtn = AssetDatabase.LoadAssetAtPath<Material>(SkyboxMountainBaker.MatPath);
             if (mtn != null) return mtn;
-            // 2º: el AllSky pelado (si nunca se corrió el baker). "Cold Sunset" es, pese
-            // al nombre, el cielo AZUL con nubes del pack — nuestro día.
-            var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Cold Sunset/Cold Sunset.mat");
+            // 2º: el AllSky pelado (si el baker falló). Día = "Epic_BlueSunset".
+            var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Epic_BlueSunset/Epic_BlueSunset.mat");
             if (sky != null) return sky;
             return AssetDatabase.LoadAssetAtPath<Material>(MapLayout.GeneratedFolder + "/mat_daysky.mat") ?? BuildDaySky();
         }
-        // ATARDECER: "Epic_BlueSunset" de AllSky (azul profundo, cúmulos, sol bajo).
+        // ATARDECER: "Cold Sunset" de AllSky (nubes deshilachadas, sol grande y difuso).
         // Los cielos naranjas/rojos (Deep Dusk, Epic_GloriousPink) quedaron descartados.
         public static Material DuskSkybox()
         {
             var mtn = AssetDatabase.LoadAssetAtPath<Material>(SkyboxMountainBaker.DuskMatPath);
             if (mtn != null) return mtn;
-            var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Epic_BlueSunset/Epic_BlueSunset.mat");
+            var sky = AssetDatabase.LoadAssetAtPath<Material>("Assets/AllSkyFree/Cold Sunset/Cold Sunset.mat");
             if (sky != null) return sky;
             return DaySkybox();
         }
