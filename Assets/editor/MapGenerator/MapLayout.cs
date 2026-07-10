@@ -30,6 +30,11 @@ namespace FolkloreArchives.MapGen
         // billboards/LOD/viento, así que chocará con el look realista y puede pesar más.
         public const bool UseLowPolyTrees = true;
 
+        // PSX (StarkCrafts): usar los árboles PSX_Tree1..4 del FBX como árboles del
+        // bosque (look Fears-to-Fathom). Si el FBX no está importado, cae a low-poly/BOTD.
+        // El pasto/detalles siguen con Polytope por ahora.
+        public const bool UsePsxTrees = true;
+
         // ------------- Key locations (x, z) — matches the hand-drawn plan -------------
         // (DirtTurnoff is derived from the smooth paved route further down, so it always
         //  sits exactly on the road wherever the road is at x=620.)

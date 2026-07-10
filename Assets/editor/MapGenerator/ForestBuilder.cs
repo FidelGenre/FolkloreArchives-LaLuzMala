@@ -34,8 +34,13 @@ namespace FolkloreArchives.MapGen
             // rendering), which we can now enable because there are no baked broadleaf
             // trees left in the mix to render broken as billboards. Used raw (not
             // baked) so the CTI shader keeps its wind + LODs + billboards.
-            // EXPERIMENTO low-poly (owner) o Conifers BOTD según el flag
-            if (MapLayout.UseLowPolyTrees)
+            // Árboles: PSX (StarkCrafts, FtF) > low-poly Polytope > Conifers BOTD.
+            GameObject[] psxTrees = MapLayout.UsePsxTrees ? BuildPsxTreePrototypes() : null;
+            if (psxTrees != null)
+            {
+                realTreeList.AddRange(psxTrees);
+            }
+            else if (MapLayout.UseLowPolyTrees)
             {
                 var lp = BuildLowPolyTreePrototypes();
                 if (lp != null) realTreeList.AddRange(lp);
@@ -821,6 +826,50 @@ namespace FolkloreArchives.MapGen
         // Solo el pino VERDE (con hojas). El _dead es pelado y los _cut/_logs/_stump son
         // troncos cortados → owner: "todos con hojas". La variedad la da la escala/tinte
         // aleatorio por instancia.
+        // ── PSX (StarkCrafts): árboles del FBX como prototipos de terrain-tree ──
+        static readonly string[] PsxTreeNames = { "PSX_Tree1", "PSX_Tree2", "PSX_Tree3", "PSX_Tree4" };
+        static GameObject[] BuildPsxTreePrototypes()
+        {
+            var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(PsxForestHelper.FbxPath);
+            if (fbx == null) { Debug.LogWarning("PSX: FBX no importado (" + PsxForestHelper.FbxPath + ") — caigo a low-poly/BOTD."); return null; }
+
+            const float target = 8f; // altura objetivo en metros
+            var results = new List<GameObject>();
+            foreach (var name in PsxTreeNames)
+            {
+                Transform child = FindChildByName(fbx.transform, name);
+                var mf = child != null ? child.GetComponent<MeshFilter>() : null;
+                var mr = child != null ? child.GetComponent<MeshRenderer>() : null;
+                if (mf == null || mf.sharedMesh == null || mr == null) continue;
+
+                float nativeH = Mathf.Max(0.001f, mf.sharedMesh.bounds.size.y);
+                var root = new GameObject(name);
+                root.transform.localScale = Vector3.one * (target / nativeH); // ~8m
+                root.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+                root.AddComponent<MeshRenderer>().sharedMaterials = mr.sharedMaterials;
+                var col = root.AddComponent<CapsuleCollider>();
+                col.center = mf.sharedMesh.bounds.center;
+                col.height = nativeH;              // (se escala con el root → ~8m)
+                col.radius = nativeH * 0.12f;
+
+                string path = MapLayout.GeneratedFolder + "/PSX_" + name + ".prefab";
+                AssetDatabase.DeleteAsset(path);
+                var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+                Object.DestroyImmediate(root);
+                if (prefab != null) results.Add(prefab);
+            }
+            if (results.Count == 0) { Debug.LogWarning("PSX: no encontré PSX_Tree1..4 en el FBX."); return null; }
+            Debug.Log("PSX: " + results.Count + " árboles PSX cargados como prototipos.");
+            return results.ToArray();
+        }
+
+        static Transform FindChildByName(Transform root, string name)
+        {
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == name) return t;
+            return null;
+        }
+
         static readonly string[] LowPolyTreeNames = { "PT_Pine_Tree_03_green" };
         static GameObject[] BuildLowPolyTreePrototypes()
         {
