@@ -47,33 +47,36 @@ namespace FolkloreArchives
             switch (_phase)
             {
                 case Phase.Day:
+                    // Día NUBLADO (Overcast). La luz de un cielo cubierto es difusa: el
+                    // sol pierde fuerza y gana el ambiente, y las sombras se ablandan.
+                    // Un sol duro y ámbar contra un cielo gris se lee como error.
                     if (sun != null)
                     {
-                        sun.intensity = 1.0f;
-                        sun.color     = new Color(1f, 0.92f, 0.72f);
-                        sun.shadows   = LightShadows.Hard;
+                        sun.intensity = 0.62f;
+                        sun.color     = new Color(0.94f, 0.94f, 0.96f);
+                        sun.shadows   = LightShadows.Soft;
                     }
                     if (daySkybox != null) RenderSettings.skybox = daySkybox;
-                    RenderSettings.ambientLight = new Color(0.30f, 0.26f, 0.32f);
+                    RenderSettings.ambientLight = new Color(0.38f, 0.38f, 0.42f);
                     RenderSettings.fogMode  = FogMode.Linear;
-                    RenderSettings.fogColor = new Color(0.68f, 0.54f, 0.58f);
+                    RenderSettings.fogColor = new Color(0.70f, 0.70f, 0.73f);
                     Shader.SetGlobalColor("_GrassTintMul", new Color(0.34f, 0.42f, 0.20f)); // verde oscuro/quemado
                     break;
 
                 case Phase.Dusk:
-                    // Sol bajo y cálido, casi rasante. La niebla va MALVA/GRIS, no roja:
-                    // el rojo saturado de antes se sumaba al grade VHS ámbar y teñía toda
-                    // la escena de sangre. El calor lo pone el sol y el cielo, no la niebla.
+                    // Atardecer con el cielo azul de Cold Sunset y el sol ya bajo: luz
+                    // cálida y rasante, pero la niebla va MALVA/GRIS, no roja — una
+                    // niebla saturada se suma al grade VHS ámbar y tiñe todo de sangre.
                     if (sun != null)
                     {
-                        sun.intensity = 0.62f;
-                        sun.color     = new Color(1f, 0.70f, 0.50f);
+                        sun.intensity = 0.72f;
+                        sun.color     = new Color(1f, 0.78f, 0.58f);
                         sun.shadows   = LightShadows.Hard;
                     }
                     if (duskSkybox != null) RenderSettings.skybox = duskSkybox;
-                    RenderSettings.ambientLight = new Color(0.20f, 0.175f, 0.21f);
+                    RenderSettings.ambientLight = new Color(0.22f, 0.20f, 0.25f);
                     RenderSettings.fogMode  = FogMode.ExponentialSquared;
-                    RenderSettings.fogColor = new Color(0.34f, 0.30f, 0.34f);
+                    RenderSettings.fogColor = new Color(0.36f, 0.33f, 0.36f);
                     Shader.SetGlobalColor("_GrassTintMul", new Color(0.42f, 0.34f, 0.22f)); // pasto quemado por la última luz
                     break;
 
