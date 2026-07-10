@@ -84,9 +84,12 @@ namespace FolkloreArchives.MapGen
             bool night = BakeOne(BaseSkyNight, NightMatPath, NightTexPath,
                                  NightMtnFar, NightMtnNear, NightGround, NightFarHaze, NightNearHaze, NightExposure, applyNow: false);
             AssetDatabase.SaveAssets();
-            Debug.Log($"<color=lime>Skybox de montañas generado</color> — día: {(day ? "OK" : "FALLÓ")}, " +
-                      $"atardecer: {(dusk ? "OK" : "FALLÓ")}, noche: {(night ? "OK" : "FALLÓ")}. " +
-                      "Ahora regenerá el mapa. Tuneá alturas/colores en SkyboxMountainBaker.cs.");
+            if (day && dusk && night)
+                Debug.Log("<color=lime>Skybox de montañas: día OK, atardecer OK, noche OK.</color>");
+            else
+                Debug.LogError($"SKYBOX DE MONTAÑAS FALLÓ — día: {(day ? "OK" : "FALLÓ")}, " +
+                               $"atardecer: {(dusk ? "OK" : "FALLÓ")}, noche: {(night ? "OK" : "FALLÓ")}. " +
+                               "El mapa va a usar los cielos de AllSky pelados, SIN montañas.");
         }
 
         // Hornea UN skybox: cielo base equirect + dos cadenas de montañas encima.
@@ -150,17 +153,28 @@ namespace FolkloreArchives.MapGen
             return true;
         }
 
-        // Carga una textura asegurándose de que se puedan leer sus píxeles
-        // (GetPixelBilinear falla si el importer tiene isReadable = false).
+        // Carga una textura asegurándose de que se pueda leer como Texture2D.
+        // OJO: los "*Equirect.png" de AllSky vienen importados como CUBEMAP
+        // (textureShape = Cube). Con esa forma, LoadAssetAtPath<Texture2D> devuelve
+        // null y el horneado abortaba sin que se notara. Hay que forzarlos a Texture2D
+        // (y a readable, o GetPixelBilinear falla). Solo rompe los "* Equirect.mat" del
+        // pack, que no usamos.
         static Texture2D LoadReadable(string path)
         {
             var imp = AssetImporter.GetAtPath(path) as TextureImporter;
-            if (imp != null && !imp.isReadable)
+            if (imp == null)
             {
-                imp.isReadable = true;
-                imp.SaveAndReimport();
+                Debug.LogError("SkyboxMountainBaker: no hay TextureImporter en " + path);
+                return null;
             }
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            bool dirty = false;
+            if (imp.textureShape != TextureImporterShape.Texture2D) { imp.textureShape = TextureImporterShape.Texture2D; dirty = true; }
+            if (!imp.isReadable) { imp.isReadable = true; dirty = true; }
+            if (dirty) imp.SaveAndReimport();
+
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (tex == null) Debug.LogError("SkyboxMountainBaker: no pude cargar como Texture2D " + path);
+            return tex;
         }
 
         // altura de montaña por columna (0..1), sin costuras (muestreo en círculo) + 3 octavas
