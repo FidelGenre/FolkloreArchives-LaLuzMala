@@ -22,7 +22,8 @@ namespace FolkloreArchives
         [Header("Locomoción")]
         public float walkSpeed = 3.2f;
         public float runSpeed  = 6.5f;
-        public float turnSpeed = 200f;   // grados/seg
+        public float turnSpeed = 200f;   // grados/seg (giro de la IA)
+        public float mouseSensitivity = 0.08f; // giro con mouse (modo jugador)
         public float gravity   = 18f;
 
         [Header("Follow (IA)")]
@@ -59,29 +60,35 @@ namespace FolkloreArchives
             cc.Move(move * Time.deltaTime);
         }
 
-        // --- controlado por el jugador ---
+        // --- controlado por el jugador (1ª persona: mouse gira, WASD mueve) ---
         Vector3 PlayerMove()
         {
             var kb = Keyboard.current;
             if (kb == null || SettingsMenu.IsOpen) return Vector3.zero;
 
-            float turn, fwd; bool run;
-            if (useArrowKeys) // jugador 2
+            // girar con el MOUSE
+            var mouse = Mouse.current;
+            if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
+                transform.Rotate(0f, mouse.delta.ReadValue().x * mouseSensitivity, 0f);
+
+            float strafe, fwd; bool run;
+            if (useArrowKeys) // jugador 2 (co-op local, no usado en online)
             {
-                turn = (kb.rightArrowKey.isPressed ? 1f : 0f) - (kb.leftArrowKey.isPressed ? 1f : 0f);
-                fwd  = (kb.upArrowKey.isPressed   ? 1f : 0f) - (kb.downArrowKey.isPressed ? 1f : 0f);
-                run  = kb.rightShiftKey.isPressed;
+                strafe = (kb.rightArrowKey.isPressed ? 1f : 0f) - (kb.leftArrowKey.isPressed ? 1f : 0f);
+                fwd    = (kb.upArrowKey.isPressed   ? 1f : 0f) - (kb.downArrowKey.isPressed ? 1f : 0f);
+                run    = kb.rightShiftKey.isPressed;
             }
-            else // jugador 1 / solo
+            else // WASD (jugador 1 / online / solo)
             {
-                turn = (kb.dKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed ? 1f : 0f);
-                fwd  = (kb.wKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed ? 1f : 0f);
-                run  = kb.leftShiftKey.isPressed;
+                strafe = (kb.dKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed ? 1f : 0f);
+                fwd    = (kb.wKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed ? 1f : 0f);
+                run    = kb.leftShiftKey.isPressed;
             }
 
-            transform.Rotate(0f, turn * turnSpeed * Time.deltaTime, 0f);
             float speed = run ? runSpeed : walkSpeed;
-            return transform.forward * fwd * speed;
+            Vector3 move = transform.forward * fwd + transform.right * strafe; // A/D = lateral
+            if (move.sqrMagnitude > 1f) move.Normalize();
+            return move * speed;
         }
 
         // --- IA: seguir a la persona ---
