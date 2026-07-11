@@ -16,6 +16,7 @@ using Unity.Netcode;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Multiplayer;
+using Unity.Services.Vivox;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -31,6 +32,8 @@ namespace FolkloreArchives.Net
         bool _busy;
         bool _cursorFree;   // F9 libera el mouse para poder clickear el panel
         int _role;          // 0 = persona, 1 = perro (elección antes de entrar)
+        string _voiceStatus = "";
+        bool _voiceReady, _muted;
         GUIStyle _box;
 
         // pasa la elección (1 byte) al servidor por la ConnectionData; el NetGameSpawner
@@ -44,8 +47,11 @@ namespace FolkloreArchives.Net
         void Update()
         {
             var kb = Keyboard.current;
-            if (kb != null && kb.f9Key.wasPressedThisFrame)
-                SetCursorFree(!_cursorFree);
+            if (kb != null)
+            {
+                if (kb.f9Key.wasPressedThisFrame) SetCursorFree(!_cursorFree);
+                if (kb.vKey.wasPressedThisFrame && _voiceReady) ToggleMute();
+            }
             // mientras esté libre, forzarlo (el jugador re-bloquea si no)
             if (_cursorFree)
             {
@@ -75,7 +81,46 @@ namespace FolkloreArchives.Net
             {
                 _status = "Error de servicios: " + e.Message +
                           "\n(¿activaste Relay + Authentication anónima en el dashboard?)";
+                return;
             }
+
+            // Voz (Vivox): init + login. Usa el mismo proyecto UGS.
+            try
+            {
+                await VivoxService.Instance.InitializeAsync();
+                await VivoxService.Instance.LoginAsync();
+                _voiceReady = true;
+                _voiceStatus = "Voz lista";
+            }
+            catch (System.Exception e)
+            {
+                _voiceStatus = "Voz OFF (¿activaste Vivox en el dashboard?): " + e.Message;
+            }
+        }
+
+        async Task JoinVoice()
+        {
+            if (!_voiceReady || _session == null) return;
+            try
+            {
+                await VivoxService.Instance.JoinGroupChannelAsync(_session.Code, ChatCapability.AudioOnly);
+                _voiceStatus = "🎙 Voz conectada (V = mutear)";
+            }
+            catch (System.Exception e) { _voiceStatus = "Voz: error al unir canal — " + e.Message; }
+        }
+
+        async Task LeaveVoice()
+        {
+            if (!_voiceReady) return;
+            try { await VivoxService.Instance.LeaveAllChannelsAsync(); } catch { }
+        }
+
+        void ToggleMute()
+        {
+            _muted = !_muted;
+            if (_muted) VivoxService.Instance.MuteInputDevice();
+            else VivoxService.Instance.UnmuteInputDevice();
+            _voiceStatus = _muted ? "🔇 Micrófono MUTEADO (V)" : "🎙 Voz conectada (V = mutear)";
         }
 
         static bool NetReady(out string err)
@@ -125,12 +170,14 @@ namespace FolkloreArchives.Net
 
         async Task Leave()
         {
+            await LeaveVoice();
             if (_session != null)
             {
                 try { await _session.LeaveAsync(); } catch { /* ya cerrada */ }
                 _session = null;
             }
             _status = "Desconectado";
+            _voiceStatus = _voiceReady ? "Voz lista" : _voiceStatus;
         }
 
         // Al entrar a una sala, apagar el jugador single-player (su cámara/AudioListener
@@ -143,6 +190,7 @@ namespace FolkloreArchives.Net
             var dog = GameObject.Find("DOG");
             if (dog != null) dog.SetActive(false); // el perro single-player; en red se spawnea aparte
             SetCursorFree(false); // a jugar: mouse capturado para el jugador en red
+            _ = JoinVoice();      // entrar al canal de voz de la sala
         }
 
         static string Short(string id) => string.IsNullOrEmpty(id) ? "?" :
@@ -156,6 +204,8 @@ namespace FolkloreArchives.Net
             GUILayout.Label("<b>ONLINE (co-op)</b>   <size=10>[F9: mouse]</size>");
             if (!_cursorFree) GUILayout.Label("<color=yellow>Apretá F9 para liberar el mouse y clickear</color>");
             GUILayout.Label(_status);
+            if (!string.IsNullOrEmpty(_voiceStatus))
+                GUILayout.Label(_muted ? "<color=orange>" + _voiceStatus + "</color>" : _voiceStatus);
             GUILayout.Space(6);
             if (_session == null)
             {

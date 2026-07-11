@@ -16,11 +16,7 @@ namespace FolkloreArchives.MapGen
         {
             var poi = BuilderUtils.Group(parent, "PointsOfInterest", Vector3.zero);
 
-            var carMat    = BuilderUtils.Mat("car",     new Color(0.55f, 0.10f, 0.08f));
-            var blackMat  = BuilderUtils.Mat("black",   new Color(0.08f, 0.08f, 0.08f));
-            var tentMat   = BuilderUtils.Mat("tent",    new Color(0.80f, 0.35f, 0.10f));
             var woodMat   = BuilderUtils.Mat("wood",    new Color(0.35f, 0.25f, 0.15f));
-            var stoneMat  = BuilderUtils.Mat("stone",   new Color(0.40f, 0.38f, 0.36f));
             var metalMat  = BuilderUtils.Mat("metal",   new Color(0.30f, 0.31f, 0.33f));
             var clothMat  = BuilderUtils.Mat("cloth",   new Color(0.35f, 0.32f, 0.28f));
             var soilMat   = BuilderUtils.Mat("soil",    new Color(0.36f, 0.26f, 0.16f));
@@ -49,46 +45,10 @@ namespace FolkloreArchives.MapGen
             var camp = BuilderUtils.Group(poi, "Campsite", BuilderUtils.Ground(t, MapLayout.Campsite));
             BuilderUtils.Label(camp, "CAMPSITE", camp.position + Vector3.up * 8f);
 
-            var car = BuilderUtils.Group(camp, "Car", BuilderUtils.Ground(t, MapLayout.Campsite.x - 12f, MapLayout.Campsite.y - 16f));
-            car.rotation = Quaternion.Euler(0f, 35f, 0f);
-            BuilderUtils.Prim(PrimitiveType.Cube, "Body", car, car.position + Vector3.up * 0.85f,
-                new Vector3(1.8f, 0.9f, 4.2f), carMat).transform.rotation = car.rotation;
-            BuilderUtils.Prim(PrimitiveType.Cube, "Cabin", car, car.position + car.rotation * new Vector3(0f, 1.6f, -0.3f),
-                new Vector3(1.6f, 0.7f, 2.0f), blackMat).transform.rotation = car.rotation;
-            for (int i = 0; i < 4; i++)
-            {
-                var off = new Vector3(i % 2 == 0 ? 0.95f : -0.95f, 0.35f, i < 2 ? 1.4f : -1.4f);
-                var wheel = BuilderUtils.Prim(PrimitiveType.Cylinder, "Wheel", car,
-                    car.position + car.rotation * off, new Vector3(0.65f, 0.15f, 0.65f), blackMat);
-                wheel.transform.rotation = car.rotation * Quaternion.Euler(0f, 0f, 90f);
-            }
-
-            // campfire (touching it = death, per the script)
-            var campfire = BuilderUtils.Group(camp, "Campfire", BuilderUtils.Ground(t, MapLayout.Campsite.x + 3f, MapLayout.Campsite.y + 2f));
-            for (int i = 0; i < 3; i++)
-                BuilderUtils.Prim(PrimitiveType.Cylinder, "Log", campfire, campfire.position + Vector3.up * 0.2f,
-                    new Vector3(0.12f, 0.8f, 0.12f), woodMat, new Vector3(90f, i * 60f, 0f));
-            for (int i = 0; i < 6; i++)
-            {
-                float ang = i * 60f * Mathf.Deg2Rad;
-                BuilderUtils.Prim(PrimitiveType.Sphere, "Stone", campfire,
-                    campfire.position + new Vector3(Mathf.Cos(ang), 0.12f, Mathf.Sin(ang)) * 1.1f,
-                    Vector3.one * 0.35f, stoneMat);
-            }
-            var fireLight = new GameObject("CampfireLight").AddComponent<Light>();
-            fireLight.transform.SetParent(campfire);
-            fireLight.transform.position = campfire.position + Vector3.up * 0.8f;
-            fireLight.type = LightType.Point;
-            fireLight.color = new Color(1f, 0.55f, 0.2f);
-            fireLight.intensity = 2.5f;
-            fireLight.range = 14f;
-
-            BuilderUtils.Prim(PrimitiveType.Cube, "Tent1", camp,
-                BuilderUtils.Ground(t, MapLayout.Campsite.x - 4f, MapLayout.Campsite.y + 9f) + Vector3.up * 0.75f,
-                new Vector3(2.6f, 1.5f, 2.6f), tentMat, new Vector3(0f, 20f, 0f));
-            BuilderUtils.Prim(PrimitiveType.Cube, "Tent2", camp,
-                BuilderUtils.Ground(t, MapLayout.Campsite.x + 6f, MapLayout.Campsite.y + 10f) + Vector3.up * 0.75f,
-                new Vector3(2.6f, 1.5f, 2.6f), tentMat, new Vector3(0f, -35f, 0f));
+            // Dressing del campamento (fogata + troncos-asiento + leña + carpas + mesa,
+            // sin autos) → CampsiteBuilder, estilo PS1 texturizado. Reemplaza los
+            // placeholders viejos (auto + fogata de cubos + carpas-cubo).
+            CampsiteBuilder.Build(camp, t, MapLayout.Campsite);
 
             BuilderUtils.Empty(camp, "SPAWN_PLAYER1", BuilderUtils.Ground(t, MapLayout.Campsite.x - 2f, MapLayout.Campsite.y - 4f) + Vector3.up * 0.5f);
             BuilderUtils.Empty(camp, "SPAWN_RUFUS", BuilderUtils.Ground(t, MapLayout.Campsite.x + 1f, MapLayout.Campsite.y - 5f) + Vector3.up * 0.5f);

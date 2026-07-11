@@ -1529,6 +1529,11 @@ namespace FolkloreArchives.MapGen
                     if (dRiv < 34f &&
                         td.GetInterpolatedHeight(wx / MapLayout.MapSizeX, wz / MapLayout.MapSize) < 9.6f) continue;
 
+                    // claro del campamento PRIMERO: el BeachPath arranca EN el campamento,
+                    // así que si el "pasto corto" del sendero (abajo) va antes, mete briznas
+                    // dentro de la fogata (y esas no pasan por este radio). Por eso va acá.
+                    if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius) continue;
+
                     // sendero pisado del campamento a la playa: pasto corto y ralo
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 2.5f)
                     {
@@ -1537,11 +1542,6 @@ namespace FolkloreArchives.MapGen
                     }
                     // mini playa arenosa: sin pasto
                     if (Vector2.Distance(p, MapLayout.RiverBeach) < 12f) continue;
-
-                    // clear only a small patch around the campfire so the tall grass
-                    // doesn't swallow it (campfire sits at Campsite + (3,2), see
-                    // LandmarkBuilder). Everything else keeps its grass as before.
-                    if (Vector2.Distance(p, MapLayout.Campsite + new Vector2(3f, 2f)) < 5f) continue;
 
                     float dRoad = BuilderUtils.DistToPolyline(p, MapLayout.DirtRoad);
                     float dA = BuilderUtils.DistToPolyline(p, MapLayout.PathA);
@@ -1954,6 +1954,9 @@ namespace FolkloreArchives.MapGen
                     // sin pasto dentro del lote de la casa de la vieja (patio limpio)
                     if (p.x > MapLayout.OldLadyLotMin.x - 1f && p.x < MapLayout.OldLadyLotMax.x + 1f &&
                         p.y > MapLayout.OldLadyLotMin.y - 1f && p.y < MapLayout.OldLadyLotMax.y + 1f) continue;
+
+                    // claro del campamento (fogata + troncos + carpas + mesa)
+                    if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius) continue;
 
                     float southDg = MapLayout.PavedRouteZAt(p.x) - p.y;
                     if (southDg > MapLayout.ShoreVegFar) continue; // out in the water

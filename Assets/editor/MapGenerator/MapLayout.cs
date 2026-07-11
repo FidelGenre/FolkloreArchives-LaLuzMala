@@ -80,6 +80,12 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 OldLadyLotMax = new Vector2(420f, 637f);
         public const float OldLadyLotHeight = 25.5f;   // nivel plano del lote (≈ altura natural ahí)
 
+        // Claro sin pasto alrededor del campamento del jugador (fogata + troncos +
+        // carpas + mesa). El dressing de CampsiteBuilder llega ~7-8m del centro y el
+        // pasto es de 4-7m de alto (billboards), así que el rooteado justo en el borde
+        // "se asoma" sobre la fogata → 11m lo empuja bien lejos y deja el suelo pelado.
+        public const float CampsiteClearRadius = 11f;
+
         // ------------- Paths (polylines, x/z) -------------
         // The paved route is a smooth Catmull-Rom curve through a handful of gentle,
         // widely-spaced control points (NOT the old up/down/up/down zig-zag). Long

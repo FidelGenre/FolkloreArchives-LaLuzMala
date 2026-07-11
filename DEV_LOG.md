@@ -7,6 +7,194 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-10 — Fogata: tamaño del modelo fijado a mano (escala 150)
+
+La persistencia del campamento guarda la transform del GRUPO `Campfire` (id 0), pero
+el owner escala el MODELO interno `Campfire_Default` (hijo del grupo, que es lo que se
+selecciona al clickear) → su tamaño no se guardaba. Como pidió, se fijó en código:
+`PS1Prop`/`SeatProp` ahora aceptan `fixedScale` opcional, y `FirePit` coloca el modelo
+de la fogata con `fixedScale = (150,150,150)` (el valor que eligió) en vez de escalar
+por altura. Si quiere otro tamaño, cambiar ese número. **Necesita regenerar.**
+
+---
+
+## 2026-07-10 — FIX REAL del pasto en la fogata (el BeachPath lo metía, no el radio)
+
+El pasto seguía atravesando la fogata aunque el claro era 11m centrado justo en ella.
+Causa real: en `ForestBuilder.SetupGrass`, el bloque del **BeachPath** (sendero
+campamento→playa, que ARRANCA en `MapLayout.Campsite`) ponía "pasto corto" con
+`continue` **ANTES** del claro del campamento → esas briznas nunca pasaban por el
+chequeo de radio (por eso agrandar el radio no hacía nada). Fix: mover el `continue`
+del claro del campamento ARRIBA del bloque del BeachPath. Ahora la fogata queda pelada.
+(`SetupProceduralGrass` no tenía BeachPath, ya estaba ok.) El radio quedó en 11.
+**Necesita regenerar.**
+
+---
+
+## 2026-07-10 — Fogata: partículas de fuego PS1 + más claro de pasto
+
+- **Claro de pasto** del campamento `CampsiteClearRadius 9 → 11`. Los dos sistemas de
+  pasto ya excluían 9m centrado en `Campsite` (fogata al centro, verificado en el
+  layout: id 0 en 0,0,0), pero el pasto es billboard de 4-7m de alto → el rooteado
+  justo en el borde de 9m "se asoma" sobre la fogata. 11m lo empuja lejos.
+- **Partículas de fuego PS1** (`CampsiteBuilder.AddFireParticles`, hijo del grupo
+  `Campfire`): `ParticleSystem` billboard, cono hacia arriba, `colorOverLifetime`
+  amarillo→naranja→rojo con fade, `sizeOverLifetime` que se achica al subir, ~22/s,
+  40 máx. Material `mat_camp_fireparticle` (URP Particles/Unlit, transparente +
+  aditivo) con textura `tex_camp_fireparticle` 32² radial naranja→alpha cuantizado
+  (crunch PS1, filtro Point). Se mantienen la brasa emisiva + la luz puntual como
+  glow estático.
+- ⚠ **Los ParticleSystem NO se animan en el Scene view en modo edición** (sólo si
+  seleccionás el objeto o en Play/Game view). En edición se ve la brasa/luz; el fuego
+  animado se ve dándole Play. No afecta la persistencia (las partículas son hijas del
+  grupo Campfire = id 0, no un objeto registrado aparte; PersistCount sigue 9).
+- **Necesita regenerar.**
+
+---
+
+## 2026-07-10 — Persistencia de ediciones del campamento (como la de muebles)
+
+El owner acomodó el campamento a mano (movió/escaló troncos, carpas, etc.) y quería
+que no se pierda al regenerar. Nuevo `CampsitePersistence.cs` (mismo patrón que
+`FurniturePersistence`):
+- **IDs estables por objeto de dressing:** `CampsiteBuilder.Build` registra 9 objetos
+  con `Reg(...)` en orden fijo → nombre `Camp_##_...` (0 fogata, 1-3 troncos, 4 leña,
+  5-7 carpas, 8 mesa). Los builders (`FirePit/HLog/Firewood/PS1Tent/PicnicTable`)
+  ahora devuelven su GameObject. Const `PersistCount = 9` + `PersistNames[]`.
+- **Menú `Tools > Folklore Archives > Save Campsite Layout`:** guarda pos/rot/escala
+  LOCAL (relativa al grupo Campsite) de cada `Camp_##` + marca borrados, a
+  `Assets/_FolkloreArchives/campsite_layout.json`. `Clear Campsite Layout` para volver
+  a código. `Build` llama `Begin()` (carga) y `Register()` aplica el override o borra.
+- **Migración de escena vieja:** los objetos del campamento actual todavía NO tienen el
+  prefijo `Camp_##` (recién se ponen al regenerar). Para no perder las ediciones YA
+  hechas, `SaveCampsiteLayout` tiene un camino B: si no hay ningún `Camp_`, matchea los
+  hijos por nombre base EN ORDEN contra `PersistNames` (asume todos presentes/en orden,
+  cierto justo después de generar sin borrar) y les migra el nombre. Así el owner puede
+  guardar sus cambios actuales ANTES de regenerar.
+- **FLUJO OWNER:** 1) Save Campsite Layout (captura+migra lo actual), 2) regenerar → los
+  cambios vuelven. Re-Save tras nuevas ediciones. **Guardar SIEMPRE antes de regenerar.**
+- Sub-partes internas (ash/ember/luz de la fogata; leños de la pila; partes de la mesa)
+  se mueven rígidas con su grupo padre → alcanza con mover el objeto top-level.
+- **Necesita compilar** (aparece el menú) y después Save.
+
+---
+
+## 2026-07-10 — FIX carpas multiplicadas (cada FBX del pack trae 5 carpas)
+
+Al regenerar aparecían ~15 carpas desparramadas. Causa: cada FBX de carpa del pack
+3Dexter **contiene las 5 variantes de forma** de ese color (5 `Tent_Base` + 5
+`Tent_SupportBar`, verificado en el OBJ), y al escalar por altura se desplegaban a lo
+ancho (el modelo abarca x≈[1,14]). Las bolsas de dormir venían igual (~5 por FBX).
+- `CampsiteBuilder`: nuevo `PS1Tent` con `CropToOneTent` — instancia el FBX, se queda
+  con **1 base (lona) + la barra de soporte más cercana** (por bounds), destruye el
+  resto (`DestroyImmediate`), y **recentra en XZ** al origen del root para poder
+  ubicarla. Materiales por nombre de sub-objeto: lona (`Tent_<Color>`) vs palos
+  (`Poles`, detecta "Support"/"Bar"). 3 instancias = 3 carpas.
+- Refactor: `PS1Prop` (props de una pieza, p.ej. la fogata) + `PS1Tent` comparten
+  `InstProp`/`SeatProp`. La **fogata** es 1 sola (3 partes, mismo atlas) → sigue con
+  `PS1Prop`, no se recorta.
+- Se **quitaron las bolsas de dormir** (también multiplicadas y sólo decorativas);
+  sus FBX/PNG quedan en el pack sin usar.
+- **Necesita regenerar.** Sigue pendiente revisar en DÍA el facing/tamaño de las carpas.
+
+---
+
+## 2026-07-10 — Campamento: swap a modelos PS1 reales (pack CC0 de 3Dexter)
+
+El owner bajó el pack **"Retro/Demolished Campground Environment" de 3Dexter3D**
+(itch.io, **CC0**) a Downloads. Copiados a `Assets/ExternalAssets/CampsitePS1/`:
+3 carpas (Orange/Green/DarkBlue) + `Campfire_Default` + 2 bolsas de dormir + sus
+texturas (`Textures/`). Trae FBX + PNG; los `.mtl` apuntan a rutas absolutas del
+autor (`C:/Users/ianmc/...`) → Unity no linkea las texturas solo.
+
+`CampsiteBuilder` reescrito para usar los modelos reales donde el pack los tiene, y
+mantener lo procedural que quedó bien:
+- **Materiales por código** (`CampTexMat`): una URP `MatTextured` por textura del
+  pack, con filtro **Point** (forzado en el import) + **mate** (specular/reflejos OFF,
+  el mismo fix del halo). `PS1Prop(fbx, texBySub[], x, z, yaw, targetH)` instancia el
+  FBX, asigna materiales por submalla (`texBySub` de largo 1 = a todas; N = por índice),
+  escala a la altura objetivo preservando la rotación/escala de import (Y-up + yaw), y
+  asienta en el piso. Las **carpas** tienen 2 submallas: `[Tent_<Color>, Poles]`
+  (índice 0 = lona, 1 = palos, según el orden del OBJ). La **fogata** usa un atlas
+  único (`CampfireBake`).
+- **Fogata:** modelo PS1 + disco de ceniza (charcoal) + **brasa emisiva + luz** cálida
+  (el modelo es estático, sin fuego/luz propios). Se mantiene el grupo `Campfire`.
+- **Se dejó procedural** (el pack no lo trae y quedó bien): troncos-asiento, pila de
+  leña, mesa. Se borró el código de carpa procedural (paneles/triángulo/lona) y las
+  texturas `CanvasTex`/`StoneTex` que ya no se usan.
+- ⚠ **A revisar en DÍA:** (1) el "facing" nativo de las carpas es desconocido → si la
+  puerta no mira a la fogata, ajustar el `yaw` (posible flip de 180). (2) Asignación
+  lona/palos por índice de submalla — si salen cambiados, invertir `texBySub`. (3) Las
+  carpas NO tienen collider (se puede atravesar) — agregar MeshCollider si molesta.
+- **Necesita regenerar** + visto del owner.
+
+---
+
+## 2026-07-10 — FIX carpas que brillaban (halo blanco): materiales del campamento a mate
+
+De noche, al acercarse, las carpas armaban un gran disco blanco. No era emisión: era
+**brillo especular** — las lonas son paneles planos e inclinados que espejaban la luz
+puntual de la fogata hacia la cámara, y el bloom del post-FX lo agrandaba (los troncos
+no brillaban por ser cilindros curvos y oscuros). Fix en `CampsiteBuilder.MatTex`:
+todos los materiales del campamento van **mate** — `_Smoothness=0`, specular OFF
+(`_SPECULARHIGHLIGHTS_OFF`) y reflejos de entorno OFF (`_ENVIRONMENTREFLECTIONS_OFF`).
+Quedan iluminados por la fogata (difuso) pero sin espejar. **Necesita regenerar.**
+
+---
+
+## 2026-07-10 — Claro sin pasto alrededor del campamento (el pasto alto tapaba las carpas)
+
+El pasto 3D crecía entre las carpas/fogata y quedaba feo. Había solo un claro chico de
+5m alrededor de la fogata VIEJA en `SetupGrass`, y `SetupProceduralGrass` (el pasto
+alto de la captura) NO tenía exclusión de campamento.
+- Nueva const `MapLayout.CampsiteClearRadius = 9f` (el dressing de CampsiteBuilder llega
+  ~7-8m del centro).
+- `ForestBuilder.SetupGrass`: el viejo `Distance(Campsite+(3,2)) < 5f` → ahora
+  `Distance(Campsite) < CampsiteClearRadius` (centrado en el campamento real).
+- `ForestBuilder.SetupProceduralGrass`: agregado el mismo claro (antes no tenía).
+- Árboles/arbustos ya estaban excluidos <12m del Campsite, así que sólo era el pasto.
+  La transición no queda dura porque el thinning por `dGameplay` ya ralea alrededor.
+- **Necesita regenerar.**
+
+---
+
+## 2026-07-10 — Campamento del jugador rediseñado (fogata + troncos + carpas, sin autos)
+
+El owner pasó una foto de referencia (camping real en Lago Queñi): fogata central,
+troncos-asiento caídos alrededor, carpas atrás. Pidió replicar eso PERO **sin autos**
+(la ref tenía camionetas) y con assets **estilo PS1**. El campamento anterior eran
+placeholders (auto de cubos, fogata de cilindro+esferas, carpas = cubos naranjas).
+
+Nuevo `CampsiteBuilder.cs` (llamado desde `LandmarkBuilder`, reemplaza el dressing
+viejo; se conservan el grupo `Campsite`, el label y los markers de spawn):
+
+- **Estilo PS1 sin depender de un pack:** genera **texturas procedurales de 64² con
+  `FilterMode.Point` + sin mipmaps** (corteza, lona, carbón, piedra) — mismo patrón que
+  `BridgeBuilder.MetalTex`, cacheadas en Generated. Geometría simple texturizada, nada
+  de color plano.
+- **Fogata** (grupo `Campfire`, se mantiene el nombre porque "tocarla = muerte" según
+  el guion): disco de ceniza/carbón + aro de 9 piedras + 5 leños en teepee + brasa
+  emisiva + luz puntual cálida (point, range 14).
+- **Troncos-asiento**: 3 cilindros caídos en herradura abierta al sur (donde se sienta
+  la gente mirando el fuego), con `FromToRotation` para acostarlos.
+- **Pila de leña** (`Firewood`): troncos apilados + ramas.
+- **Carpas** (`Tent`): carpa canadiense a dos aguas armada como malla combinada
+  (2 faldones de lona inclinados + triángulo de fondo, frente abierto = puerta + piso).
+  3 carpas atrás (norte) mirando a la fogata, tinte naranja/verde/azul sobre la misma
+  textura de lona. ⚠ cada carpa usa `BuildCombinedStatic` con **nombre único**
+  (Tent_0/1/2) para no pisar el mismo `mesh_*.asset`.
+- **Mesa de camping** rústica (tablón + 2 bancos + patas) al costado este.
+- **SIN autos** (a pedido). Se borraron del código el auto de cubos y sus materiales
+  huérfanos (`carMat/blackMat/tentMat/stoneMat`) de `LandmarkBuilder`.
+- **Pendiente/– nota:** la "llama" es brasa emisiva + luz (sin partículas) → si el owner
+  quiere fuego animado, agregar un `ParticleSystem`. Si consigue modelos PS1 reales de
+  carpa/fogata, se pueden swapear (como la cocina). Ajustar posiciones/orientación de
+  carpas con captura en DÍA. (El warning "Graphics Ring Buffer space" de la captura es
+  de GPU/escena, no de este cambio.)
+- **Necesita regenerar** + visto del owner.
+
+---
+
 ## 2026-07-09 — Persistencia de ediciones de muebles (mover/rotar/borrar sobrevive al regenerar)
 
 El owner pidió poder mover/rotar/borrar muebles a mano y que no se pierdan al
