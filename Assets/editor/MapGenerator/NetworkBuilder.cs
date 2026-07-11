@@ -114,11 +114,23 @@ namespace FolkloreArchives.MapGen
 
             BuildDogVisual(root.transform);
 
-            // 1ª persona: cámara a la altura de la cabeza del perro, mirando adelante
-            // (el dueño ve "como el perro", no lo ve en 3ª persona).
+            // 1ª persona: la cámara va en el HOCICO mirando adelante. Como el modelo
+            // está girado 180°, su cabeza queda en el frente (+Z); calculo ese borde con
+            // los bounds y coloco la cámara justo ahí (si no, veías el cuerpo = 3ª persona).
+            float eyeY = 0.9f, noseZ = 0.6f;
+            {
+                var rends = root.GetComponentsInChildren<Renderer>();
+                if (rends.Length > 0)
+                {
+                    Bounds mb = rends[0].bounds;
+                    for (int i = 1; i < rends.Length; i++) mb.Encapsulate(rends[i].bounds);
+                    eyeY = mb.max.y * 0.62f;      // altura de los ojos ≈ 62% del alto
+                    noseZ = mb.max.z + 0.08f;     // justo delante del hocico
+                }
+            }
             var camGO = new GameObject("Camera");
             camGO.transform.SetParent(root.transform);
-            camGO.transform.localPosition = new Vector3(0f, 1.0f, 0.35f);
+            camGO.transform.localPosition = new Vector3(0f, eyeY, noseZ);
             camGO.transform.localRotation = Quaternion.identity;
             var cam = camGO.AddComponent<Camera>();
             cam.tag = "MainCamera";
