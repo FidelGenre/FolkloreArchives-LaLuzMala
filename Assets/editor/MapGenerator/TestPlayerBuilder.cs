@@ -159,11 +159,28 @@ namespace FolkloreArchives.MapGen
             dogCtrl.mode = FolkloreArchives.DogController.Mode.Follow;
             dog.AddComponent<FolkloreArchives.DogWalkAnim>(); // patas se mueven al caminar
 
-            // cámara 3ª persona del perro (detrás y arriba), apagada hasta que tomes control
+            // cámara 1ª persona del perro: en el HOCICO mirando adelante (igual que
+            // online). Como el modelo está girado 180°, la cabeza queda en +Z. Calculo
+            // ese borde con los bounds, pero con el perro en origen+identidad para que
+            // los bounds (que son en mundo) coincidan con el espacio LOCAL del perro.
+            float dEyeY = 0.9f, dNoseZ = 0.6f;
+            {
+                var savedPos = dog.transform.position; var savedRot = dog.transform.rotation;
+                dog.transform.position = Vector3.zero; dog.transform.rotation = Quaternion.identity;
+                var drends = model.GetComponentsInChildren<Renderer>();
+                if (drends.Length > 0)
+                {
+                    Bounds mb = drends[0].bounds;
+                    for (int i = 1; i < drends.Length; i++) mb.Encapsulate(drends[i].bounds);
+                    dEyeY = mb.max.y * 0.62f;     // ojos ≈ 62% del alto
+                    dNoseZ = mb.max.z + 0.08f;    // justo delante del hocico
+                }
+                dog.transform.position = savedPos; dog.transform.rotation = savedRot;
+            }
             var dogCamGO = new GameObject("DogCamera");
             dogCamGO.transform.SetParent(dog.transform);
-            dogCamGO.transform.localPosition = new Vector3(0f, 1.8f, -3.2f);
-            dogCamGO.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
+            dogCamGO.transform.localPosition = new Vector3(0f, dEyeY, dNoseZ);
+            dogCamGO.transform.localRotation = Quaternion.identity;
             var dogCam = dogCamGO.AddComponent<Camera>();
             dogCam.tag = "MainCamera";
             dogCam.clearFlags = CameraClearFlags.Skybox;
