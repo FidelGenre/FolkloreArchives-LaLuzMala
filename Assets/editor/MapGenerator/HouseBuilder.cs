@@ -176,7 +176,7 @@ namespace FolkloreArchives.MapGen
             inst.name = "OldLadyHouse_ALP";
             inst.transform.SetParent(parent, true);
 
-            Vector2 c = MapLayout.OldLadyRanch;
+            Vector2 c = MapLayout.OldLadyHouseCenter;
             float gy = terrain != null
                 ? terrain.SampleHeight(new Vector3(c.x, 0f, c.y)) + terrain.transform.position.y
                 : 20f;
