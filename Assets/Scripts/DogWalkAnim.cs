@@ -33,8 +33,20 @@ namespace FolkloreArchives
                 legs[i] = FindDeep(transform, legBones[i]);
                 if (legs[i] != null) baseRot[i] = legs[i].localRotation;
             }
+            _dog = GetComponent<DogController>();
+            _model = transform.Find("Model");
+            if (_model != null) { _modelBaseRot = _model.localRotation; _modelBasePos = _model.localPosition; }
             lastPos = transform.position;
         }
+
+        [Header("Sentado (modo Idle)")]
+        public float sitPitch = -30f;   // inclina el cuerpo: ancas abajo, pecho arriba
+        public float sitDrop = 0.15f;
+        DogController _dog;
+        Transform _model;
+        Quaternion _modelBaseRot;
+        Vector3 _modelBasePos;
+        float _sitT;
 
         // LateUpdate: después de mover al perro, sobreescribe la pose de las patas
         void LateUpdate()
@@ -53,6 +65,16 @@ namespace FolkloreArchives
                 float sign = (i == 0 || i == 3) ? 1f : -1f;     // diagonales en contrafase
                 float ang = Mathf.Sin(phase) * swing * amp * sign;
                 legs[i].localRotation = baseRot[i] * Quaternion.AngleAxis(ang, axis);
+            }
+
+            // SENTADO: cuando el perro está en Idle (le dijiste que se quede), inclina
+            // el cuerpo hacia atrás → pose de sentado.
+            if (_model != null)
+            {
+                bool sitting = _dog != null && _dog.mode == DogController.Mode.Idle;
+                _sitT = Mathf.Lerp(_sitT, sitting ? 1f : 0f, 8f * dt);
+                _model.localRotation = _modelBaseRot * Quaternion.Euler(sitPitch * _sitT, 0f, 0f);
+                _model.localPosition = _modelBasePos + Vector3.down * (sitDrop * _sitT);
             }
         }
 

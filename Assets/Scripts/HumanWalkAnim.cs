@@ -30,7 +30,8 @@ namespace FolkloreArchives
         public float cadence = 6.5f;
         public Vector3 axis = Vector3.right;
         public float moveThreshold = 0.3f;
-        public float crouchScaleY = 0.66f;   // alto del modelo al agacharse (fracción)
+        public float crouchScaleY = 0.62f;   // alto del modelo al agacharse (fracción)
+        public float crouchDrop = 0.35f;      // cuánto baja el modelo al agacharse (m)
 
         // agachado, replicado a todos (lo escribe el dueño)
         readonly NetworkVariable<bool> _crouch = new NetworkVariable<bool>(
@@ -62,9 +63,13 @@ namespace FolkloreArchives
                 else _rest[i] = baseLocal;
             }
             _model = transform.Find("Model");
-            _modelScale = _model != null ? _model.localScale : Vector3.one;
+            if (_model == null) { var smr = GetComponentInChildren<SkinnedMeshRenderer>(); if (smr != null) _model = smr.transform.parent; }
+            if (_model != null) { _modelScale = _model.localScale; _modelBasePos = _model.localPosition; }
+            else _modelScale = Vector3.one;
             _lastPos = transform.position;
         }
+        Vector3 _modelBasePos;
+        float _crouchT;
 
         void Update()
         {
@@ -84,13 +89,14 @@ namespace FolkloreArchives
 
             bool crouched = IsSpawned && _crouch.Value;
 
-            // agacharse: achica el modelo en Y (pivote ≈ pies) → se ve más bajo/agachado
+            // agacharse: baja el modelo y lo achica en Y → se ve claramente más bajo
+            // (el compañero te ve agacharte; vos no, porque en 1ª persona tu cuerpo va oculto).
             if (_model != null)
             {
-                float targetY = _modelScale.y * (crouched ? crouchScaleY : 1f);
-                var s = _model.localScale;
-                s.y = Mathf.Lerp(s.y, targetY, 12f * dt);
+                _crouchT = Mathf.Lerp(_crouchT, crouched ? 1f : 0f, 12f * dt);
+                var s = _modelScale; s.y = _modelScale.y * Mathf.Lerp(1f, crouchScaleY, _crouchT);
                 _model.localScale = s;
+                _model.localPosition = _modelBasePos + Vector3.down * (crouchDrop * _crouchT);
             }
 
             bool moving = speed > moveThreshold;
