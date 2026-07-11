@@ -152,20 +152,26 @@ namespace FolkloreArchives.Net
         {
             if (_box == null) _box = new GUIStyle(GUI.skin.box) { richText = true, alignment = TextAnchor.UpperLeft, wordWrap = true };
             const float w = 280f;
-            GUILayout.BeginArea(new Rect(Screen.width - w - 12f, 12f, w, 240f), _box);
+            GUILayout.BeginArea(new Rect(Screen.width - w - 12f, 12f, w, 300f), _box);
             GUILayout.Label("<b>ONLINE (co-op)</b>   <size=10>[F9: mouse]</size>");
             if (!_cursorFree) GUILayout.Label("<color=yellow>Apretá F9 para liberar el mouse y clickear</color>");
             GUILayout.Label(_status);
             GUILayout.Space(6);
             if (_session == null)
             {
-                // elección de personaje ANTES de entrar
-                GUILayout.Label("Jugar como:");
+                // elección de personaje ANTES de entrar — botones grandes, el elegido
+                // queda resaltado en verde.
+                GUILayout.Label("<b>ELEGÍ TU PERSONAJE:</b>");
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Toggle(_role == 0, " Persona", GUILayout.Width(120))) _role = 0;
-                if (GUILayout.Toggle(_role == 1, " Perro")) _role = 1;
+                var prev = GUI.color;
+                GUI.color = _role == 0 ? Color.green : Color.gray;
+                if (GUILayout.Button("PERSONA", GUILayout.Height(30))) _role = 0;
+                GUI.color = _role == 1 ? Color.green : Color.gray;
+                if (GUILayout.Button("PERRO", GUILayout.Height(30))) _role = 1;
+                GUI.color = prev;
                 GUILayout.EndHorizontal();
-                GUILayout.Space(4);
+                GUILayout.Label(_role == 1 ? "→ vas a ser el PERRO 🐕" : "→ vas a ser la PERSONA");
+                GUILayout.Space(6);
 
                 GUI.enabled = !_busy;
                 if (GUILayout.Button("Crear sala (HOST)")) _ = Host();
