@@ -58,6 +58,8 @@ namespace FolkloreArchives.Net
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
             }
+
+            Update3DVoice();   // posición 3D del jugador en el canal de voz
         }
 
         void SetCursorFree(bool free)
@@ -98,19 +100,37 @@ namespace FolkloreArchives.Net
             }
         }
 
+        string _channel;   // canal de voz activo (para el update 3D)
+
         async Task JoinVoice()
         {
             if (!_voiceReady || _session == null) return;
             try
             {
-                await VivoxService.Instance.JoinGroupChannelAsync(_session.Code, ChatCapability.AudioOnly);
-                _voiceStatus = "🎙 Voz conectada (V = mutear)";
+                // Canal POSICIONAL 3D: se escucha al otro según distancia y dirección.
+                //   audible 45m (a partir de ahí no se oye), conversacional 4m (adentro
+                //   se oye a volumen pleno), caída inversa (natural).
+                var props = new Channel3DProperties(45, 4, 1.0f, AudioFadeModel.InverseByDistance);
+                _channel = _session.Code;
+                await VivoxService.Instance.JoinPositionalChannelAsync(_channel, ChatCapability.AudioOnly, props);
+                _voiceStatus = "🎙 Voz 3D conectada (V = mutear)";
             }
             catch (System.Exception e) { _voiceStatus = "Voz: error al unir canal — " + e.Message; }
         }
 
+        // Actualiza la posición/orientación 3D del jugador local en el canal, cada frame.
+        // Camera.main = la cámara del personaje que controlás (persona o perro), así que
+        // Vivox sabe desde dónde hablás y desde dónde escuchás.
+        void Update3DVoice()
+        {
+            if (!_voiceReady || string.IsNullOrEmpty(_channel)) return;
+            var cam = Camera.main;
+            if (cam != null) VivoxService.Instance.Set3DPosition(cam.gameObject, _channel);
+        }
+
         async Task LeaveVoice()
         {
+            _channel = null;
             if (!_voiceReady) return;
             try { await VivoxService.Instance.LeaveAllChannelsAsync(); } catch { }
         }
