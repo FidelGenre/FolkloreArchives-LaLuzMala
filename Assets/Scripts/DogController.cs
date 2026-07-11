@@ -25,6 +25,8 @@ namespace FolkloreArchives
         public float turnSpeed = 200f;   // grados/seg (giro de la IA)
         public float mouseSensitivity = 0.08f; // giro con mouse (modo jugador)
         public float gravity   = 18f;
+        public float jumpHeight = 0.9f;   // saltar (Espacio)
+        public float crouchRatio = 0.5f;  // agacharse (Ctrl/C): baja a esta fracción del alto
 
         [Header("Follow (IA)")]
         public Transform followTarget;             // la persona
@@ -39,8 +41,16 @@ namespace FolkloreArchives
 
         CharacterController cc;
         float verticalVel;
+        Transform camT;
+        float standHeight, camBaseY;
 
-        void Start() => cc = GetComponent<CharacterController>();
+        void Start()
+        {
+            cc = GetComponent<CharacterController>();
+            standHeight = cc.height;
+            var camGo = GetComponentInChildren<Camera>(true);
+            if (camGo != null) { camT = camGo.transform; camBaseY = camT.localPosition.y; }
+        }
 
         void Update()
         {
@@ -51,13 +61,38 @@ namespace FolkloreArchives
                 case Mode.Follow: planar = FollowMove(); break;
             }
 
-            // gravedad
-            if (cc.isGrounded) verticalVel = -1f;
+            bool grounded = cc.isGrounded;
+            if (grounded) verticalVel = -1f;
             else verticalVel -= gravity * Time.deltaTime;
+
+            if (mode == Mode.Player) JumpCrouch(grounded);   // saltar/agacharse solo cuando lo controlás
 
             Vector3 move = planar;
             move.y = verticalVel;
             cc.Move(move * Time.deltaTime);
+        }
+
+        // Espacio = saltar (si está en el piso y no agachado). Ctrl/C = agacharse
+        // (baja el alto del collider y la cámara).
+        void JumpCrouch(bool grounded)
+        {
+            var kb = Keyboard.current;
+            if (kb == null) return;
+
+            bool wantCrouch = kb.leftCtrlKey.isPressed || kb.cKey.isPressed;
+            float targetH = wantCrouch ? standHeight * crouchRatio : standHeight;
+            cc.height = Mathf.Lerp(cc.height, targetH, 10f * Time.deltaTime);
+            cc.center = new Vector3(0f, cc.height * 0.5f, 0f);
+            if (camT != null)
+            {
+                float targetCamY = camBaseY - (standHeight - cc.height);
+                camT.localPosition = new Vector3(camT.localPosition.x,
+                    Mathf.Lerp(camT.localPosition.y, targetCamY, 10f * Time.deltaTime),
+                    camT.localPosition.z);
+            }
+
+            if (grounded && !wantCrouch && kb.spaceKey.wasPressedThisFrame)
+                verticalVel = Mathf.Sqrt(2f * gravity * jumpHeight);
         }
 
         // --- controlado por el jugador (1ª persona: mouse gira, WASD mueve) ---
