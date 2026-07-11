@@ -74,17 +74,25 @@ namespace FolkloreArchives
 
             if (mode == Mode.Player) Jump(grounded);   // saltar solo cuando lo controlás (el perro no se agacha)
 
+            Vector3 before = transform.position;
             Vector3 move = planar;
             move.y = verticalVel;
             var flags = cc.Move(move * Time.deltaTime);
 
             // AUTO-SALTO: SOLO en modo Follow (IA). Controlado, el salto lo hace el
-            // jugador (Espacio). Si se estaba moviendo y chocó de costado, salta el obstáculo.
-            if (mode == Mode.Follow && grounded && planar.sqrMagnitude > 0.05f &&
-                (flags & CollisionFlags.Sides) != 0 && Time.time >= _nextAutoJump)
+            // jugador (Espacio). Detecta que está BLOQUEADO: quería avanzar pero apenas
+            // se movió (o chocó de costado). Más fiable que depender solo de Sides, que
+            // no siempre se activa según la forma del obstáculo.
+            if (mode == Mode.Follow && grounded && planar.sqrMagnitude > 0.05f && Time.time >= _nextAutoJump)
             {
-                verticalVel = Mathf.Sqrt(2f * gravity * jumpHeight);
-                _nextAutoJump = Time.time + 0.6f;   // cooldown para no saltar en loop
+                Vector3 actual = transform.position - before; actual.y = 0f;
+                float wanted = new Vector2(planar.x, planar.z).magnitude * Time.deltaTime;
+                bool blocked = (flags & CollisionFlags.Sides) != 0 || actual.magnitude < wanted * 0.5f;
+                if (blocked)
+                {
+                    verticalVel = Mathf.Sqrt(2f * gravity * jumpHeight);
+                    _nextAutoJump = Time.time + 0.6f;   // cooldown para no saltar en loop
+                }
             }
         }
         float _nextAutoJump;

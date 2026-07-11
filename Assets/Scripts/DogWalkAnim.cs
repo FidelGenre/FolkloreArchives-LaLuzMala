@@ -40,8 +40,8 @@ namespace FolkloreArchives
         }
 
         [Header("Sentado (modo Idle)")]
-        public float sitPitch = -30f;   // inclina el cuerpo: ancas abajo, pecho arriba
-        public float sitDrop = 0.15f;
+        public float sitPitch = -16f;   // inclina el cuerpo: pecho arriba, ancas abajo (negativo = hocico arriba)
+        public float sitLift = 0.08f;   // sube un poco el modelo para que las ancas no atraviesen el piso
         DogController _dog;
         Transform _model;
         Quaternion _modelBaseRot;
@@ -73,8 +73,12 @@ namespace FolkloreArchives
             {
                 bool sitting = _dog != null && _dog.mode == DogController.Mode.Idle;
                 _sitT = Mathf.Lerp(_sitT, sitting ? 1f : 0f, 8f * dt);
-                _model.localRotation = _modelBaseRot * Quaternion.Euler(sitPitch * _sitT, 0f, 0f);
-                _model.localPosition = _modelBasePos + Vector3.down * (sitDrop * _sitT);
+                // PRE-multiplico: el pitch va en el espacio del PADRE (eje derecha del
+                // perro), no en el local del modelo (que está girado 180° y volteaba el
+                // sentado hacia el lado contrario). Y en vez de bajar, subo un poco para
+                // que las ancas no se hundan en la tierra.
+                _model.localRotation = Quaternion.Euler(sitPitch * _sitT, 0f, 0f) * _modelBaseRot;
+                _model.localPosition = _modelBasePos + Vector3.up * (sitLift * _sitT);
             }
         }
 
