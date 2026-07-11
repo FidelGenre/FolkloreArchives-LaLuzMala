@@ -33,20 +33,8 @@ namespace FolkloreArchives
                 legs[i] = FindDeep(transform, legBones[i]);
                 if (legs[i] != null) baseRot[i] = legs[i].localRotation;
             }
-            _dog = GetComponent<DogController>();
-            _model = transform.Find("Model");
-            if (_model != null) { _modelBaseRot = _model.localRotation; _modelBasePos = _model.localPosition; }
             lastPos = transform.position;
         }
-
-        [Header("Sentado (modo Idle)")]
-        public float sitPitch = -16f;   // inclina el cuerpo: pecho arriba, ancas abajo (negativo = hocico arriba)
-        public float sitLift = 0.08f;   // sube un poco el modelo para que las ancas no atraviesen el piso
-        DogController _dog;
-        Transform _model;
-        Quaternion _modelBaseRot;
-        Vector3 _modelBasePos;
-        float _sitT;
 
         // LateUpdate: después de mover al perro, sobreescribe la pose de las patas
         void LateUpdate()
@@ -67,19 +55,10 @@ namespace FolkloreArchives
                 legs[i].localRotation = baseRot[i] * Quaternion.AngleAxis(ang, axis);
             }
 
-            // SENTADO: cuando el perro está en Idle (le dijiste que se quede), inclina
-            // el cuerpo hacia atrás → pose de sentado.
-            if (_model != null)
-            {
-                bool sitting = _dog != null && _dog.mode == DogController.Mode.Idle;
-                _sitT = Mathf.Lerp(_sitT, sitting ? 1f : 0f, 8f * dt);
-                // PRE-multiplico: el pitch va en el espacio del PADRE (eje derecha del
-                // perro), no en el local del modelo (que está girado 180° y volteaba el
-                // sentado hacia el lado contrario). Y en vez de bajar, subo un poco para
-                // que las ancas no se hundan en la tierra.
-                _model.localRotation = Quaternion.Euler(sitPitch * _sitT, 0f, 0f) * _modelBaseRot;
-                _model.localPosition = _modelBasePos + Vector3.up * (sitLift * _sitT);
-            }
+            // QUIETO: cuando el perro está en Idle (le dijiste que se quede) simplemente
+            // se queda PARADO quieto (la caminata ya se apaga sola con amp→0). No se
+            // sienta: la pose de sentado sobre un rig sin huesos de patas plegables
+            // quedaba mal, así que la sacamos.
         }
 
         static Transform FindDeep(Transform root, string name)
