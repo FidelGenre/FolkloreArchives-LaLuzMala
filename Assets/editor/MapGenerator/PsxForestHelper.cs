@@ -15,7 +15,9 @@ namespace FolkloreArchives.MapGen
         public const string FbxPath =
             "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_Forest_AssetCollection_byStarkCrafts.fbx";
 
-        [MenuItem("Tools/Folklore Archives/Listar contenido del FBX PSX")]
+        // Diagnóstico ya cumplido (las texturas se extrajeron a PSX_ExtractedTex).
+        // Se saca del menú; se puede reactivar descomentando el [MenuItem].
+        // [MenuItem("Tools/Folklore Archives/Listar contenido del FBX PSX")]
         public static void ListFbx()
         {
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(FbxPath);
