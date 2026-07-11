@@ -232,9 +232,9 @@ namespace FolkloreArchives.MapGen
                 model.transform.localScale = Vector3.one * (target / h);
                 Bounds b2 = model.GetComponentInChildren<Renderer>().bounds;
                 foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
-                // -0.25: los bounds del skinned-mesh vienen inflados hacia abajo y lo
-                // dejaban levitando; bajo el modelo para apoyar las patas en el piso.
-                model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y) - 0.25f, 0f);
+                // pequeño ajuste hacia abajo (los bounds del skinned vienen algo inflados);
+                // -0.06 apoya las patas sin hundirlas.
+                model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y) - 0.06f, 0f);
             }
         }
     }

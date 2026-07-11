@@ -146,7 +146,7 @@ namespace FolkloreArchives.MapGen
                 var all = model.GetComponentsInChildren<Renderer>();
                 for (int i = 0; i < all.Length; i++) b2.Encapsulate(all[i].bounds);
                 float bottomLocal = b2.min.y - dog.transform.position.y;
-                model.transform.localPosition = new Vector3(0f, -bottomLocal - 0.25f, 0f); // -0.25: bounds skinned inflados → no levita
+                model.transform.localPosition = new Vector3(0f, -bottomLocal - 0.06f, 0f); // -0.06: apoya patas sin hundir
                 Debug.Log($"Rufus: alto nativo {h:0.00} → escala {s:0.000} (objetivo {DogTargetHeight} m).");
             }
             else Debug.LogWarning("Rufus: el modelo no tiene Renderers para medir — queda a escala 1.");
