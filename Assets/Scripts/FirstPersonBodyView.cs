@@ -64,6 +64,13 @@ namespace FolkloreArchives
                         if (sh == null) return;   // ni URP hay: no puedo hacer nada
                         fallback = new Material(sh);
                         Texture tex = TexFromAny(mats);
+#if UNITY_EDITOR
+                        // en el editor, si el FBX no expuso su textura, cargo la del pack
+                        // directamente (misma que usa BuildPersonVisual al generar)
+                        if (tex == null)
+                            tex = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture>(
+                                "Assets/ExternalAssets/Player/character_256.png");
+#endif
                         if (tex != null && fallback.HasProperty("_BaseMap")) fallback.SetTexture("_BaseMap", tex);
                         else if (fallback.HasProperty("_BaseColor")) fallback.SetColor("_BaseColor", new Color(0.82f, 0.68f, 0.55f));
                         if (fallback.HasProperty("_Smoothness")) fallback.SetFloat("_Smoothness", 0.05f);
