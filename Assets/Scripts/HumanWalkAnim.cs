@@ -23,8 +23,8 @@ namespace FolkloreArchives
         public Limb[] limbs = {
             new Limb { bone = "thigh.L",     phase =  1f, rest = Vector3.zero },
             new Limb { bone = "thigh.R",     phase = -1f, rest = Vector3.zero },
-            new Limb { bone = "upper_arm.L", phase = -1f, rest = new Vector3(0f, 0f, -72f) },
-            new Limb { bone = "upper_arm.R", phase =  1f, rest = new Vector3(0f, 0f,  72f) },
+            new Limb { bone = "upper_arm.L", phase = -1f, rest = new Vector3(0f, 0f,  75f) },
+            new Limb { bone = "upper_arm.R", phase =  1f, rest = new Vector3(0f, 0f, -75f) },
         };
         public float legSwing = 26f;
         public float armSwing = 20f;
