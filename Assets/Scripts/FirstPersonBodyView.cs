@@ -35,7 +35,29 @@ namespace FolkloreArchives
                 var lp = cam.transform.localPosition;
                 cam.transform.localPosition = new Vector3(lp.x, lp.y - eyeDrop, lp.z + eyeForward);
             }
+            FixMagentaMaterials();
             _done = true;
+        }
+
+        // Repara en runtime las sub-mallas magenta: si el modelo tiene ranuras con el
+        // material "Standard" del FBX (magenta en URP), las reemplaza por el material
+        // URP bueno que ya tiene el propio modelo. Es un parche para tu vista sin tener
+        // que regenerar; el fix permanente (para el compañero también) es regenerar.
+        void FixMagentaMaterials()
+        {
+            foreach (var r in GetComponentsInChildren<Renderer>(true))
+            {
+                var mats = r.sharedMaterials;
+                Material good = null;
+                foreach (var m in mats)
+                    if (m != null && m.shader != null && m.shader.name.Contains("Universal")) { good = m; break; }
+                if (good == null) continue;   // ninguna ranura URP: no puedo saber cuál es la buena
+                bool changed = false;
+                for (int k = 0; k < mats.Length; k++)
+                    if (mats[k] == null || mats[k].shader == null || !mats[k].shader.name.Contains("Universal"))
+                    { mats[k] = good; changed = true; }
+                if (changed) r.sharedMaterials = mats;
+            }
         }
     }
 }
