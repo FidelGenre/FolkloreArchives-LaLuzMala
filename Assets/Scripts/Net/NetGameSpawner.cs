@@ -57,12 +57,21 @@ namespace FolkloreArchives.Net
             resp.CreatePlayerObject = false;   // lo spawneamos nosotros (por elección) en OnClientConnected
         }
 
+        bool _personTaken, _dogTaken;
+
         void OnClientConnected(ulong clientId)
         {
             if (_nm == null || !_nm.IsServer) return;
             int choice = _choice.TryGetValue(clientId, out var c) ? c : 0;
+
+            // resolver conflicto: si tu personaje ya está tomado, te toca el otro
+            // (co-op de 2 → siempre uno persona + uno perro).
+            if (choice == 0 && _personTaken) choice = 1;
+            else if (choice == 1 && _dogTaken) choice = 0;
+
             var prefab = (choice == 1 && dogPrefab != null) ? dogPrefab : personPrefab;
             if (prefab == null) { Debug.LogError("[NET] Falta el prefab de personaje."); return; }
+            if (choice == 1) _dogTaken = true; else _personTaken = true;
 
             Vector3 pos = OnGround(new Vector3(SpawnXZ.x + (clientId % 4) * 2f, 0f, SpawnXZ.y));
             var go = Instantiate(prefab, pos, Quaternion.identity);

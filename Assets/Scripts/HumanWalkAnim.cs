@@ -2,9 +2,10 @@
 //  FOLKLORE ARCHIVES - LA LUZ MALA
 //  HumanWalkAnim.cs — caminata PROCEDURAL para el personaje humano
 //  (Simple PSX Character de JashiPSX — rig completo, sin clips).
-//  Balancea muslos y brazos con marcha humana: pierna y brazo
-//  CONTRALATERALES en fase (izq-adelante + brazo der-adelante).
-//  Amplitud sube/baja según si el jugador se mueve.
+//  El modelo viene en T-pose (brazos abiertos). En vez de adivinar
+//  el eje del hueso, calculo en Start la rotación que hace que el
+//  brazo APUNTE HACIA ABAJO (con la dirección real del hueso→hijo),
+//  y sobre esa pose de descanso balanceo la marcha. Piernas: base.
 //  Reemplazable por animaciones de Mixamo más adelante.
 // ============================================================
 using UnityEngine;
@@ -14,37 +15,48 @@ namespace FolkloreArchives
     public class HumanWalkAnim : MonoBehaviour
     {
         [System.Serializable]
-        public struct Limb { public string bone; public float phase; public Vector3 rest; } // phase=+1/-1, rest=euler base
+        public struct Limb { public string bone; public float phase; } // phase = +1 / -1
 
-        // marcha: muslo.L adelante con brazo.R adelante (contralateral).
-        // rest en los BRAZOS = bajarlos de la T-pose a los costados (los muslos ya
-        // cuelgan bien, rest 0). Si los brazos van para el lado equivocado, invertir
-        // el signo del Z en el rest.
+        // marcha: muslo.L adelante con brazo.R adelante (contralateral)
         public Limb[] limbs = {
-            new Limb { bone = "thigh.L",     phase =  1f, rest = Vector3.zero },
-            new Limb { bone = "thigh.R",     phase = -1f, rest = Vector3.zero },
-            new Limb { bone = "upper_arm.L", phase = -1f, rest = new Vector3(0f, 0f,  75f) },
-            new Limb { bone = "upper_arm.R", phase =  1f, rest = new Vector3(0f, 0f, -75f) },
+            new Limb { bone = "thigh.L",     phase =  1f },
+            new Limb { bone = "thigh.R",     phase = -1f },
+            new Limb { bone = "upper_arm.L", phase = -1f },
+            new Limb { bone = "upper_arm.R", phase =  1f },
         };
         public float legSwing = 26f;
-        public float armSwing = 20f;
+        public float armSwing = 16f;
         public float cadence = 6.5f;
         public Vector3 axis = Vector3.right;   // eje de balanceo (local del hueso)
         public float moveThreshold = 0.3f;
 
         Transform[] _t;
-        Quaternion[] _base;
+        Quaternion[] _rest;   // pose de descanso (brazos ya bajados; piernas = base)
         float _phase, _amp;
         Vector3 _lastPos;
 
         void Start()
         {
             _t = new Transform[limbs.Length];
-            _base = new Quaternion[limbs.Length];
+            _rest = new Quaternion[limbs.Length];
             for (int i = 0; i < limbs.Length; i++)
             {
                 _t[i] = FindDeep(transform, limbs[i].bone);
-                if (_t[i] != null) _base[i] = _t[i].localRotation;
+                if (_t[i] == null) continue;
+                Quaternion baseLocal = _t[i].localRotation;
+
+                if (limbs[i].bone.Contains("arm") && _t[i].childCount > 0 && _t[i].parent != null)
+                {
+                    // dirección real del brazo (hueso → hijo) y rotación que la lleva a -Y
+                    Vector3 dir = (_t[i].GetChild(0).position - _t[i].position).normalized;
+                    Quaternion worldDelta = Quaternion.FromToRotation(dir, Vector3.down);
+                    Quaternion pW = _t[i].parent.rotation;
+                    _rest[i] = Quaternion.Inverse(pW) * worldDelta * (pW * baseLocal);
+                }
+                else
+                {
+                    _rest[i] = baseLocal;
+                }
             }
             _lastPos = transform.position;
         }
@@ -65,8 +77,7 @@ namespace FolkloreArchives
                 bool isArm = limbs[i].bone.Contains("arm");
                 float amt = (isArm ? armSwing : legSwing) * limbs[i].phase * _amp;
                 float ang = Mathf.Sin(_phase) * amt;
-                // base del modelo → rest (bajar brazos) → balanceo
-                _t[i].localRotation = _base[i] * Quaternion.Euler(limbs[i].rest) * Quaternion.AngleAxis(ang, axis);
+                _t[i].localRotation = _rest[i] * Quaternion.AngleAxis(ang, axis);
             }
         }
 
