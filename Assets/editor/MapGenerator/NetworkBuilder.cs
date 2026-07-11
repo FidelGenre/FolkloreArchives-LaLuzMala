@@ -110,6 +110,7 @@ namespace FolkloreArchives.MapGen
             cc.height = 1.1f; cc.radius = 0.35f; cc.center = new Vector3(0f, 0.55f, 0f);
             var dogCtrl = root.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.enabled = false;
+            root.AddComponent<FolkloreArchives.DogWalkAnim>(); // patas se mueven al caminar
 
             BuildDogVisual(root.transform);
 
@@ -157,7 +158,9 @@ namespace FolkloreArchives.MapGen
                 model.transform.localScale = Vector3.one * (target / h);
                 Bounds b2 = model.GetComponentInChildren<Renderer>().bounds;
                 foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
-                model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y), 0f);
+                // -0.25: los bounds del skinned-mesh vienen inflados hacia abajo y lo
+                // dejaban levitando; bajo el modelo para apoyar las patas en el piso.
+                model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y) - 0.25f, 0f);
             }
         }
     }
