@@ -7,6 +7,28 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-11 — Casa: muebles Kenney (color plano) → pack nappin texturizado
+
+El owner quiere que la casa de la vieja se vea más creíble. Los muebles Kenney son
+de color plano; el pack **House Interior Pack (nappin.dev)** — 57 modelos lowpoly
+texturizados con paleta de gradientes — da un interior mucho más cohesivo.
+
+- **Integración** (`HouseBuilder`): nuevo prefijo `NAP_` en `FurnitureItems`. En
+  `PlaceFurniture`, si el modelo empieza con `NAP_`, carga el prefab de
+  `Assets/nappin/HouseInteriorPack/Prefabs/(Prb)<Nombre>.prefab`.
+- **Materiales**: los prefabs de nappin usan shader **built-in (Standard)** → en URP
+  saldrían magenta. `NappinUrp(src)` convierte cada material a URP/Lit copiando la
+  textura del gradiente (`_MainTex`→`_BaseMap`), color y emisión (para las luces
+  `EmissiveWarm`). Cacheado por material fuente.
+- **Mapeo** (mismo orden/cantidad/posiciones → IDs de persistencia estables): cama,
+  mesas de luz, ropero, cómoda, sofá, sillas, mesa ratona, estante, lámpara, consola
+  TV, bacha/cocina/campana/heladera, inodoro, lavabo, espejo, perchero, etc. Sin
+  equivalente nappin (siguen Kenney/PS1): alfombra, radio, TV vintage, bañera, banco,
+  y la cocina PS1 (mesada/alacenas/mesa/sillas).
+- **Crédito**: House Interior Pack por **nappin** (nappin.dev).
+- ⚠ 1er pase: rotaciones/posiciones pueden necesitar ajuste (el "facing" nativo de
+  nappin difiere del de Kenney) → revisar en captura de DÍA y afinar.
+
 ## 2026-07-10 — Fogata: tamaño del modelo fijado a mano (escala 150)
 
 La persistencia del campamento guarda la transform del GRUPO `Campfire` (id 0), pero

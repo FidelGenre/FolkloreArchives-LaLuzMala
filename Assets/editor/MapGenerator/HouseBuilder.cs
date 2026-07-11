@@ -379,6 +379,37 @@ namespace FolkloreArchives.MapGen
         // PS1 Kitchen Pack (Dazed Crow Games, licencia FREE con atribución — NO CC0;
         // no subir los .fbx/.png a un repo público). Un atlas 256² compartido.
         const string KFurnPS1Dir = "Assets/ExternalAssets/HouseFurniture_PS1/";
+        // House Interior Pack (nappin.dev, lowpoly texturizado). Prefabs con materiales
+        // built-in (Standard) → hay que convertirlos a URP al instanciar o salen magenta.
+        const string NappinDir = "Assets/nappin/HouseInteriorPack/Prefabs/(Prb)";
+
+        // Convierte los materiales built-in del pack nappin a URP (una vez por material,
+        // cacheado): crea un URP/Lit copiando la textura del gradiente y el color/emisión.
+        static readonly Dictionary<Material, Material> _napMatCache = new Dictionary<Material, Material>();
+        static Material NappinUrp(Material src)
+        {
+            if (src == null) return BuilderUtils.Mat("nap_null", new Color(0.6f, 0.6f, 0.6f), 0f);
+            if (src.shader != null && src.shader.name.Contains("Universal")) return src;
+            if (_napMatCache.TryGetValue(src, out var cached)) return cached;
+
+            var sh = Shader.Find("Universal Render Pipeline/Lit");
+            var m = new Material(sh) { name = "nap_" + src.name };
+            Texture tex = src.HasProperty("_MainTex") ? src.GetTexture("_MainTex") : null;
+            if (tex != null && m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", tex);
+            Color col = src.HasProperty("_Color") ? src.GetColor("_Color") : Color.white;
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tex != null ? Color.white : col);
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.08f);
+            // materiales de luz del pack (EmissiveWarm) → emisión cálida
+            if (src.name.Contains("Emissive") || src.IsKeywordEnabled("_EMISSION"))
+            {
+                m.EnableKeyword("_EMISSION");
+                Color em = src.HasProperty("_EmissionColor") ? src.GetColor("_EmissionColor")
+                                                             : new Color(1f, 0.85f, 0.55f);
+                if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", em);
+            }
+            _napMatCache[src] = m;
+            return m;
+        }
 
         static readonly Dictionary<string, Color> KPalette = new Dictionary<string, Color>
         {
@@ -410,53 +441,55 @@ namespace FolkloreArchives.MapGen
         //   escena y guardar con el menú (el "facing" nativo de los modelos varía).
         public static readonly (string m, float x, float z, float ry, float h, float by)[] FurnitureItems =
         {
+                // Muebles del pack nappin (NAP_*) donde hay equivalente; los que nappin no
+                // tiene (alfombra, radio, TV vintage, bañera, banco) siguen Kenney/PS1.
                 // ── DORMITORIO PRINCIPAL (x0..8, z0..5) ──
-                ("bedDouble",           4.0f,  1.5f,   0f, 0.85f, 0f),
-                ("cabinetBed",          1.1f,  0.5f,   0f, 0.45f, 0f),
-                ("cabinetBed",          6.9f,  0.5f,   0f, 0.45f, 0f),
-                ("bookcaseClosedDoors", 7.3f,  3.9f, -90f, 1.80f, 0f),
-                ("sideTableDrawers",    0.7f,  3.9f,  90f, 0.75f, 0f),
+                ("NAP_DoubleBed",       4.0f,  1.5f,   0f, 0.85f, 0f),
+                ("NAP_BedsideTable",    1.1f,  0.5f,   0f, 0.45f, 0f),
+                ("NAP_BedsideTable",    6.9f,  0.5f,   0f, 0.45f, 0f),
+                ("NAP_Wardrobe",        7.3f,  3.9f, -90f, 1.80f, 0f),
+                ("NAP_Dresser",         0.7f,  3.9f,  90f, 0.75f, 0f),
                 // ── LIVING (x0..8, z5..10; chimenea O, entrada E) ──
                 ("rugRectangle",        4.0f,  7.6f,   0f, 0.03f, 0f),
-                ("loungeSofa",          6.1f,  7.6f,  90f, 0.75f, 0f),
-                ("loungeChair",         2.4f,  9.0f, 200f, 0.75f, 0f),
-                ("tableCoffee",         4.2f,  7.6f,   0f, 0.40f, 0f),
+                ("NAP_Sofa",            6.1f,  7.6f,  90f, 0.75f, 0f),
+                ("NAP_Chair1",          2.4f,  9.0f, 200f, 0.75f, 0f),
+                ("NAP_CoffeTable",      4.2f,  7.6f,   0f, 0.40f, 0f),
                 ("radio",               4.7f,  7.6f,   0f, 0.20f, 0.40f),
-                ("bookcaseOpen",        2.4f,  9.6f, 180f, 1.80f, 0f),
-                ("lampRoundFloor",      7.4f,  9.4f,   0f, 1.50f, 0f),
-                ("cabinetTelevision",   0.7f,  6.4f,  90f, 0.50f, 0f),
+                ("NAP_Shelf1",          2.4f,  9.6f, 180f, 1.80f, 0f),
+                ("NAP_Lamp",            7.4f,  9.4f,   0f, 1.50f, 0f),
+                ("NAP_MediaConsole",    0.7f,  6.4f,  90f, 0.50f, 0f),
                 ("televisionVintage",   0.85f, 6.4f,  90f, 0.45f, 0.50f),
                 // ── COCINA-COMEDOR (ala este, x8..16, z0..7) ──
                 //    mesada/alacenas/mesa/sillas = PS1 Kitchen Pack (texturizado).
-                //    bacha/cocina/campana/heladera siguen Kenney hasta bajar más PS1.
+                //    bacha/cocina/campana/heladera = nappin.
                 ("PS1_Cabinet_Base",    9.6f,  0.6f,   0f, 0.90f, 0f),
-                ("kitchenSink",        11.0f,  0.6f,   0f, 0.90f, 0f),
-                ("kitchenStove",       12.4f,  0.6f,   0f, 0.90f, 0f),
+                ("NAP_KitchenSink",    11.0f,  0.6f,   0f, 0.90f, 0f),
+                ("NAP_Stove",          12.4f,  0.6f,   0f, 0.90f, 0f),
                 ("PS1_Cabinet_Base",   13.8f,  0.6f,   0f, 0.90f, 0f),
                 ("PS1_Cabinet_Upper",   9.6f,  0.5f,   0f, 0.70f, 1.55f),
                 ("PS1_Cabinet_Upper",  13.8f,  0.5f,   0f, 0.70f, 1.55f),
-                ("hoodLarge",          12.4f,  0.45f,  0f, 0.55f, 1.55f),
-                ("kitchenFridgeSmall", 15.3f,  1.4f, -90f, 1.25f, 0f),
+                ("NAP_SmokeVent",      12.4f,  0.45f,  0f, 0.55f, 1.55f),
+                ("NAP_Fridge",         15.3f,  1.4f, -90f, 1.25f, 0f),
                 ("PS1_Table",          11.5f,  4.4f,   0f, 0.75f, 0f),
                 ("PS1_Chair",          10.4f,  4.4f,  90f, 0.90f, 0f),
                 ("PS1_Chair",          12.6f,  4.4f, -90f, 0.90f, 0f),
                 ("PS1_Chair",          11.5f,  3.4f,   0f, 0.90f, 0f),
                 ("PS1_Chair",          11.5f,  5.4f, 180f, 0.90f, 0f),
                 // ── DORMITORIO 2 (simple, x3.5..8, z10..14) ──
-                ("bedSingle",           6.0f, 12.9f, 180f, 0.80f, 0f),
-                ("cabinetBed",          4.3f, 13.4f,   0f, 0.45f, 0f),
-                ("bookcaseClosedDoors", 7.4f, 11.0f, -90f, 1.70f, 0f),
+                ("NAP_SingleBed",       6.0f, 12.9f, 180f, 0.80f, 0f),
+                ("NAP_BedsideTable",    4.3f, 13.4f,   0f, 0.45f, 0f),
+                ("NAP_Storage1",        7.4f, 11.0f, -90f, 1.70f, 0f),
                 // ── BAÑO (x0..3.5, z10..14) ──
-                ("toilet",              0.8f, 13.3f,  90f, 0.70f, 0f),
-                ("bathroomSink",        0.8f, 11.2f,  90f, 0.80f, 0f),
-                ("bathroomMirror",      0.35f,11.2f,  90f, 0.55f, 1.15f),
+                ("NAP_Toilet",          0.8f, 13.3f,  90f, 0.70f, 0f),
+                ("NAP_BathroomSink",    0.8f, 11.2f,  90f, 0.80f, 0f),
+                ("NAP_Mirror1",         0.35f,11.2f,  90f, 0.55f, 1.15f),
                 ("bathtub",             2.8f, 12.4f, -90f, 0.55f, 0f),
                 // ── GALERÍA (codo NE, x8..16, z7..14) ──
                 ("bench",              14.6f,  8.2f, -90f, 0.50f, 0f),
-                ("loungeChair",        12.6f, 12.2f,  40f, 0.75f, 0f),
-                ("sideTable",          13.7f, 11.4f,   0f, 0.55f, 0f),
-                ("pottedPlant",        15.3f, 13.3f,   0f, 0.90f, 0f),
-                ("coatRackStanding",    8.7f,  7.6f,   0f, 1.70f, 0f),
+                ("NAP_Chair2",         12.6f, 12.2f,  40f, 0.75f, 0f),
+                ("NAP_LaunchTable",    13.7f, 11.4f,   0f, 0.55f, 0f),
+                ("NAP_WaterGarden",    15.3f, 13.3f,   0f, 0.90f, 0f),
+                ("NAP_CoatHanger",      8.7f,  7.6f,   0f, 1.70f, 0f),
         };
 
         static void BuildFurnitureKenney(Transform group, float floorWorldY)
@@ -476,9 +509,11 @@ namespace FolkloreArchives.MapGen
             if (FurniturePersistence.IsDeleted(id)) return;
 
             bool isPs1 = model.StartsWith("PS1_");
-            string dir = isPs1 ? KFurnPS1Dir : KFurnDir;
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(dir + model + ".fbx");
-            if (prefab == null) { Debug.LogWarning("[HouseBuilder] falta mueble: " + model); return; }
+            bool isNap = model.StartsWith("NAP_");
+            string path = isNap ? NappinDir + model.Substring(4) + ".prefab"
+                        : (isPs1 ? KFurnPS1Dir : KFurnDir) + model + ".fbx";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) { Debug.LogWarning("[HouseBuilder] falta mueble: " + model + " (" + path + ")"); return; }
 
             // El objeto "Furn_##_modelo" ES el FBX (no un holder vacío): así, al clickearlo
             // en la escena, Unity lo selecciona directo → lo que movés/rotás es lo que se
@@ -490,15 +525,17 @@ namespace FolkloreArchives.MapGen
             Quaternion r0 = inst.transform.localRotation;   // rotación de eje del import
             Vector3    s0 = inst.transform.localScale;       // escala del import
 
-            // Materiales: PS1 = un atlas texturizado compartido; Kenney = remapeo por
-            // NOMBRE a color plano de la paleta.
+            // Materiales: nappin = convertir sus materiales built-in a URP (conservando la
+            // textura del gradiente); PS1 = atlas texturizado compartido; Kenney = remapeo
+            // por NOMBRE a color plano de la paleta.
             Material ps1 = isPs1 ? Ps1Mat() : null;
             foreach (var r in inst.GetComponentsInChildren<MeshRenderer>(true))
             {
                 var src = r.sharedMaterials;
                 var outMats = new Material[Mathf.Max(1, src.Length)];
                 for (int i = 0; i < outMats.Length; i++)
-                    outMats[i] = isPs1 ? ps1
+                    outMats[i] = isNap ? NappinUrp(i < src.Length ? src[i] : null)
+                        : isPs1 ? ps1
                         : KenneyMat(i < src.Length && src[i] != null ? src[i].name : null);
                 r.sharedMaterials = outMats;
             }
