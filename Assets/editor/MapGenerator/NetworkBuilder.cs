@@ -142,17 +142,24 @@ namespace FolkloreArchives.MapGen
                 foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
                 model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y), 0f);
 
-                // material PSX con la textura del pack
+                // material PSX. SIEMPRE creo un material URP (aunque falte la textura),
+                // porque si no, las mallas se quedan con los materiales "Standard" del FBX
+                // que en URP se ven MAGENTA (shader incompatible).
                 var tex = LoadCharTex();
-                if (tex != null)
+                var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+                else if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", new Color(0.82f, 0.68f, 0.55f)); // piel de respaldo
+                if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.05f);
+                string matPath = "Assets/Settings/PSX_Character.mat";
+                AssetDatabase.DeleteAsset(matPath);
+                AssetDatabase.CreateAsset(mat, matPath);
+                // pinto TODAS las ranuras de material de cada renderer (no solo la 0),
+                // si no las sub-mallas restantes quedan magenta.
+                foreach (var r in rends)
                 {
-                    var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                    if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
-                    if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.05f);
-                    string matPath = "Assets/Settings/PSX_Character.mat";
-                    AssetDatabase.DeleteAsset(matPath);
-                    AssetDatabase.CreateAsset(mat, matPath);
-                    foreach (var r in rends) r.sharedMaterial = mat;
+                    var arr = new Material[r.sharedMaterials.Length];
+                    for (int k = 0; k < arr.Length; k++) arr[k] = mat;
+                    r.sharedMaterials = arr;
                 }
             }
         }

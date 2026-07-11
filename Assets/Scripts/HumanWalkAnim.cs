@@ -51,9 +51,11 @@ namespace FolkloreArchives
                 _t[i] = FindDeep(transform, limbs[i].bone);
                 if (_t[i] == null) continue;
                 Quaternion baseLocal = _t[i].localRotation;
-                if (limbs[i].bone.Contains("arm") && _t[i].childCount > 0 && _t[i].parent != null)
+                Transform tip = limbs[i].bone.Contains("arm") ? DeepestChild(_t[i]) : null;
+                if (tip != null && tip != _t[i] && _t[i].parent != null)
                 {
-                    Vector3 dir = (_t[i].GetChild(0).position - _t[i].position).normalized;
+                    // dirección real del brazo (hombro → mano) y la roto para que apunte a -Y
+                    Vector3 dir = (tip.position - _t[i].position).normalized;
                     Quaternion worldDelta = Quaternion.FromToRotation(dir, Vector3.down);
                     Quaternion pW = _t[i].parent.rotation;
                     _rest[i] = Quaternion.Inverse(pW) * worldDelta * (pW * baseLocal);
@@ -115,6 +117,15 @@ namespace FolkloreArchives
                 float ang = Mathf.Sin(_phase) * amt;
                 _t[i].localRotation = _rest[i] * Quaternion.AngleAxis(ang, axis);
             }
+        }
+
+        // desciende por el primer hijo hasta la punta (mano), saltando huesos de twist
+        static Transform DeepestChild(Transform t)
+        {
+            var cur = t;
+            int guard = 0;
+            while (cur.childCount > 0 && guard++ < 16) cur = cur.GetChild(0);
+            return cur;
         }
 
         static Transform FindDeep(Transform root, string name)
