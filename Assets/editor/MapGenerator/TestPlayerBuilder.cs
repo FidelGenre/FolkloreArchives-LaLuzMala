@@ -82,7 +82,8 @@ namespace FolkloreArchives.MapGen
             flashlight.shadows = LightShadows.None; // shadows from this were a real cost too; skip them
 
             player.AddComponent<FolkloreArchives.MapExplorer>();
-            player.AddComponent<FolkloreArchives.SettingsMenu>(); // menú de opciones (Esc): motion blur, AA, render scale
+            // El menú de opciones (Esc) ahora va en el objeto NET (NetworkBuilder), que
+            // NO se desactiva en online — así Esc abre el menú también en co-op.
 
             // DayNightController: Tab cicla Día → Atardecer → Noche en Play mode
             var dnc = player.AddComponent<FolkloreArchives.DayNightController>();

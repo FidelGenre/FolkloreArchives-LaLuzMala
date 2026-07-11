@@ -29,6 +29,11 @@ namespace FolkloreArchives.MapGen
             if (net.GetComponent<FolkloreArchives.Net.NetworkBootstrap>() == null)
                 net.AddComponent<FolkloreArchives.Net.NetworkBootstrap>();
 
+            // Menú de opciones (Esc): acá en NET (siempre activo) para que funcione
+            // tanto en single-player como en online (donde el player se desactiva).
+            if (net.GetComponent<FolkloreArchives.SettingsMenu>() == null)
+                net.AddComponent<FolkloreArchives.SettingsMenu>();
+
             var nm = net.GetComponent<NetworkManager>();
             if (nm == null) nm = net.AddComponent<NetworkManager>();
             var utp = net.GetComponent<UnityTransport>();

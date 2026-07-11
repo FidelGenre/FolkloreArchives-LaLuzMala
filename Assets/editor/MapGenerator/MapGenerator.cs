@@ -67,20 +67,23 @@ namespace FolkloreArchives.MapGen
 
             var root = new GameObject(MapLayout.RootName);
 
-            // Hornea los 3 skybox (día/atardecer/noche) con las montañas ANTES de que
-            // EnvironmentBuilder los busque. Antes era un menú aparte y era un pie de
-            // fuego: si no lo corrías, el mapa se generaba con los .mat viejos y no
-            // había ninguna señal de que estabas viendo un cielo de hace dos versiones.
-            SkyboxMountainBaker.Bake();
+            // Cronómetro por fase → así se ve en la consola qué parte se come el tiempo.
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            long prev = 0;
+            void Lap(string name) { long now = sw.ElapsedMilliseconds; Debug.Log($"[GEN] {name}: {(now - prev) / 1000f:0.0}s"); prev = now; }
 
-            Terrain terrain = TerrainBuilder.Build(root.transform);
+            SkyboxMountainBaker.BakeCached();   // solo hornea si falta (ahorra tiempo en cada Generate)
+            Lap("Skybox");
+
+            Terrain terrain = TerrainBuilder.Build(root.transform);            Lap("Terrain");
             EnvironmentBuilder.Build(root.transform);
             EnvironmentBuilder.BuildDaySky(); // pre-genera mat_daysky.mat para el DayNightController
-            ForestBuilder.Build(root.transform, terrain);
+            Lap("Environment");
+            ForestBuilder.Build(root.transform, terrain);                      Lap("Forest (arboles+pasto)");
             RoadsideBuilder.Build(root.transform, terrain); // guardrail + lake on the road's south side
             BridgeBuilder.Build(root.transform, terrain);   // steel-girder bridge over the water crossing
             TunnelBuilder.Build(root.transform, terrain);   // west-end drivable tunnel (game start)
-            LandmarkBuilder.Build(root.transform, terrain);
+            LandmarkBuilder.Build(root.transform, terrain);                    Lap("Roadside+Bridge+Tunnel+Landmark+Campamento");
             // Montañas de fondo: desactivadas por ahora. El método de "cámara de fondo"
             // rompía el skybox/día-noche en URP. El camino correcto es un SKYBOX con
             // montañas (mantiene cielo + montañas, funciona con niebla, sin 2ª cámara).
@@ -89,13 +92,16 @@ namespace FolkloreArchives.MapGen
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
             StoryTriggerBuilder.Build(root.transform, terrain);
             TestPlayerBuilder.Build(root.transform, terrain);
+            Lap("Casa+Story+Player");
 
             // Red (co-op): NET con NetworkManager + transporte + panel de conexión +
             // prefab de jugador de prueba. Idempotente; persiste entre regenerados.
             NetworkBuilder.EnsureNet();
+            Lap("Red (prefabs persona/perro)");
 
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene()); // salva el .unity para que el Build incluya el mapa
+            Lap("Guardar assets+escena");
             Selection.activeGameObject = root;
             Debug.Log("<color=lime>LA LUZ MALA map generated. Press Play: WASD + mouse, Shift = run, F = flashlight.</color>");
         }

@@ -78,6 +78,18 @@ namespace FolkloreArchives.MapGen
         // adelante en vez de como profundidad.
         const float RidgeBase = 0.020f, RidgeAmp = 0.135f;  // cima ≈ 0.655 (~28° de elevación)
 
+        // Llamado por Generate: NO re-hornea si los 3 materiales ya existen (ahorra
+        // ~48 MB de texturas por regeneración). Para forzar el rebuild, el menú.
+        public static void BakeCached()
+        {
+            bool haveAll =
+                AssetDatabase.LoadAssetAtPath<Material>(MatPath) != null &&
+                AssetDatabase.LoadAssetAtPath<Material>(DuskMatPath) != null &&
+                AssetDatabase.LoadAssetAtPath<Material>(NightMatPath) != null;
+            if (haveAll) return;   // ya está horneado, no rehacer
+            Bake();
+        }
+
         [MenuItem("Tools/Folklore Archives/Generar Skybox de Montañas")]
         public static void Bake()
         {
