@@ -1512,3 +1512,7 @@ Iterated on the look with the project owner. Net state after this session:
 - **PS1 Dog** by *Jo_Zinn5632* — licencia **CC-BY (Creative Commons Attribution)**.
   Fuente: Sketchfab. Uso comercial permitido **acreditando al autor**. El crédito
   debe figurar en los créditos del juego (Steam). Archivo: `Assets/ExternalAssets/Dog/PS1_Dog.glb`.
+
+- **Simple Character PSX** by *JashiPSX* — licencia **CC-BY 4.0**.
+  Fuente: itch.io. Uso comercial permitido **acreditando al autor** (crédito en los
+  créditos del juego). Archivo: `Assets/ExternalAssets/Player/SimpleCharacterPSX.fbx`.
