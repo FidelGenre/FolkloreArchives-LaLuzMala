@@ -66,6 +66,8 @@ namespace FolkloreArchives.MapGen
 
         public static void Build(Transform parent, Terrain terrain)
         {
+            if (UseAlpHouse) { BuildAlpHouse(parent, terrain); return; }
+
             var group = BuilderUtils.Group(parent, "OldLadyHouse", Vector3.zero);
 
             // Posición: bounding box centrado en OldLadyRanch, apoyado en el terreno.
@@ -156,6 +158,47 @@ namespace FolkloreArchives.MapGen
 
             BuilderUtils.MarkStaticRecursive(group);
             Debug.Log("<color=lime>Casa de la vieja (planta en L + muebles Kenney) construida en OldLadyRanch.</color>");
+        }
+
+        // ── Casa de la vieja: coloca el modelo ALP (Country house) en OldLadyRanch,
+        //    convierte sus materiales Standard a URP (si no, magenta) y lo apoya en el
+        //    terreno. Trae interior + colliders → se puede caminar adentro.
+        static void BuildAlpHouse(Transform parent, Terrain terrain)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AlpHousePrefab);
+            if (prefab == null)
+            {
+                Debug.LogError("[HouseBuilder] no encontré la casa ALP en " + AlpHousePrefab +
+                               " — ¿la importaste del Asset Store?");
+                return;
+            }
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            inst.name = "OldLadyHouse_ALP";
+            inst.transform.SetParent(parent, true);
+
+            Vector2 c = MapLayout.OldLadyRanch;
+            float gy = terrain != null
+                ? terrain.SampleHeight(new Vector3(c.x, 0f, c.y)) + terrain.transform.position.y
+                : 20f;
+            inst.transform.position = new Vector3(c.x, gy + AlpHouseDropY, c.y);
+            inst.transform.rotation = Quaternion.Euler(0f, AlpHouseYaw, 0f);
+            inst.transform.localScale = Vector3.one * AlpHouseScale;
+
+            // materiales built-in → URP (conserva textura + normal + emisión)
+            int fixedMats = 0;
+            foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
+            {
+                var src = r.sharedMaterials;
+                var outM = new Material[src.Length];
+                for (int i = 0; i < src.Length; i++)
+                {
+                    outM[i] = NappinUrp(src[i]);
+                    if (outM[i] != src[i]) fixedMats++;
+                }
+                r.sharedMaterials = outM;
+            }
+            BuilderUtils.MarkStaticRecursive(inst.transform);
+            Debug.Log($"<color=lime>Casa de la vieja: modelo ALP en OldLadyRanch (materiales a URP: {fixedMats}).</color>");
         }
 
         // ── Galería del codo NE (x8..16, z7..14): abierta al este y al norte ─────
@@ -383,6 +426,16 @@ namespace FolkloreArchives.MapGen
         // built-in (Standard) → hay que convertirlos a URP al instanciar o salen magenta.
         const string NappinDir = "Assets/nappin/HouseInteriorPack/Prefabs/(Prb)";
 
+        // ── Casa de la vieja: modelo ALP (Country house, Aleksey8310) en vez de la
+        //    cáscara procedural. Trae interior completo + colliders; materiales Standard
+        //    → se convierten a URP al colocar. La casa procedural queda como respaldo
+        //    (UseAlpHouse=false para volver a ella).
+        const bool UseAlpHouse = true;
+        const string AlpHousePrefab = "Assets/ALP_Assets/country house01/Prefabs/House_Prefab.prefab";
+        const float AlpHouseYaw = 0f;      // giro (ajustar por captura: entrada hacia el camino)
+        const float AlpHouseScale = 1f;    // escala nativa (metros reales)
+        const float AlpHouseDropY = 0f;    // ajuste fino de altura (si flota/se hunde)
+
         // Convierte los materiales built-in del pack nappin a URP (una vez por material,
         // cacheado): crea un URP/Lit copiando la textura del gradiente y el color/emisión.
         static readonly Dictionary<Material, Material> _napMatCache = new Dictionary<Material, Material>();
@@ -399,6 +452,13 @@ namespace FolkloreArchives.MapGen
             Color col = src.HasProperty("_Color") ? src.GetColor("_Color") : Color.white;
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tex != null ? Color.white : col);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.08f);
+            // normal map (la casa ALP trae detalle en normales que si no se perdería)
+            Texture bump = src.HasProperty("_BumpMap") ? src.GetTexture("_BumpMap") : null;
+            if (bump != null && m.HasProperty("_BumpMap"))
+            {
+                m.EnableKeyword("_NORMALMAP");
+                m.SetTexture("_BumpMap", bump);
+            }
             // materiales de luz del pack (EmissiveWarm) → emisión cálida
             if (src.name.Contains("Emissive") || src.IsKeywordEnabled("_EMISSION"))
             {
