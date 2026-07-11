@@ -554,7 +554,9 @@ namespace FolkloreArchives.MapGen
             // objetivo (preservando s0), y asentar la base en el piso.
             inst.transform.localRotation = Quaternion.Euler(0f, rotY, 0f) * r0;
             Bounds b = FurnitureBounds(inst);
-            if (b.size.y > 0.001f) inst.transform.localScale = s0 * (targetH / b.size.y);
+            // nappin ya viene a escala real (metros) → NO re-escalar por altura (si no
+            // quedaban enanos). Kenney/PS1 sí se normalizan a la altura objetivo.
+            if (!isNap && b.size.y > 0.001f) inst.transform.localScale = s0 * (targetH / b.size.y);
 
             inst.transform.localPosition = new Vector3(lx, 0f, lz);
             b = FurnitureBounds(inst);   // ya rotado/escalado
