@@ -1535,9 +1535,9 @@ namespace FolkloreArchives.MapGen
                     float wz = zi / (float)(res - 1) * MapLayout.MapSize;
                     var p = new Vector2(wx, wz);
 
-                    // sin pasto dentro del lote de la casa de la vieja (patio limpio)
-                    if (p.x > MapLayout.OldLadyLotMin.x - 1f && p.x < MapLayout.OldLadyLotMax.x + 1f &&
-                        p.y > MapLayout.OldLadyLotMin.y - 1f && p.y < MapLayout.OldLadyLotMax.y + 1f) continue;
+                    // sin pasto SOLO bajo la huella de la casa (que no atraviese el piso);
+                    // el resto del lote lleva pasto hasta las paredes (pedido del owner)
+                    if (Vector2.Distance(p, MapLayout.OldLadyRanch) < 5.5f) continue;
 
                     float southDg = MapLayout.PavedRouteZAt(p.x) - p.y;
                     if (southDg > MapLayout.ShoreVegFar) continue; // out in the water
@@ -1975,9 +1975,9 @@ namespace FolkloreArchives.MapGen
                     float wz = zi / (float)(res - 1) * MapLayout.MapSize;
                     var p = new Vector2(wx, wz);
 
-                    // sin pasto dentro del lote de la casa de la vieja (patio limpio)
-                    if (p.x > MapLayout.OldLadyLotMin.x - 1f && p.x < MapLayout.OldLadyLotMax.x + 1f &&
-                        p.y > MapLayout.OldLadyLotMin.y - 1f && p.y < MapLayout.OldLadyLotMax.y + 1f) continue;
+                    // sin pasto SOLO bajo la huella de la casa (que no atraviese el piso);
+                    // el resto del lote lleva pasto hasta las paredes (pedido del owner)
+                    if (Vector2.Distance(p, MapLayout.OldLadyRanch) < 5.5f) continue;
 
                     // claro del campamento (fogata + troncos + carpas + mesa)
                     if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius) continue;

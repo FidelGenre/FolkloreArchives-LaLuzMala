@@ -432,7 +432,7 @@ namespace FolkloreArchives.MapGen
         //    (UseAlpHouse=false para volver a ella).
         const bool UseAlpHouse = true;
         const string AlpHousePrefab = "Assets/ALP_Assets/country house01/Prefabs/House_Prefab.prefab";
-        const float AlpHouseYaw = 0f;      // giro (ajustar por captura: entrada hacia el camino)
+        const float AlpHouseYaw = 180f;    // giro (ajustar por captura: entrada hacia el camino)
         const float AlpHouseScale = 1f;    // escala nativa (metros reales)
         const float AlpHouseDropY = 0f;    // ajuste fino de altura (si flota/se hunde)
 
