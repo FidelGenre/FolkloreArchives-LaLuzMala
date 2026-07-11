@@ -41,7 +41,10 @@ namespace FolkloreArchives.MapGen
             go.transform.SetParent(parent);
             go.transform.position = Vector3.zero;
             var terrain = go.GetComponent<Terrain>();
-            terrain.heightmapPixelError = 8f;
+            // LOD del terreno: más alto = menos triángulos dibujados (se simplifica con
+            // la distancia). 30 rebaja bastante los polígonos; con la niebla no se nota.
+            // (Se aplica cada Generate, no necesita Rebuild Terrain.)
+            terrain.heightmapPixelError = 30f;
             // dense-forest self-shadowing at night is invisible under fog anyway -
             // skip it entirely, it's a big chunk of the per-frame shadow pass cost
             terrain.shadowCastingMode = ShadowCastingMode.Off;
