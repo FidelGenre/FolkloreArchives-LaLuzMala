@@ -140,7 +140,10 @@ namespace FolkloreArchives.MapGen
                 model.transform.localScale = Vector3.one * (target / h);
                 Bounds b2 = model.GetComponentInChildren<Renderer>().bounds;
                 foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
-                model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y), 0f);
+                // -0.1: planta los pies. El origen del jugador (fondo del CharacterController)
+                // queda un poco por encima del suelo real (skinWidth + margen), así que sin
+                // este ajuste el modelo flota. Baja el modelo para que las suelas toquen.
+                model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y) - 0.1f, 0f);
 
                 // material PSX. SIEMPRE creo un material URP (aunque falte la textura),
                 // porque si no, las mallas se quedan con los materiales "Standard" del FBX
