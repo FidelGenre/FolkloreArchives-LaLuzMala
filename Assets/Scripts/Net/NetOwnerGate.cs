@@ -19,6 +19,10 @@ namespace FolkloreArchives.Net
             var cam = GetComponentInChildren<Camera>(true);
             if (cam != null) cam.gameObject.SetActive(mine);   // cámara + AudioListener solo míos
 
+            // 1ª persona: el DUEÑO no ve su propio cuerpo (lo apagamos). El compañero
+            // (no-dueño) SÍ ve tu modelo moverse.
+            foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = !mine;
+
             var explorer = GetComponent<MapExplorer>();
             if (explorer != null) explorer.enabled = mine;
 

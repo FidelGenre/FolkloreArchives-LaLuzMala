@@ -63,12 +63,10 @@ namespace FolkloreArchives.MapGen
             var explorer = root.AddComponent<FolkloreArchives.MapExplorer>();
             explorer.enabled = false; // el gate lo prende para el dueño
 
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            body.transform.SetParent(root.transform);
-            body.transform.localPosition = new Vector3(0f, 1.2f, 0f);
-            body.transform.localScale = new Vector3(0.7f, 1.2f, 0.7f);
-            Object.DestroyImmediate(body.GetComponent<Collider>());
+            // cuerpo = modelo humano PSX (lo que ve el compañero). Si el FBX no está,
+            // cae a una cápsula.
+            BuildPersonVisual(root.transform);
+            root.AddComponent<FolkloreArchives.HumanWalkAnim>(); // brazos/piernas al caminar
 
             var camGO = new GameObject("Camera");
             camGO.transform.SetParent(root.transform);
@@ -97,6 +95,70 @@ namespace FolkloreArchives.MapGen
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, PersonPrefabPath);
             Object.DestroyImmediate(root);
             return prefab;
+        }
+
+        const string CharFbx = "Assets/ExternalAssets/Player/SimpleCharacterPSX.fbx";
+        const string CharTex = "Assets/ExternalAssets/Player/character_256.png";
+
+        // Instancia el modelo humano PSX, lo escala a ~2.3 m, le apoya los pies en y=0
+        // y le pone la textura 256 con filtro Point (look PSX). Fallback: cápsula.
+        static void BuildPersonVisual(Transform parent)
+        {
+            var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(CharFbx);
+            if (fbx == null)
+            {
+                Debug.LogWarning("NetPerson: no encontré " + CharFbx + " — uso cápsula.");
+                var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                body.name = "Body"; body.transform.SetParent(parent);
+                body.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+                body.transform.localScale = new Vector3(0.7f, 1.2f, 0.7f);
+                Object.DestroyImmediate(body.GetComponent<Collider>());
+                return;
+            }
+
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
+            model.name = "Model";
+            model.transform.SetParent(parent);
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one;
+
+            const float target = 2.3f; // alto ≈ jugador (CC = 2.4)
+            var rends = model.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                Bounds b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                float h = Mathf.Max(0.0001f, b.size.y);
+                model.transform.localScale = Vector3.one * (target / h);
+                Bounds b2 = model.GetComponentInChildren<Renderer>().bounds;
+                foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
+                model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y), 0f);
+
+                // material PSX con la textura del pack
+                var tex = LoadCharTex();
+                if (tex != null)
+                {
+                    var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+                    if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.05f);
+                    string matPath = "Assets/Settings/PSX_Character.mat";
+                    AssetDatabase.DeleteAsset(matPath);
+                    AssetDatabase.CreateAsset(mat, matPath);
+                    foreach (var r in rends) r.sharedMaterial = mat;
+                }
+            }
+        }
+
+        static Texture2D LoadCharTex()
+        {
+            var imp = AssetImporter.GetAtPath(CharTex) as TextureImporter;
+            if (imp != null && imp.filterMode != FilterMode.Point)
+            {
+                imp.filterMode = FilterMode.Point;   // pixelado PSX
+                imp.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(CharTex);
         }
 
         // ── PERRO en red: modelo PS1 + DogController + cámara 3ª persona ──
