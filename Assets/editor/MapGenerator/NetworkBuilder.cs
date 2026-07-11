@@ -113,10 +113,12 @@ namespace FolkloreArchives.MapGen
 
             BuildDogVisual(root.transform);
 
+            // 1ª persona: cámara a la altura de la cabeza del perro, mirando adelante
+            // (el dueño ve "como el perro", no lo ve en 3ª persona).
             var camGO = new GameObject("Camera");
             camGO.transform.SetParent(root.transform);
-            camGO.transform.localPosition = new Vector3(0f, 1.8f, -3.2f);
-            camGO.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
+            camGO.transform.localPosition = new Vector3(0f, 1.0f, 0.35f);
+            camGO.transform.localRotation = Quaternion.identity;
             var cam = camGO.AddComponent<Camera>();
             cam.tag = "MainCamera";
             cam.clearFlags = CameraClearFlags.Skybox;
