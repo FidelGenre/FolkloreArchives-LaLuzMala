@@ -40,6 +40,7 @@ namespace FolkloreArchives.MapGen
             if (utp == null) utp = net.AddComponent<UnityTransport>();
 
             if (nm.NetworkConfig == null) nm.NetworkConfig = new NetworkConfig();
+            nm.LogLevel = LogLevel.Error;   // menos spam de NGO en la consola
             nm.NetworkConfig.NetworkTransport = utp;
             nm.NetworkConfig.PlayerPrefab = null;          // spawn manual por elección
             nm.NetworkConfig.ConnectionApproval = true;    // cada cliente manda su elección
