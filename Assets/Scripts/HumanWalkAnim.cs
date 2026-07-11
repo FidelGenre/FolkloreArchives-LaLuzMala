@@ -14,14 +14,17 @@ namespace FolkloreArchives
     public class HumanWalkAnim : MonoBehaviour
     {
         [System.Serializable]
-        public struct Limb { public string bone; public float phase; } // phase = +1 / -1
+        public struct Limb { public string bone; public float phase; public Vector3 rest; } // phase=+1/-1, rest=euler base
 
-        // marcha: muslo.L adelante con brazo.R adelante (contralateral)
+        // marcha: muslo.L adelante con brazo.R adelante (contralateral).
+        // rest en los BRAZOS = bajarlos de la T-pose a los costados (los muslos ya
+        // cuelgan bien, rest 0). Si los brazos van para el lado equivocado, invertir
+        // el signo del Z en el rest.
         public Limb[] limbs = {
-            new Limb { bone = "thigh.L",     phase =  1f },
-            new Limb { bone = "thigh.R",     phase = -1f },
-            new Limb { bone = "upper_arm.L", phase = -1f },
-            new Limb { bone = "upper_arm.R", phase =  1f },
+            new Limb { bone = "thigh.L",     phase =  1f, rest = Vector3.zero },
+            new Limb { bone = "thigh.R",     phase = -1f, rest = Vector3.zero },
+            new Limb { bone = "upper_arm.L", phase = -1f, rest = new Vector3(0f, 0f, -72f) },
+            new Limb { bone = "upper_arm.R", phase =  1f, rest = new Vector3(0f, 0f,  72f) },
         };
         public float legSwing = 26f;
         public float armSwing = 20f;
@@ -62,7 +65,8 @@ namespace FolkloreArchives
                 bool isArm = limbs[i].bone.Contains("arm");
                 float amt = (isArm ? armSwing : legSwing) * limbs[i].phase * _amp;
                 float ang = Mathf.Sin(_phase) * amt;
-                _t[i].localRotation = _base[i] * Quaternion.AngleAxis(ang, axis);
+                // base del modelo → rest (bajar brazos) → balanceo
+                _t[i].localRotation = _base[i] * Quaternion.Euler(limbs[i].rest) * Quaternion.AngleAxis(ang, axis);
             }
         }
 
