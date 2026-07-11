@@ -71,9 +71,9 @@ namespace FolkloreArchives
             move.y = verticalVel;
             var flags = cc.Move(move * Time.deltaTime);
 
-            // AUTO-SALTO: si se estaba moviendo y chocó de costado contra algo, salta
-            // (sirve para pasar troncos/rocas, tanto controlado como siguiéndote).
-            if (grounded && planar.sqrMagnitude > 0.05f &&
+            // AUTO-SALTO: SOLO en modo Follow (IA). Controlado, el salto lo hace el
+            // jugador (Espacio). Si se estaba moviendo y chocó de costado, salta el obstáculo.
+            if (mode == Mode.Follow && grounded && planar.sqrMagnitude > 0.05f &&
                 (flags & CollisionFlags.Sides) != 0 && Time.time >= _nextAutoJump)
             {
                 verticalVel = Mathf.Sqrt(2f * gravity * jumpHeight);
