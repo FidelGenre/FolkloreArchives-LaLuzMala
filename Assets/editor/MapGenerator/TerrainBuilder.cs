@@ -12,24 +12,30 @@ namespace FolkloreArchives.MapGen
 {
     public static class TerrainBuilder
     {
+        public const string TerrainAssetPath = "Assets/_FolkloreArchives/Generated/FolkloreTerrain.asset";
+
         public static Terrain Build(Transform parent)
         {
-            var td = new TerrainData();
-            td.heightmapResolution = 513;
-            td.alphamapResolution = 2048; // ~0.5m/texel - fine enough to resolve the two worn wheel ruts on the dirt road
-            td.size = new Vector3(MapLayout.MapSizeX, MapLayout.MaxHeight, MapLayout.MapSize);
+            // CACHE: el terreno es lo más caro de generar (pintar 2048² celdas con
+            // distancias a caminos = ~3.6 min). Como es determinístico (Seed), si ya
+            // existe el asset lo REUSAMOS y saltamos toda la generación. Para forzar el
+            // rebuild (cambiaste altura/caminos/POIs): Tools > … > Rebuild Terrain.
+            var td = AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainAssetPath);
+            if (td == null)
+            {
+                td = new TerrainData();
+                td.heightmapResolution = 513;
+                td.alphamapResolution = 2048; // ~0.5m/texel - fine enough to resolve the two worn wheel ruts on the dirt road
+                td.size = new Vector3(MapLayout.MapSizeX, MapLayout.MaxHeight, MapLayout.MapSize);
 
-            int res = td.heightmapResolution;
-            float[,] h = ComputeProceduralHeights(res);
-            // Re-apply the owner's hand-edits (Smooth Height brush etc.) saved via
-            // Tools > Folklore Archives > Save Terrain Edits. Stored as a diff over
-            // the procedural base so it only affects the cells actually painted and
-            // survives a full regenerate. No-op if no edits file exists.
-            TerrainEditPersistence.ApplyTerrainEdits(h, res);
-            td.SetHeights(0, 0, h);
-            PaintTextures(td);
+                int res = td.heightmapResolution;
+                float[,] h = ComputeProceduralHeights(res);
+                TerrainEditPersistence.ApplyTerrainEdits(h, res);
+                td.SetHeights(0, 0, h);
+                PaintTextures(td);
+                AssetDatabase.CreateAsset(td, TerrainAssetPath);
+            }
 
-            AssetDatabase.CreateAsset(td, MapLayout.GeneratedFolder + "/FolkloreTerrain.asset");
             var go = Terrain.CreateTerrainGameObject(td);
             go.name = "Terrain";
             go.transform.SetParent(parent);
@@ -40,6 +46,15 @@ namespace FolkloreArchives.MapGen
             // skip it entirely, it's a big chunk of the per-frame shadow pass cost
             terrain.shadowCastingMode = ShadowCastingMode.Off;
             return terrain;
+        }
+
+        // Borra el terreno cacheado → el próximo Generate lo rehace desde cero.
+        // Usar cuando cambiaste altura/caminos/POIs/edits del terreno.
+        [MenuItem("Tools/Folklore Archives/Rebuild Terrain (forzar)")]
+        public static void ForceRebuildTerrain()
+        {
+            AssetDatabase.DeleteAsset(TerrainAssetPath);
+            Debug.Log("<color=lime>Terreno cacheado borrado — el próximo Generate lo regenera (~3.6 min esa vez).</color>");
         }
 
         // Pure procedural heightmap (normalised 0..1), no hand-edits applied.
