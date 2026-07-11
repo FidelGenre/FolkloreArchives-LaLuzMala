@@ -164,6 +164,21 @@ namespace FolkloreArchives.Net
             err = null; return true;
         }
 
+        // Si una conexión anterior dejó el NetworkManager prendido, cerrarlo antes de
+        // arrancar otra (si no, tira "Failed to start the network manager").
+        async Task EnsureNmStopped()
+        {
+            var nm = NetworkManager.Singleton;
+            if (nm == null) return;
+            if (nm.IsListening || nm.ShutdownInProgress)
+            {
+                nm.Shutdown();
+                float t = 0f;
+                while ((nm.IsListening || nm.ShutdownInProgress) && t < 2f)
+                { await Task.Delay(50); t += 0.05f; }
+            }
+        }
+
         async Task Host()
         {
             if (_busy) return;
@@ -171,6 +186,7 @@ namespace FolkloreArchives.Net
             _busy = true; _status = "Creando sala…";
             try
             {
+                await EnsureNmStopped();
                 SendRole();
                 var options = new SessionOptions { MaxPlayers = maxPlayers }
                     .WithRelayNetwork();   // host-client (el que crea = host)
@@ -189,6 +205,7 @@ namespace FolkloreArchives.Net
             _busy = true; _status = "Uniéndose…";
             try
             {
+                await EnsureNmStopped();
                 SendRole();
                 _session = await MultiplayerService.Instance
                     .JoinSessionByCodeAsync(code.Trim().ToUpperInvariant());
