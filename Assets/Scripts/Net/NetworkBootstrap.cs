@@ -34,6 +34,8 @@ namespace FolkloreArchives.Net
         int _role;          // 0 = persona, 1 = perro (elección antes de entrar)
         string _voiceStatus = "";
         bool _voiceReady, _muted;
+        bool _pushToTalk;   // false = micrófono abierto (V mutea); true = hablar con T
+        bool _transmitting; // estado real del micrófono, para no spamear Mute/Unmute
         GUIStyle _box;
 
         // pasa la elección (1 byte) al servidor por la ConnectionData; el NetGameSpawner
@@ -59,7 +61,8 @@ namespace FolkloreArchives.Net
                 Cursor.visible = true;
             }
 
-            Update3DVoice();   // posición 3D del jugador en el canal de voz
+            Update3DVoice();       // posición 3D del jugador en el canal de voz
+            UpdateVoiceTransmit(); // aplica mute / push-to-talk
         }
 
         void SetCursorFree(bool free)
@@ -135,12 +138,20 @@ namespace FolkloreArchives.Net
             try { await VivoxService.Instance.LeaveAllChannelsAsync(); } catch { }
         }
 
-        void ToggleMute()
+        void ToggleMute() => _muted = !_muted;   // el flag; lo aplica UpdateVoiceTransmit
+
+        // Decide si el micrófono transmite según el modo:
+        //   - micrófono abierto: transmite salvo que estés muteado (V)
+        //   - push-to-talk: transmite solo mientras mantenés T
+        void UpdateVoiceTransmit()
         {
-            _muted = !_muted;
-            if (_muted) VivoxService.Instance.MuteInputDevice();
-            else VivoxService.Instance.UnmuteInputDevice();
-            _voiceStatus = _muted ? "🔇 Micrófono MUTEADO (V)" : "🎙 Voz conectada (V = mutear)";
+            if (!_voiceReady || string.IsNullOrEmpty(_channel)) return;
+            var kb = Keyboard.current;
+            bool want = _pushToTalk ? (kb != null && kb.tKey.isPressed) : !_muted;
+            if (want == _transmitting) return;
+            _transmitting = want;
+            if (want) VivoxService.Instance.UnmuteInputDevice();
+            else VivoxService.Instance.MuteInputDevice();
         }
 
         static bool NetReady(out string err)
@@ -255,6 +266,22 @@ namespace FolkloreArchives.Net
             }
             else
             {
+                // ── controles de voz (solo si el canal está activo) ──
+                if (_voiceReady && !string.IsNullOrEmpty(_channel))
+                {
+                    if (_pushToTalk)
+                        GUILayout.Label(_transmitting ? "<color=lime>🎙 HABLANDO (T)</color>" : "Push-to-talk: mantené <b>T</b> para hablar");
+                    else
+                        GUILayout.Label(_muted ? "<color=orange>🔇 Muteado (V)</color>" : "🎙 Micrófono abierto (V = mutear)");
+
+                    if (GUILayout.Button(_pushToTalk ? "Modo: Push-to-talk → pasar a Mic abierto"
+                                                     : "Modo: Mic abierto → pasar a Push-to-talk"))
+                    {
+                        _pushToTalk = !_pushToTalk;
+                        _muted = false;
+                    }
+                    GUILayout.Space(4);
+                }
                 if (GUILayout.Button("Salir de la sala")) _ = Leave();
             }
             GUILayout.EndArea();
