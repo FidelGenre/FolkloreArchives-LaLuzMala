@@ -13,9 +13,31 @@ namespace FolkloreArchives.MapGen
 {
     public static class ForestBuilder
     {
+        // Borra los árboles/pasto guardados en el terreno → el próximo Generate los
+        // regenera. Usar tras cambiar árboles, pasto, densidad, o flags PSX.
+        [MenuItem("Tools/Folklore Archives/Rebuild Forest (forzar)")]
+        public static void ForceRebuildForest()
+        {
+            var td = AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainBuilder.TerrainAssetPath);
+            if (td == null) { Debug.LogWarning("No hay terreno cacheado (regenerá primero)."); return; }
+            td.SetTreeInstances(new TreeInstance[0], true);
+            td.detailPrototypes = new DetailPrototype[0];
+            EditorUtility.SetDirty(td);
+            AssetDatabase.SaveAssets();
+            Debug.Log("<color=lime>Bosque borrado del terreno — el próximo Generate lo regenera (~80s).</color>");
+        }
+
         public static void Build(Transform parent, Terrain terrain)
         {
             var td = terrain.terrainData;
+
+            // CACHE del bosque: los árboles y el pasto quedan guardados DENTRO del
+            // terreno. Si el terreno vino cacheado (ya tiene árboles de un build
+            // anterior), saltamos todo el scatter (~79s). Para rehacerlo tras cambiar
+            // árboles/pasto/densidad: Tools > Folklore Archives > Rebuild Forest.
+            bool forestCached = td.treeInstanceCount > 0;
+            if (!forestCached)
+            {
             if (MapLayout.UseLowPolyTrees) ConvertLowPolyMaterialsToURP(); // arregla el rosa (Built-in → URP)
 
             // ForestPack.fbx's tree mesh (~88k tris, only 1 qualifying prototype)
@@ -99,6 +121,8 @@ namespace FolkloreArchives.MapGen
             td.SetTreeInstances(instances.ToArray(), true);
             Debug.Log("Forest: " + instances.Count + " tree/bush instances planted.");
             SetupGrass(td);
+            }
+            else Debug.Log("Bosque cacheado (árboles/pasto ya en el terreno) — Rebuild Forest para rehacer.");
 
             // fade del césped: por defecto (noche) el corte es DetailRenderDistance.
             // El toggle día/noche re-setea estas globales para seguir su distancia.
