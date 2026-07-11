@@ -4,6 +4,8 @@
 //  (cámara, AudioListener, control, cursor) SOLO para el dueño.
 //  Los demás lo ven como un avatar sincronizado por el
 //  OwnerNetworkTransform, sin cámara ni input.
+//  1ª persona con conciencia del cuerpo: el dueño VE su cuerpo
+//  (piernas al mirar abajo); solo se le oculta la cabeza.
 // ============================================================
 using Unity.Netcode;
 using UnityEngine;
@@ -19,9 +21,14 @@ namespace FolkloreArchives.Net
             var cam = GetComponentInChildren<Camera>(true);
             if (cam != null) cam.gameObject.SetActive(mine);   // cámara + AudioListener solo míos
 
-            // 1ª persona: el DUEÑO no ve su propio cuerpo (lo apagamos). El compañero
-            // (no-dueño) SÍ ve tu modelo moverse.
-            foreach (var r in GetComponentsInChildren<Renderer>(true)) r.enabled = !mine;
+            // El dueño VE su propio cuerpo (piernas al mirar abajo). Solo le colapsamos
+            // la CABEZA (hueso "head") para no ver por dentro del cráneo al mirar al
+            // frente. El compañero ve el modelo entero, con cabeza.
+            if (mine)
+            {
+                var head = FindDeep(transform, "head");
+                if (head != null) head.localScale = Vector3.one * 0.001f;
+            }
 
             var explorer = GetComponent<MapExplorer>();
             if (explorer != null) explorer.enabled = mine;
@@ -60,6 +67,17 @@ namespace FolkloreArchives.Net
             if (cc != null) cc.enabled = false;
             transform.position = p;
             if (cc != null) cc.enabled = had;
+        }
+
+        static Transform FindDeep(Transform root, string name)
+        {
+            if (root.name == name) return root;
+            foreach (Transform c in root)
+            {
+                var r = FindDeep(c, name);
+                if (r != null) return r;
+            }
+            return null;
         }
     }
 }
