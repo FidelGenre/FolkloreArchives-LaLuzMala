@@ -26,8 +26,10 @@ namespace FolkloreArchives
 
         [Header("Control")]
         public Key switchKey = Key.G;   // tomar/soltar el control del perro
+        public Key stayKey   = Key.E;   // (offline) que el perro se quede quieto / vuelva a seguir
 
         bool controllingDog;
+        bool dogStay;   // el perro está esperando quieto (no te sigue)
 
         void Start() => Apply();
 
@@ -35,9 +37,16 @@ namespace FolkloreArchives
         {
             var kb = Keyboard.current;
             if (kb == null || SettingsMenu.IsOpen) return;
+
             if (kb[switchKey].wasPressedThisFrame)
             {
                 controllingDog = !controllingDog;
+                Apply();
+            }
+            // E: alterna quedarse/seguir (solo cuando controlás la persona)
+            else if (!controllingDog && kb[stayKey].wasPressedThisFrame)
+            {
+                dogStay = !dogStay;
                 Apply();
             }
         }
@@ -46,8 +55,12 @@ namespace FolkloreArchives
         {
             // persona: activa solo si NO controlás al perro
             if (person != null) person.enabled = !controllingDog;
-            // perro: Player si lo controlás, si no Follow (te sigue)
-            if (dog != null) dog.mode = controllingDog ? DogController.Mode.Player : DogController.Mode.Follow;
+            // perro: Player si lo controlás; si no, Idle (quieto) si le dijiste que espere,
+            // o Follow (te sigue).
+            if (dog != null)
+                dog.mode = controllingDog ? DogController.Mode.Player
+                         : dogStay        ? DogController.Mode.Idle
+                                          : DogController.Mode.Follow;
 
             // cámara + AudioListener: solo una activa
             Camera on  = controllingDog ? dogCam : personCam;
@@ -56,6 +69,16 @@ namespace FolkloreArchives
             if (on  != null) on.gameObject.SetActive(true);
 
             Cursor.lockState = CursorLockMode.Locked;
+        }
+
+        GUIStyle _hint;
+        void OnGUI()
+        {
+            if (controllingDog) return;   // el hint del perro solo cuando controlás la persona
+            if (_hint == null) _hint = new GUIStyle(GUI.skin.label) { fontSize = 13, richText = true };
+            string s = dogStay ? "<color=orange>Rufus: QUIETO</color>  (E: que te siga)"
+                               : "Rufus: te sigue  (E: quedarse | G: controlarlo)";
+            GUI.Label(new Rect(12f, 44f, 420f, 22f), s, _hint);
         }
     }
 }

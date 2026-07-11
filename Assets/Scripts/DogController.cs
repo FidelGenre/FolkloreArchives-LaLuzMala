@@ -69,8 +69,18 @@ namespace FolkloreArchives
 
             Vector3 move = planar;
             move.y = verticalVel;
-            cc.Move(move * Time.deltaTime);
+            var flags = cc.Move(move * Time.deltaTime);
+
+            // AUTO-SALTO: si se estaba moviendo y chocó de costado contra algo, salta
+            // (sirve para pasar troncos/rocas, tanto controlado como siguiéndote).
+            if (grounded && planar.sqrMagnitude > 0.05f &&
+                (flags & CollisionFlags.Sides) != 0 && Time.time >= _nextAutoJump)
+            {
+                verticalVel = Mathf.Sqrt(2f * gravity * jumpHeight);
+                _nextAutoJump = Time.time + 0.6f;   // cooldown para no saltar en loop
+            }
         }
+        float _nextAutoJump;
 
         // Espacio = saltar (si está en el piso). El perro NO se agacha (pedido del dueño).
         void Jump(bool grounded)
