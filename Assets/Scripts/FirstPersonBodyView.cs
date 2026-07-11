@@ -45,19 +45,52 @@ namespace FolkloreArchives
         // que regenerar; el fix permanente (para el compañero también) es regenerar.
         void FixMagentaMaterials()
         {
+            Material fallback = null;   // material URP creado en runtime, por si no hay ninguno bueno
             foreach (var r in GetComponentsInChildren<Renderer>(true))
             {
                 var mats = r.sharedMaterials;
+                // 1) buscar un material URP ya presente en este renderer (para conservar su textura)
                 Material good = null;
                 foreach (var m in mats)
-                    if (m != null && m.shader != null && m.shader.name.Contains("Universal")) { good = m; break; }
-                if (good == null) continue;   // ninguna ranura URP: no puedo saber cuál es la buena
+                    if (IsUrp(m)) { good = m; break; }
+                // 2) si no hay, crear uno URP — el shader URP siempre está incluido. Le
+                //    paso la TEXTURA que ya trae el material roto del FBX (misma pinta que
+                //    el personaje), y si no hay textura, un color piel.
+                if (good == null)
+                {
+                    if (fallback == null)
+                    {
+                        var sh = Shader.Find("Universal Render Pipeline/Lit");
+                        if (sh == null) return;   // ni URP hay: no puedo hacer nada
+                        fallback = new Material(sh);
+                        Texture tex = TexFromAny(mats);
+                        if (tex != null && fallback.HasProperty("_BaseMap")) fallback.SetTexture("_BaseMap", tex);
+                        else if (fallback.HasProperty("_BaseColor")) fallback.SetColor("_BaseColor", new Color(0.82f, 0.68f, 0.55f));
+                        if (fallback.HasProperty("_Smoothness")) fallback.SetFloat("_Smoothness", 0.05f);
+                    }
+                    good = fallback;
+                }
+                // 3) reemplazar toda ranura que NO sea URP (magenta) por el material bueno
                 bool changed = false;
                 for (int k = 0; k < mats.Length; k++)
-                    if (mats[k] == null || mats[k].shader == null || !mats[k].shader.name.Contains("Universal"))
-                    { mats[k] = good; changed = true; }
+                    if (!IsUrp(mats[k])) { mats[k] = good; changed = true; }
                 if (changed) r.sharedMaterials = mats;
             }
+        }
+
+        static bool IsUrp(Material m) =>
+            m != null && m.shader != null && m.shader.name.Contains("Universal");
+
+        // saca la textura principal de cualquiera de los materiales (Standard usa _MainTex)
+        static Texture TexFromAny(Material[] mats)
+        {
+            foreach (var m in mats)
+            {
+                if (m == null) continue;
+                if (m.HasProperty("_MainTex") && m.GetTexture("_MainTex") != null) return m.GetTexture("_MainTex");
+                if (m.HasProperty("_BaseMap") && m.GetTexture("_BaseMap") != null) return m.GetTexture("_BaseMap");
+            }
+            return null;
         }
     }
 }
