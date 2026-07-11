@@ -4,17 +4,18 @@
 //  (Simple PSX Character de JashiPSX — rig completo, sin clips).
 //   · Caminata: balanceo de piernas y brazos (brazos bajados desde
 //     la T-pose calculando su dirección real → apuntar a -Y).
-//   · Agacharse: se sincroniza por RED (NetworkVariable) y agacha
-//     el modelo (lo ve el compañero). El perro NO usa este script.
-//  Reemplazable por animaciones de Mixamo más adelante.
+//   · Agacharse: baja/achata el modelo. El estado de agachado viene
+//     de NetCrouchSync si existe (online, replicado al compañero) o,
+//     si no (modo solo), directo del teclado local.
+//  Es un MonoBehaviour normal (sirve online Y en solo, sin necesitar
+//  NetworkObject). El perro NO usa este script.
 // ============================================================
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace FolkloreArchives
 {
-    public class HumanWalkAnim : NetworkBehaviour
+    public class HumanWalkAnim : MonoBehaviour
     {
         [System.Serializable]
         public struct Limb { public string bone; public float phase; } // phase = +1 / -1
@@ -33,16 +34,13 @@ namespace FolkloreArchives
         public float crouchScaleY = 0.62f;   // alto del modelo al agacharse (fracción)
         public float crouchDrop = 0.35f;      // cuánto baja el modelo al agacharse (m)
 
-        // agachado, replicado a todos (lo escribe el dueño)
-        readonly NetworkVariable<bool> _crouch = new NetworkVariable<bool>(
-            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-
         Transform[] _t;
         Quaternion[] _rest;
         Transform _model;
         Vector3 _modelScale;
         float _phase, _amp;
         Vector3 _lastPos;
+        NetCrouchSync _net;   // opcional: solo en el prefab de red
 
         void Start()
         {
@@ -66,19 +64,24 @@ namespace FolkloreArchives
             if (_model == null) { var smr = GetComponentInChildren<SkinnedMeshRenderer>(); if (smr != null) _model = smr.transform.parent; }
             if (_model != null) { _modelScale = _model.localScale; _modelBasePos = _model.localPosition; }
             else _modelScale = Vector3.one;
+            _net = GetComponent<NetCrouchSync>();
             _lastPos = transform.position;
         }
         Vector3 _modelBasePos;
         float _crouchT;
 
-        void Update()
+        // ¿está agachado? Online: lo decide/replica NetCrouchSync (el dueño escribe,
+        // todos leen). Solo: teclado local (Ctrl/C).
+        bool WantCrouch()
         {
-            if (IsSpawned && IsOwner)
+            var kb = Keyboard.current;
+            bool localInput = kb != null && (kb.leftCtrlKey.isPressed || kb.cKey.isPressed);
+            if (_net != null)
             {
-                var kb = Keyboard.current;
-                bool want = kb != null && (kb.leftCtrlKey.isPressed || kb.cKey.isPressed);
-                if (want != _crouch.Value) _crouch.Value = want;
+                if (_net.IsOwnerLocal) _net.SetLocal(localInput);
+                return _net.Crouched;
             }
+            return localInput;
         }
 
         void LateUpdate()
@@ -87,10 +90,10 @@ namespace FolkloreArchives
             float speed = (transform.position - _lastPos).magnitude / dt;
             _lastPos = transform.position;
 
-            bool crouched = IsSpawned && _crouch.Value;
+            bool crouched = WantCrouch();
 
             // agacharse: baja el modelo y lo achica en Y → se ve claramente más bajo
-            // (el compañero te ve agacharte; vos no, porque en 1ª persona tu cuerpo va oculto).
+            // (el compañero te ve agacharte).
             if (_model != null)
             {
                 _crouchT = Mathf.Lerp(_crouchT, crouched ? 1f : 0f, 12f * dt);

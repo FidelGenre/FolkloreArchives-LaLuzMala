@@ -72,7 +72,8 @@ namespace FolkloreArchives.MapGen
             // cuerpo = modelo humano PSX (lo que ve el compañero). Si el FBX no está,
             // cae a una cápsula.
             BuildPersonVisual(root.transform);
-            root.AddComponent<FolkloreArchives.HumanWalkAnim>(); // brazos/piernas al caminar
+            root.AddComponent<FolkloreArchives.NetCrouchSync>();  // replica el agachado al compañero
+            root.AddComponent<FolkloreArchives.HumanWalkAnim>();  // brazos/piernas al caminar
 
             var camGO = new GameObject("Camera");
             camGO.transform.SetParent(root.transform);
@@ -108,7 +109,7 @@ namespace FolkloreArchives.MapGen
 
         // Instancia el modelo humano PSX, lo escala a ~2.3 m, le apoya los pies en y=0
         // y le pone la textura 256 con filtro Point (look PSX). Fallback: cápsula.
-        static void BuildPersonVisual(Transform parent)
+        public static void BuildPersonVisual(Transform parent)
         {
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(CharFbx);
             if (fbx == null)

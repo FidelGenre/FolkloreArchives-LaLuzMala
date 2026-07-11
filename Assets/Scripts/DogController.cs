@@ -43,13 +43,20 @@ namespace FolkloreArchives
         float verticalVel;
         Transform camT;
         float standHeight, camBaseY;
+        float pitch;   // mirar arriba/abajo (grados); parte del ángulo base de la cámara
 
         void Start()
         {
             cc = GetComponent<CharacterController>();
             standHeight = cc.height;
             var camGo = GetComponentInChildren<Camera>(true);
-            if (camGo != null) { camT = camGo.transform; camBaseY = camT.localPosition.y; }
+            if (camGo != null)
+            {
+                camT = camGo.transform;
+                camBaseY = camT.localPosition.y;
+                pitch = camT.localEulerAngles.x;   // respeta la inclinación inicial (3ª persona solo)
+                if (pitch > 180f) pitch -= 360f;
+            }
         }
 
         void Update()
@@ -97,10 +104,20 @@ namespace FolkloreArchives
             var kb = Keyboard.current;
             if (kb == null || SettingsMenu.IsOpen) return Vector3.zero;
 
-            // girar con el MOUSE
+            // girar con el MOUSE: X gira el cuerpo (yaw), Y inclina la cámara (pitch:
+            // mirar abajo para verte las patas / arriba). El pitch va en la CÁMARA, no
+            // en el cuerpo, para no volcar al perro.
             var mouse = Mouse.current;
             if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
-                transform.Rotate(0f, mouse.delta.ReadValue().x * mouseSensitivity, 0f);
+            {
+                Vector2 d = mouse.delta.ReadValue();
+                transform.Rotate(0f, d.x * mouseSensitivity, 0f);
+                if (camT != null)
+                {
+                    pitch = Mathf.Clamp(pitch - d.y * mouseSensitivity, -80f, 80f);
+                    camT.localEulerAngles = new Vector3(pitch, 0f, 0f);
+                }
+            }
 
             float strafe, fwd; bool run;
             if (useArrowKeys) // jugador 2 (co-op local, no usado en online)

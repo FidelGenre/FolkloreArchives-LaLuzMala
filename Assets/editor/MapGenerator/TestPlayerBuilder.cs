@@ -36,12 +36,10 @@ namespace FolkloreArchives.MapGen
             cc.radius = 0.35f;
             cc.center = new Vector3(0f, 1.2f, 0f);   // centro = altura/2 (pies en el suelo)
 
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            body.transform.SetParent(player.transform);
-            body.transform.localPosition = new Vector3(0f, 1.2f, 0f);
-            body.transform.localScale = new Vector3(0.7f, 1.2f, 0.7f); // capsule primitive = 2u alto → 2.4 m
-            Object.DestroyImmediate(body.GetComponent<Collider>());
+            // Cuerpo REAL (mismo modelo PSX que en online) para tener conciencia del
+            // cuerpo: al mirar abajo te ves torso y piernas. Si falta el fbx, cae a cápsula.
+            NetworkBuilder.BuildPersonVisual(player.transform);
+            player.AddComponent<FolkloreArchives.HumanWalkAnim>(); // brazos/piernas al caminar
 
             var camGO = new GameObject("Camera");
             camGO.transform.SetParent(player.transform);
@@ -84,6 +82,10 @@ namespace FolkloreArchives.MapGen
             player.AddComponent<FolkloreArchives.MapExplorer>();
             // El menú de opciones (Esc) ahora va en el objeto NET (NetworkBuilder), que
             // NO se desactiva en online — así Esc abre el menú también en co-op.
+
+            // conciencia del cuerpo en solo: te ocultás cabeza/cuello y acercás el near-clip
+            var bodyView = player.AddComponent<FolkloreArchives.FirstPersonBodyView>();
+            bodyView.cam = cam;
 
             // DayNightController: Tab cicla Día → Atardecer → Noche en Play mode
             var dnc = player.AddComponent<FolkloreArchives.DayNightController>();
