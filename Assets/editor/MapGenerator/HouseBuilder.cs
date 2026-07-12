@@ -258,6 +258,13 @@ namespace FolkloreArchives.MapGen
             if (wood.HasProperty("_BaseMap")) wood.SetTextureScale("_BaseMap", new Vector2(3f, 2f));
             var roof = HouseMat("barn_roof", "CorrugatedSteel007A", new Color(0.32f, 0.33f, 0.32f), 0.3f, 2.5f);
             var beam = BuilderUtils.Mat("barn_beam", new Color(0.22f, 0.16f, 0.10f), 0f); // madera oscura (postes/vigas)
+            // puerta = tablones (otra textura de madera del pack ALP), para que se note
+            var doorTex = AssetDatabase.LoadAssetAtPath<Texture2D>(AlpTex + "WoodPlank01.png");
+            var doorNrm = BuilderUtils.LoadAsNormalMap(AlpTex + "WoodPlank01_N.png");
+            var door = doorTex != null
+                ? BuilderUtils.MatTextured("barn_door", doorTex, Color.white, 0.1f, doorNrm) : wood;
+            door.mainTextureScale = new Vector2(1f, 2.5f);
+            if (door.HasProperty("_BaseMap")) door.SetTextureScale("_BaseMap", new Vector2(1f, 2.5f));
 
             const float W = 7f, D = 9f, eaveH = 3.4f, ridgeY = 5.4f, t = 0.2f;
 
@@ -274,9 +281,9 @@ namespace FolkloreArchives.MapGen
             // hojas del portón (un poco entornadas, madera oscura)
             // una hoja abierta de par en par, la otra entornada (barn abandonado). Sin
             // collider para poder entrar por el hueco.
-            var dL = BarnBox(g, beam, new Vector3(-0.75f, 1.4f, D / 2f + 0.06f), new Vector3(1.45f, 2.7f, 0.08f));
+            var dL = BarnBox(g, door, new Vector3(-0.75f, 1.4f, D / 2f + 0.06f), new Vector3(1.45f, 2.7f, 0.08f));
             dL.transform.localRotation = Quaternion.Euler(0f, 75f, 0f);
-            var dR = BarnBox(g, beam, new Vector3(0.75f, 1.4f, D / 2f + 0.06f), new Vector3(1.45f, 2.7f, 0.08f));
+            var dR = BarnBox(g, door, new Vector3(0.75f, 1.4f, D / 2f + 0.06f), new Vector3(1.45f, 2.7f, 0.08f));
             dR.transform.localRotation = Quaternion.Euler(0f, -18f, 0f);
             Object.DestroyImmediate(dL.GetComponent<Collider>());
             Object.DestroyImmediate(dR.GetComponent<Collider>());
