@@ -11,9 +11,9 @@ namespace FolkloreArchives.MapGen
 {
     public static class LuzMalaBuilder
     {
-        // dónde aparece (x,z world). En el bosque, entre el campamento (410,442) y el
-        // rancho de la vieja (404,625) — el jugador la va a cruzar de noche.
-        public static readonly Vector2 SpawnXZ = new Vector2(412, 492);
+        // dónde aparece (x,z world). Cerca del rancho de la vieja (404,625), en tierra
+        // firme y seca (la posición anterior 412,492 caía sobre el agua).
+        public static readonly Vector2 SpawnXZ = new Vector2(404, 608);
 
         public static void Build(Transform parent, Terrain terrain)
         {

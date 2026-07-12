@@ -25,9 +25,9 @@ namespace FolkloreArchives
         [Header("Aspecto")]
         public Color idleColor = new Color(0.9f, 0.95f, 1f);   // BLANCA cuando está tranquila
         public Color aggroColor = new Color(1f, 0.18f, 0.12f); // ROJA cuando se pone agresiva
-        public float lightRange = 42f;
+        public float lightRange = 36f;
         public float baseIntensity = 8f;
-        public float glowSize = 15f;       // tamaño del resplandor (MUY grande)
+        public float glowSize = 11.5f;     // tamaño del resplandor (grande, un toque menos)
 
         [Header("Pruebas")]
         public bool holdStill = true;      // no se mueve (para verla bien). Poner false para el acecho.
