@@ -211,9 +211,10 @@ namespace FolkloreArchives.MapGen
                 hb.center += new Vector3(0f, delta, 0f);
             }
 
-            // luces interiores cálidas (la casa viene a oscuras) + muebles + galpón
+            // luces interiores cálidas (la casa viene a oscuras) + galpón
+            // (muebles nappin desactivados: el owner quiere un pack de muebles viejos)
             AddInteriorLights(inst.transform, hb);
-            BuildAlpFurniture(inst.transform, hb);
+            if (UseNappinFurniture) BuildAlpFurniture(inst.transform, hb);
             BuildBarn(parent, terrain);
 
             Debug.Log($"<color=lime>Casa de la vieja: modelo ALP en OldLadyRanch (materiales a URP: {fixedMats}).</color>");
@@ -678,6 +679,7 @@ namespace FolkloreArchives.MapGen
         const string AlpHousePrefab = "Assets/ALP_Assets/country house01/Prefabs/House_Prefab.prefab";
         const float AlpHouseYaw = 180f;    // giro (ajustar por captura: entrada hacia el camino)
         const float AlpHouseScale = 1.35f; // agrandada: puertas/techos por encima del jugador (2.4m)
+        const bool UseNappinFurniture = false; // muebles nappin OFF (el owner usará un pack de muebles viejos)
         const float AlpHouseDropY = 0f;    // ajuste fino de altura (si flota/se hunde)
 
         // Convierte los materiales built-in del pack nappin a URP (una vez por material,
