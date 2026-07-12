@@ -224,17 +224,40 @@ namespace FolkloreArchives.MapGen
         static void BuildAlpFurniture(Transform parent, Bounds hb)
         {
             float floorY = hb.min.y + 0.05f;
-            // (nombre nappin, fx, fz, yaw) — fx/fz = fracción del footprint (0..1)
+            // (nombre nappin, fx, fz, yaw) — fx/fz = fracción del footprint (0..1).
+            // Repartido en zonas: LIVING (centro, ya andaba), DORMITORIO (frente-izq),
+            // COCINA (frente-der), COMEDOR (fondo-der), BAÑO (fondo-izq). 1er pase: puede
+            // que alguno atraviese una pared interior → se reubica por captura.
             var items = new (string n, float fx, float fz, float yaw)[]
             {
-                ("Sofa",         0.45f, 0.50f,   0f),
-                ("CoffeTable",   0.52f, 0.42f,   0f),
-                ("MediaConsole", 0.52f, 0.30f, 180f),
-                ("Chair1",       0.60f, 0.56f, 210f),
-                ("Lamp",         0.63f, 0.32f,   0f),
-                ("Dresser",      0.38f, 0.58f,  90f),
-                ("Storage1",     0.40f, 0.40f,   0f),
-                ("WaterGarden",  0.62f, 0.60f,   0f),
+                // LIVING (centro)
+                ("Sofa",         0.45f, 0.52f,   0f),
+                ("CoffeTable",   0.50f, 0.44f,   0f),
+                ("MediaConsole", 0.50f, 0.30f, 180f),
+                ("Chair1",       0.58f, 0.55f, 210f),
+                ("Lamp",         0.62f, 0.34f,   0f),
+                ("WaterGarden",  0.62f, 0.62f,   0f),
+                // DORMITORIO (frente-izquierda)
+                ("DoubleBed",    0.22f, 0.26f,   0f),
+                ("BedsideTable", 0.12f, 0.22f,   0f),
+                ("Wardrobe",     0.13f, 0.42f,  90f),
+                ("Dresser",      0.30f, 0.15f, 180f),
+                // COCINA (frente-derecha)
+                ("Stove",        0.80f, 0.16f, 180f),
+                ("Fridge",       0.88f, 0.24f, -90f),
+                ("KitchenSink",  0.72f, 0.16f, 180f),
+                ("KitchenIsland",0.80f, 0.34f,   0f),
+                // COMEDOR (fondo-derecha)
+                ("LaunchTable",  0.75f, 0.72f,   0f),
+                ("DiningChair",  0.68f, 0.72f,  90f),
+                ("DiningChair",  0.82f, 0.72f, -90f),
+                // BAÑO (fondo-izquierda)
+                ("Toilet",       0.15f, 0.80f,  90f),
+                ("BathroomSink", 0.15f, 0.68f,  90f),
+                // varios
+                ("Shelf1",       0.40f, 0.86f, 180f),
+                ("CoatHanger",   0.52f, 0.88f, 180f),
+                ("Storage1",     0.30f, 0.80f,   0f),
             };
             foreach (var it in items)
             {
