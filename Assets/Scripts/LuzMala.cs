@@ -22,8 +22,9 @@ namespace FolkloreArchives
     {
         [Header("Aspecto")]
         public Color color = new Color(1f, 0.92f, 0.55f);  // amarillo pálido fantasmal
-        public float lightRange = 14f;
-        public float baseIntensity = 3.5f;
+        public float lightRange = 18f;
+        public float baseIntensity = 6f;
+        public float orbSize = 0.85f;
 
         [Header("Flotación")]
         public float hoverHeight = 1.6f;   // altura sobre el terreno
@@ -76,7 +77,7 @@ namespace FolkloreArchives
                 s.name = "Orb";
                 Destroy(s.GetComponent<Collider>());
                 s.transform.SetParent(transform, false);
-                s.transform.localScale = Vector3.one * 0.5f;
+                s.transform.localScale = Vector3.one * orbSize;
                 _orb = s.transform;
             }
             var mr = _orb.GetComponent<MeshRenderer>();
@@ -86,7 +87,7 @@ namespace FolkloreArchives
                 _orbMat = new Material(sh);
                 if (_orbMat.HasProperty("_BaseColor")) _orbMat.SetColor("_BaseColor", color);
                 _orbMat.EnableKeyword("_EMISSION");
-                if (_orbMat.HasProperty("_EmissionColor")) _orbMat.SetColor("_EmissionColor", color * 4f); // HDR → bloom
+                if (_orbMat.HasProperty("_EmissionColor")) _orbMat.SetColor("_EmissionColor", color * 6f); // HDR → bloom
                 mr.sharedMaterial = _orbMat;
             }
             _intensity = baseIntensity;
