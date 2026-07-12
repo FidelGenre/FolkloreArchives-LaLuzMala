@@ -3,18 +3,20 @@
 //  LuzMala.cs — el fenómeno que da nombre al juego. Un fuego fatuo
 //  del folklore patagónico: una luz flotante que aparece de NOCHE.
 //
+//  Visual: NO es una esfera sólida. Son billboards ADITIVOS que
+//  miran a la cámara — núcleo caliente + halo difuso + rayos — con
+//  texturas generadas por código. El bloom del grade VHS los funde
+//  en un resplandor tipo "luz mala" (difuso, con halo y destellos).
+//  Sin assets.
+//
 //  Comportamiento:
 //   · Solo de noche (DayNightController.IsNight). De día se esconde.
-//   · Deriva/flota (bob + wander Perlin) a la altura del terreno.
-//   · Si estás cerca y NO la mirás/iluminás → se ACERCA lento.
-//   · Si la mirás de frente o le apuntás con la linterna → RETROCEDE
-//     y se atenúa (mecánica de tensión: para escapar hay que mirarla).
-//   · Si te alcanza → susto (parpadea tu linterna) y se aleja de golpe.
-//
-//  Es solo una luz + esfera emisiva: el bloom del grade VHS la hace
-//  brillar. Sin assets. Tuneable desde el inspector.
+//   · Flota (bob + wander). Si estás cerca y NO la mirás → se ACERCA.
+//   · Si la mirás de frente o le apuntás con la linterna → RETROCEDE.
+//   · Si te alcanza → susto (apaga tu linterna) y se aleja de golpe.
 // ============================================================
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace FolkloreArchives
 {
@@ -24,30 +26,32 @@ namespace FolkloreArchives
         public Color color = new Color(1f, 0.92f, 0.55f);  // amarillo pálido fantasmal
         public float lightRange = 18f;
         public float baseIntensity = 6f;
-        public float orbSize = 0.85f;
+        public float glowSize = 2.2f;      // tamaño del resplandor
 
         [Header("Flotación")]
-        public float hoverHeight = 1.6f;   // altura sobre el terreno
+        public float hoverHeight = 1.7f;
         public float bobAmplitude = 0.5f;
         public float bobSpeed = 1.3f;
-        public float wanderRadius = 6f;    // deriva alrededor del punto de aparición
+        public float wanderRadius = 6f;
         public float wanderSpeed = 0.35f;
 
         [Header("Acecho")]
-        public float activateDistance = 55f; // desde acá te empieza a notar
-        public float approachSpeed = 2.2f;   // se acerca lento
-        public float retreatSpeed = 9f;      // huye rápido si la mirás/iluminás
-        public float killDistance = 2.2f;    // te alcanzó
-        [Range(0f, 1f)] public float lookThreshold = 0.9f;  // cuán de frente hay que mirarla
+        public float activateDistance = 55f;
+        public float approachSpeed = 2.2f;
+        public float retreatSpeed = 9f;
+        public float killDistance = 2.2f;
+        [Range(0f, 1f)] public float lookThreshold = 0.9f;
 
         Light _light;
-        Transform _orb;
-        Material _orbMat;
         DayNightController _dnc;
         Terrain _terrain;
         Vector3 _home;
-        float _seed, _flashUntil, _scareCooldown;
-        float _intensity;
+        float _seed, _flashUntil, _scareCooldown, _intensity;
+
+        // capas del resplandor (billboards)
+        Transform[] _bb;
+        Material[] _bbMat;
+        float[] _bbScale, _bbFlickerSeed;
 
         void Start()
         {
@@ -56,7 +60,7 @@ namespace FolkloreArchives
             _terrain = Terrain.activeTerrain;
             _dnc = FindFirstObjectByType<DayNightController>();
 
-            // luz puntual
+            // luz puntual (ilumina el entorno)
             _light = GetComponentInChildren<Light>();
             if (_light == null)
             {
@@ -69,26 +73,27 @@ namespace FolkloreArchives
             _light.range = lightRange;
             _light.shadows = LightShadows.None;
 
-            // esfera emisiva (el "cuerpo" de la luz)
-            _orb = transform.Find("Orb");
-            if (_orb == null)
+            // texturas generadas: halo radial suave + rayos (estrella)
+            var radial = MakeRadialTex();
+            var rays = MakeRayTex();
+
+            // 3 capas: halo difuso grande, núcleo caliente chico, destellos
+            _bb = new Transform[3];
+            _bbMat = new Material[3];
+            _bbScale = new[] { glowSize * 2.2f, glowSize * 0.9f, glowSize * 3.2f };
+            _bbFlickerSeed = new[] { Random.value * 10f, Random.value * 10f, Random.value * 10f };
+            var texs = new[] { radial, radial, rays };
+            var tints = new[] { color * 0.45f, color * 1.2f, color * 0.5f };
+            for (int i = 0; i < 3; i++)
             {
-                var s = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                s.name = "Orb";
-                Destroy(s.GetComponent<Collider>());
-                s.transform.SetParent(transform, false);
-                s.transform.localScale = Vector3.one * orbSize;
-                _orb = s.transform;
-            }
-            var mr = _orb.GetComponent<MeshRenderer>();
-            if (mr != null)
-            {
-                var sh = Shader.Find("Universal Render Pipeline/Lit");
-                _orbMat = new Material(sh);
-                if (_orbMat.HasProperty("_BaseColor")) _orbMat.SetColor("_BaseColor", color);
-                _orbMat.EnableKeyword("_EMISSION");
-                if (_orbMat.HasProperty("_EmissionColor")) _orbMat.SetColor("_EmissionColor", color * 6f); // HDR → bloom
-                mr.sharedMaterial = _orbMat;
+                var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                q.name = "Glow" + i;
+                Destroy(q.GetComponent<Collider>());
+                q.transform.SetParent(transform, false);
+                q.transform.localScale = Vector3.one * _bbScale[i];
+                _bbMat[i] = MakeAdditive(texs[i], tints[i]);
+                q.GetComponent<MeshRenderer>().sharedMaterial = _bbMat[i];
+                _bb[i] = q.transform;
             }
             _intensity = baseIntensity;
         }
@@ -97,14 +102,14 @@ namespace FolkloreArchives
         {
             bool night = _dnc == null || _dnc.IsNight;
             if (_light != null && _light.enabled != night) _light.enabled = night;
-            if (_orb != null && _orb.gameObject.activeSelf != night) _orb.gameObject.SetActive(night);
+            if (_bb != null) foreach (var b in _bb) if (b != null && b.gameObject.activeSelf != night) b.gameObject.SetActive(night);
             if (!night) return;
 
             float dt = Time.deltaTime;
             var cam = Camera.main;
             Vector3 pos = transform.position;
 
-            // ¿el jugador la mira de frente o le apunta con la linterna?
+            // ¿la mira de frente o la ilumina?
             bool lookedAt = false, lit = false;
             float dist = 999f;
             if (cam != null)
@@ -113,58 +118,69 @@ namespace FolkloreArchives
                 dist = toCam.magnitude;
                 Vector3 dirToLuz = (-toCam).normalized;
                 float look = Vector3.Dot(cam.transform.forward, dirToLuz);
-                lookedAt = look > lookThreshold && dist < activateDistance;      // mirándola de frente
-                lit = FlashlightOn(cam) && look > 0.7f && dist < 32f;            // linterna (cono más ancho)
+                lookedAt = look > lookThreshold && dist < activateDistance;
+                lit = FlashlightOn(cam) && look > 0.7f && dist < 32f;
             }
 
-            // ---- movimiento ----
+            // movimiento
             Vector3 planar = Vector3.zero;
             if (cam != null && (lookedAt || lit))
             {
-                // huye del jugador
-                Vector3 away = (pos - cam.transform.position); away.y = 0f;
+                Vector3 away = pos - cam.transform.position; away.y = 0f;
                 planar = away.normalized * retreatSpeed;
-                _intensity = Mathf.Lerp(_intensity, baseIntensity * 0.25f, 6f * dt); // se atenúa
+                _intensity = Mathf.Lerp(_intensity, baseIntensity * 0.25f, 6f * dt);
             }
             else if (cam != null && dist < activateDistance && dist > killDistance)
             {
-                // te acecha: se acerca lento
-                Vector3 toward = (cam.transform.position - pos); toward.y = 0f;
+                Vector3 toward = cam.transform.position - pos; toward.y = 0f;
                 planar = toward.normalized * approachSpeed;
                 _intensity = Mathf.Lerp(_intensity, baseIntensity * 1.15f, 3f * dt);
             }
             else
             {
-                // deriva alrededor de su punto de aparición
                 float nx = Mathf.PerlinNoise(_seed, Time.time * wanderSpeed) - 0.5f;
                 float nz = Mathf.PerlinNoise(Time.time * wanderSpeed, _seed) - 0.5f;
                 Vector3 target = _home + new Vector3(nx, 0f, nz) * wanderRadius * 2f;
-                planar = Vector3.ClampMagnitude((target - pos), 1f); planar.y = 0f;
+                planar = Vector3.ClampMagnitude(target - pos, 1f); planar.y = 0f;
                 planar *= wanderSpeed * 4f;
                 _intensity = Mathf.Lerp(_intensity, baseIntensity, 2f * dt);
             }
-
             pos += planar * dt;
 
-            // altura: flota sobre el terreno con bob
             float groundY = _terrain != null ? _terrain.SampleHeight(pos) + _terrain.transform.position.y : pos.y;
             float bob = Mathf.Sin(Time.time * bobSpeed + _seed) * bobAmplitude;
             pos.y = groundY + hoverHeight + bob;
             transform.position = pos;
 
-            // parpadeo del brillo (Perlin) + susto reciente
             float flick = 0.75f + 0.25f * Mathf.PerlinNoise(_seed * 2f, Time.time * 7f);
             float inten = _intensity * flick;
             if (_light != null) _light.intensity = inten;
-            if (_orbMat != null && _orbMat.HasProperty("_EmissionColor"))
-                _orbMat.SetColor("_EmissionColor", color * Mathf.Max(0.5f, inten));
+            UpdateGlow(cam, inten);
 
-            // ---- te alcanzó: susto ----
             if (cam != null && dist < killDistance && Time.time >= _scareCooldown)
                 Scare(cam, pos);
         }
 
-        // busca el foco (spot) de la linterna bajo la cámara y ve si está encendido
+        // orienta cada capa hacia la cámara y le da un latido/parpadeo propio
+        void UpdateGlow(Camera cam, float inten)
+        {
+            if (_bb == null) return;
+            float k = Mathf.Clamp01(inten / Mathf.Max(0.01f, baseIntensity));
+            for (int i = 0; i < _bb.Length; i++)
+            {
+                if (_bb[i] == null) continue;
+                if (cam != null) _bb[i].rotation = Quaternion.LookRotation(_bb[i].position - cam.transform.position);
+                // latido: cada capa palpita con su propia fase (fuego fatuo "vivo")
+                float pulse = 0.85f + 0.15f * Mathf.PerlinNoise(_bbFlickerSeed[i], Time.time * (5f + i));
+                _bb[i].localScale = Vector3.one * (_bbScale[i] * pulse);
+                if (_bbMat[i] != null && _bbMat[i].HasProperty("_BaseColor"))
+                {
+                    Color baseT = (i == 1) ? color * 1.2f : (i == 0 ? color * 0.45f : color * 0.5f);
+                    _bbMat[i].SetColor("_BaseColor", baseT * (0.5f + k));
+                }
+            }
+        }
+
         bool FlashlightOn(Camera cam)
         {
             foreach (var l in cam.GetComponentsInChildren<Light>())
@@ -172,16 +188,13 @@ namespace FolkloreArchives
             return false;
         }
 
-        // susto: parpadea la linterna del jugador y la Luz se aleja de golpe. (v1: sin
-        // game-over todavía; se puede enganchar acá un fade/respawn/daño de cordura.)
         void Scare(Camera cam, Vector3 pos)
         {
             foreach (var l in cam.GetComponentsInChildren<Light>())
-                if (l.type == LightType.Spot) l.enabled = false;   // se te apaga la linterna
+                if (l.type == LightType.Spot) l.enabled = false;
             _flashUntil = Time.time + 0.6f;
             _scareCooldown = Time.time + 6f;
-            // se aleja de golpe (reaparece lejos)
-            Vector3 away = (pos - cam.transform.position); away.y = 0f;
+            Vector3 away = pos - cam.transform.position; away.y = 0f;
             transform.position = pos + away.normalized * 25f;
             _home = transform.position;
             Debug.Log("<color=orange>[LuzMala] te alcanzó — susto</color>");
@@ -189,7 +202,6 @@ namespace FolkloreArchives
 
         void LateUpdate()
         {
-            // devolver la linterna tras el parpadeo del susto
             if (_flashUntil > 0f && Time.time >= _flashUntil)
             {
                 _flashUntil = 0f;
@@ -198,6 +210,66 @@ namespace FolkloreArchives
                     foreach (var l in cam.GetComponentsInChildren<Light>(true))
                         if (l.type == LightType.Spot) l.enabled = true;
             }
+        }
+
+        // ---- materiales/texturas procedurales ----
+
+        static Material MakeAdditive(Texture2D tex, Color tint)
+        {
+            var m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            m.SetTexture("_BaseMap", tex);
+            m.SetColor("_BaseColor", tint);
+            m.SetFloat("_Surface", 1f);                 // transparent
+            m.SetFloat("_Blend", 2f);                   // additive
+            m.SetFloat("_SrcBlend", (float)BlendMode.One);
+            m.SetFloat("_DstBlend", (float)BlendMode.One);
+            m.SetFloat("_ZWrite", 0f);
+            m.SetFloat("_Cull", (float)CullMode.Off);   // doble cara (no importa a qué lado mire)
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.renderQueue = (int)RenderQueue.Transparent;
+            return m;
+        }
+
+        // halo radial suave: núcleo caliente que se desvanece hacia afuera
+        static Texture2D MakeRadialTex()
+        {
+            const int N = 128;
+            var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color[N * N];
+            for (int y = 0; y < N; y++)
+                for (int x = 0; x < N; x++)
+                {
+                    float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float halo = Mathf.Pow(Mathf.Clamp01(1f - d), 2.4f);       // desvanecido amplio
+                    float core = Mathf.Pow(Mathf.Clamp01(1f - d * 2.6f), 4f);   // núcleo caliente
+                    float v = Mathf.Clamp01(halo * 0.8f + core);
+                    px[y * N + x] = new Color(v, v, v, v);
+                }
+            t.SetPixels(px); t.Apply();
+            return t;
+        }
+
+        // rayos/destellos tipo estrella (cruz suave + halo)
+        static Texture2D MakeRayTex()
+        {
+            const int N = 128;
+            var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color[N * N];
+            for (int y = 0; y < N; y++)
+                for (int x = 0; x < N; x++)
+                {
+                    float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float fall = Mathf.Clamp01(1f - d);
+                    float streakH = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dy) * 12f), 2f);
+                    float streakV = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dx) * 12f), 2f);
+                    float diag = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(Mathf.Abs(dx) - Mathf.Abs(dy)) * 16f), 2f) * 0.5f;
+                    float v = Mathf.Clamp01((streakH + streakV + diag) * fall * fall);
+                    px[y * N + x] = new Color(v, v, v, v);
+                }
+            t.SetPixels(px); t.Apply();
+            return t;
         }
     }
 }
