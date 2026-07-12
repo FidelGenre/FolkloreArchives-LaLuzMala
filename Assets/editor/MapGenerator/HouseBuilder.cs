@@ -247,7 +247,15 @@ namespace FolkloreArchives.MapGen
             g.position = new Vector3(c.x, gy, c.y);
             g.rotation = Quaternion.Euler(0f, BarnYaw, 0f);
 
-            var wood = HouseMat("barn_wood", "WoodFloor064", new Color(0.46f, 0.36f, 0.24f), 0.1f, 2f);
+            // MISMA madera que la casa ALP (su propia textura), para que combine.
+            const string AlpTex = "Assets/ALP_Assets/country house01/Textures/";
+            var woodTex = AssetDatabase.LoadAssetAtPath<Texture2D>(AlpTex + "OldHouseMapWood01.png");
+            var woodNrm = BuilderUtils.LoadAsNormalMap(AlpTex + "OldHouseMapWood01_N.png");
+            var wood = woodTex != null
+                ? BuilderUtils.MatTextured("barn_wood", woodTex, Color.white, 0.1f, woodNrm)
+                : HouseMat("barn_wood", "WoodFloor064", new Color(0.46f, 0.36f, 0.24f), 0.1f, 2f);
+            wood.mainTextureScale = new Vector2(3f, 2f);
+            if (wood.HasProperty("_BaseMap")) wood.SetTextureScale("_BaseMap", new Vector2(3f, 2f));
             var roof = HouseMat("barn_roof", "CorrugatedSteel007A", new Color(0.32f, 0.33f, 0.32f), 0.3f, 2.5f);
             var beam = BuilderUtils.Mat("barn_beam", new Color(0.22f, 0.16f, 0.10f), 0f); // madera oscura (postes/vigas)
 
@@ -283,6 +291,11 @@ namespace FolkloreArchives.MapGen
             rR.transform.localRotation = Quaternion.Euler(0f, 0f, -ang);
             BarnBox(g, beam, new Vector3(0f, ridgeY, 0f), new Vector3(0.25f, 0.25f, D + 1.2f)); // viga de cumbrera
 
+            // cerrar los HASTIALES (triángulos bajo el techo) con tablones escalonados,
+            // así no queda abierto arriba. Frente y fondo.
+            GableFill(g, wood, D / 2f, W, eaveH, ridgeY, t);
+            GableFill(g, wood, -D / 2f, W, eaveH, ridgeY, t);
+
             // postes de esquina (madera oscura) — dan estructura de galpón
             foreach (var sx in new[] { -1f, 1f })
                 foreach (var sz in new[] { -1f, 1f })
@@ -309,6 +322,21 @@ namespace FolkloreArchives.MapGen
             cube.transform.localScale = size;
             cube.GetComponent<MeshRenderer>().sharedMaterial = m;
             return cube;
+        }
+
+        // Rellena el triángulo del hastial (entre el alero y la cumbrera) con tablones
+        // horizontales que se angostan hacia arriba → tapa el hueco sin dejarlo abierto.
+        static void GableFill(Transform g, Material mat, float zPlane, float W, float eaveH, float ridgeY, float t)
+        {
+            const int N = 7;
+            float dh = (ridgeY - eaveH) / N;
+            for (int i = 0; i < N; i++)
+            {
+                float yTop = eaveH + (i + 1) * dh;                       // ancho según el borde superior
+                float w = W * (ridgeY - yTop) / (ridgeY - eaveH);         // 0 en la cumbrera
+                if (w < 0.15f) continue;
+                BarnBox(g, mat, new Vector3(0f, eaveH + (i + 0.5f) * dh, zPlane), new Vector3(w, dh + 0.03f, t));
+            }
         }
 
         // ── Galería del codo NE (x8..16, z7..14): abierta al este y al norte ─────
