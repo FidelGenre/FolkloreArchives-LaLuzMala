@@ -279,14 +279,10 @@ namespace FolkloreArchives.MapGen
             BarnBox(g, wood, new Vector3(1.5f + sideW / 2f, eaveH / 2f, D / 2f), new Vector3(sideW, eaveH, t));
             BarnBox(g, wood, new Vector3(0f, (2.8f + eaveH) / 2f, D / 2f), new Vector3(3.0f, eaveH - 2.8f, t)); // dintel
             // hojas del portón (un poco entornadas, madera oscura)
-            // una hoja abierta de par en par, la otra entornada (barn abandonado). Sin
-            // collider para poder entrar por el hueco.
-            var dL = BarnBox(g, door, new Vector3(-0.75f, 1.4f, D / 2f + 0.06f), new Vector3(1.45f, 2.7f, 0.08f));
-            dL.transform.localRotation = Quaternion.Euler(0f, 75f, 0f);
-            var dR = BarnBox(g, door, new Vector3(0.75f, 1.4f, D / 2f + 0.06f), new Vector3(1.45f, 2.7f, 0.08f));
-            dR.transform.localRotation = Quaternion.Euler(0f, -18f, 0f);
-            Object.DestroyImmediate(dL.GetComponent<Collider>());
-            Object.DestroyImmediate(dR.GetComponent<Collider>());
+            // hojas del portón con BISAGRA en el marco (no giran sobre su centro). Una
+            // bien abierta, la otra entornada (galpón abandonado). Sin collider → se entra.
+            BarnDoorLeaf(g, door, -1.5f, +1f, -70f, D / 2f, 1.45f, 2.7f, 1.35f);  // izquierda, abierta
+            BarnDoorLeaf(g, door, 1.5f, -1f, 22f, D / 2f, 1.45f, 2.7f, 1.35f);    // derecha, entornada
 
             // TECHO a dos aguas: dos planos inclinados que se juntan en la cumbrera
             float run = W / 2f, rise = ridgeY - eaveH;
@@ -329,6 +325,24 @@ namespace FolkloreArchives.MapGen
             cube.transform.localScale = size;
             cube.GetComponent<MeshRenderer>().sharedMaterial = m;
             return cube;
+        }
+
+        // Hoja de portón que gira sobre la BISAGRA (en el marco), no sobre su centro:
+        // un pivote vacío en el marco + la hoja colgada a un costado. dir=+1 la hoja va
+        // hacia +x desde la bisagra, dir=-1 hacia -x.
+        static void BarnDoorLeaf(Transform g, Material m, float hingeX, float dir, float openDeg,
+                                 float z, float w, float h, float yc)
+        {
+            var hinge = new GameObject("BarnDoor");
+            hinge.transform.SetParent(g, false);
+            hinge.transform.localPosition = new Vector3(hingeX, yc, z);
+            hinge.transform.localRotation = Quaternion.Euler(0f, openDeg, 0f);
+            var leaf = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            leaf.transform.SetParent(hinge.transform, false);
+            leaf.transform.localPosition = new Vector3(dir * w / 2f, 0f, 0f);
+            leaf.transform.localScale = new Vector3(w, h, 0.08f);
+            leaf.GetComponent<MeshRenderer>().sharedMaterial = m;
+            Object.DestroyImmediate(leaf.GetComponent<Collider>());
         }
 
         // Rellena el triángulo del hastial (entre el alero y la cumbrera) con tablones

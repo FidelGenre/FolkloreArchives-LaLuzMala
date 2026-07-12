@@ -177,13 +177,17 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] Camino19 = { MainCriminalCamp, new Vector2(919, 453), HostageArea };     // cr: delincuentes → rehenes
         public static readonly Vector2[] Camino20 = { Grave, CabinEast, EscapePoint };                            // c15: tumba → cabaña este → escape
         public static readonly Vector2[] Camino21 = { MainCriminalCamp, new Vector2(808, 268), EscapePoint };     // c16e: delincuentes → escape
+        // caminito corto de la puerta de la casa al portón del galpón
+        public static readonly Vector2[] BarnPath = {
+            new Vector2(404, 618), new Vector2(398, 623), new Vector2(391, 628)
+        };
         // Todos ondulados en S (no líneas rectas).
         public static readonly Vector2[][] ExtraTrails = {
             Snake(Camino9, 16f, 8f), Snake(Camino10, 16f, 8f), Snake(Camino11, 16f, 8f),
             Snake(Camino12, 16f, 8f), Snake(Camino13, 16f, 8f), Snake(Camino14, 18f, 8f),
             Snake(Camino15, 16f, 8f), Snake(Camino16, 16f, 8f), Snake(Camino17, 16f, 8f),
             Snake(Camino18, 16f, 8f), Snake(Camino19, 14f, 8f), Snake(Camino20, 16f, 8f),
-            Snake(Camino21, 16f, 8f)
+            Snake(Camino21, 16f, 8f), BarnPath
         };
 
         // ===== ZONA CENTRAL: montañas + lago gigante (owner: unir Campo de Caza +
