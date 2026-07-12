@@ -428,9 +428,9 @@ namespace FolkloreArchives.MapGen
                     // no solo el centro, así el patio/perímetro queda libre
                     if (p.x > MapLayout.OldLadyLotMin.x - 1f && p.x < MapLayout.OldLadyLotMax.x + 1f &&
                         p.y > MapLayout.OldLadyLotMin.y - 1f && p.y < MapLayout.OldLadyLotMax.y + 1f) continue;
-                    // y sin árboles sobre la casa (que se corrió al costado del lote)
-                    if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 11f) continue;
-                    if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 7.5f) continue; // ni sobre el galpón
+                    // sin árboles sobre la casa ni el galpón (huella + margen)
+                    if (MapLayout.InRect(p, MapLayout.OldLadyHouseFootMin, MapLayout.OldLadyHouseFootMax, 3f)) continue;
+                    if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 3f)) continue;
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 12f) continue;
                     if (Vector2.Distance(p, MapLayout.SecondaryCamp) < 8f) continue;
                     if (Vector2.Distance(p, MapLayout.HostageArea) < 6f) continue;
@@ -1268,9 +1268,9 @@ namespace FolkloreArchives.MapGen
                     // no solo el centro, así el patio/perímetro queda libre
                     if (p.x > MapLayout.OldLadyLotMin.x - 1f && p.x < MapLayout.OldLadyLotMax.x + 1f &&
                         p.y > MapLayout.OldLadyLotMin.y - 1f && p.y < MapLayout.OldLadyLotMax.y + 1f) continue;
-                    // y sin árboles sobre la casa (que se corrió al costado del lote)
-                    if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 11f) continue;
-                    if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 7.5f) continue; // ni sobre el galpón
+                    // sin árboles sobre la casa ni el galpón (huella + margen)
+                    if (MapLayout.InRect(p, MapLayout.OldLadyHouseFootMin, MapLayout.OldLadyHouseFootMax, 3f)) continue;
+                    if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 3f)) continue;
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 12f) continue;
                     if (Vector2.Distance(p, MapLayout.SecondaryCamp) < 8f) continue;
                     if (Vector2.Distance(p, MapLayout.HostageArea) < 6f) continue;
@@ -1542,9 +1542,10 @@ namespace FolkloreArchives.MapGen
                     var p = new Vector2(wx, wz);
 
                     // sin pasto SOLO bajo la huella de la casa (que no atraviese el piso);
-                    // el resto del lote lleva pasto hasta las paredes (pedido del owner)
-                    if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 7.5f) continue;
-                    if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 5.5f) continue; // bajo el galpón
+                    // sin pasto bajo la HUELLA de la casa y el galpón (que no atraviese el
+                    // piso); afuera el pasto llega hasta las paredes (pedido del owner)
+                    if (MapLayout.InRect(p, MapLayout.OldLadyHouseFootMin, MapLayout.OldLadyHouseFootMax, 0.2f)) continue;
+                    if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 0.2f)) continue;
 
                     float southDg = MapLayout.PavedRouteZAt(p.x) - p.y;
                     if (southDg > MapLayout.ShoreVegFar) continue; // out in the water
@@ -1983,9 +1984,10 @@ namespace FolkloreArchives.MapGen
                     var p = new Vector2(wx, wz);
 
                     // sin pasto SOLO bajo la huella de la casa (que no atraviese el piso);
-                    // el resto del lote lleva pasto hasta las paredes (pedido del owner)
-                    if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 7.5f) continue;
-                    if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 5.5f) continue; // bajo el galpón
+                    // sin pasto bajo la HUELLA de la casa y el galpón (que no atraviese el
+                    // piso); afuera el pasto llega hasta las paredes (pedido del owner)
+                    if (MapLayout.InRect(p, MapLayout.OldLadyHouseFootMin, MapLayout.OldLadyHouseFootMax, 0.2f)) continue;
+                    if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 0.2f)) continue;
 
                     // claro del campamento (fogata + troncos + carpas + mesa)
                     if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius) continue;

@@ -64,6 +64,16 @@ namespace FolkloreArchives.MapGen
         // + algo al norte), cerca. Lo usan HouseBuilder (colocar) y ForestBuilder
         // (despejar pasto/árboles bajo él).
         public static readonly Vector2 OldLadyBarnCenter = new Vector2(391, 633);
+
+        // HUELLAS rectangulares (min/max en x,z world) de la casa y el galpón, para que
+        // ForestBuilder despeje el pasto EXACTO bajo cada edificio (el despeje por radio
+        // dejaba pasto atravesando el piso en las esquinas). Ajustar si sobra/falta.
+        public static readonly Vector2 OldLadyHouseFootMin = new Vector2(394f, 616f);
+        public static readonly Vector2 OldLadyHouseFootMax = new Vector2(415f, 634f);
+        public static readonly Vector2 OldLadyBarnFootMin  = new Vector2(387f, 628f);
+        public static readonly Vector2 OldLadyBarnFootMax  = new Vector2(395f, 638f);
+        public static bool InRect(Vector2 p, Vector2 mn, Vector2 mx, float m) =>
+            p.x > mn.x - m && p.x < mx.x + m && p.y > mn.y - m && p.y < mx.y + m;
         public static readonly Vector2 HuntingField     = new Vector2(165, 397);  // "CAMPO DE CAZA" (oeste)
         public static readonly Vector2 Grave            = new Vector2(775, 475);  // "TUMBA" — este, frente al Mirador Este
         public static readonly Vector2 MainCriminalCamp = new Vector2(905, 395);  // "DELINCUENTES PRINCIPAL" (este)
