@@ -430,6 +430,7 @@ namespace FolkloreArchives.MapGen
                         p.y > MapLayout.OldLadyLotMin.y - 1f && p.y < MapLayout.OldLadyLotMax.y + 1f) continue;
                     // y sin árboles sobre la casa (que se corrió al costado del lote)
                     if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 8f) continue;
+                    if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 6f) continue; // ni sobre el galpón
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 12f) continue;
                     if (Vector2.Distance(p, MapLayout.SecondaryCamp) < 8f) continue;
                     if (Vector2.Distance(p, MapLayout.HostageArea) < 6f) continue;
@@ -1269,6 +1270,7 @@ namespace FolkloreArchives.MapGen
                         p.y > MapLayout.OldLadyLotMin.y - 1f && p.y < MapLayout.OldLadyLotMax.y + 1f) continue;
                     // y sin árboles sobre la casa (que se corrió al costado del lote)
                     if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 8f) continue;
+                    if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 6f) continue; // ni sobre el galpón
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 12f) continue;
                     if (Vector2.Distance(p, MapLayout.SecondaryCamp) < 8f) continue;
                     if (Vector2.Distance(p, MapLayout.HostageArea) < 6f) continue;
@@ -1542,6 +1544,7 @@ namespace FolkloreArchives.MapGen
                     // sin pasto SOLO bajo la huella de la casa (que no atraviese el piso);
                     // el resto del lote lleva pasto hasta las paredes (pedido del owner)
                     if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 5.5f) continue;
+                    if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 4.5f) continue; // bajo el galpón
 
                     float southDg = MapLayout.PavedRouteZAt(p.x) - p.y;
                     if (southDg > MapLayout.ShoreVegFar) continue; // out in the water
@@ -1982,6 +1985,7 @@ namespace FolkloreArchives.MapGen
                     // sin pasto SOLO bajo la huella de la casa (que no atraviese el piso);
                     // el resto del lote lleva pasto hasta las paredes (pedido del owner)
                     if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 5.5f) continue;
+                    if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 4.5f) continue; // bajo el galpón
 
                     // claro del campamento (fogata + troncos + carpas + mesa)
                     if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius) continue;

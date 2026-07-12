@@ -198,7 +198,89 @@ namespace FolkloreArchives.MapGen
                 r.sharedMaterials = outM;
             }
             BuilderUtils.MarkStaticRecursive(inst.transform);
+
+            // luces interiores cálidas (la casa viene a oscuras) + galpón al lado
+            Bounds hb = new Bounds(inst.transform.position, Vector3.one);
+            var rb = inst.GetComponentsInChildren<Renderer>();
+            if (rb.Length > 0) { hb = rb[0].bounds; foreach (var r in rb) hb.Encapsulate(r.bounds); }
+            AddInteriorLights(inst.transform, hb);
+            BuildBarn(parent, terrain);
+
             Debug.Log($"<color=lime>Casa de la vieja: modelo ALP en OldLadyRanch (materiales a URP: {fixedMats}).</color>");
+        }
+
+        // Luces cálidas tenues repartidas dentro de la casa (a la altura del techo), con
+        // parpadeo en algunas para el clima de terror. Sin sombras (perf en el bosque).
+        static void AddInteriorLights(Transform parent, Bounds hb)
+        {
+            float y = hb.min.y + hb.size.y * 0.72f;   // cerca del techo
+            const int nx = 2, nz = 2;
+            for (int ix = 0; ix < nx; ix++)
+                for (int iz = 0; iz < nz; iz++)
+                {
+                    float fx = (ix + 1f) / (nx + 1f), fz = (iz + 1f) / (nz + 1f);
+                    var p = new Vector3(Mathf.Lerp(hb.min.x, hb.max.x, fx), y,
+                                        Mathf.Lerp(hb.min.z, hb.max.z, fz));
+                    var go = new GameObject($"HouseLight_{ix}{iz}");
+                    go.transform.SetParent(parent, true);
+                    go.transform.position = p;
+                    var l = go.AddComponent<Light>();
+                    l.type = LightType.Point;
+                    l.color = new Color(1f, 0.72f, 0.42f);   // bombita cálida vieja
+                    l.intensity = 2.0f;
+                    l.range = 7.5f;
+                    l.shadows = LightShadows.None;
+                    if ((ix + iz) % 2 == 0) go.AddComponent<FolkloreArchives.LightFlicker>();
+                }
+        }
+
+        // ── Galpón/granero rústico de chapa+madera al lado de la casa (procedural) ──
+        const float BarnYaw = -55f;   // portón (+Z) mirando hacia la casa (ajustable)
+        static void BuildBarn(Transform parent, Terrain terrain)
+        {
+            var g = BuilderUtils.Group(parent, "OldLadyBarn", Vector3.zero);
+            Vector2 c = MapLayout.OldLadyBarnCenter;
+            float gy = terrain != null
+                ? terrain.SampleHeight(new Vector3(c.x, 0f, c.y)) + terrain.transform.position.y
+                : 20f;
+            g.position = new Vector3(c.x, gy, c.y);
+            g.rotation = Quaternion.Euler(0f, BarnYaw, 0f);
+
+            var wood = HouseMat("barn_wood", "WoodFloor064", new Color(0.48f, 0.38f, 0.26f), 0.1f, 2f);
+            var roof = HouseMat("barn_roof", "CorrugatedSteel007A", new Color(0.34f, 0.35f, 0.34f), 0.3f, 2.5f);
+
+            float W = 6.5f, D = 5f, H = 3.2f, t = 0.2f;
+            BarnBox(g, wood, new Vector3(0f, 0.05f, 0f), new Vector3(W, 0.1f, D));      // piso
+            BarnBox(g, wood, new Vector3(0f, H / 2f, -D / 2f), new Vector3(W, H, t));   // fondo
+            BarnBox(g, wood, new Vector3(-W / 2f, H / 2f, 0f), new Vector3(t, H, D));   // izquierda
+            BarnBox(g, wood, new Vector3(W / 2f, H / 2f, 0f), new Vector3(t, H, D));    // derecha
+            float sideW = W / 2f - 1.2f;                                               // frente con portón
+            BarnBox(g, wood, new Vector3(-(1.2f + sideW / 2f), H / 2f, D / 2f), new Vector3(sideW, H, t));
+            BarnBox(g, wood, new Vector3(1.2f + sideW / 2f, H / 2f, D / 2f), new Vector3(sideW, H, t));
+            BarnBox(g, wood, new Vector3(0f, 2.7f, D / 2f), new Vector3(2.4f, 1.0f, t)); // dintel
+            var r = BarnBox(g, roof, new Vector3(0f, H + 0.18f, 0f), new Vector3(W + 0.6f, 0.15f, D + 0.9f));
+            r.transform.localRotation = Quaternion.Euler(8f, 0f, 0f);                   // techo a un agua
+
+            // luz tenue parpadeante dentro del galpón
+            var lg = new GameObject("BarnLight");
+            lg.transform.SetParent(g, false);
+            lg.transform.localPosition = new Vector3(0f, H - 0.4f, 0f);
+            var l = lg.AddComponent<Light>();
+            l.type = LightType.Point; l.color = new Color(1f, 0.66f, 0.36f);
+            l.intensity = 1.4f; l.range = 6f; l.shadows = LightShadows.None;
+            lg.AddComponent<FolkloreArchives.LightFlicker>();
+
+            BuilderUtils.MarkStaticRecursive(g);
+        }
+
+        static GameObject BarnBox(Transform g, Material m, Vector3 localCenter, Vector3 size)
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);  // trae BoxCollider (paredes sólidas)
+            cube.transform.SetParent(g, false);
+            cube.transform.localPosition = localCenter;
+            cube.transform.localScale = size;
+            cube.GetComponent<MeshRenderer>().sharedMaterial = m;
+            return cube;
         }
 
         // ── Galería del codo NE (x8..16, z7..14): abierta al este y al norte ─────
