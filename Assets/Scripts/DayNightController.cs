@@ -28,6 +28,8 @@ namespace FolkloreArchives
 
         // Compatibilidad: el resto del código (MapGenerator) sigue pensando en día/noche.
         public bool IsDay => _phase == Phase.Day;
+        public bool IsNight => _phase == Phase.Night;   // lo usa la Luz Mala (solo de noche)
+        public Phase CurrentPhase => _phase;
 
         // Aplica la fase inicial al entrar en Play. Sin esto, _phase decía "Night" pero
         // el cielo/sol/niebla de la escena quedaban como los dejó la generación (o el

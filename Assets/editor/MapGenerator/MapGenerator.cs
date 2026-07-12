@@ -90,6 +90,7 @@ namespace FolkloreArchives.MapGen
             // SilhouetteMountainBuilder.Build(root.transform);
             // MountainRingBuilder.Build(root.transform, terrain); // montañas 3D reales HQP
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
+            LuzMalaBuilder.Build(root.transform, terrain);   // La Luz Mala (aparece de noche)
             StoryTriggerBuilder.Build(root.transform, terrain);
             TestPlayerBuilder.Build(root.transform, terrain);
             Lap("Casa+Story+Player");
