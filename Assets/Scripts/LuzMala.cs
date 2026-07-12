@@ -23,10 +23,16 @@ namespace FolkloreArchives
     public class LuzMala : MonoBehaviour
     {
         [Header("Aspecto")]
-        public Color color = new Color(1f, 0.92f, 0.55f);  // amarillo pálido fantasmal
-        public float lightRange = 18f;
-        public float baseIntensity = 6f;
-        public float glowSize = 2.2f;      // tamaño del resplandor
+        public Color idleColor = new Color(0.9f, 0.95f, 1f);   // BLANCA cuando está tranquila
+        public Color aggroColor = new Color(1f, 0.18f, 0.12f); // ROJA cuando se pone agresiva
+        public float lightRange = 26f;
+        public float baseIntensity = 7f;
+        public float glowSize = 6f;        // tamaño del resplandor (grande)
+
+        [Header("Pruebas")]
+        public bool holdStill = true;      // no se mueve (para verla bien). Poner false para el acecho.
+
+        Color _curColor;
 
         [Header("Flotación")]
         public float hoverHeight = 1.7f;
@@ -68,8 +74,9 @@ namespace FolkloreArchives
                 lg.transform.SetParent(transform, false);
                 _light = lg.AddComponent<Light>();
             }
+            _curColor = idleColor;
             _light.type = LightType.Point;
-            _light.color = color;
+            _light.color = _curColor;
             _light.range = lightRange;
             _light.shadows = LightShadows.None;
 
@@ -83,7 +90,7 @@ namespace FolkloreArchives
             _bbScale = new[] { glowSize * 2.2f, glowSize * 0.9f, glowSize * 3.2f };
             _bbFlickerSeed = new[] { Random.value * 10f, Random.value * 10f, Random.value * 10f };
             var texs = new[] { radial, radial, rays };
-            var tints = new[] { color * 0.45f, color * 1.2f, color * 0.5f };
+            var tints = new[] { _curColor * 0.45f, _curColor * 1.2f, _curColor * 0.5f };
             for (int i = 0; i < 3; i++)
             {
                 var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -122,28 +129,37 @@ namespace FolkloreArchives
                 lit = FlashlightOn(cam) && look > 0.7f && dist < 32f;
             }
 
-            // movimiento
+            // ESTADO: agresiva = está cerca y NO la mirás (te acecha) → se pone ROJA.
+            //         tranquila/mirándola/lejos → BLANCA.
+            bool aggro = cam != null && dist < activateDistance * 0.7f && dist > killDistance && !(lookedAt || lit);
+            _curColor = Color.Lerp(_curColor, aggro ? aggroColor : idleColor, 3f * dt);
+            if (_light != null) _light.color = _curColor;
+
+            // movimiento (si holdStill, se queda quieta para verla bien)
             Vector3 planar = Vector3.zero;
-            if (cam != null && (lookedAt || lit))
+            if (!holdStill)
             {
-                Vector3 away = pos - cam.transform.position; away.y = 0f;
-                planar = away.normalized * retreatSpeed;
-                _intensity = Mathf.Lerp(_intensity, baseIntensity * 0.25f, 6f * dt);
-            }
-            else if (cam != null && dist < activateDistance && dist > killDistance)
-            {
-                Vector3 toward = cam.transform.position - pos; toward.y = 0f;
-                planar = toward.normalized * approachSpeed;
-                _intensity = Mathf.Lerp(_intensity, baseIntensity * 1.15f, 3f * dt);
-            }
-            else
-            {
-                float nx = Mathf.PerlinNoise(_seed, Time.time * wanderSpeed) - 0.5f;
-                float nz = Mathf.PerlinNoise(Time.time * wanderSpeed, _seed) - 0.5f;
-                Vector3 target = _home + new Vector3(nx, 0f, nz) * wanderRadius * 2f;
-                planar = Vector3.ClampMagnitude(target - pos, 1f); planar.y = 0f;
-                planar *= wanderSpeed * 4f;
-                _intensity = Mathf.Lerp(_intensity, baseIntensity, 2f * dt);
+                if (cam != null && (lookedAt || lit))
+                {
+                    Vector3 away = pos - cam.transform.position; away.y = 0f;
+                    planar = away.normalized * retreatSpeed;
+                    _intensity = Mathf.Lerp(_intensity, baseIntensity * 0.25f, 6f * dt);
+                }
+                else if (cam != null && dist < activateDistance && dist > killDistance)
+                {
+                    Vector3 toward = cam.transform.position - pos; toward.y = 0f;
+                    planar = toward.normalized * approachSpeed;
+                    _intensity = Mathf.Lerp(_intensity, baseIntensity * 1.15f, 3f * dt);
+                }
+                else
+                {
+                    float nx = Mathf.PerlinNoise(_seed, Time.time * wanderSpeed) - 0.5f;
+                    float nz = Mathf.PerlinNoise(Time.time * wanderSpeed, _seed) - 0.5f;
+                    Vector3 target = _home + new Vector3(nx, 0f, nz) * wanderRadius * 2f;
+                    planar = Vector3.ClampMagnitude(target - pos, 1f); planar.y = 0f;
+                    planar *= wanderSpeed * 4f;
+                    _intensity = Mathf.Lerp(_intensity, baseIntensity, 2f * dt);
+                }
             }
             pos += planar * dt;
 
@@ -157,7 +173,7 @@ namespace FolkloreArchives
             if (_light != null) _light.intensity = inten;
             UpdateGlow(cam, inten);
 
-            if (cam != null && dist < killDistance && Time.time >= _scareCooldown)
+            if (!holdStill && cam != null && dist < killDistance && Time.time >= _scareCooldown)
                 Scare(cam, pos);
         }
 
@@ -175,7 +191,7 @@ namespace FolkloreArchives
                 _bb[i].localScale = Vector3.one * (_bbScale[i] * pulse);
                 if (_bbMat[i] != null && _bbMat[i].HasProperty("_BaseColor"))
                 {
-                    Color baseT = (i == 1) ? color * 1.2f : (i == 0 ? color * 0.45f : color * 0.5f);
+                    Color baseT = (i == 1) ? _curColor * 1.2f : (i == 0 ? _curColor * 0.45f : _curColor * 0.5f);
                     _bbMat[i].SetColor("_BaseColor", baseT * (0.5f + k));
                 }
             }
