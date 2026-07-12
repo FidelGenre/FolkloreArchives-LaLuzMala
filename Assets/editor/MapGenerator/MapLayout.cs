@@ -60,9 +60,9 @@ namespace FolkloreArchives.MapGen
         // por OldLadyRanch). Lo usan HouseBuilder (dónde colocar la casa) y ForestBuilder
         // (dónde despejar el pasto bajo la huella). Un solo punto → siempre alineados.
         public static readonly Vector2 OldLadyHouseCenter = new Vector2(404, 625);
-        // galpón/granero de la vieja: al SE de la casa. Lo usan HouseBuilder (colocar) y
-        // ForestBuilder (despejar pasto/árboles bajo él).
-        public static readonly Vector2 OldLadyBarnCenter = new Vector2(416, 616);
+        // galpón/granero de la vieja: DETRÁS de la casa (norte). Lo usan HouseBuilder
+        // (colocar) y ForestBuilder (despejar pasto/árboles bajo él).
+        public static readonly Vector2 OldLadyBarnCenter = new Vector2(404, 644);
         public static readonly Vector2 HuntingField     = new Vector2(165, 397);  // "CAMPO DE CAZA" (oeste)
         public static readonly Vector2 Grave            = new Vector2(775, 475);  // "TUMBA" — este, frente al Mirador Este
         public static readonly Vector2 MainCriminalCamp = new Vector2(905, 395);  // "DELINCUENTES PRINCIPAL" (este)

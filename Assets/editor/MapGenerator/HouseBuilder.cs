@@ -234,8 +234,9 @@ namespace FolkloreArchives.MapGen
                 }
         }
 
-        // ── Galpón/granero rústico de chapa+madera al lado de la casa (procedural) ──
-        const float BarnYaw = -55f;   // portón (+Z) mirando hacia la casa (ajustable)
+        // ── Galpón/granero rústico de madera + chapa, techo a DOS AGUAS (procedural) ──
+        //    Detrás de la casa y mirando para el mismo lado (portón en +Z local).
+        const float BarnYaw = 180f;
         static void BuildBarn(Transform parent, Terrain terrain)
         {
             var g = BuilderUtils.Group(parent, "OldLadyBarn", Vector3.zero);
@@ -246,28 +247,55 @@ namespace FolkloreArchives.MapGen
             g.position = new Vector3(c.x, gy, c.y);
             g.rotation = Quaternion.Euler(0f, BarnYaw, 0f);
 
-            var wood = HouseMat("barn_wood", "WoodFloor064", new Color(0.48f, 0.38f, 0.26f), 0.1f, 2f);
-            var roof = HouseMat("barn_roof", "CorrugatedSteel007A", new Color(0.34f, 0.35f, 0.34f), 0.3f, 2.5f);
+            var wood = HouseMat("barn_wood", "WoodFloor064", new Color(0.46f, 0.36f, 0.24f), 0.1f, 2f);
+            var roof = HouseMat("barn_roof", "CorrugatedSteel007A", new Color(0.32f, 0.33f, 0.32f), 0.3f, 2.5f);
+            var beam = BuilderUtils.Mat("barn_beam", new Color(0.22f, 0.16f, 0.10f), 0f); // madera oscura (postes/vigas)
 
-            float W = 6.5f, D = 5f, H = 3.2f, t = 0.2f;
-            BarnBox(g, wood, new Vector3(0f, 0.05f, 0f), new Vector3(W, 0.1f, D));      // piso
-            BarnBox(g, wood, new Vector3(0f, H / 2f, -D / 2f), new Vector3(W, H, t));   // fondo
-            BarnBox(g, wood, new Vector3(-W / 2f, H / 2f, 0f), new Vector3(t, H, D));   // izquierda
-            BarnBox(g, wood, new Vector3(W / 2f, H / 2f, 0f), new Vector3(t, H, D));    // derecha
-            float sideW = W / 2f - 1.2f;                                               // frente con portón
-            BarnBox(g, wood, new Vector3(-(1.2f + sideW / 2f), H / 2f, D / 2f), new Vector3(sideW, H, t));
-            BarnBox(g, wood, new Vector3(1.2f + sideW / 2f, H / 2f, D / 2f), new Vector3(sideW, H, t));
-            BarnBox(g, wood, new Vector3(0f, 2.7f, D / 2f), new Vector3(2.4f, 1.0f, t)); // dintel
-            var r = BarnBox(g, roof, new Vector3(0f, H + 0.18f, 0f), new Vector3(W + 0.6f, 0.15f, D + 0.9f));
-            r.transform.localRotation = Quaternion.Euler(8f, 0f, 0f);                   // techo a un agua
+            const float W = 7f, D = 9f, eaveH = 3.4f, ridgeY = 5.4f, t = 0.2f;
+
+            // piso + paredes
+            BarnBox(g, wood, new Vector3(0f, 0.05f, 0f), new Vector3(W, 0.1f, D));            // piso
+            BarnBox(g, wood, new Vector3(-W / 2f, eaveH / 2f, 0f), new Vector3(t, eaveH, D)); // lateral izq
+            BarnBox(g, wood, new Vector3(W / 2f, eaveH / 2f, 0f), new Vector3(t, eaveH, D));  // lateral der
+            BarnBox(g, wood, new Vector3(0f, eaveH / 2f, -D / 2f), new Vector3(W, eaveH, t)); // hastial trasero
+            // hastial frontal con PORTÓN doble (hueco 3.0)
+            float sideW = W / 2f - 1.5f;
+            BarnBox(g, wood, new Vector3(-(1.5f + sideW / 2f), eaveH / 2f, D / 2f), new Vector3(sideW, eaveH, t));
+            BarnBox(g, wood, new Vector3(1.5f + sideW / 2f, eaveH / 2f, D / 2f), new Vector3(sideW, eaveH, t));
+            BarnBox(g, wood, new Vector3(0f, (2.8f + eaveH) / 2f, D / 2f), new Vector3(3.0f, eaveH - 2.8f, t)); // dintel
+            // hojas del portón (un poco entornadas, madera oscura)
+            // una hoja abierta de par en par, la otra entornada (barn abandonado). Sin
+            // collider para poder entrar por el hueco.
+            var dL = BarnBox(g, beam, new Vector3(-0.75f, 1.4f, D / 2f + 0.06f), new Vector3(1.45f, 2.7f, 0.08f));
+            dL.transform.localRotation = Quaternion.Euler(0f, 75f, 0f);
+            var dR = BarnBox(g, beam, new Vector3(0.75f, 1.4f, D / 2f + 0.06f), new Vector3(1.45f, 2.7f, 0.08f));
+            dR.transform.localRotation = Quaternion.Euler(0f, -18f, 0f);
+            Object.DestroyImmediate(dL.GetComponent<Collider>());
+            Object.DestroyImmediate(dR.GetComponent<Collider>());
+
+            // TECHO a dos aguas: dos planos inclinados que se juntan en la cumbrera
+            float run = W / 2f, rise = ridgeY - eaveH;
+            float planeLen = Mathf.Sqrt(run * run + rise * rise);
+            float ang = Mathf.Atan2(rise, run) * Mathf.Rad2Deg;
+            var rL = BarnBox(g, roof, new Vector3(-run / 2f, (eaveH + ridgeY) / 2f, 0f), new Vector3(planeLen, 0.16f, D + 1.2f));
+            rL.transform.localRotation = Quaternion.Euler(0f, 0f, ang);   // sube hacia el centro
+            var rR = BarnBox(g, roof, new Vector3(run / 2f, (eaveH + ridgeY) / 2f, 0f), new Vector3(planeLen, 0.16f, D + 1.2f));
+            rR.transform.localRotation = Quaternion.Euler(0f, 0f, -ang);
+            BarnBox(g, beam, new Vector3(0f, ridgeY, 0f), new Vector3(0.25f, 0.25f, D + 1.2f)); // viga de cumbrera
+
+            // postes de esquina (madera oscura) — dan estructura de galpón
+            foreach (var sx in new[] { -1f, 1f })
+                foreach (var sz in new[] { -1f, 1f })
+                    BarnBox(g, beam, new Vector3(sx * (W / 2f - 0.15f), eaveH / 2f, sz * (D / 2f - 0.15f)),
+                            new Vector3(0.3f, eaveH, 0.3f));
 
             // luz tenue parpadeante dentro del galpón
             var lg = new GameObject("BarnLight");
             lg.transform.SetParent(g, false);
-            lg.transform.localPosition = new Vector3(0f, H - 0.4f, 0f);
+            lg.transform.localPosition = new Vector3(0f, eaveH - 0.4f, 0f);
             var l = lg.AddComponent<Light>();
             l.type = LightType.Point; l.color = new Color(1f, 0.66f, 0.36f);
-            l.intensity = 1.4f; l.range = 6f; l.shadows = LightShadows.None;
+            l.intensity = 1.4f; l.range = 7f; l.shadows = LightShadows.None;
             lg.AddComponent<FolkloreArchives.LightFlicker>();
 
             BuilderUtils.MarkStaticRecursive(g);
