@@ -199,14 +199,76 @@ namespace FolkloreArchives.MapGen
             }
             BuilderUtils.MarkStaticRecursive(inst.transform);
 
-            // luces interiores cálidas (la casa viene a oscuras) + galpón al lado
+            // apoyar la BASE real en el suelo (robusto al pivote y a la escala): calculo
+            // los bounds y bajo/subo la casa para que su punto más bajo quede en el terreno.
             Bounds hb = new Bounds(inst.transform.position, Vector3.one);
             var rb = inst.GetComponentsInChildren<Renderer>();
-            if (rb.Length > 0) { hb = rb[0].bounds; foreach (var r in rb) hb.Encapsulate(r.bounds); }
+            if (rb.Length > 0)
+            {
+                hb = rb[0].bounds; foreach (var r in rb) hb.Encapsulate(r.bounds);
+                float delta = (gy + AlpHouseDropY) - hb.min.y;
+                inst.transform.position += new Vector3(0f, delta, 0f);
+                hb.center += new Vector3(0f, delta, 0f);
+            }
+
+            // luces interiores cálidas (la casa viene a oscuras) + muebles + galpón
             AddInteriorLights(inst.transform, hb);
+            BuildAlpFurniture(inst.transform, hb);
             BuildBarn(parent, terrain);
 
             Debug.Log($"<color=lime>Casa de la vieja: modelo ALP en OldLadyRanch (materiales a URP: {fixedMats}).</color>");
+        }
+
+        // Muebles nappin dentro de la casa ALP. 1er pase: agrupo un living en el CENTRO
+        // (menos riesgo de chocar paredes interiores que no conozco). Se afina por captura.
+        static void BuildAlpFurniture(Transform parent, Bounds hb)
+        {
+            float floorY = hb.min.y + 0.05f;
+            // (nombre nappin, fx, fz, yaw) — fx/fz = fracción del footprint (0..1)
+            var items = new (string n, float fx, float fz, float yaw)[]
+            {
+                ("Sofa",         0.45f, 0.50f,   0f),
+                ("CoffeTable",   0.52f, 0.42f,   0f),
+                ("MediaConsole", 0.52f, 0.30f, 180f),
+                ("Chair1",       0.60f, 0.56f, 210f),
+                ("Lamp",         0.63f, 0.32f,   0f),
+                ("Dresser",      0.38f, 0.58f,  90f),
+                ("Storage1",     0.40f, 0.40f,   0f),
+                ("WaterGarden",  0.62f, 0.60f,   0f),
+            };
+            foreach (var it in items)
+            {
+                var pos = new Vector3(Mathf.Lerp(hb.min.x, hb.max.x, it.fx), floorY,
+                                      Mathf.Lerp(hb.min.z, hb.max.z, it.fz));
+                PlaceNappinWorld(parent, it.n, pos, it.yaw, floorY);
+            }
+        }
+
+        // Instancia un prefab nappin en una posición del mundo, convierte sus materiales a
+        // URP y apoya su base en floorY.
+        static void PlaceNappinWorld(Transform parent, string napName, Vector3 pos, float yaw, float floorY)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(NappinDir + napName + ".prefab");
+            if (prefab == null) { Debug.LogWarning("[HouseBuilder] falta mueble nappin: " + napName); return; }
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            inst.name = "Furn_" + napName;
+            inst.transform.SetParent(parent, true);
+            inst.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            inst.transform.position = pos;
+            foreach (var r in inst.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var src = r.sharedMaterials;
+                var o = new Material[src.Length];
+                for (int i = 0; i < src.Length; i++) o[i] = NappinUrp(src[i]);
+                r.sharedMaterials = o;
+            }
+            // apoyar la base en el piso
+            var rs = inst.GetComponentsInChildren<Renderer>();
+            if (rs.Length > 0)
+            {
+                Bounds b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
+                inst.transform.position += Vector3.up * (floorY - b.min.y);
+            }
         }
 
         // Luces cálidas tenues repartidas dentro de la casa (a la altura del techo), con
@@ -592,7 +654,7 @@ namespace FolkloreArchives.MapGen
         const bool UseAlpHouse = true;
         const string AlpHousePrefab = "Assets/ALP_Assets/country house01/Prefabs/House_Prefab.prefab";
         const float AlpHouseYaw = 180f;    // giro (ajustar por captura: entrada hacia el camino)
-        const float AlpHouseScale = 1f;    // escala nativa (metros reales)
+        const float AlpHouseScale = 1.35f; // agrandada: puertas/techos por encima del jugador (2.4m)
         const float AlpHouseDropY = 0f;    // ajuste fino de altura (si flota/se hunde)
 
         // Convierte los materiales built-in del pack nappin a URP (una vez por material,
