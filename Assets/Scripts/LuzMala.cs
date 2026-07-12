@@ -16,6 +16,7 @@
 //   · Si te alcanza → susto (apaga tu linterna) y se aleja de golpe.
 // ============================================================
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 namespace FolkloreArchives
@@ -33,6 +34,7 @@ namespace FolkloreArchives
         public bool holdStill = true;      // no se mueve (para verla bien). Poner false para el acecho.
 
         Color _curColor;
+        bool _manualRed;   // tecla L: fuerza roja (para verla)
 
         [Header("Flotación")]
         public float hoverHeight = 4f;
@@ -129,10 +131,15 @@ namespace FolkloreArchives
                 lit = FlashlightOn(cam) && look > 0.7f && dist < 32f;
             }
 
+            // Tecla L: alterna ROJO/BLANCO a mano (para verla).
+            if (Keyboard.current != null && Keyboard.current.lKey.wasPressedThisFrame)
+                _manualRed = !_manualRed;
+
             // ESTADO: agresiva = está cerca y NO la mirás (te acecha) → se pone ROJA.
-            //         tranquila/mirándola/lejos → BLANCA.
+            //         tranquila/mirándola/lejos → BLANCA. La L la fuerza a roja.
             bool aggro = cam != null && dist < activateDistance * 0.7f && dist > killDistance && !(lookedAt || lit);
-            _curColor = Color.Lerp(_curColor, aggro ? aggroColor : idleColor, 3f * dt);
+            bool wantRed = _manualRed || aggro;
+            _curColor = Color.Lerp(_curColor, wantRed ? aggroColor : idleColor, 4f * dt);
             if (_light != null) _light.color = _curColor;
 
             // movimiento (si holdStill, se queda quieta para verla bien)
