@@ -18,6 +18,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 
 namespace FolkloreArchives
 {
@@ -33,8 +34,16 @@ namespace FolkloreArchives
         [Header("Pruebas")]
         public bool holdStill = true;      // no se mueve (para verla bien). Poner false para el acecho.
 
+        [Header("Mundo se pone rojo (cuando está agresiva)")]
+        public bool redWorld = true;
+        public Color redFogColor = new Color(0.22f, 0.02f, 0.02f);
+        [Range(0f, 1f)] public float vignetteStrength = 0.55f;
+
         Color _curColor;
         bool _manualRed;   // tecla L: fuerza roja (para verla)
+        float _redAmount;  // 0..1 qué tan "roja/agresiva" está el mundo
+        Color _baseFog;
+        RawImage _vig;     // viñeta roja en pantalla
 
         [Header("Flotación")]
         public float hoverHeight = 4f;
@@ -82,16 +91,16 @@ namespace FolkloreArchives
             _light.range = lightRange;
             _light.shadows = LightShadows.None;
 
-            // halo radial suave y MOTEADO (neblina), sin rayos → difuso, no "estrella"
+            // halo moteado (neblina) + núcleo + RAYOS (las "puntas" que te gustaban)
             var radial = MakeRadialTex();
+            var rays = MakeRayTex();
 
-            // 3 capas de halo: exterior tenue + medio + núcleo. Todo círculos suaves.
             _bb = new Transform[3];
             _bbMat = new Material[3];
-            _bbScale = new[] { glowSize * 2.4f, glowSize * 1.0f, glowSize * 3.6f };
+            _bbScale = new[] { glowSize * 2.4f, glowSize * 1.0f, glowSize * 3.0f };
             _bbFlickerSeed = new[] { Random.value * 10f, Random.value * 10f, Random.value * 10f };
-            var texs = new[] { radial, radial, radial };
-            var tints = new[] { _curColor * 0.4f, _curColor * 1.3f, _curColor * 0.18f };
+            var texs = new[] { radial, radial, rays };
+            var tints = new[] { _curColor * 0.4f, _curColor * 1.3f, _curColor * 0.4f };
             for (int i = 0; i < 3; i++)
             {
                 var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -103,6 +112,25 @@ namespace FolkloreArchives
                 q.GetComponent<MeshRenderer>().sharedMaterial = _bbMat[i];
                 _bb[i] = q.transform;
             }
+
+            // viñeta roja de pantalla (para el "mundo se pone rojo")
+            if (redWorld)
+            {
+                var cGo = new GameObject("LuzMalaVignette");
+                cGo.transform.SetParent(transform, false);
+                var canvas = cGo.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 500;
+                _vig = new GameObject("Vig").AddComponent<RawImage>();
+                _vig.transform.SetParent(cGo.transform, false);
+                _vig.texture = MakeVignetteTex();
+                _vig.raycastTarget = false;
+                _vig.color = new Color(1f, 0f, 0f, 0f);
+                var rt = _vig.rectTransform;
+                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            }
+            _baseFog = RenderSettings.fogColor;
             _intensity = baseIntensity;
         }
 
@@ -111,7 +139,7 @@ namespace FolkloreArchives
             bool night = _dnc == null || _dnc.IsNight;
             if (_light != null && _light.enabled != night) _light.enabled = night;
             if (_bb != null) foreach (var b in _bb) if (b != null && b.gameObject.activeSelf != night) b.gameObject.SetActive(night);
-            if (!night) return;
+            if (!night) { ApplyRedAtmosphere(0f, Time.deltaTime); return; }
 
             float dt = Time.deltaTime;
             var cam = Camera.main;
@@ -181,6 +209,22 @@ namespace FolkloreArchives
 
             if (!holdStill && cam != null && dist < killDistance && Time.time >= _scareCooldown)
                 Scare(cam, pos);
+
+            ApplyRedAtmosphere(wantRed ? 1f : 0f, dt);   // mundo rojo cuando está agresiva
+        }
+
+        // tiñe el mundo de rojo (viñeta + niebla) según qué tan agresiva está la Luz
+        void ApplyRedAtmosphere(float target, float dt)
+        {
+            if (!redWorld) return;
+            _redAmount = Mathf.Lerp(_redAmount, target, 3f * dt);
+            float pulse = 0.7f + 0.3f * Mathf.Sin(Time.time * 4f);
+            if (_vig != null) _vig.color = new Color(0.8f, 0f, 0f, _redAmount * vignetteStrength * pulse);
+            if (RenderSettings.fog)
+            {
+                if (_redAmount < 0.02f) _baseFog = RenderSettings.fogColor;   // recaptura el fog de la fase
+                RenderSettings.fogColor = Color.Lerp(_baseFog, redFogColor, _redAmount * 0.6f);
+            }
         }
 
         // orienta cada capa hacia la cámara y le da un latido/parpadeo propio
@@ -191,13 +235,18 @@ namespace FolkloreArchives
             for (int i = 0; i < _bb.Length; i++)
             {
                 if (_bb[i] == null) continue;
-                if (cam != null) _bb[i].rotation = Quaternion.LookRotation(_bb[i].position - cam.transform.position);
+                if (cam != null)
+                {
+                    var look = Quaternion.LookRotation(_bb[i].position - cam.transform.position);
+                    if (i == 2) look *= Quaternion.AngleAxis(Time.time * 7f, Vector3.forward); // las puntas giran lento
+                    _bb[i].rotation = look;
+                }
                 // latido: cada capa palpita con su propia fase (fuego fatuo "vivo")
                 float pulse = 0.85f + 0.15f * Mathf.PerlinNoise(_bbFlickerSeed[i], Time.time * (5f + i));
                 _bb[i].localScale = Vector3.one * (_bbScale[i] * pulse);
                 if (_bbMat[i] != null && _bbMat[i].HasProperty("_BaseColor"))
                 {
-                    Color baseT = (i == 1) ? _curColor * 1.3f : (i == 0 ? _curColor * 0.4f : _curColor * 0.18f);
+                    Color baseT = (i == 1) ? _curColor * 1.3f : _curColor * 0.4f;
                     _bbMat[i].SetColor("_BaseColor", baseT * (0.5f + k));
                 }
             }
@@ -235,6 +284,24 @@ namespace FolkloreArchives
         }
 
         // ---- materiales/texturas procedurales ----
+
+        // viñeta: transparente en el centro, opaca en los bordes (para el rojo en pantalla)
+        static Texture2D MakeVignetteTex()
+        {
+            const int N = 256;
+            var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color[N * N];
+            for (int y = 0; y < N; y++)
+                for (int x = 0; x < N; x++)
+                {
+                    float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float a = Mathf.SmoothStep(0.5f, 1.3f, d);   // 0 centro → 1 bordes
+                    px[y * N + x] = new Color(1f, 1f, 1f, a);
+                }
+            t.SetPixels(px); t.Apply();
+            return t;
+        }
 
         static Material MakeAdditive(Texture2D tex, Color tint)
         {
@@ -274,6 +341,31 @@ namespace FolkloreArchives
                     float v = Mathf.Clamp01((halo * 0.75f + core) * mottle);
                     // corte limpio a cero entre d=0.8 y 1.0 → círculo, sin borde cuadrado
                     v *= Mathf.SmoothStep(1f, 0f, Mathf.Clamp01((d - 0.8f) / 0.2f));
+                    px[y * N + x] = new Color(v, v, v, v);
+                }
+            t.SetPixels(px); t.Apply();
+            return t;
+        }
+
+        // puntas/rayos: muchos finos e IRREGULARES (no cruz simétrica) — armónicos con
+        // fase distinta. Con el giro lento parecen destellos vivos, no una estrella fija.
+        static Texture2D MakeRayTex()
+        {
+            const int N = 128;
+            var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color[N * N];
+            for (int y = 0; y < N; y++)
+                for (int x = 0; x < N; x++)
+                {
+                    float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float fall = Mathf.Clamp01(1f - d);
+                    float ang = Mathf.Atan2(dy, dx);
+                    float s = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(ang * 9f + 0.5f)), 12f)
+                            + 0.7f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(ang * 14f + 2.3f)), 16f)
+                            + 0.5f * Mathf.Pow(Mathf.Max(0f, Mathf.Cos(ang * 6f - 1.1f)), 9f)
+                            + 0.4f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(ang * 21f + 4.0f)), 20f);
+                    float v = Mathf.Clamp01(s * Mathf.Pow(fall, 2.3f));
                     px[y * N + x] = new Color(v, v, v, v);
                 }
             t.SetPixels(px); t.Apply();
