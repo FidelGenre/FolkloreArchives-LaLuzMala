@@ -72,9 +72,55 @@ namespace FolkloreArchives.MapGen
             var td = AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainAssetPath);
             if (td == null) { Debug.LogWarning("No hay terreno cacheado — hacé Generate primero, después Repaint."); return; }
             PaintTextures(td);
+            ClearGrassOnMud(td);
             EditorUtility.SetDirty(td);
             AssetDatabase.SaveAssets();
-            Debug.Log("<color=lime>Terreno RE-PINTADO: bosque VERDE (capa 0) + BARRO Ground071 en caminos/campamento (capa 4). NO se tocaron árboles ni pasto.</color>");
+            Debug.Log("<color=lime>Terreno RE-PINTADO: bosque VERDE (capa 0) + BARRO Ground071 en caminos/campamento (capa 4). Pasto despejado SOLO sobre el barro; el bosque queda intacto.</color>");
+        }
+
+        // ¿este punto es zona de BARRO (camino a pie / campamento / rancho / galpón /
+        // cabaña)? Mismo criterio que el splat en PaintTextures, para que el pasto se
+        // despeje EXACTAMENTE donde está el barro (si no, el pasto denso tapa el barro).
+        // El bosque general (fuera de estas zonas) NO se toca.
+        static bool IsMudSpot(Vector2 p)
+        {
+            float footNoise = Mathf.PerlinNoise(p.x * 0.25f, p.y * 0.25f) * 0.3f;
+            float dFootTr = Mathf.Min(BuilderUtils.DistToPolyline(p, MapLayout.PathA),
+                            Mathf.Min(BuilderUtils.DistToScaryPaths(p),
+                            Mathf.Min(BuilderUtils.DistToExtraTrails(p),
+                                      BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
+            if (dFootTr < 5.0f + footNoise) return true;
+            if (Vector2.Distance(p, MapLayout.Campsite) < 18f) return true;
+            if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f) return true;
+            if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f) return true;
+            if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f) return true;
+            return false;
+        }
+
+        // Despeja el pasto DETAIL (todas las prototipos) SOLO sobre las zonas de barro,
+        // sobre el terreno ya cacheado. Así el barro re-pintado queda a la vista sin
+        // rehacer todo el bosque. El pasto del bosque queda como está.
+        static void ClearGrassOnMud(TerrainData td)
+        {
+            int nproto = td.detailPrototypes != null ? td.detailPrototypes.Length : 0;
+            if (nproto == 0) return;
+            int res = td.detailResolution;
+            int cleared = 0;
+            var layers = new int[nproto][,];
+            for (int i = 0; i < nproto; i++) layers[i] = td.GetDetailLayer(0, 0, i);
+            for (int zi = 0; zi < res; zi++)
+            {
+                float wz = zi / (float)(res - 1) * MapLayout.MapSize;
+                for (int xi = 0; xi < res; xi++)
+                {
+                    float wx = xi / (float)(res - 1) * MapLayout.MapSizeX;
+                    if (!IsMudSpot(new Vector2(wx, wz))) continue;
+                    for (int i = 0; i < nproto; i++)
+                        if (layers[i][zi, xi] != 0) { layers[i][zi, xi] = 0; cleared++; }
+                }
+            }
+            for (int i = 0; i < nproto; i++) td.SetDetailLayer(0, 0, i, layers[i]);
+            Debug.Log($"<color=cyan>[Repaint] pasto despejado sobre el barro: {cleared} celdas detail limpiadas.</color>");
         }
 
         // Pure procedural heightmap (normalised 0..1), no hand-edits applied.
