@@ -89,10 +89,10 @@ namespace FolkloreArchives
             // 3 capas: halo difuso grande, núcleo caliente chico, destellos
             _bb = new Transform[3];
             _bbMat = new Material[3];
-            _bbScale = new[] { glowSize * 2.2f, glowSize * 0.9f, glowSize * 3.2f };
+            _bbScale = new[] { glowSize * 2.2f, glowSize * 0.9f, glowSize * 2.5f };
             _bbFlickerSeed = new[] { Random.value * 10f, Random.value * 10f, Random.value * 10f };
             var texs = new[] { radial, radial, rays };
-            var tints = new[] { _curColor * 0.45f, _curColor * 1.2f, _curColor * 0.5f };
+            var tints = new[] { _curColor * 0.45f, _curColor * 1.2f, _curColor * 0.35f };
             for (int i = 0; i < 3; i++)
             {
                 var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -192,7 +192,12 @@ namespace FolkloreArchives
             for (int i = 0; i < _bb.Length; i++)
             {
                 if (_bb[i] == null) continue;
-                if (cam != null) _bb[i].rotation = Quaternion.LookRotation(_bb[i].position - cam.transform.position);
+                if (cam != null)
+                {
+                    var look = Quaternion.LookRotation(_bb[i].position - cam.transform.position);
+                    if (i == 2) look *= Quaternion.AngleAxis(Time.time * 7f, Vector3.forward); // los rayos giran lento
+                    _bb[i].rotation = look;
+                }
                 // latido: cada capa palpita con su propia fase (fuego fatuo "vivo")
                 float pulse = 0.85f + 0.15f * Mathf.PerlinNoise(_bbFlickerSeed[i], Time.time * (5f + i));
                 _bb[i].localScale = Vector3.one * (_bbScale[i] * pulse);
@@ -273,7 +278,8 @@ namespace FolkloreArchives
             return t;
         }
 
-        // rayos/destellos tipo estrella (cruz suave + halo)
+        // destellos: MUCHOS rayos finos e IRREGULARES (no una cruz simétrica) — suma de
+        // armónicos con fase distinta → parece un fuego fatuo, no una estrella navideña.
         static Texture2D MakeRayTex()
         {
             const int N = 128;
@@ -285,10 +291,13 @@ namespace FolkloreArchives
                     float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
                     float d = Mathf.Sqrt(dx * dx + dy * dy);
                     float fall = Mathf.Clamp01(1f - d);
-                    float streakH = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dy) * 12f), 2f);
-                    float streakV = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(dx) * 12f), 2f);
-                    float diag = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(Mathf.Abs(dx) - Mathf.Abs(dy)) * 16f), 2f) * 0.5f;
-                    float v = Mathf.Clamp01((streakH + streakV + diag) * fall * fall);
+                    float ang = Mathf.Atan2(dy, dx);
+                    // spokes irregulares: frecuencias y fases distintas, algunos más largos
+                    float s = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(ang * 9f + 0.5f)), 12f)
+                            + 0.7f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(ang * 14f + 2.3f)), 16f)
+                            + 0.5f * Mathf.Pow(Mathf.Max(0f, Mathf.Cos(ang * 6f - 1.1f)), 9f)
+                            + 0.4f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(ang * 21f + 4.0f)), 20f);
+                    float v = Mathf.Clamp01(s * Mathf.Pow(fall, 2.3f));
                     px[y * N + x] = new Color(v, v, v, v);
                 }
             t.SetPixels(px); t.Apply();
