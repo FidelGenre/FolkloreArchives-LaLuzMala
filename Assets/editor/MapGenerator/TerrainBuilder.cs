@@ -207,8 +207,10 @@ namespace FolkloreArchives.MapGen
             // como estaban: el pack PSX no trae asfalto ni nieve.
             bool psx = MapLayout.UsePsxGround;
             var layers = new TerrainLayer[7];
-            layers[0] = (psx ? PsxLayer("PSX_Seamless_WildForestGrass_128px",   6f) : null)
-                        ?? PackLayer("Grass_A_TerrainLayer",  "grass",    new Color(0.16f, 0.30f, 0.12f));
+            // capa 0 (base) = BARRO también: el owner quiere el suelo de barro. Con
+            // BaseMudBlend=1 el suelo base ya va a barro; esto asegura marrón aunque el
+            // splatmap use la capa 0. (El pasto verde es el DETAIL aparte, no esta capa.)
+            layers[0] = MuddyDirtLayer();
             // SUELO BASE: barro MARRÓN de verdad (Ground054). Antes usaba el PSX
             // ForestEarthGround, que es VERDOSO → con BaseMudBlend=1 todo el suelo salía
             // verde. Forzado a marrón (el owner quiere el suelo de barro).
@@ -349,16 +351,20 @@ namespace FolkloreArchives.MapGen
         // brown if the textures aren't present.
         static TerrainLayer MuddyDirtLayer()
         {
-            // Textura de TIERRA/BARRO marrón real (ambientCG Ground054, CC0) en vez de
-            // la "Muddy" del pack que era verde-oliva. Se usa directa (ya es marrón),
-            // sin el tinte multiplicativo que antes no alcanzaba a sacarle el verde.
-            const string dirtDir  = "Assets/ExternalAssets/TerrainTextures/Ground054/";
-            var diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(dirtDir + "Ground054_1K-JPG_Color.jpg");
+            // BARRO DE BOSQUE (ambientCG Ground071: tierra + ramitas, estilo Fears to
+            // Fathom). Fallback a Ground054 y luego a la Muddy tintada.
+            const string g071 = "Assets/ExternalAssets/TerrainTextures/Ground071/";
+            const string g054 = "Assets/ExternalAssets/TerrainTextures/Ground054/";
+            Texture2D diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(g071 + "Ground071_2K-JPG_Color.jpg");
             Texture2D normal = null;
-
+            if (diffuse != null) normal = BuilderUtils.LoadAsNormalMap(g071 + "Ground071_2K-JPG_NormalGL.jpg");
+            else
+            {
+                diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(g054 + "Ground054_1K-JPG_Color.jpg");
+                if (diffuse != null) normal = BuilderUtils.LoadAsNormalMap(g054 + "Ground054_1K-JPG_NormalGL.jpg");
+            }
             if (diffuse == null)
             {
-                // fallback: la vieja Muddy tintada (por si falta Ground054)
                 diffuse = BuilderUtils.Tint(
                     "Assets/TerrainSampleAssets/Textures/Terrain/Muddy_BaseColor.tif",
                     MapLayout.MudTint, "muddy_dirt_tinted");
@@ -366,10 +372,6 @@ namespace FolkloreArchives.MapGen
                     return PackLayer("Muddy_TerrainLayer", "dirt", new Color(0.42f, 0.30f, 0.18f));
                 normal = BuilderUtils.LoadAsNormalMap(
                     "Assets/TerrainSampleAssets/Textures/Terrain/Muddy_Normal.tif");
-            }
-            else
-            {
-                normal = BuilderUtils.LoadAsNormalMap(dirtDir + "Ground054_1K-JPG_NormalGL.jpg");
             }
 
             string layerPath = MapLayout.GeneratedFolder + "/layer_muddydirt.terrainlayer";
