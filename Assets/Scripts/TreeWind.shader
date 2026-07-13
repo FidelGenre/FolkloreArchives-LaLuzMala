@@ -13,8 +13,8 @@ Shader "Folklore/TreeWind"
         _BaseMap ("Base Map", 2D) = "white" {}
         _BaseColor ("Base Color", Color) = (1,1,1,1)
         _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.4
-        _WindStrength ("Wind Strength", Float) = 0.3
-        _WindSpeed ("Wind Speed", Float) = 0.9
+        _WindStrength ("Wind Strength", Float) = 0.55
+        _WindSpeed ("Wind Speed", Float) = 1.0
     }
     SubShader
     {
