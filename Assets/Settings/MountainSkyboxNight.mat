@@ -37,6 +37,6 @@ Material:
     - _MirrorOnBack: 0
     - _Rotation: 0
     m_Colors:
-    - _Tint: {r: 0.5028017, g: 0.4904735, b: 0.48963308, a: 0.5140093}
+    - _Tint: {r: 0.5039528, g: 0.48655957, b: 0.4853738, a: 0.519765}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

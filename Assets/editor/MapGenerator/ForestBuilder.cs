@@ -1070,7 +1070,7 @@ namespace FolkloreArchives.MapGen
             if (m.HasProperty("_Metallic"))   m.SetFloat("_Metallic", 0f);
             if (wind)
             {
-                if (m.HasProperty("_WindStrength")) m.SetFloat("_WindStrength", 0.55f);
+                if (m.HasProperty("_WindStrength")) m.SetFloat("_WindStrength", 0.68f);
                 if (m.HasProperty("_WindSpeed"))    m.SetFloat("_WindSpeed", 1.0f);
             }
             if (texPath != null)
