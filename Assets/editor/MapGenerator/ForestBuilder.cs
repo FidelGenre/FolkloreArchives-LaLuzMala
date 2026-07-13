@@ -1555,6 +1555,12 @@ namespace FolkloreArchives.MapGen
                     if (MapLayout.InRect(p, MapLayout.OldLadyHouseFootMin, MapLayout.OldLadyHouseFootMax, 0.2f)) continue;
                     if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 0.2f)) continue;
 
+                    // SIN PASTO sobre las zonas de BARRO (campamento 18m, senderos a pie 5m,
+                    // rancho/galpón/cabaña). Mismo criterio que el splat en TerrainBuilder,
+                    // así el pasto NO vuelve a tapar el barro en cada Generate. El bosque
+                    // general (fuera del barro) mantiene todo su pasto.
+                    if (TerrainBuilder.IsMudSpot(p)) continue;
+
                     // claro del campamento de los ladrones (suelo pisado bajo ranchos/fuego)
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 26f) continue;
 

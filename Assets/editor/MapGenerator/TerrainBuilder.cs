@@ -14,6 +14,11 @@ namespace FolkloreArchives.MapGen
     {
         public const string TerrainAssetPath = "Assets/_FolkloreArchives/Generated/FolkloreTerrain.asset";
 
+        // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
+        // que el próximo Generate re-pinte el terreno cacheado una sola vez.
+        const int SplatVersion = 5;
+        const string SplatVersionKey = "Folklore_SplatVersion";
+
         public static Terrain Build(Transform parent)
         {
             // CACHE: el terreno es lo más caro de generar (pintar 2048² celdas con
@@ -34,6 +39,18 @@ namespace FolkloreArchives.MapGen
                 td.SetHeights(0, 0, h);
                 PaintTextures(td);
                 AssetDatabase.CreateAsset(td, TerrainAssetPath);
+                EditorPrefs.SetInt(SplatVersionKey, SplatVersion);
+            }
+            else if (EditorPrefs.GetInt(SplatVersionKey, 0) != SplatVersion)
+            {
+                // Terreno cacheado pero el CÓDIGO del splat cambió (subí SplatVersion):
+                // re-pinto el barro UNA vez sobre el cache (no en cada Generate, es caro).
+                // Así el owner solo hace Generate y el barro aparece sin acordarse del botón.
+                Debug.Log("<color=yellow>[SPLAT] version nueva → re-pintando el barro sobre el terreno cacheado (una vez)…</color>");
+                PaintTextures(td);
+                EditorUtility.SetDirty(td);
+                AssetDatabase.SaveAssets();
+                EditorPrefs.SetInt(SplatVersionKey, SplatVersion);
             }
 
             var go = Terrain.CreateTerrainGameObject(td);
@@ -94,7 +111,7 @@ namespace FolkloreArchives.MapGen
         // cabaña)? Mismo criterio que el splat en PaintTextures, para que el pasto se
         // despeje EXACTAMENTE donde está el barro (si no, el pasto denso tapa el barro).
         // El bosque general (fuera de estas zonas) NO se toca.
-        static bool IsMudSpot(Vector2 p)
+        public static bool IsMudSpot(Vector2 p)
         {
             float footNoise = Mathf.PerlinNoise(p.x * 0.25f, p.y * 0.25f) * 0.3f;
             float dFootTr = Mathf.Min(BuilderUtils.DistToPolyline(p, MapLayout.PathA),
