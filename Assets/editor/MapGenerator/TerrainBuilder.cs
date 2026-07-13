@@ -285,6 +285,7 @@ namespace FolkloreArchives.MapGen
                     if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius + 2f) trail = 1f;
                     if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f) trail = 1f;
                     if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f) trail = 1f;
+                    if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f) trail = 1f;
                     // orillas arenosas del río: una franja de arena a lo largo de toda
                     // la ribera, enmascarada por ALTURA — desde justo bajo la línea de
                     // agua (7m) hasta ~2m por encima. Así la bajada del campamento al
@@ -320,6 +321,14 @@ namespace FolkloreArchives.MapGen
                     float w1 = dirt * (1f - w2 - w4 - w5);
                     float w3 = dry * (1f - w2 - w4 - w5 - w1);
                     float w0 = Mathf.Max(0f, 1f - w1 - w2 - w3 - w4 - w5);
+
+                    // CLAROS PISADOS = BARRO Ground071 SÍ O SÍ (pisa asfalto/arena/pasto/
+                    // lo que sea). Campamento, rancho, galpón, cabaña abandonada.
+                    if (Vector2.Distance(p, MapLayout.Campsite) < 18f
+                     || Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f
+                     || Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f
+                     || Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f)
+                    { w0 = 0f; w1 = 0f; w2 = 0f; w3 = 0f; w5 = 0f; w4 = 1f; }
 
                     // SUELO BASE EMBARRADO: lo que quedaba como pasto verde puro (w0)
                     // se reparte entre pasto y barro (capa Muddy) con manchones Perlin
