@@ -47,7 +47,7 @@ namespace FolkloreArchives
         bool _wasRed;      // para restaurar niebla/ambiente al volver a blanco
         RawImage _vig;     // viñeta roja en pantalla
         Light _flash;      // linterna del jugador (para hacerla parpadear en rojo)
-        float _nextBlink;
+        float _nextBlink, _flashBaseInt;
         bool _flashBlinking, _flashWantOn;
 
         [Header("Flotación")]
@@ -232,17 +232,23 @@ namespace FolkloreArchives
             bool red = _redAmount > 0.05f;
             if (!red)
             {
-                if (_flashBlinking) { _flash.enabled = _flashWantOn; _flashBlinking = false; }
+                if (_flashBlinking) { _flash.enabled = _flashWantOn; _flash.intensity = _flashBaseInt; _flashBlinking = false; }
                 else _flashWantOn = _flash.enabled;   // seguir el toggle del jugador (F)
                 return;
             }
-            if (!_flashBlinking) { _flashWantOn = _flash.enabled; _flashBlinking = true; }
+            if (!_flashBlinking) { _flashWantOn = _flash.enabled; _flashBaseInt = _flash.intensity; _flashBlinking = true; }
+
+            // temblor de intensidad rápido (luz que falla) → natural, no un on/off seco
+            float n = Mathf.PerlinNoise(_seed * 3f, Time.time * 26f);
+            _flash.intensity = _flashBaseInt * (0.45f + 0.55f * n);
+
+            // cortes on/off RÁPIDOS e irregulares
             if (Time.time >= _nextBlink)
             {
-                bool on = Random.value > 0.32f;       // más tiempo prendida que apagada
+                bool on = Random.value > 0.35f;
                 _flash.enabled = _flashWantOn && on;
-                _nextBlink = Time.time + (_flash.enabled ? Random.Range(0.06f, 0.22f)
-                                                         : Random.Range(0.03f, 0.11f));
+                _nextBlink = Time.time + (on ? Random.Range(0.03f, 0.12f)
+                                             : Random.Range(0.02f, 0.06f));
             }
         }
 
