@@ -1575,8 +1575,7 @@ namespace FolkloreArchives.MapGen
                     // claro del campamento PRIMERO: el BeachPath arranca EN el campamento,
                     // así que si el "pasto corto" del sendero (abajo) va antes, mete briznas
                     // dentro de la fogata (y esas no pasan por este radio). Por eso va acá.
-                    if (Vector2.Distance(p, MapLayout.Campsite) < 18f) continue;
-                    if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f) continue;
+                    if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius) continue;
 
                     // sendero pisado del campamento a la playa: pasto corto y ralo
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 2.5f)
@@ -2002,8 +2001,7 @@ namespace FolkloreArchives.MapGen
                     if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 0.2f)) continue;
 
                     // claro del campamento (fogata + troncos + carpas + mesa)
-                    if (Vector2.Distance(p, MapLayout.Campsite) < 18f) continue;
-                    if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f) continue;
+                    if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius) continue;
                     // claro del campamento de los ladrones (suelo pisado)
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 26f) continue;
 
@@ -2014,9 +2012,6 @@ namespace FolkloreArchives.MapGen
                     if (BuilderUtils.DistToPolyline(p, MapLayout.DirtRoad) < 5f) continue;
                     if (BuilderUtils.DistToPolyline(p, MapLayout.PathA) < 5f) continue;
                     if (BuilderUtils.DistToScaryPaths(p) < 4f) continue;
-                    // despejar el pasto SOLO en la franja del sendero (no el bosque) → se ve
-                    // el camino de barro. El pasto del bosque queda intacto.
-                    if (BuilderUtils.DistToExtraTrails(p) < 3f) continue;
                     if (BuilderUtils.DistToRivers(p) < 18f) continue;
 
                     float df = Vector2.Distance(p, MapLayout.HuntingField);
