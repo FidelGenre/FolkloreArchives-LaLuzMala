@@ -220,7 +220,7 @@ namespace FolkloreArchives
             if (!redWorld) return;
             _redAmount = Mathf.Lerp(_redAmount, target, 3f * dt);
             float pulse = 0.7f + 0.3f * Mathf.Sin(Time.time * 4f);
-            float strength = Mathf.Min(vignetteStrength, 0.3f);   // tope: nunca tapar la pantalla
+            float strength = Mathf.Min(vignetteStrength, 0.22f);  // tope: viñeta mínima, solo borde
             if (_vig != null) _vig.color = new Color(0.7f, 0f, 0f, _redAmount * strength * pulse);
             // niebla roja SOLO si redFog (por defecto off: la niebla densa de noche tapaba todo)
             if (redFog && RenderSettings.fog)
@@ -299,9 +299,8 @@ namespace FolkloreArchives
                 {
                     float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
                     float d = Mathf.Sqrt(dx * dx + dy * dy);
-                    // smoothstep de UMBRAL a mano (Mathf.SmoothStep es un lerp, no sirve):
-                    // 0 en el centro (d<0.6), sube a 1 hacia los bordes → viñeta real.
-                    float tt = Mathf.Clamp01((d - 0.6f) / 0.55f);
+                    // viñeta FINA solo en el borde: limpia hasta d~0.92, sube al borde.
+                    float tt = Mathf.Clamp01((d - 0.92f) / 0.45f);
                     float a = tt * tt * (3f - 2f * tt);
                     px[y * N + x] = new Color(1f, 1f, 1f, a);
                 }
