@@ -280,6 +280,11 @@ namespace FolkloreArchives.MapGen
                                     Mathf.Min(BuilderUtils.DistToExtraTrails(p),
                                               BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
                     if (dFootTr < 3.0f + footNoise) trail = 1f;   // franja ancha: barro bajo todo el pasto del camino
+                    // CLAROS de barro: campamento, rancho de la vieja y su galpón (owner:
+                    // esos lugares pisados tienen que ser tierra/barro, no pasto).
+                    if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius + 2f) trail = 1f;
+                    if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f) trail = 1f;
+                    if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f) trail = 1f;
                     // orillas arenosas del río: una franja de arena a lo largo de toda
                     // la ribera, enmascarada por ALTURA — desde justo bajo la línea de
                     // agua (7m) hasta ~2m por encima. Así la bajada del campamento al
