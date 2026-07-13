@@ -281,6 +281,9 @@ namespace FolkloreArchives
             _redAmount = Mathf.Lerp(_redAmount, target, 3f * dt);
             if (target < 0.01f && _redAmount < 0.01f) _redAmount = 0f;   // volver EXACTO a normal
 
+            // árboles y pasto se sacuden fuerte cuando ataca (global que leen los shaders)
+            Shader.SetGlobalFloat("_TreeWindGust", Mathf.Lerp(1f, 6f, _redAmount));
+
             float pulse = 0.7f + 0.3f * Mathf.Sin(Time.time * 4f);
             float strength = Mathf.Min(vignetteStrength, 0.04f);
             if (_vig != null) _vig.color = new Color(0.6f, 0f, 0f, _redAmount * strength * pulse);

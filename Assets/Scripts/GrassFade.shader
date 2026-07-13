@@ -55,6 +55,7 @@ Shader "Folklore/GrassFade"
             // materials so the fade follows the current detailObjectDistance.
             float _GrassFadeStart;
             float _GrassFadeEnd;
+            float _TreeWindGust;   // lo sube la Luz Mala al atacar: 1 normal, >1 tormenta
             // per-mode colour multiplier (day sets a warm, dark, burnt tint so the sun
             // doesn't wash the grass out and it reads drier). All-zero = treated as
             // white (no change).
@@ -104,11 +105,17 @@ Shader "Folklore/GrassFade"
                 UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
 
                 float3 posWS = TransformObjectToWorld(IN.positionOS.xyz);
-                // wind: sway the top of the blade (uv.y ~ height), phased by world pos
+                // wind: sway the top of the blade (uv.y ~ height), phased by world pos.
+                // _TreeWindGust (global) lo sube la Luz Mala al atacar → tormenta.
                 float h = saturate(IN.uv.y);
-                float sway = sin(_Time.y * _WindSpeed + posWS.x * 0.25 + posWS.z * 0.25);
-                posWS.x += sway * _WindStrength * h;
-                posWS.z += cos(_Time.y * _WindSpeed * 0.8 + posWS.z * 0.2) * _WindStrength * 0.5 * h;
+                float g = max(1.0, _TreeWindGust);
+                float phase = posWS.x * 0.25 + posWS.z * 0.25;
+                float amp = _WindStrength * h * g;
+                posWS.x += sin(_Time.y * _WindSpeed + phase) * amp;
+                posWS.z += cos(_Time.y * _WindSpeed * 0.8 + posWS.z * 0.2) * amp * 0.5;
+                // ráfaga rápida extra durante el ataque (g>1)
+                float fastAmp = _WindStrength * h * (g - 1.0) * 0.6;
+                posWS.x += sin(_Time.y * _WindSpeed * 3.5 + phase * 2.0) * fastAmp;
 
                 OUT.positionWS = posWS;
                 OUT.positionHCS = TransformWorldToHClip(posWS);

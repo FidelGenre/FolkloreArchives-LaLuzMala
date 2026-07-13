@@ -40,6 +40,9 @@ Shader "Folklore/TreeWind"
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
 
+            // GLOBAL (lo sube la Luz Mala al atacar): 1 = viento normal, >1 = tormenta.
+            float _TreeWindGust;
+
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
@@ -80,8 +83,14 @@ Shader "Folklore/TreeWind"
                 float h = saturate(IN.uv.y);
                 float phase = posWS.x * 0.15 + posWS.z * 0.15;
                 float gust = 0.6 + 0.4 * sin(_Time.y * 0.35 + phase);          // rachas lentas
-                float swayX = sin(_Time.y * _WindSpeed + phase) * _WindStrength * h * gust;
-                float swayZ = cos(_Time.y * _WindSpeed * 0.8 + phase * 1.3) * _WindStrength * 0.6 * h * gust;
+                float g = max(1.0, _TreeWindGust);   // 1 normal; sube MUCHO cuando ataca la Luz Mala
+                float amp = _WindStrength * h * gust * g;
+                float swayX = sin(_Time.y * _WindSpeed + phase) * amp;
+                float swayZ = cos(_Time.y * _WindSpeed * 0.8 + phase * 1.3) * amp * 0.6;
+                // ráfaga RÁPIDA y exagerada extra solo durante el ataque (g>1)
+                float fastAmp = _WindStrength * h * (g - 1.0) * 0.6;
+                swayX += sin(_Time.y * _WindSpeed * 3.5 + phase * 2.0) * fastAmp;
+                swayZ += cos(_Time.y * _WindSpeed * 4.2 + phase * 2.4) * fastAmp * 0.7;
                 posWS.x += swayX;
                 posWS.z += swayZ;
 
