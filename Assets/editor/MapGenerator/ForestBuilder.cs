@@ -2015,10 +2015,7 @@ namespace FolkloreArchives.MapGen
 
                     float n = Mathf.PerlinNoise(wx * 0.05f, wz * 0.05f);
                     int v = n > 0.25f ? Random.Range(8, 14) : Random.Range(4, 8);
-                    // caminos del owner (ExtraTrails): pasto RALO → asoma el barro marrón
-                    bool onTrail = BuilderUtils.DistToExtraTrails(p) < 3f;
-                    if (onTrail) v = Random.Range(0, 3);
-                    if (dryZone) dryMap[zi, xi] = onTrail ? v : v + 2;
+                    if (dryZone) dryMap[zi, xi] = v + 2;
                     else greenMap[zi, xi] = v;
                 }
             }
