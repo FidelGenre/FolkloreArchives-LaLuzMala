@@ -346,6 +346,7 @@ namespace FolkloreArchives.MapGen
                 }
             }
             td.SetAlphamaps(0, 0, map);
+            Debug.Log($"<color=cyan>[SPLAT v3] barro Ground071 en caminos + campamento + rancho. BaseMudBlend={MapLayout.BaseMudBlend} (0=base verde). Si NO ves este mensaje al regenerar, el codigo no compilo.</color>");
         }
 
         // Base ground "barro": the pack's Muddy layer texture is a greenish olive,
