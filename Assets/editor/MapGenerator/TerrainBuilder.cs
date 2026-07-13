@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 5;
+        const int SplatVersion = 6;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -46,8 +46,9 @@ namespace FolkloreArchives.MapGen
                 // Terreno cacheado pero el CÓDIGO del splat cambió (subí SplatVersion):
                 // re-pinto el barro UNA vez sobre el cache (no en cada Generate, es caro).
                 // Así el owner solo hace Generate y el barro aparece sin acordarse del botón.
-                Debug.Log("<color=yellow>[SPLAT] version nueva → re-pintando el barro sobre el terreno cacheado (una vez)…</color>");
+                Debug.Log("<color=yellow>[SPLAT] version nueva → re-pintando el barro + despejando pasto sobre el barro (una vez)…</color>");
                 PaintTextures(td);
+                ClearGrassOnMud(td); // el pasto cacheado también tapa el barro: despejarlo acá
                 EditorUtility.SetDirty(td);
                 AssetDatabase.SaveAssets();
                 EditorPrefs.SetInt(SplatVersionKey, SplatVersion);
