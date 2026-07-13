@@ -299,7 +299,10 @@ namespace FolkloreArchives
                 {
                     float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
                     float d = Mathf.Sqrt(dx * dx + dy * dy);
-                    float a = Mathf.SmoothStep(0.5f, 1.3f, d);   // 0 centro → 1 bordes
+                    // smoothstep de UMBRAL a mano (Mathf.SmoothStep es un lerp, no sirve):
+                    // 0 en el centro (d<0.6), sube a 1 hacia los bordes → viñeta real.
+                    float tt = Mathf.Clamp01((d - 0.6f) / 0.55f);
+                    float a = tt * tt * (3f - 2f * tt);
                     px[y * N + x] = new Color(1f, 1f, 1f, a);
                 }
             t.SetPixels(px); t.Apply();
