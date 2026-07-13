@@ -80,17 +80,20 @@ Shader "Folklore/TreeWind"
                 float3 posWS = TransformObjectToWorld(IN.positionOS.xyz);
                 // viento: la copa se balancea más arriba (uv.y ~ altura), con fase por
                 // posición mundial → cada árbol se mueve distinto. Dos ejes + una racha lenta.
-                float h = saturate(IN.uv.y);
+                // hmask = uv.y² → la BASE queda anclada y solo se mueve la punta: la copa
+                // se DOBLA (como una rama), no se estira/despega del tronco.
+                float hmask = saturate(IN.uv.y);
+                hmask *= hmask;
                 float phase = posWS.x * 0.15 + posWS.z * 0.15;
                 float gust = 0.6 + 0.4 * sin(_Time.y * 0.35 + phase);          // rachas lentas
-                float g = max(1.0, _TreeWindGust);   // 1 normal; sube MUCHO cuando ataca la Luz Mala
-                float amp = _WindStrength * h * gust * g;
+                float g = max(1.0, _TreeWindGust);   // 1 normal; sube cuando ataca la Luz Mala
+                float amp = _WindStrength * hmask * gust * g;
                 float swayX = sin(_Time.y * _WindSpeed + phase) * amp;
                 float swayZ = cos(_Time.y * _WindSpeed * 0.8 + phase * 1.3) * amp * 0.6;
-                // ráfaga RÁPIDA y exagerada extra solo durante el ataque (g>1)
-                float fastAmp = _WindStrength * h * (g - 1.0) * 0.6;
-                swayX += sin(_Time.y * _WindSpeed * 3.5 + phase * 2.0) * fastAmp;
-                swayZ += cos(_Time.y * _WindSpeed * 4.2 + phase * 2.4) * fastAmp * 0.7;
+                // ráfaga rápida extra en el ataque (más suave para no deformar el card)
+                float fastAmp = _WindStrength * hmask * (g - 1.0) * 0.3;
+                swayX += sin(_Time.y * _WindSpeed * 3.5 + phase) * fastAmp;
+                swayZ += cos(_Time.y * _WindSpeed * 4.2 + phase) * fastAmp * 0.7;
                 posWS.x += swayX;
                 posWS.z += swayZ;
 

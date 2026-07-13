@@ -282,7 +282,7 @@ namespace FolkloreArchives
             if (target < 0.01f && _redAmount < 0.01f) _redAmount = 0f;   // volver EXACTO a normal
 
             // árboles y pasto se sacuden fuerte cuando ataca (global que leen los shaders)
-            Shader.SetGlobalFloat("_TreeWindGust", Mathf.Lerp(1f, 6f, _redAmount));
+            Shader.SetGlobalFloat("_TreeWindGust", Mathf.Lerp(1f, 3.5f, _redAmount));
 
             float pulse = 0.7f + 0.3f * Mathf.Sin(Time.time * 4f);
             float strength = Mathf.Min(vignetteStrength, 0.04f);
