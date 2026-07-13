@@ -44,6 +44,7 @@ namespace FolkloreArchives
         bool _manualRed;   // tecla L: fuerza roja (para verla)
         float _redAmount;  // 0..1 qué tan "roja/agresiva" está el mundo
         Color _baseFog, _baseAmbient;
+        bool _wasRed;      // para restaurar niebla/ambiente al volver a blanco
         RawImage _vig;     // viñeta roja en pantalla
 
         [Header("Flotación")]
@@ -218,17 +219,35 @@ namespace FolkloreArchives
         void ApplyRedAtmosphere(float target, float dt)
         {
             if (!redWorld) return;
-            _redAmount = Mathf.Lerp(_redAmount, target, 3f * dt);
-            float pulse = 0.7f + 0.3f * Mathf.Sin(Time.time * 4f);
-            float strength = Mathf.Min(vignetteStrength, 0.04f);  // tope: viñeta mínima, translúcida
-            if (_vig != null) _vig.color = new Color(0.6f, 0f, 0f, _redAmount * strength * pulse);
-            // niebla + ambiente rojizos (sutil) cuando está agresiva
-            if (redFog)
+
+            // capturar niebla/ambiente BASE al ARRANCAR el rojo (antes de teñir). Antes
+            // recapturaba desde el color ya teñido cada frame → se iba poniendo más rojo
+            // y no volvía nunca. Ahora solo en el flanco de subida.
+            if (_redAmount < 0.02f && target > 0.5f)
             {
-                if (_redAmount < 0.02f) { _baseFog = RenderSettings.fogColor; _baseAmbient = RenderSettings.ambientLight; }
-                if (RenderSettings.fog)
-                    RenderSettings.fogColor = Color.Lerp(_baseFog, redFogColor, _redAmount * 0.35f);
+                if (RenderSettings.fog) _baseFog = RenderSettings.fogColor;
+                _baseAmbient = RenderSettings.ambientLight;
+            }
+            _redAmount = Mathf.Lerp(_redAmount, target, 3f * dt);
+            if (target < 0.01f && _redAmount < 0.01f) _redAmount = 0f;   // volver EXACTO a normal
+
+            float pulse = 0.7f + 0.3f * Mathf.Sin(Time.time * 4f);
+            float strength = Mathf.Min(vignetteStrength, 0.04f);
+            if (_vig != null) _vig.color = new Color(0.6f, 0f, 0f, _redAmount * strength * pulse);
+
+            // niebla + ambiente rojizos MIENTRAS está roja; se RESTAURAN al volver a blanco.
+            bool active = _redAmount > 0.005f;
+            if (redFog && active)
+            {
+                if (RenderSettings.fog) RenderSettings.fogColor = Color.Lerp(_baseFog, redFogColor, _redAmount * 0.35f);
                 RenderSettings.ambientLight = Color.Lerp(_baseAmbient, new Color(0.22f, 0.03f, 0.03f), _redAmount * 0.4f);
+                _wasRed = true;
+            }
+            else if (redFog && _wasRed)   // acaba de volver a blanco → restaurar UNA vez
+            {
+                if (RenderSettings.fog) RenderSettings.fogColor = _baseFog;
+                RenderSettings.ambientLight = _baseAmbient;
+                _wasRed = false;
             }
         }
 
