@@ -46,6 +46,9 @@ namespace FolkloreArchives
         Color _baseFog, _baseAmbient;
         bool _wasRed;      // para restaurar niebla/ambiente al volver a blanco
         RawImage _vig;     // viñeta roja en pantalla
+        Light _flash;      // linterna del jugador (para hacerla parpadear en rojo)
+        float _nextBlink;
+        bool _flashBlinking, _flashWantOn;
 
         [Header("Flotación")]
         public float hoverHeight = 4f;
@@ -99,7 +102,7 @@ namespace FolkloreArchives
 
             _bb = new Transform[3];
             _bbMat = new Material[3];
-            _bbScale = new[] { glowSize * 2.4f, glowSize * 1.0f, glowSize * 3.0f };
+            _bbScale = new[] { glowSize * 2.2f, glowSize * 1.0f, glowSize * 2.4f };
             _bbFlickerSeed = new[] { Random.value * 10f, Random.value * 10f, Random.value * 10f };
             var texs = new[] { radial, radial, rays };
             var tints = new[] { _curColor * 0.4f, _curColor * 1.3f, _curColor * 0.4f };
@@ -141,7 +144,7 @@ namespace FolkloreArchives
             bool night = _dnc == null || _dnc.IsNight;
             if (_light != null && _light.enabled != night) _light.enabled = night;
             if (_bb != null) foreach (var b in _bb) if (b != null && b.gameObject.activeSelf != night) b.gameObject.SetActive(night);
-            if (!night) { ApplyRedAtmosphere(0f, Time.deltaTime); return; }
+            if (!night) { ApplyRedAtmosphere(0f, Time.deltaTime); FlickerFlashlight(Camera.main); return; }
 
             float dt = Time.deltaTime;
             var cam = Camera.main;
@@ -213,6 +216,34 @@ namespace FolkloreArchives
                 Scare(cam, pos);
 
             ApplyRedAtmosphere(wantRed ? 1f : 0f, dt);   // mundo rojo cuando está agresiva
+            FlickerFlashlight(cam);                       // linterna parpadea mientras está roja
+        }
+
+        // mientras el mundo está rojo (Luz agresiva), la linterna del jugador PARPADEA
+        // (como si el fenómeno la afectara). Respeta si el jugador la tenía prendida o no.
+        void FlickerFlashlight(Camera cam)
+        {
+            if (cam == null) return;
+            if (_flash == null)
+                foreach (var l in cam.GetComponentsInChildren<Light>(true))
+                    if (l != _light && l.type == LightType.Spot) { _flash = l; break; }
+            if (_flash == null) return;
+
+            bool red = _redAmount > 0.05f;
+            if (!red)
+            {
+                if (_flashBlinking) { _flash.enabled = _flashWantOn; _flashBlinking = false; }
+                else _flashWantOn = _flash.enabled;   // seguir el toggle del jugador (F)
+                return;
+            }
+            if (!_flashBlinking) { _flashWantOn = _flash.enabled; _flashBlinking = true; }
+            if (Time.time >= _nextBlink)
+            {
+                bool on = Random.value > 0.32f;       // más tiempo prendida que apagada
+                _flash.enabled = _flashWantOn && on;
+                _nextBlink = Time.time + (_flash.enabled ? Random.Range(0.06f, 0.22f)
+                                                         : Random.Range(0.03f, 0.11f));
+            }
         }
 
         // tiñe el mundo de rojo (viñeta + niebla) según qué tan agresiva está la Luz
@@ -337,11 +368,16 @@ namespace FolkloreArchives
             m.SetColor("_BaseColor", tint);
             m.SetFloat("_Surface", 1f);                 // transparent
             m.SetFloat("_Blend", 2f);                   // additive
-            m.SetFloat("_SrcBlend", (float)BlendMode.One);
+            // SrcAlpha/One → suma color * alpha: donde el alpha es 0 (bordes) NO dibuja
+            // nada → adiós cuadrado del quad, aunque el material caiga en otro modo.
+            m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
             m.SetFloat("_DstBlend", (float)BlendMode.One);
             m.SetFloat("_ZWrite", 0f);
-            m.SetFloat("_Cull", (float)CullMode.Off);   // doble cara (no importa a qué lado mire)
+            m.SetFloat("_Cull", (float)CullMode.Off);
+            m.SetFloat("_AlphaClip", 0f);
+            m.SetOverrideTag("RenderType", "Transparent");
             m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.DisableKeyword("_ALPHATEST_ON");
             m.renderQueue = (int)RenderQueue.Transparent;
             return m;
         }
