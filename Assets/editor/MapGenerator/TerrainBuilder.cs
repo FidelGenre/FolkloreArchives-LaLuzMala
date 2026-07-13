@@ -207,10 +207,10 @@ namespace FolkloreArchives.MapGen
             // como estaban: el pack PSX no trae asfalto ni nieve.
             bool psx = MapLayout.UsePsxGround;
             var layers = new TerrainLayer[7];
-            // capa 0 (base) = BARRO también: el owner quiere el suelo de barro. Con
-            // BaseMudBlend=1 el suelo base ya va a barro; esto asegura marrón aunque el
-            // splatmap use la capa 0. (El pasto verde es el DETAIL aparte, no esta capa.)
-            layers[0] = MuddyDirtLayer();
+            // capa 0 (base) = PASTO VERDE (el bosque general queda verde). El barro
+            // (Ground071) va SOLO en caminos/claros vía las otras capas.
+            layers[0] = (psx ? PsxLayer("PSX_Seamless_WildForestGrass_128px",   6f) : null)
+                        ?? PackLayer("Grass_A_TerrainLayer",  "grass",    new Color(0.16f, 0.30f, 0.12f));
             // SUELO BASE: barro MARRÓN de verdad (Ground054). Antes usaba el PSX
             // ForestEarthGround, que es VERDOSO → con BaseMudBlend=1 todo el suelo salía
             // verde. Forzado a marrón (el owner quiere el suelo de barro).

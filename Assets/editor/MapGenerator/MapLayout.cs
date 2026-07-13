@@ -337,7 +337,7 @@ namespace FolkloreArchives.MapGen
         // (pedido del owner: el piso tiene que ser TIERRA, no verde).
         // 0 = pasto verde puro, 1 = barro puro. Manchones Perlin grandes le
         // suman/restan ~±0.2 para que no quede un color plano.
-        public const float BaseMudBlend = 1.0f;   // todo el suelo base = barro (owner: "todo barro, más marrón")
+        public const float BaseMudBlend = 0f;      // suelo base = pasto VERDE; el barro va solo en caminos/claros (owner)
 
         // Degradado de densidad del pasto por distancia a "zonas jugables" (caminos,
         // senderos y POIs). El jugador casi siempre anda cerca de esos lugares, así
