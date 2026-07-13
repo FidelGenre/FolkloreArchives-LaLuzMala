@@ -886,7 +886,7 @@ namespace FolkloreArchives.MapGen
                 // COPA: la textura de aguja REAL de este pino (con alpha → recorte).
                 //   PSX_Tree1 → PSX_TreeCrown1_128px ; PSX_Tree4 → PSX_TreeCrown4_Tex_128px
                 Material crown = PsxMat("PSX_PineCrown_" + name, Color.white,
-                                        PineCrownTexFor(name), cutout: true);
+                                        PineCrownTexFor(name), cutout: true, wind: true);
 
                 // El FBX es Z-up (Blender): la ALTURA es Z. Roto -90° en X (Z→Y) FIJO.
                 Vector3 sz = mesh.bounds.size;
@@ -1053,18 +1053,26 @@ namespace FolkloreArchives.MapGen
 
         // material URP/Lit para los árboles PSX (que vienen blancos). Opcional: textura
         // (_BaseMap) y recorte alpha (para el follaje = hojas con transparencia).
-        static Material PsxMat(string name, Color col, string texPath = null, bool cutout = false)
+        static Material PsxMat(string name, Color col, string texPath = null, bool cutout = false, bool wind = false)
         {
             string path = "Assets/Settings/" + name + ".mat";
             var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            // copas con viento → shader Folklore/TreeWind (balancea la copa). Resto → URP/Lit.
+            var shader = wind ? Shader.Find("Folklore/TreeWind") : Shader.Find("Universal Render Pipeline/Lit");
             if (m == null)
             {
-                m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                m = new Material(shader != null ? shader : Shader.Find("Universal Render Pipeline/Lit"));
                 AssetDatabase.CreateAsset(m, path);
             }
+            else if (shader != null && m.shader != shader) m.shader = shader;   // re-aplicar si cambió
             if (m.HasProperty("_BaseColor"))  m.SetColor("_BaseColor", col);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.05f);
             if (m.HasProperty("_Metallic"))   m.SetFloat("_Metallic", 0f);
+            if (wind)
+            {
+                if (m.HasProperty("_WindStrength")) m.SetFloat("_WindStrength", 0.3f);
+                if (m.HasProperty("_WindSpeed"))    m.SetFloat("_WindSpeed", 0.9f);
+            }
             if (texPath != null)
             {
                 var t = AssetDatabase.LoadAssetAtPath<Texture>(texPath);
