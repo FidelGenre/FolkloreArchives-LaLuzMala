@@ -36,8 +36,9 @@ namespace FolkloreArchives
 
         [Header("Mundo se pone rojo (cuando está agresiva)")]
         public bool redWorld = true;
+        public bool redFog = false;    // teñir la niebla de rojo (OFF: tapaba toda la pantalla)
         public Color redFogColor = new Color(0.22f, 0.02f, 0.02f);
-        [Range(0f, 1f)] public float vignetteStrength = 0.55f;
+        [Range(0f, 1f)] public float vignetteStrength = 0.28f;  // viñeta sutil en los bordes
 
         Color _curColor;
         bool _manualRed;   // tecla L: fuerza roja (para verla)
@@ -219,11 +220,13 @@ namespace FolkloreArchives
             if (!redWorld) return;
             _redAmount = Mathf.Lerp(_redAmount, target, 3f * dt);
             float pulse = 0.7f + 0.3f * Mathf.Sin(Time.time * 4f);
-            if (_vig != null) _vig.color = new Color(0.8f, 0f, 0f, _redAmount * vignetteStrength * pulse);
-            if (RenderSettings.fog)
+            float strength = Mathf.Min(vignetteStrength, 0.3f);   // tope: nunca tapar la pantalla
+            if (_vig != null) _vig.color = new Color(0.7f, 0f, 0f, _redAmount * strength * pulse);
+            // niebla roja SOLO si redFog (por defecto off: la niebla densa de noche tapaba todo)
+            if (redFog && RenderSettings.fog)
             {
-                if (_redAmount < 0.02f) _baseFog = RenderSettings.fogColor;   // recaptura el fog de la fase
-                RenderSettings.fogColor = Color.Lerp(_baseFog, redFogColor, _redAmount * 0.6f);
+                if (_redAmount < 0.02f) _baseFog = RenderSettings.fogColor;
+                RenderSettings.fogColor = Color.Lerp(_baseFog, redFogColor, _redAmount * 0.3f);
             }
         }
 
