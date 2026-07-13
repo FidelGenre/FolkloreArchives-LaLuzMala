@@ -209,8 +209,10 @@ namespace FolkloreArchives.MapGen
             var layers = new TerrainLayer[7];
             layers[0] = (psx ? PsxLayer("PSX_Seamless_WildForestGrass_128px",   6f) : null)
                         ?? PackLayer("Grass_A_TerrainLayer",  "grass",    new Color(0.16f, 0.30f, 0.12f));
-            layers[1] = (psx ? PsxLayer("PSX_Seamless_ForestEarthGround_128px", 5f) : null)
-                        ?? MuddyDirtLayer();
+            // SUELO BASE: barro MARRÓN de verdad (Ground054). Antes usaba el PSX
+            // ForestEarthGround, que es VERDOSO → con BaseMudBlend=1 todo el suelo salía
+            // verde. Forzado a marrón (el owner quiere el suelo de barro).
+            layers[1] = MuddyDirtLayer();
             layers[2] = PavedRoadLayer();   // asfalto: sin equivalente PSX
             layers[3] = (psx ? PsxLayer("PSX_Seamless_ForestDryGround_128px",   6f) : null)
                         ?? PackLayer("Grass_Dry_TerrainLayer","drygrass", new Color(0.55f, 0.50f, 0.25f));
