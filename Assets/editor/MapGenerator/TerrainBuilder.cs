@@ -385,14 +385,20 @@ namespace FolkloreArchives.MapGen
 
         static TerrainLayer TrailLayer()
         {
-            // Nature Starter Kit 2's ground02 is a proper worn-dirt-path texture
-            string diffusePath = MapLayout.NatureKitFolder + "/ground02.tga";
-            var diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(diffusePath);
-            if (diffuse == null)
+            // BARRO/TIERRA estilo PSX (StarkCrafts) en los senderos — pega con el pasto y
+            // el piso PSX del juego (el ground02 de NatureKit tiraba a verdoso/musgo).
+            const string psxEarth = "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_ForestGround_Tex/PSX_Seamless_ForestEarthGround_128px.png";
+            var diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(psxEarth);
+            if (diffuse != null && AssetImporter.GetAtPath(psxEarth) is TextureImporter imp && imp.filterMode != FilterMode.Point)
             {
-                Debug.LogWarning("Nature Starter Kit 2 ground texture not found at " + diffusePath + " - dirt road falls back to the Muddy layer.");
-                return CreateLayer("dirt", new Color(0.42f, 0.30f, 0.18f));
+                imp.filterMode = FilterMode.Point;   // crunch PSX (sin blur)
+                imp.SaveAndReimport();
+                diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(psxEarth);
             }
+            if (diffuse == null)  // fallback: la vieja ground02, y si no, color
+                diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(MapLayout.NatureKitFolder + "/ground02.tga");
+            if (diffuse == null)
+                return CreateLayer("dirt", new Color(0.42f, 0.30f, 0.18f));
 
             string layerPath = MapLayout.GeneratedFolder + "/layer_traildirt.terrainlayer";
             var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
@@ -402,7 +408,7 @@ namespace FolkloreArchives.MapGen
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
             layer.diffuseTexture = diffuse;
-            layer.tileSize = new Vector2(4f, 4f);
+            layer.tileSize = new Vector2(3f, 3f);   // 128px → tile chico para el pixelado PSX
             EditorUtility.SetDirty(layer);
             return layer;
         }
