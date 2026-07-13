@@ -36,14 +36,14 @@ namespace FolkloreArchives
 
         [Header("Mundo se pone rojo (cuando está agresiva)")]
         public bool redWorld = true;
-        public bool redFog = false;    // teñir la niebla de rojo (OFF: tapaba toda la pantalla)
-        public Color redFogColor = new Color(0.22f, 0.02f, 0.02f);
-        [Range(0f, 1f)] public float vignetteStrength = 0.28f;  // viñeta sutil en los bordes
+        public bool redFog = true;     // niebla + ambiente rojizos (sutil)
+        public Color redFogColor = new Color(0.30f, 0.05f, 0.05f);
+        [Range(0f, 1f)] public float vignetteStrength = 0.1f;   // viñeta MÍNIMA y difusa
 
         Color _curColor;
         bool _manualRed;   // tecla L: fuerza roja (para verla)
         float _redAmount;  // 0..1 qué tan "roja/agresiva" está el mundo
-        Color _baseFog;
+        Color _baseFog, _baseAmbient;
         RawImage _vig;     // viñeta roja en pantalla
 
         [Header("Flotación")]
@@ -220,13 +220,15 @@ namespace FolkloreArchives
             if (!redWorld) return;
             _redAmount = Mathf.Lerp(_redAmount, target, 3f * dt);
             float pulse = 0.7f + 0.3f * Mathf.Sin(Time.time * 4f);
-            float strength = Mathf.Min(vignetteStrength, 0.22f);  // tope: viñeta mínima, solo borde
-            if (_vig != null) _vig.color = new Color(0.7f, 0f, 0f, _redAmount * strength * pulse);
-            // niebla roja SOLO si redFog (por defecto off: la niebla densa de noche tapaba todo)
-            if (redFog && RenderSettings.fog)
+            float strength = Mathf.Min(vignetteStrength, 0.12f);  // tope: viñeta mínima
+            if (_vig != null) _vig.color = new Color(0.6f, 0f, 0f, _redAmount * strength * pulse);
+            // niebla + ambiente rojizos (sutil) cuando está agresiva
+            if (redFog)
             {
-                if (_redAmount < 0.02f) _baseFog = RenderSettings.fogColor;
-                RenderSettings.fogColor = Color.Lerp(_baseFog, redFogColor, _redAmount * 0.3f);
+                if (_redAmount < 0.02f) { _baseFog = RenderSettings.fogColor; _baseAmbient = RenderSettings.ambientLight; }
+                if (RenderSettings.fog)
+                    RenderSettings.fogColor = Color.Lerp(_baseFog, redFogColor, _redAmount * 0.35f);
+                RenderSettings.ambientLight = Color.Lerp(_baseAmbient, new Color(0.22f, 0.03f, 0.03f), _redAmount * 0.4f);
             }
         }
 
@@ -299,8 +301,9 @@ namespace FolkloreArchives
                 {
                     float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
                     float d = Mathf.Sqrt(dx * dx + dy * dy);
-                    // viñeta FINA solo en el borde: limpia hasta d~0.92, sube al borde.
-                    float tt = Mathf.Clamp01((d - 0.92f) / 0.45f);
+                    // viñeta DIFUSA: gradiente ancho y suave desde el centro hacia afuera
+                    // (con alpha muy bajo se ve a través, no un aro rojo sólido).
+                    float tt = Mathf.Clamp01((d - 0.45f) / 0.85f);
                     float a = tt * tt * (3f - 2f * tt);
                     px[y * N + x] = new Color(1f, 1f, 1f, a);
                 }
