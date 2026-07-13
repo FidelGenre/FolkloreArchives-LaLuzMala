@@ -1486,8 +1486,10 @@ namespace FolkloreArchives.MapGen
 
         // ---------------- GRASS (terrain details) ----------------
 
+        static int _mudGrassCleared = 0;
         static void SetupGrass(TerrainData td)
         {
+            _mudGrassCleared = 0;
             // 1024 (up from 512) = ~1m per detail cell instead of ~2m, so the ~1.6m
             // bare wheel ruts on the dirt road actually resolve instead of being lost
             // between cells. Cells are now 4x smaller, so per-cell counts below are
@@ -1559,7 +1561,7 @@ namespace FolkloreArchives.MapGen
                     // rancho/galpón/cabaña). Mismo criterio que el splat en TerrainBuilder,
                     // así el pasto NO vuelve a tapar el barro en cada Generate. El bosque
                     // general (fuera del barro) mantiene todo su pasto.
-                    if (TerrainBuilder.IsMudSpot(p)) continue;
+                    if (TerrainBuilder.IsMudSpot(p)) { _mudGrassCleared++; continue; }
 
                     // claro del campamento de los ladrones (suelo pisado bajo ranchos/fuego)
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 26f) continue;
@@ -1664,6 +1666,7 @@ namespace FolkloreArchives.MapGen
                 }
             }
             for (int i = 0; i < protos.Count; i++) td.SetDetailLayer(0, 0, i, maps[i]);
+            Debug.Log($"<color=cyan>[GRASS] pasto despejado sobre el barro (IsMudSpot): {_mudGrassCleared} celdas detail. Campsite={MapLayout.Campsite}</color>");
         }
 
         // Prefabs de pasto/arbusto low-poly (Polytope)
