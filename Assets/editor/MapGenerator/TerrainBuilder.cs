@@ -75,7 +75,19 @@ namespace FolkloreArchives.MapGen
             ClearGrassOnMud(td);
             EditorUtility.SetDirty(td);
             AssetDatabase.SaveAssets();
-            Debug.Log("<color=lime>Terreno RE-PINTADO: bosque VERDE (capa 0) + BARRO Ground071 en caminos/campamento (capa 4). Pasto despejado SOLO sobre el barro; el bosque queda intacto.</color>");
+
+            // REFRESCAR el terreno VIVO de la escena: SetAlphamaps/SetDetailLayer tocan
+            // el asset, pero el Terrain ya instanciado cachea el render del splat y del
+            // pasto y NO se actualiza solo. Flush() lo obliga a re-leer del TerrainData.
+            int flushed = 0;
+            foreach (var t in Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
+            {
+                if (t.terrainData != td) continue;
+                t.terrainData = td;   // re-asignar por si quedó una copia
+                t.Flush();
+                flushed++;
+            }
+            Debug.Log($"<color=lime>Terreno RE-PINTADO: bosque VERDE + BARRO en caminos/campamento, pasto despejado sobre el barro. Terrenos vivos refrescados: {flushed}. Si sigue igual, hacé Generate Greybox Map.</color>");
         }
 
         // ¿este punto es zona de BARRO (camino a pie / campamento / rancho / galpón /
