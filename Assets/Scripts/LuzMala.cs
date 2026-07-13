@@ -220,7 +220,7 @@ namespace FolkloreArchives
             if (!redWorld) return;
             _redAmount = Mathf.Lerp(_redAmount, target, 3f * dt);
             float pulse = 0.7f + 0.3f * Mathf.Sin(Time.time * 4f);
-            float strength = Mathf.Min(vignetteStrength, 0.12f);  // tope: viñeta mínima
+            float strength = Mathf.Min(vignetteStrength, 0.07f);  // tope: viñeta mínima
             if (_vig != null) _vig.color = new Color(0.6f, 0f, 0f, _redAmount * strength * pulse);
             // niebla + ambiente rojizos (sutil) cuando está agresiva
             if (redFog)
@@ -301,9 +301,8 @@ namespace FolkloreArchives
                 {
                     float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
                     float d = Mathf.Sqrt(dx * dx + dy * dy);
-                    // viñeta DIFUSA: gradiente ancho y suave desde el centro hacia afuera
-                    // (con alpha muy bajo se ve a través, no un aro rojo sólido).
-                    float tt = Mathf.Clamp01((d - 0.45f) / 0.85f);
+                    // viñeta DIFUSA y CHICA: empieza más afuera y se queda cerca del borde.
+                    float tt = Mathf.Clamp01((d - 0.75f) / 0.6f);
                     float a = tt * tt * (3f - 2f * tt);
                     px[y * N + x] = new Color(1f, 1f, 1f, a);
                 }
