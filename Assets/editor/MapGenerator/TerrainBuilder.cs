@@ -60,6 +60,23 @@ namespace FolkloreArchives.MapGen
             Debug.Log("<color=lime>Terreno cacheado borrado — el próximo Generate lo regenera (~3.6 min esa vez).</color>");
         }
 
+        // RE-PINTA solo el splatmap (texturas del suelo: bosque verde + barro en
+        // caminos/campamento) sobre el terreno cacheado, SIN borrar árboles/pasto ni
+        // recomputar altura. Es la forma rápida de aplicar cambios de PaintTextures
+        // (el barro de los caminos) sin el rebuild completo de 3.6 min.
+        // La CAUSA de que el barro "nunca aparecía": PaintTextures solo corría al crear
+        // el terreno; un Generate normal reusa el cache y jamás re-pinta.
+        [MenuItem("Tools/Folklore Archives/Repaint Terrain (barro caminos)")]
+        public static void RepaintTerrain()
+        {
+            var td = AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainAssetPath);
+            if (td == null) { Debug.LogWarning("No hay terreno cacheado — hacé Generate primero, después Repaint."); return; }
+            PaintTextures(td);
+            EditorUtility.SetDirty(td);
+            AssetDatabase.SaveAssets();
+            Debug.Log("<color=lime>Terreno RE-PINTADO: bosque VERDE (capa 0) + BARRO Ground071 en caminos/campamento (capa 4). NO se tocaron árboles ni pasto.</color>");
+        }
+
         // Pure procedural heightmap (normalised 0..1), no hand-edits applied.
         // Shared by Build() and by TerrainEditPersistence when diffing the owner's
         // manual terrain edits against the procedural base.
