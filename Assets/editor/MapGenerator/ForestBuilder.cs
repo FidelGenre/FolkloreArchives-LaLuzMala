@@ -2007,7 +2007,6 @@ namespace FolkloreArchives.MapGen
                     if (BuilderUtils.DistToPolyline(p, MapLayout.DirtRoad) < 5f) continue;
                     if (BuilderUtils.DistToPolyline(p, MapLayout.PathA) < 5f) continue;
                     if (BuilderUtils.DistToScaryPaths(p) < 4f) continue;
-                    if (BuilderUtils.DistToExtraTrails(p) < 4f) continue; // caminos del owner (galpón, etc.): que se vea el barro
                     if (BuilderUtils.DistToRivers(p) < 18f) continue;
 
                     float df = Vector2.Distance(p, MapLayout.HuntingField);

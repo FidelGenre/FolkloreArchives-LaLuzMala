@@ -385,16 +385,11 @@ namespace FolkloreArchives.MapGen
 
         static TerrainLayer TrailLayer()
         {
-            // BARRO/TIERRA estilo PSX (StarkCrafts) en los senderos — pega con el pasto y
-            // el piso PSX del juego (el ground02 de NatureKit tiraba a verdoso/musgo).
-            const string psxEarth = "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_ForestGround_Tex/PSX_Seamless_ForestEarthGround_128px.png";
-            var diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(psxEarth);
-            if (diffuse != null && AssetImporter.GetAtPath(psxEarth) is TextureImporter imp && imp.filterMode != FilterMode.Point)
-            {
-                imp.filterMode = FilterMode.Point;   // crunch PSX (sin blur)
-                imp.SaveAndReimport();
-                diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(psxEarth);
-            }
+            // BARRO MARRÓN (ambientCG Ground054) en los senderos — el mismo del camino del
+            // auto: marrón claro sin verde, para que ASOME entre el pasto (el pasto queda
+            // arriba; el barro se ve en los huecos). El ground02 de NatureKit tiraba a verde.
+            const string dirtDir = "Assets/ExternalAssets/TerrainTextures/Ground054/";
+            var diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(dirtDir + "Ground054_1K-JPG_Color.jpg");
             if (diffuse == null)  // fallback: la vieja ground02, y si no, color
                 diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(MapLayout.NatureKitFolder + "/ground02.tga");
             if (diffuse == null)
@@ -408,7 +403,8 @@ namespace FolkloreArchives.MapGen
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
             layer.diffuseTexture = diffuse;
-            layer.tileSize = new Vector2(3f, 3f);   // 128px → tile chico para el pixelado PSX
+            layer.normalMapTexture = BuilderUtils.LoadAsNormalMap(dirtDir + "Ground054_1K-JPG_NormalGL.jpg");
+            layer.tileSize = new Vector2(4f, 4f);
             EditorUtility.SetDirty(layer);
             return layer;
         }
