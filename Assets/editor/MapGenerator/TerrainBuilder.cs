@@ -214,8 +214,9 @@ namespace FolkloreArchives.MapGen
             layers[2] = PavedRoadLayer();   // asfalto: sin equivalente PSX
             layers[3] = (psx ? PsxLayer("PSX_Seamless_ForestDryGround_128px",   6f) : null)
                         ?? PackLayer("Grass_Dry_TerrainLayer","drygrass", new Color(0.55f, 0.50f, 0.25f));
-            layers[4] = (psx ? PsxLayer("PSX_Seamless_ForestWildGround_128px",  5f) : null)
-                        ?? TrailLayer();
+            // SENDEROS: barro MARRÓN de verdad (Ground054), NO el "wild ground" PSX que
+            // tira a verde. Forzado aunque el resto del piso sea PSX (el owner quería barro).
+            layers[4] = TrailLayer();
             layers[5] = (psx ? PsxLayer("PSX_Seamless_ForestGravel_Ground_128px", 5f) : null)
                         ?? PackLayer("Sand_TerrainLayer",     "sand",     new Color(0.76f, 0.70f, 0.50f));
             layers[6] = CreateLayer("snow", new Color(0.92f, 0.94f, 0.98f)); // nieve de los picos
