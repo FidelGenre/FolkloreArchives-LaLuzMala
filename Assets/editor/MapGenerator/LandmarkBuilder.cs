@@ -88,14 +88,15 @@ namespace FolkloreArchives.MapGen
             // ---------- MAIN CRIMINAL CAMP (Act 3) ----------
             var criminals = BuilderUtils.Group(poi, "MainCriminalCamp", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp));
             BuilderUtils.Label(criminals, "MAIN CRIMINAL CAMP", criminals.position + Vector3.up * 9f);
-            Shack(criminals, t, MapLayout.MainCriminalCamp.x - 8f, MapLayout.MainCriminalCamp.y + 2f, 15f, clothMat, metalMat);
-            Shack(criminals, t, MapLayout.MainCriminalCamp.x + 6f, MapLayout.MainCriminalCamp.y - 5f, -40f, clothMat, metalMat);
-            Shack(criminals, t, MapLayout.MainCriminalCamp.x + 2f, MapLayout.MainCriminalCamp.y + 9f, 80f, clothMat, metalMat);
+            // Dressing del campamento de ladrones (4 ranchos de chapa + fogata + baño +
+            // mesa + chatarra), estilo PS1, más siniestro que el de los protagonistas.
+            CriminalCampBuilder.Build(criminals, t, MapLayout.MainCriminalCamp);
             BuilderUtils.Empty(criminals, "SPAWN_CRIMINAL_1", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp.x - 4f, MapLayout.MainCriminalCamp.y) + Vector3.up * 0.5f);
             BuilderUtils.Empty(criminals, "SPAWN_CRIMINAL_2", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp.x + 4f, MapLayout.MainCriminalCamp.y + 4f) + Vector3.up * 0.5f);
             BuilderUtils.Empty(criminals, "SPAWN_CRIMINAL_3", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp.x, MapLayout.MainCriminalCamp.y - 6f) + Vector3.up * 0.5f);
             BuilderUtils.Empty(criminals, "JOURNAL_POINT", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp.x - 8f, MapLayout.MainCriminalCamp.y + 2f) + Vector3.up * 1f);
-            WarmLight(criminals, BuilderUtils.Ground(t, MapLayout.MainCriminalCamp.x, MapLayout.MainCriminalCamp.y) + Vector3.up * 1.2f, 18f, 3.2f); // distant campfire glow
+            // (La WarmLight vieja se sacó: sobre-iluminaba los ranchos y los "prendía" en
+            //  blanco. La fogata de CriminalCampBuilder ya da la luz del campamento.)
 
             // ---------- HOSTAGE AREA (Act 3 — failed rescue) ----------
             var hostages = BuilderUtils.Group(poi, "HostageArea", BuilderUtils.Ground(t, MapLayout.HostageArea));

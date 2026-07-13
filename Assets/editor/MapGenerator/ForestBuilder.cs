@@ -1555,6 +1555,9 @@ namespace FolkloreArchives.MapGen
                     if (MapLayout.InRect(p, MapLayout.OldLadyHouseFootMin, MapLayout.OldLadyHouseFootMax, 0.2f)) continue;
                     if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 0.2f)) continue;
 
+                    // claro del campamento de los ladrones (suelo pisado bajo ranchos/fuego)
+                    if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 26f) continue;
+
                     float southDg = MapLayout.PavedRouteZAt(p.x) - p.y;
                     if (southDg > MapLayout.ShoreVegFar) continue; // out in the water
                     // keep grass off the tarmac, but on the lakeside let it grow right
@@ -1999,6 +2002,8 @@ namespace FolkloreArchives.MapGen
 
                     // claro del campamento (fogata + troncos + carpas + mesa)
                     if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius) continue;
+                    // claro del campamento de los ladrones (suelo pisado)
+                    if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 26f) continue;
 
                     float southDg = MapLayout.PavedRouteZAt(p.x) - p.y;
                     if (southDg > MapLayout.ShoreVegFar) continue; // out in the water
@@ -2007,6 +2012,9 @@ namespace FolkloreArchives.MapGen
                     if (BuilderUtils.DistToPolyline(p, MapLayout.DirtRoad) < 5f) continue;
                     if (BuilderUtils.DistToPolyline(p, MapLayout.PathA) < 5f) continue;
                     if (BuilderUtils.DistToScaryPaths(p) < 4f) continue;
+                    // despejar el pasto SOLO en la franja del sendero (no el bosque) → se ve
+                    // el camino de barro. El pasto del bosque queda intacto.
+                    if (BuilderUtils.DistToExtraTrails(p) < 3f) continue;
                     if (BuilderUtils.DistToRivers(p) < 18f) continue;
 
                     float df = Vector2.Distance(p, MapLayout.HuntingField);
