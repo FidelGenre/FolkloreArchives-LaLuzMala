@@ -38,13 +38,16 @@ namespace FolkloreArchives
         public bool redWorld = true;
         public bool redFog = true;     // niebla + ambiente rojizos (sutil)
         public Color redFogColor = new Color(0.30f, 0.05f, 0.05f);
+        public bool redSky = true;     // tiñe el CIELO de rojo (skybox _Tint)
+        public Color redSkyTint = new Color(0.6f, 0.16f, 0.13f);
         [Range(0f, 1f)] public float vignetteStrength = 0.1f;   // viñeta MÍNIMA y difusa
 
         Color _curColor;
         bool _manualRed;   // tecla L: fuerza roja (para verla)
         float _redAmount;  // 0..1 qué tan "roja/agresiva" está el mundo
-        Color _baseFog, _baseAmbient;
-        bool _wasRed;      // para restaurar niebla/ambiente al volver a blanco
+        Color _baseFog, _baseAmbient, _baseSkyTint;
+        Material _skyMat;  // el skybox que estamos tiñendo (para restaurarlo)
+        bool _wasRed;      // para restaurar niebla/ambiente/cielo al volver a blanco
         RawImage _vig;     // viñeta roja en pantalla
         Light _flash;      // linterna del jugador (para hacerla parpadear en rojo)
         float _nextBlink, _flashBaseInt;
@@ -219,6 +222,14 @@ namespace FolkloreArchives
             FlickerFlashlight(cam);                       // linterna parpadea mientras está roja
         }
 
+        // seguridad: al parar Play / destruir, devolver el cielo a su tinte original
+        // (el skybox es un asset compartido; si no, quedaría rojo para siempre).
+        void OnDisable()
+        {
+            if (redSky && _skyMat != null && _skyMat.HasProperty("_Tint"))
+                _skyMat.SetColor("_Tint", _baseSkyTint);
+        }
+
         // mientras el mundo está rojo (Luz agresiva), la linterna del jugador PARPADEA
         // (como si el fenómeno la afectara). Respeta si el jugador la tenía prendida o no.
         void FlickerFlashlight(Camera cam)
@@ -264,6 +275,8 @@ namespace FolkloreArchives
             {
                 if (RenderSettings.fog) _baseFog = RenderSettings.fogColor;
                 _baseAmbient = RenderSettings.ambientLight;
+                if (redSky && RenderSettings.skybox != null && RenderSettings.skybox.HasProperty("_Tint"))
+                { _skyMat = RenderSettings.skybox; _baseSkyTint = _skyMat.GetColor("_Tint"); }
             }
             _redAmount = Mathf.Lerp(_redAmount, target, 3f * dt);
             if (target < 0.01f && _redAmount < 0.01f) _redAmount = 0f;   // volver EXACTO a normal
@@ -272,18 +285,20 @@ namespace FolkloreArchives
             float strength = Mathf.Min(vignetteStrength, 0.04f);
             if (_vig != null) _vig.color = new Color(0.6f, 0f, 0f, _redAmount * strength * pulse);
 
-            // niebla + ambiente rojizos MIENTRAS está roja; se RESTAURAN al volver a blanco.
+            // niebla + ambiente + CIELO rojizos MIENTRAS está roja; se RESTAURAN al volver.
             bool active = _redAmount > 0.005f;
-            if (redFog && active)
+            if (active)
             {
-                if (RenderSettings.fog) RenderSettings.fogColor = Color.Lerp(_baseFog, redFogColor, _redAmount * 0.35f);
-                RenderSettings.ambientLight = Color.Lerp(_baseAmbient, new Color(0.22f, 0.03f, 0.03f), _redAmount * 0.4f);
+                if (redFog && RenderSettings.fog) RenderSettings.fogColor = Color.Lerp(_baseFog, redFogColor, _redAmount * 0.35f);
+                if (redFog) RenderSettings.ambientLight = Color.Lerp(_baseAmbient, new Color(0.22f, 0.03f, 0.03f), _redAmount * 0.4f);
+                if (redSky && _skyMat != null) _skyMat.SetColor("_Tint", Color.Lerp(_baseSkyTint, redSkyTint, _redAmount * 0.75f));
                 _wasRed = true;
             }
-            else if (redFog && _wasRed)   // acaba de volver a blanco → restaurar UNA vez
+            else if (_wasRed)   // acaba de volver a blanco → restaurar UNA vez
             {
-                if (RenderSettings.fog) RenderSettings.fogColor = _baseFog;
-                RenderSettings.ambientLight = _baseAmbient;
+                if (redFog && RenderSettings.fog) RenderSettings.fogColor = _baseFog;
+                if (redFog) RenderSettings.ambientLight = _baseAmbient;
+                if (redSky && _skyMat != null) _skyMat.SetColor("_Tint", _baseSkyTint);
                 _wasRed = false;
             }
         }
