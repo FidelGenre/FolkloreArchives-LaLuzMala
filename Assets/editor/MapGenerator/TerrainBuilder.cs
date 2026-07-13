@@ -275,7 +275,7 @@ namespace FolkloreArchives.MapGen
                                     Mathf.Min(BuilderUtils.DistToScaryPaths(p),
                                     Mathf.Min(BuilderUtils.DistToExtraTrails(p),
                                               BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
-                    if (dFootTr < 1.0f + footNoise) trail = 1f;
+                    if (dFootTr < 3.0f + footNoise) trail = 1f;   // franja ancha: barro bajo todo el pasto del camino
                     // orillas arenosas del río: una franja de arena a lo largo de toda
                     // la ribera, enmascarada por ALTURA — desde justo bajo la línea de
                     // agua (7m) hasta ~2m por encima. Así la bajada del campamento al
