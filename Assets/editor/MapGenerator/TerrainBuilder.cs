@@ -390,12 +390,19 @@ namespace FolkloreArchives.MapGen
 
         static TerrainLayer TrailLayer()
         {
-            // BARRO MARRÓN (ambientCG Ground054) en los senderos — el mismo del camino del
-            // auto: marrón claro sin verde, para que ASOME entre el pasto (el pasto queda
-            // arriba; el barro se ve en los huecos). El ground02 de NatureKit tiraba a verde.
-            const string dirtDir = "Assets/ExternalAssets/TerrainTextures/Ground054/";
-            var diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(dirtDir + "Ground054_1K-JPG_Color.jpg");
-            if (diffuse == null)  // fallback: la vieja ground02, y si no, color
+            // BARRO DE BOSQUE (Ground071, el que eligió el owner) en los senderos.
+            // Fallback: Ground054, luego ground02, luego color.
+            const string g071 = "Assets/ExternalAssets/TerrainTextures/Ground071/";
+            const string g054 = "Assets/ExternalAssets/TerrainTextures/Ground054/";
+            var diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(g071 + "Ground071_2K-JPG_Color.jpg");
+            Texture2D normal = null;
+            if (diffuse != null) normal = BuilderUtils.LoadAsNormalMap(g071 + "Ground071_2K-JPG_NormalGL.jpg");
+            else
+            {
+                diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(g054 + "Ground054_1K-JPG_Color.jpg");
+                if (diffuse != null) normal = BuilderUtils.LoadAsNormalMap(g054 + "Ground054_1K-JPG_NormalGL.jpg");
+            }
+            if (diffuse == null)
                 diffuse = AssetDatabase.LoadAssetAtPath<Texture2D>(MapLayout.NatureKitFolder + "/ground02.tga");
             if (diffuse == null)
                 return CreateLayer("dirt", new Color(0.42f, 0.30f, 0.18f));
@@ -408,7 +415,7 @@ namespace FolkloreArchives.MapGen
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
             layer.diffuseTexture = diffuse;
-            layer.normalMapTexture = BuilderUtils.LoadAsNormalMap(dirtDir + "Ground054_1K-JPG_NormalGL.jpg");
+            if (normal != null) layer.normalMapTexture = normal;
             layer.tileSize = new Vector2(4f, 4f);
             EditorUtility.SetDirty(layer);
             return layer;
