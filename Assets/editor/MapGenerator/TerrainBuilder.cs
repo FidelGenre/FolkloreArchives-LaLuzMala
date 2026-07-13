@@ -279,7 +279,7 @@ namespace FolkloreArchives.MapGen
                                     Mathf.Min(BuilderUtils.DistToScaryPaths(p),
                                     Mathf.Min(BuilderUtils.DistToExtraTrails(p),
                                               BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
-                    if (dFootTr < 3.0f + footNoise) trail = 1f;   // franja ancha: barro bajo todo el pasto del camino
+                    if (dFootTr < 5.0f + footNoise) trail = 1f;   // franja ancha: más barro visible entre las matas
                     // CLAROS de barro: campamento, rancho de la vieja y su galpón (owner:
                     // esos lugares pisados tienen que ser tierra/barro, no pasto).
                     if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius + 2f) trail = 1f;
