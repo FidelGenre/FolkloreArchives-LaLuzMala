@@ -82,17 +82,16 @@ namespace FolkloreArchives
             _light.range = lightRange;
             _light.shadows = LightShadows.None;
 
-            // texturas generadas: halo radial suave + rayos (estrella)
+            // halo radial suave y MOTEADO (neblina), sin rayos → difuso, no "estrella"
             var radial = MakeRadialTex();
-            var rays = MakeRayTex();
 
-            // 3 capas: halo difuso grande, núcleo caliente chico, destellos
+            // 3 capas de halo: exterior tenue + medio + núcleo. Todo círculos suaves.
             _bb = new Transform[3];
             _bbMat = new Material[3];
-            _bbScale = new[] { glowSize * 2.2f, glowSize * 0.9f, glowSize * 2.5f };
+            _bbScale = new[] { glowSize * 2.4f, glowSize * 1.0f, glowSize * 3.6f };
             _bbFlickerSeed = new[] { Random.value * 10f, Random.value * 10f, Random.value * 10f };
-            var texs = new[] { radial, radial, rays };
-            var tints = new[] { _curColor * 0.45f, _curColor * 1.2f, _curColor * 0.35f };
+            var texs = new[] { radial, radial, radial };
+            var tints = new[] { _curColor * 0.4f, _curColor * 1.3f, _curColor * 0.18f };
             for (int i = 0; i < 3; i++)
             {
                 var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -192,18 +191,13 @@ namespace FolkloreArchives
             for (int i = 0; i < _bb.Length; i++)
             {
                 if (_bb[i] == null) continue;
-                if (cam != null)
-                {
-                    var look = Quaternion.LookRotation(_bb[i].position - cam.transform.position);
-                    if (i == 2) look *= Quaternion.AngleAxis(Time.time * 7f, Vector3.forward); // los rayos giran lento
-                    _bb[i].rotation = look;
-                }
+                if (cam != null) _bb[i].rotation = Quaternion.LookRotation(_bb[i].position - cam.transform.position);
                 // latido: cada capa palpita con su propia fase (fuego fatuo "vivo")
                 float pulse = 0.85f + 0.15f * Mathf.PerlinNoise(_bbFlickerSeed[i], Time.time * (5f + i));
                 _bb[i].localScale = Vector3.one * (_bbScale[i] * pulse);
                 if (_bbMat[i] != null && _bbMat[i].HasProperty("_BaseColor"))
                 {
-                    Color baseT = (i == 1) ? _curColor * 1.2f : (i == 0 ? _curColor * 0.45f : _curColor * 0.5f);
+                    Color baseT = (i == 1) ? _curColor * 1.3f : (i == 0 ? _curColor * 0.4f : _curColor * 0.18f);
                     _bbMat[i].SetColor("_BaseColor", baseT * (0.5f + k));
                 }
             }
@@ -258,7 +252,9 @@ namespace FolkloreArchives
             return m;
         }
 
-        // halo radial suave: núcleo caliente que se desvanece hacia afuera
+        // halo radial suave y MOTEADO: núcleo caliente + desvanecido con ruido tipo
+        // niebla, y corte limpio a 0 antes del borde (para que NO se vea el cuadrado
+        // del billboard). Nada de gradiente perfecto → menos "plástico".
         static Texture2D MakeRadialTex()
         {
             const int N = 128;
@@ -269,35 +265,15 @@ namespace FolkloreArchives
                 {
                     float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
                     float d = Mathf.Sqrt(dx * dx + dy * dy);
-                    float halo = Mathf.Pow(Mathf.Clamp01(1f - d), 2.4f);       // desvanecido amplio
-                    float core = Mathf.Pow(Mathf.Clamp01(1f - d * 2.6f), 4f);   // núcleo caliente
-                    float v = Mathf.Clamp01(halo * 0.8f + core);
-                    px[y * N + x] = new Color(v, v, v, v);
-                }
-            t.SetPixels(px); t.Apply();
-            return t;
-        }
-
-        // destellos: MUCHOS rayos finos e IRREGULARES (no una cruz simétrica) — suma de
-        // armónicos con fase distinta → parece un fuego fatuo, no una estrella navideña.
-        static Texture2D MakeRayTex()
-        {
-            const int N = 128;
-            var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
-            var px = new Color[N * N];
-            for (int y = 0; y < N; y++)
-                for (int x = 0; x < N; x++)
-                {
-                    float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
-                    float d = Mathf.Sqrt(dx * dx + dy * dy);
-                    float fall = Mathf.Clamp01(1f - d);
-                    float ang = Mathf.Atan2(dy, dx);
-                    // spokes irregulares: frecuencias y fases distintas, algunos más largos
-                    float s = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(ang * 9f + 0.5f)), 12f)
-                            + 0.7f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(ang * 14f + 2.3f)), 16f)
-                            + 0.5f * Mathf.Pow(Mathf.Max(0f, Mathf.Cos(ang * 6f - 1.1f)), 9f)
-                            + 0.4f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(ang * 21f + 4.0f)), 20f);
-                    float v = Mathf.Clamp01(s * Mathf.Pow(fall, 2.3f));
+                    float halo = Mathf.Pow(Mathf.Clamp01(1f - d), 2.2f);
+                    float core = Mathf.Pow(Mathf.Clamp01(1f - d * 2.4f), 3f);
+                    // ruido moteado (dos octavas) → aspecto de niebla, no plástico
+                    float n = 0.6f * Mathf.PerlinNoise(dx * 5f + 11f, dy * 5f + 7f)
+                            + 0.4f * Mathf.PerlinNoise(dx * 11f + 3f, dy * 11f + 19f);
+                    float mottle = 0.65f + 0.7f * n;   // ~0.65..1.35
+                    float v = Mathf.Clamp01((halo * 0.75f + core) * mottle);
+                    // corte limpio a cero entre d=0.8 y 1.0 → círculo, sin borde cuadrado
+                    v *= Mathf.SmoothStep(1f, 0f, Mathf.Clamp01((d - 0.8f) / 0.2f));
                     px[y * N + x] = new Color(v, v, v, v);
                 }
             t.SetPixels(px); t.Apply();
