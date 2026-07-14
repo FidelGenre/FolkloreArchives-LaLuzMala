@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 11;
+        const int SplatVersion = 12;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -128,18 +128,35 @@ namespace FolkloreArchives.MapGen
         // cabaña)? Mismo criterio que el splat en PaintTextures, para que el pasto se
         // despeje EXACTAMENTE donde está el barro (si no, el pasto denso tapa el barro).
         // El bosque general (fuera de estas zonas) NO se toca.
-        public static bool IsMudSpot(Vector2 p)
+        // Ancho a cada lado de un sendero a pie (barro). El pasto verde llega a este borde.
+        public const float FootTrailHalfWidth = 2.5f;
+
+        // CLARO PELADO (barro SIN pasto): campamento, rancho, galpón, cabaña. Suelo pisado
+        // de verdad — ahí no crece nada.
+        public static bool IsClearing(Vector2 p)
         {
-            float footNoise = Mathf.PerlinNoise(p.x * 0.25f, p.y * 0.25f) * 0.3f;
-            float dFootTr = Mathf.Min(BuilderUtils.DistToPolyline(p, MapLayout.PathA),
-                            Mathf.Min(BuilderUtils.DistToScaryPaths(p),
-                            Mathf.Min(BuilderUtils.DistToExtraTrails(p),
-                                      BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
-            if (dFootTr < 2.0f + footNoise) return true;
             if (Vector2.Distance(p, MapLayout.Campsite) < 12f) return true;
             if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f) return true;
             if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f) return true;
             if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f) return true;
+            return false;
+        }
+
+        // SENDERO a pie (barro CON pasto corto ralo encima): distancia al sendero más cercano.
+        public static float DistToFootTrail(Vector2 p)
+        {
+            return Mathf.Min(BuilderUtils.DistToPolyline(p, MapLayout.PathA),
+                   Mathf.Min(BuilderUtils.DistToScaryPaths(p),
+                   Mathf.Min(BuilderUtils.DistToExtraTrails(p),
+                             BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
+        }
+
+        // ¿este punto tiene BARRO en el suelo (splat)? = claro pelado O sendero a pie.
+        public static bool IsMudSpot(Vector2 p)
+        {
+            if (IsClearing(p)) return true;
+            float footNoise = Mathf.PerlinNoise(p.x * 0.25f, p.y * 0.25f) * 0.3f;
+            if (DistToFootTrail(p) < FootTrailHalfWidth + footNoise) return true;
             return false;
         }
 
@@ -160,7 +177,7 @@ namespace FolkloreArchives.MapGen
                 for (int xi = 0; xi < res; xi++)
                 {
                     float wx = xi / (float)(res - 1) * MapLayout.MapSizeX;
-                    if (!IsMudSpot(new Vector2(wx, wz))) continue;
+                    if (!IsClearing(new Vector2(wx, wz))) continue; // solo pelar CLAROS; los senderos llevan pasto corto (SetupGrass)
                     for (int i = 0; i < nproto; i++)
                         if (layers[i][zi, xi] != 0) { layers[i][zi, xi] = 0; cleared++; }
                 }
@@ -388,7 +405,7 @@ namespace FolkloreArchives.MapGen
                                     Mathf.Min(BuilderUtils.DistToScaryPaths(p),
                                     Mathf.Min(BuilderUtils.DistToExtraTrails(p),
                                               BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
-                    if (dFootTr < 2.0f + footNoise) trail = 1f;   // sendero angosto pero visible (~2m): barro claro con el verde pegado al borde
+                    if (dFootTr < FootTrailHalfWidth + footNoise) trail = 1f;   // sendero (~2.5m): barro con pasto corto ralo encima (el pasto lo pone SetupGrass)
                     // CLAROS de barro: campamento, rancho de la vieja y su galpón (owner:
                     // esos lugares pisados tienen que ser tierra/barro, no pasto).
                     if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius + 2f) trail = 1f;

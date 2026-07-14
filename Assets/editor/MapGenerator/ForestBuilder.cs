@@ -1557,11 +1557,20 @@ namespace FolkloreArchives.MapGen
                     if (MapLayout.InRect(p, MapLayout.OldLadyHouseFootMin, MapLayout.OldLadyHouseFootMax, 0.2f)) continue;
                     if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 0.2f)) continue;
 
-                    // SIN PASTO sobre las zonas de BARRO (campamento 18m, senderos a pie 5m,
-                    // rancho/galpón/cabaña). Mismo criterio que el splat en TerrainBuilder,
-                    // así el pasto NO vuelve a tapar el barro en cada Generate. El bosque
-                    // general (fuera del barro) mantiene todo su pasto.
-                    if (TerrainBuilder.IsMudSpot(p)) { _mudGrassCleared++; continue; }
+                    // CLARO PELADO (campamento/rancho/galpón/cabaña): barro sin nada de pasto.
+                    if (TerrainBuilder.IsClearing(p)) { _mudGrassCleared++; continue; }
+
+                    // SENDERO a pie: barro con pasto verde CORTO y RALO (surtido) encima —
+                    // más bajo que el del bosque, como un caminito pisado donde crece algo
+                    // de pasto. El barro (splat) asoma entre las matas cortas.
+                    float footNoiseG = Mathf.PerlinNoise(p.x * 0.25f, p.y * 0.25f) * 0.3f;
+                    if (TerrainBuilder.DistToFootTrail(p) < TerrainBuilder.FootTrailHalfWidth + footNoiseG)
+                    {
+                        if (shortIdx >= 0 && Random.value < 0.5f)   // ~50% de las celdas: surtido, no parejo
+                            maps[shortIdx][zi, xi] = 1 + Random.Range(0, 2);
+                        _mudGrassCleared++;
+                        continue;
+                    }
 
                     // claro del campamento de los ladrones (suelo pisado bajo ranchos/fuego)
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 26f) continue;
