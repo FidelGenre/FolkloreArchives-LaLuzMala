@@ -75,6 +75,7 @@ namespace FolkloreArchives.MapGen
             // Escala GLOBAL del auto (carrocería + interior + asientos + collider juntos).
             // Subí CarSize para agrandarlo más. 1.35 → ~7.2m (bien grande, para el jugador de 2.4m).
             car.transform.localScale = Vector3.one * CarSize;
+            Debug.Log($"<color=cyan>[CarBuilder] Auto armado. Escala efectiva = {ModelScale * CarSize:0.00} (largo ~{7.37f * ModelScale * CarSize:0.0}m). Si NO ves este mensaje al regenerar, no se ejecutó el codigo nuevo.</color>");
             return car;
         }
 
