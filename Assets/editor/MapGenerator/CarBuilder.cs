@@ -93,44 +93,29 @@ namespace FolkloreArchives.MapGen
             }
         }
 
-        // ---------- INTERIOR procedural ----------
+        // ---------- INTERIOR procedural (MÍNIMO y SEGURO) ----------
+        // Solo tablero + volante + radio, ubicados relativos al asiento del conductor
+        // (adelante y abajo de la vista) para que SIEMPRE queden adentro de la cabina y
+        // en cámara, sin atravesar la carrocería. Nada de paneles/asientos anchos que
+        // (al no conocer las medidas exactas del modelo) se salían para afuera.
+        static readonly Vector3 DriverLocal = new Vector3(-0.42f, 1.08f, 0.18f);
+
         static void BuildInterior(Transform car)
         {
-            var seat = Mat("car_int_seat", SeatColor);
-            var dash = Mat("car_int_dash", DashColor);
+            var dash  = Mat("car_int_dash", DashColor);
             var wheel = Mat("car_int_wheel", WheelColor);
-            var panel = Mat("car_int_panel", PanelColor);
-            var glow = Mat("car_int_radio", RadioGlow, 1.6f);
+            var glow  = Mat("car_int_radio", RadioGlow, 1.6f);
 
-            // piso + techo interior (tapan el "transparente" arriba/abajo)
-            IBox(car, "Int_Floor", new Vector3(0f, 0.42f, -0.35f), new Vector3(1.62f, 0.06f, 2.70f), panel);
-            IBox(car, "Int_Roof",  new Vector3(0f, 1.30f, -0.35f), new Vector3(1.55f, 0.05f, 2.30f), panel);
-            // paneles laterales (der + trasero-izq; el frente-izq lo tapa la PUERTA)
-            IBox(car, "Int_PanelR",   new Vector3( 0.85f, 0.70f, -0.30f), new Vector3(0.05f, 0.55f, 1.95f), panel);
-            IBox(car, "Int_PanelLrear",new Vector3(-0.85f, 0.70f, -0.95f), new Vector3(0.05f, 0.55f, 0.95f), panel);
-            IBox(car, "Int_Rear",     new Vector3(0f, 0.85f, -1.55f), new Vector3(1.55f, 0.55f, 0.10f), panel);
+            // tablero: angosto y bajo, delante de los asientos
+            Vector3 dashC = DriverLocal + new Vector3(0.42f, -0.28f, 0.55f); // centrado en X, abajo-adelante
+            IBox(car, "Dash",         dashC,                              new Vector3(1.05f, 0.20f, 0.20f), dash);
+            IBox(car, "Radio",        dashC + new Vector3(0f, 0.01f, -0.10f), new Vector3(0.22f, 0.12f, 0.10f), dash);
+            IBox(car, "RadioDisplay", dashC + new Vector3(0f, 0.03f, -0.05f), new Vector3(0.15f, 0.045f, 0.02f), glow);
 
-            // tablero + guantera
-            IBox(car, "Dash", new Vector3(0f, 0.96f, 0.82f), new Vector3(1.55f, 0.30f, 0.26f), dash);
-            // radio + display encendido
-            IBox(car, "Radio",        new Vector3(0f, 0.90f, 0.70f), new Vector3(0.24f, 0.15f, 0.10f), dash);
-            IBox(car, "RadioDisplay", new Vector3(0f, 0.92f, 0.76f), new Vector3(0.16f, 0.05f, 0.02f), glow);
-
-            // volante (columna + aro) frente al conductor
-            IBox(car, "SteerColumn", new Vector3(-0.42f, 0.90f, 0.60f), new Vector3(0.06f, 0.06f, 0.34f), wheel, new Vector3(58f, 0f, 0f));
-            ICyl(car, "SteerWheel",  new Vector3(-0.42f, 0.94f, 0.46f), new Vector3(0.36f, 0.03f, 0.36f), wheel, new Vector3(58f, 0f, 0f));
-
-            // asientos (base + respaldo) x4
-            FrontSeat(car, "SeatV_Driver", -0.42f,  0.10f, seat);
-            FrontSeat(car, "SeatV_Pax",     0.42f,  0.10f, seat);
-            FrontSeat(car, "SeatV_RearL",  -0.42f, -0.95f, seat);
-            FrontSeat(car, "SeatV_RearR",   0.42f, -0.95f, seat);
-        }
-
-        static void FrontSeat(Transform car, string n, float x, float z, Material m)
-        {
-            IBox(car, n + "_base", new Vector3(x, 0.56f, z),          new Vector3(0.52f, 0.14f, 0.52f), m);
-            IBox(car, n + "_back", new Vector3(x, 0.90f, z - 0.28f),  new Vector3(0.52f, 0.60f, 0.14f), m);
+            // volante frente al conductor (columna inclinada + aro)
+            Vector3 wheelC = DriverLocal + new Vector3(0f, -0.26f, 0.34f);
+            IBox(car, "SteerColumn", wheelC + new Vector3(0f, -0.02f, 0.10f), new Vector3(0.05f, 0.05f, 0.28f), wheel, new Vector3(58f, 0f, 0f));
+            ICyl(car, "SteerWheel",  wheelC,                                  new Vector3(0.32f, 0.03f, 0.32f), wheel, new Vector3(58f, 0f, 0f));
         }
 
         // ---------- PUERTA del conductor (pivote que gira) ----------
