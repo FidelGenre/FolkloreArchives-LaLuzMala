@@ -1637,7 +1637,9 @@ namespace FolkloreArchives.MapGen
                     // jugable más próxima (caminos + POIs), reusando lo ya calculado.
                     float dPaved = BuilderUtils.DistToPolyline(p, MapLayout.PavedRoute);
                     float dGameplay = Mathf.Min(Mathf.Min(dRoad, dA), Mathf.Min(dScary, dPaved));
-                    dGameplay = Mathf.Min(dGameplay, Vector2.Distance(p, MapLayout.Campsite));
+                    // Campamento: medir al BORDE del claro de barro (no al centro), así el
+                    // pasto está PLENO pegado al barro y no ralo alrededor del campamento.
+                    dGameplay = Mathf.Min(dGameplay, Mathf.Max(0f, Vector2.Distance(p, MapLayout.Campsite) - 12f));
                     dGameplay = Mathf.Min(dGameplay, df); // HuntingField
                     dGameplay = Mathf.Min(dGameplay, dm); // MainCriminalCamp
                     dGameplay = Mathf.Min(dGameplay, Vector2.Distance(p, MapLayout.OldLadyRanch));
