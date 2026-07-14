@@ -69,6 +69,22 @@ namespace FolkloreArchives.MapGen
             return terrain;
         }
 
+        // Lleva la cámara del Scene view justo encima del CAMPAMENTO, mirando de arriba,
+        // para poder VER el barro sin tener que buscarlo navegando (saca la ambigüedad
+        // de "¿estoy parado en el barro o en el bosque?").
+        [MenuItem("Tools/Folklore Archives/Ver el Campamento (camara)")]
+        public static void FrameCampsite()
+        {
+            var sv = SceneView.lastActiveSceneView;
+            if (sv == null) { Debug.LogWarning("Abrí una ventana Scene primero."); return; }
+            var t = Object.FindFirstObjectByType<Terrain>();
+            float y = t != null ? t.SampleHeight(new Vector3(MapLayout.Campsite.x, 0f, MapLayout.Campsite.y)) : 12f;
+            var center = new Vector3(MapLayout.Campsite.x, y, MapLayout.Campsite.y);
+            sv.LookAt(center, Quaternion.Euler(72f, 0f, 0f), 22f); // picado cerrado, bien cerca
+            sv.Repaint();
+            Debug.Log($"<color=lime>Cámara sobre el CAMPAMENTO {MapLayout.Campsite}. Si acá NO ves barro marrón, el barro no se está pintando/despejando en el campamento.</color>");
+        }
+
         // Borra el terreno cacheado → el próximo Generate lo rehace desde cero.
         // Usar cuando cambiaste altura/caminos/POIs/edits del terreno.
         [MenuItem("Tools/Folklore Archives/Rebuild Terrain (forzar)")]
