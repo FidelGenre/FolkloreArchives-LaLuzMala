@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 13;
+        const int SplatVersion = 14;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -129,7 +129,7 @@ namespace FolkloreArchives.MapGen
         // despeje EXACTAMENTE donde está el barro (si no, el pasto denso tapa el barro).
         // El bosque general (fuera de estas zonas) NO se toca.
         // Ancho a cada lado de un sendero a pie (barro). El pasto verde llega a este borde.
-        public const float FootTrailHalfWidth = 4.0f;
+        public const float FootTrailHalfWidth = 2.0f;
 
         // CLARO PELADO (barro SIN pasto): campamento, rancho, galpón, cabaña. Suelo pisado
         // de verdad — ahí no crece nada.
