@@ -63,7 +63,7 @@ namespace FolkloreArchives.MapGen
                 }
                 carDoors = doorList.ToArray();
 
-                Debug.Log($"<color=cyan>[CarBuilder] scailman completo. escala {scale:0.000}, largo {TargetLength}m. Volante {(steer!=null?"OK":"NO")}, puertas {_doors.Length}.</color>");
+                Debug.Log($"<color=cyan>[CarBuilder] scailman completo. escala {scale:0.000}, largo {TargetLength}m. Volante {(steer!=null?"OK":"NO")}, puertas {carDoors.Length}.</color>");
             }
             else
             {
