@@ -175,14 +175,18 @@ namespace FolkloreArchives
 
             if (door != null && !openDoors.Contains(door)) { yield return AnimateDoor(c, door, true, 0.30f); openDoors.Add(door); }
 
-            // posición de bajada: al costado del auto, sobre el PISO (ignorando el propio auto)
+            // posición + orientación de bajada: al costado del auto, sobre el PISO,
+            // MIRANDO hacia afuera (salida natural, sin giros raros).
             Vector3 sideDir = (seat.position - c.transform.position); sideDir.y = 0f;
             if (sideDir.sqrMagnitude < 0.01f) sideDir = -c.transform.right;
-            Vector3 side = c.transform.position + sideDir.normalized * 2.2f;
+            sideDir.Normalize();
+            Vector3 side = c.transform.position + sideDir * 2.8f;
             side.y = GroundYIgnoring(c, side) + 0.05f;
             transform.position = side;
+            transform.rotation = Quaternion.LookRotation(sideDir);   // el jugador mira hacia afuera
+            lookYaw = 0f; lookPitch = 0f;
 
-            // deslizar la cámara del asiento hasta el ojo del jugador (SUAVE)
+            // deslizar la cámara del asiento hasta el ojo del jugador (SUAVE, camino corto)
             Vector3 targetPos = camParent.TransformPoint(camLocalPos);
             Quaternion targetRot = camParent.rotation * camLocalRot;
             yield return Glide(cam, targetPos, targetRot);
