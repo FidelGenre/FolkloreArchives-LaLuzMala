@@ -19,6 +19,8 @@ namespace FolkloreArchives.MapGen
         // El OBJ mide ~7.37 de largo → 0.72 lo lleva a ~5.3m (grande, para acompañar
         // al jugador de 2.4m). Subí/bajá este número para agrandar/achicar el auto.
         const float ModelScale = 0.72f;
+        // Escala GLOBAL extra encima de ModelScale (agranda TODO el auto junto).
+        const float CarSize = 1.35f;
 
         // Colores del interior (PS1 apagado).
         static readonly Color SeatColor  = new Color(0.16f, 0.13f, 0.12f);
@@ -70,6 +72,9 @@ namespace FolkloreArchives.MapGen
 
             car.transform.position = pos + Vector3.up * 0.05f;
             car.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            // Escala GLOBAL del auto (carrocería + interior + asientos + collider juntos).
+            // Subí CarSize para agrandarlo más. 1.35 → ~7.2m (bien grande, para el jugador de 2.4m).
+            car.transform.localScale = Vector3.one * CarSize;
             return car;
         }
 
