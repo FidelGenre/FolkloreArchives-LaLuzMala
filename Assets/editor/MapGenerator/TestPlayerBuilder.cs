@@ -21,15 +21,13 @@ namespace FolkloreArchives.MapGen
             var player = new GameObject("TEST_PLAYER");
             player.transform.SetParent(parent);
 
-            // spawn ON the dirt road a little back from the campsite, FACING down the
-            // road, so the two-track wheel ruts are right in front of the player
-            // instead of behind them (that's why the road was "never visible").
-            Vector2 roadEnd = MapLayout.Campsite;
-            Vector2 roadPrev = MapLayout.DirtRoad[MapLayout.DirtRoad.Length - 2];
-            Vector2 dir = (roadPrev - roadEnd).normalized;
-            Vector2 spawnXZ = roadEnd + dir * 12f;
-            player.transform.position = BuilderUtils.Ground(t, spawnXZ.x, spawnXZ.y) + Vector3.up * 0.2f;
-            player.transform.rotation = Quaternion.Euler(0f, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg, 0f);
+            // spawn AL LADO DEL AUTO (en la ruta, pasando el túnel) para poder probar
+            // el manejo sin caminar desde el campamento. Encaja con el arranque del juego.
+            // (Para volver a spawnear en el campamento: usar MapLayout.Campsite como antes.)
+            float carX = MapLayout.TunnelEntranceX + 22f;
+            Vector2 spawnXZ = new Vector2(carX, MapLayout.PavedRouteZAt(carX) + 3.5f);
+            player.transform.position = new Vector3(spawnXZ.x, MapLayout.RoadSurfaceHeight + 0.2f, spawnXZ.y);
+            player.transform.rotation = Quaternion.Euler(0f, 180f, 0f); // mirando hacia el auto
 
             var cc = player.AddComponent<CharacterController>();
             cc.height = 2.4f;                        // jugador de 2.40 m
