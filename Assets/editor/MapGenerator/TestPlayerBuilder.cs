@@ -80,6 +80,7 @@ namespace FolkloreArchives.MapGen
             flashlight.shadows = LightShadows.None; // shadows from this were a real cost too; skip them
 
             player.AddComponent<FolkloreArchives.MapExplorer>();
+            player.AddComponent<FolkloreArchives.PlayerVehicleInteractor>(); // subir/bajar del auto con E
             // El menú de opciones (Esc) ahora va en el objeto NET (NetworkBuilder), que
             // NO se desactiva en online — así Esc abre el menú también en co-op.
 

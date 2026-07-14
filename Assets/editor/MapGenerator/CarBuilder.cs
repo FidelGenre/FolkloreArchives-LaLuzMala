@@ -47,13 +47,33 @@ namespace FolkloreArchives.MapGen
                 Placeholder(car.transform);
             }
 
+            // Collider (fondo ≈ y0 para que apoye en el piso con las ruedas).
             var col = car.AddComponent<BoxCollider>();
-            col.center = new Vector3(0f, 0.65f, 0f);
-            col.size   = new Vector3(1.65f, 1.20f, 4.35f);
+            col.center = new Vector3(0f, 0.55f, 0f);
+            col.size   = new Vector3(1.65f, 1.10f, 4.35f);
 
-            car.transform.position = pos + Vector3.up * 0.02f;
+            // Física + manejo arcade.
+            car.AddComponent<Rigidbody>();
+            var ctrl = car.AddComponent<FolkloreArchives.CarController>();
+
+            // Asientos (anclas de cámara): 2 adelante + 2 atrás. Conductor a la IZQUIERDA (-X).
+            ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   new Vector3(-0.35f, 1.05f,  0.25f));
+            ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", new Vector3( 0.35f, 1.05f,  0.25f));
+            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    new Vector3(-0.35f, 1.05f, -0.70f));
+            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    new Vector3( 0.35f, 1.05f, -0.70f));
+
+            car.transform.position = pos + Vector3.up * 0.05f;
             car.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             return car;
+        }
+
+        static Transform Seat(Transform car, string name, Vector3 lpos)
+        {
+            var g = new GameObject(name);
+            g.transform.SetParent(car);
+            g.transform.localPosition = lpos;
+            g.transform.localRotation = Quaternion.identity;
+            return g.transform;
         }
 
         // Material URP con la textura PSX del auto (baja gloss para que no brille plástico).
