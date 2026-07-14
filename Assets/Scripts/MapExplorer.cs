@@ -90,6 +90,7 @@ namespace FolkloreArchives
             var mouse = Mouse.current;
             if (kb == null || mouse == null) return;
             if (SettingsMenu.IsOpen) return; // menú de opciones abierto: no mover/mirar
+            if (controller == null || !controller.enabled) return; // arriba del auto: el CC está apagado
 
             // Look
             if (Cursor.lockState == CursorLockMode.Locked)

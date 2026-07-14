@@ -1,11 +1,12 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
-//  PlayerVehicleInteractor.cs — subir/bajar del auto con E.
-//  E sube al ASIENTO MÁS CERCANO (conductor/acompañante/traseros):
-//  se abre la puerta de ese asiento, la cámara ENTRA suave y la
-//  puerta cierra. Solo manejás si te subís al asiento del conductor.
-//  E de nuevo = se abre la puerta, bajás al costado y cierra.
-//  Mientras manejás, el mouse mueve la vista (free-look acotado).
+//  PlayerVehicleInteractor.cs — subir/bajar del auto, MANUAL.
+//    E  → si la puerta más cercana está CERRADA: la abre (no te sienta).
+//         si está ABIERTA: te subís a ESE asiento (despacio).
+//         si ya estás sentado: te bajás (despacio).
+//    Q  → abre/cierra a mano la puerta más cercana (para cerrarla al subir).
+//  Solo manejás si te subís del lado del conductor. Mientras manejás,
+//  el mouse mueve la vista (free-look acotado).
 // ============================================================
 using System.Collections;
 using System.Collections.Generic;
@@ -25,30 +26,24 @@ namespace FolkloreArchives
 
         CharacterController cc;
         MapExplorer explorer;
-        Transform cam;
-        Transform camParent;
+        Transform cam, camParent;
         Vector3 camLocalPos;
         Quaternion camLocalRot;
         Renderer[] bodyRenderers;
 
         CarController car;      // auto en el que estoy; null = a pie
-        Transform mySeat;       // asiento en el que estoy
+        Transform mySeat, myDoor;
         bool busy;
         float lookYaw, lookPitch;
         readonly Dictionary<Transform, Quaternion> doorClosed = new Dictionary<Transform, Quaternion>();
+        readonly HashSet<Transform> openDoors = new HashSet<Transform>();
 
         void Start()
         {
             cc = GetComponent<CharacterController>();
             explorer = GetComponent<MapExplorer>();
             var c = GetComponentInChildren<Camera>();
-            if (c != null)
-            {
-                cam = c.transform;
-                camParent = cam.parent;
-                camLocalPos = cam.localPosition;
-                camLocalRot = cam.localRotation;
-            }
+            if (c != null) { cam = c.transform; camParent = cam.parent; camLocalPos = cam.localPosition; camLocalRot = cam.localRotation; }
             bodyRenderers = GetComponentsInChildren<Renderer>(true);
         }
 
@@ -57,12 +52,32 @@ namespace FolkloreArchives
             var kb = Keyboard.current;
             if (kb == null || SettingsMenu.IsOpen || busy) return;
 
-            if (kb.eKey.wasPressedThisFrame)
+            // Q: abrir/cerrar a mano la puerta más cercana
+            if (kb.qKey.wasPressedThisFrame)
             {
-                if (car == null) TryEnter();
-                else StartCoroutine(ExitRoutine());
+                Vector3 from = car != null && cam != null ? cam.position : transform.position;
+                var (dc, dd) = FindNearestDoor(from);
+                if (dd != null) StartCoroutine(SetDoor(dc, dd, !openDoors.Contains(dd)));
             }
 
+            // E: abrir puerta / sentarse / bajarse
+            if (kb.eKey.wasPressedThisFrame)
+            {
+                if (car != null) StartCoroutine(ExitRoutine());
+                else
+                {
+                    var (dc, dd) = FindNearestDoor(transform.position);
+                    if (dd != null)
+                    {
+                        if (openDoors.Contains(dd))
+                            StartCoroutine(SitRoutine(dc, NearestSeat(dc, dd.position), dd));   // abierta → subir
+                        else
+                            StartCoroutine(SetDoor(dc, dd, true));                              // cerrada → abrir
+                    }
+                }
+            }
+
+            // free-look mientras manejo/voy de acompañante
             if (car != null && cam != null && Cursor.lockState == CursorLockMode.Locked)
             {
                 var mouse = Mouse.current;
@@ -78,60 +93,44 @@ namespace FolkloreArchives
 
         static Transform[] Seats(CarController c) => new[] { c.driverSeat, c.frontPassenger, c.rearLeft, c.rearRight };
 
-        void TryEnter()
+        (CarController, Transform) FindNearestDoor(Vector3 from)
         {
-            // Elijo la PUERTA más cercana a donde estoy; de ahí sale el asiento (así coinciden).
-            CarController bestCar = null; Transform bestDoor = null; float bestD = enterRange;
+            CarController bc = null; Transform bd = null; float best = enterRange;
             foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
             {
-                if (Vector3.Distance(transform.position, c.transform.position) > enterRange + 4f) continue;
                 if (c.doors == null) continue;
+                if (Vector3.Distance(from, c.transform.position) > enterRange + 5f) continue;
                 foreach (var d in c.doors)
                 {
                     if (d == null) continue;
-                    float dist = Vector3.Distance(transform.position, d.position);
-                    if (dist < bestD) { bestD = dist; bestCar = c; bestDoor = d; }
+                    float dist = Vector3.Distance(from, d.position);
+                    if (dist < best) { best = dist; bc = c; bd = d; }
                 }
             }
-            if (bestCar == null)
-            {
-                // fallback (auto sin puertas): asiento más cercano
-                Transform bestSeat = null; float sd = enterRange + 1.5f;
-                foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
-                    foreach (var s in Seats(c))
-                    {
-                        if (s == null) continue;
-                        float d = Vector3.Distance(transform.position, s.position);
-                        if (d < sd) { sd = d; bestSeat = s; bestCar = c; }
-                    }
-                if (bestCar != null) StartCoroutine(EnterRoutine(bestCar, bestSeat, null));
-                return;
-            }
-            Transform seat = NearestSeat(bestCar, bestDoor.position);
-            StartCoroutine(EnterRoutine(bestCar, seat, bestDoor));
+            return (bc, bd);
         }
 
         Transform NearestSeat(CarController c, Vector3 to)
         {
             Transform best = null; float bd = float.MaxValue;
-            foreach (var s in Seats(c))
-            {
-                if (s == null) continue;
-                float d = Vector3.Distance(s.position, to);
-                if (d < bd) { bd = d; best = s; }
-            }
+            foreach (var s in Seats(c)) { if (s == null) continue; float d = Vector3.Distance(s.position, to); if (d < bd) { bd = d; best = s; } }
             return best;
         }
 
-        IEnumerator EnterRoutine(CarController c, Transform seat, Transform door)
+        IEnumerator SetDoor(CarController c, Transform door, bool open)
+        {
+            busy = true;
+            yield return AnimateDoor(c, door, open, 0.35f);
+            if (open) openDoors.Add(door); else openDoors.Remove(door);
+            busy = false;
+        }
+
+        IEnumerator SitRoutine(CarController c, Transform seat, Transform door)
         {
             busy = true;
             if (explorer != null) explorer.enabled = false;
             if (cc != null) cc.enabled = false;
             SetBodyVisible(false);
-
-            if (door == null) door = NearestDoor(c, seat);
-            yield return AnimateDoor(c, door, true, 0.32f);
 
             cam.SetParent(null, true);
             Vector3 p0 = cam.position; Quaternion r0 = cam.rotation;
@@ -145,13 +144,10 @@ namespace FolkloreArchives
                 yield return null;
             }
             cam.SetParent(seat, false);
-            cam.localPosition = Vector3.zero;
-            cam.localRotation = Quaternion.identity;
+            cam.localPosition = Vector3.zero; cam.localRotation = Quaternion.identity;
             lookYaw = 0f; lookPitch = 0f;
 
-            yield return AnimateDoor(c, door, false, 0.32f);
-
-            car = c; mySeat = seat;
+            car = c; mySeat = seat; myDoor = door;
             c.driving = (seat == c.driverSeat);   // solo manejás en el asiento del conductor
             busy = false;
         }
@@ -159,20 +155,20 @@ namespace FolkloreArchives
         IEnumerator ExitRoutine()
         {
             busy = true;
-            var c = car; var seat = mySeat; car = null; mySeat = null; c.driving = false;
+            var c = car; var seat = mySeat; var door = myDoor;
+            car = null; mySeat = null; myDoor = null; c.driving = false;
 
-            Transform door = NearestDoor(c, seat);
-            yield return AnimateDoor(c, door, true, 0.30f);
+            // si la puerta está cerrada, abrirla para poder bajar
+            if (door != null && !openDoors.Contains(door)) { yield return AnimateDoor(c, door, true, 0.30f); openDoors.Add(door); }
 
-            // ubicar al jugador al lado de la puerta (cuerpo oculto todavía)
+            // ubicar al jugador al lado de la puerta (cuerpo oculto)
             Vector3 sideDir = (seat.position - c.transform.position); sideDir.y = 0f;
             if (sideDir.sqrMagnitude < 0.01f) sideDir = -c.transform.right;
             Vector3 side = c.transform.position + sideDir.normalized * 1.8f + Vector3.up * 1.5f;
-            if (Physics.Raycast(side + Vector3.up * 2f, Vector3.down, out var hit, 8f))
-                side.y = hit.point.y + 0.1f;
+            if (Physics.Raycast(side + Vector3.up * 2f, Vector3.down, out var hit, 8f)) side.y = hit.point.y + 0.1f;
             transform.position = side;
 
-            // deslizar la cámara del asiento hasta el ojo del jugador afuera (salida SUAVE)
+            // deslizar la cámara del asiento hasta el ojo del jugador afuera (SUAVE)
             cam.SetParent(null, true);
             Vector3 p0 = cam.position; Quaternion r0 = cam.rotation;
             Vector3 targetPos = camParent.TransformPoint(camLocalPos);
@@ -187,28 +183,12 @@ namespace FolkloreArchives
                 yield return null;
             }
             cam.SetParent(camParent, false);
-            cam.localPosition = camLocalPos;
-            cam.localRotation = camLocalRot;
+            cam.localPosition = camLocalPos; cam.localRotation = camLocalRot;
 
             SetBodyVisible(true);
             if (cc != null) cc.enabled = true;
             if (explorer != null) explorer.enabled = true;
-
-            yield return AnimateDoor(c, door, false, 0.30f);
-            busy = false;
-        }
-
-        Transform NearestDoor(CarController c, Transform seat)
-        {
-            if (c.doors == null || seat == null) return null;
-            Transform best = null; float bd = float.MaxValue;
-            foreach (var d in c.doors)
-            {
-                if (d == null) continue;
-                float dd = Vector3.Distance(d.position, seat.position);
-                if (dd < bd) { bd = dd; best = d; }
-            }
-            return best;
+            busy = false;   // la puerta queda ABIERTA; se cierra con Q
         }
 
         IEnumerator AnimateDoor(CarController c, Transform door, bool open, float dur)
@@ -216,7 +196,6 @@ namespace FolkloreArchives
             if (door == null) yield break;
             if (!doorClosed.ContainsKey(door)) doorClosed[door] = door.localRotation;
             Quaternion closed = doorClosed[door];
-            // sentido de apertura según el lado de la puerta (izq/der)
             float sign = c.transform.InverseTransformPoint(door.position).x < 0f ? 1f : -1f;
             Quaternion openRot = closed * Quaternion.Euler(0f, sign * doorOpenDeg, 0f);
             Quaternion from = door.localRotation;
@@ -239,15 +218,19 @@ namespace FolkloreArchives
 
         void OnGUI()
         {
-            if (car != null || busy) return;
-            bool near = false;
-            foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
-                if (Vector3.Distance(transform.position, c.transform.position) < enterRange + 3f) { near = true; break; }
-            if (!near) return;
-            var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
+            if (busy) return;
+            string msg;
+            if (car != null) msg = "[ E ] Bajar    [ Q ] Puerta";
+            else
+            {
+                var (_, dd) = FindNearestDoor(transform.position);
+                if (dd == null) return;
+                msg = openDoors.Contains(dd) ? "[ E ] Subir    [ Q ] Cerrar puerta" : "[ E ] Abrir puerta    [ Q ] Puerta";
+            }
+            var style = new GUIStyle(GUI.skin.label) { fontSize = 19, alignment = TextAnchor.MiddleCenter };
             style.normal.textColor = Color.white;
-            GUI.Box(new Rect(Screen.width / 2 - 150, Screen.height - 90, 300, 34), GUIContent.none);
-            GUI.Label(new Rect(Screen.width / 2 - 150, Screen.height - 90, 300, 34), "[ E ]  Subir (asiento más cercano)", style);
+            GUI.Box(new Rect(Screen.width / 2 - 190, Screen.height - 90, 380, 32), GUIContent.none);
+            GUI.Label(new Rect(Screen.width / 2 - 190, Screen.height - 90, 380, 32), msg, style);
         }
     }
 }
