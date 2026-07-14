@@ -29,6 +29,10 @@ namespace FolkloreArchives
         public Transform rearLeft;
         public Transform rearRight;
 
+        [Header("Puerta del conductor (pivote que gira al subir)")]
+        public Transform driverDoor;      // pivote de la puerta
+        public float doorOpenAngle = -68f; // grados que abre
+
         [HideInInspector] public bool driving = false;
 
         Rigidbody rb;

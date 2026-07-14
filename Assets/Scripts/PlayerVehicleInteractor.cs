@@ -1,11 +1,12 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
 //  PlayerVehicleInteractor.cs — subir/bajar del auto con E.
-//  Al subir: apaga el movimiento a pie (MapExplorer + CharacterController),
-//  oculta el cuerpo del jugador, lleva la cámara al asiento del auto y
-//  activa el CarController. Mientras manejás, el mouse mueve la vista
-//  (free-look acotado) sin girar el auto. E de nuevo = bajar al costado.
+//  Al subir: se abre la PUERTA del conductor, la cámara ENTRA suave
+//  hasta el asiento (no teletransporta), se apaga el movimiento a pie
+//  y se oculta el cuerpo. Al manejar, el mouse mueve la vista adentro.
+//  E de nuevo = se abre la puerta, bajás al costado y cierra.
 // ============================================================
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -14,9 +15,10 @@ namespace FolkloreArchives
     public class PlayerVehicleInteractor : MonoBehaviour
     {
         public float enterRange = 3.5f;
-        public float lookYawLimit = 120f;   // cuánto podés girar la vista adentro
+        public float lookYawLimit = 120f;
         public float lookPitchLimit = 45f;
         public float lookSensitivity = 0.08f;
+        public float enterDuration = 0.6f;
 
         CharacterController cc;
         MapExplorer explorer;
@@ -26,8 +28,10 @@ namespace FolkloreArchives
         Quaternion camLocalRot;
         Renderer[] bodyRenderers;
 
-        CarController car;   // auto en el que estoy; null = a pie
+        CarController car;      // auto en el que estoy; null = a pie
+        bool busy;             // entrando/bajando (bloquea input)
         float lookYaw, lookPitch;
+        float doorAngle;
 
         void Start()
         {
@@ -41,20 +45,18 @@ namespace FolkloreArchives
                 camLocalPos = cam.localPosition;
                 camLocalRot = cam.localRotation;
             }
-            // renderers del CUERPO (para ocultarlos al subir). El perro es hermano, no
-            // se toca. La cámara/linterna no tienen renderer.
             bodyRenderers = GetComponentsInChildren<Renderer>(true);
         }
 
         void Update()
         {
             var kb = Keyboard.current;
-            if (kb == null || SettingsMenu.IsOpen) return;
+            if (kb == null || SettingsMenu.IsOpen || busy) return;
 
             if (kb.eKey.wasPressedThisFrame)
             {
                 if (car == null) TryEnter();
-                else Exit();
+                else StartCoroutine(ExitRoutine());
             }
 
             // free-look mientras manejo (mueve la vista, no el auto)
@@ -79,39 +81,81 @@ namespace FolkloreArchives
                 float d = Vector3.Distance(transform.position, c.transform.position);
                 if (d < bestD) { bestD = d; best = c; }
             }
-            if (best == null) return;
+            if (best != null) StartCoroutine(EnterRoutine(best));
+        }
 
-            car = best;
+        IEnumerator EnterRoutine(CarController c)
+        {
+            busy = true;
             if (explorer != null) explorer.enabled = false;
             if (cc != null) cc.enabled = false;
             SetBodyVisible(false);
 
-            Transform seat = car.driverSeat != null ? car.driverSeat : car.transform;
+            yield return AnimateDoor(c, c.doorOpenAngle, 0.32f);   // abrir puerta
+
+            // deslizar la cámara desde donde está hasta el asiento
+            Transform seat = c.driverSeat != null ? c.driverSeat : c.transform;
+            cam.SetParent(null, true);
+            Vector3 p0 = cam.position; Quaternion r0 = cam.rotation;
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / Mathf.Max(0.05f, enterDuration);
+                float e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
+                cam.position = Vector3.Lerp(p0, seat.position, e);
+                cam.rotation = Quaternion.Slerp(r0, seat.rotation, e);
+                yield return null;
+            }
             cam.SetParent(seat, false);
             cam.localPosition = Vector3.zero;
             cam.localRotation = Quaternion.identity;
             lookYaw = 0f; lookPitch = 0f;
-            car.driving = true;
+
+            yield return AnimateDoor(c, 0f, 0.32f);                 // cerrar puerta
+
+            car = c; c.driving = true;
+            busy = false;
         }
 
-        void Exit()
+        IEnumerator ExitRoutine()
         {
-            var c = car; car = null;
-            c.driving = false;
+            busy = true;
+            var c = car; car = null; c.driving = false;
 
-            // bajar al lado izquierdo del auto, apoyado en el piso
-            Vector3 side = c.transform.position - c.transform.right * 1.6f + Vector3.up * 1.5f;
-            if (Physics.Raycast(side + Vector3.up * 2f, Vector3.down, out var hit, 8f))
-                side.y = hit.point.y + 0.1f;
+            yield return AnimateDoor(c, c.doorOpenAngle, 0.30f);    // abrir puerta
 
             cam.SetParent(camParent, false);
             cam.localPosition = camLocalPos;
             cam.localRotation = camLocalRot;
 
+            // bajar al lado izquierdo, apoyado en el piso
+            Vector3 side = c.transform.position - c.transform.right * 1.8f + Vector3.up * 1.5f;
+            if (Physics.Raycast(side + Vector3.up * 2f, Vector3.down, out var hit, 8f))
+                side.y = hit.point.y + 0.1f;
             transform.position = side;
+
             SetBodyVisible(true);
             if (cc != null) cc.enabled = true;
             if (explorer != null) explorer.enabled = true;
+
+            yield return AnimateDoor(c, 0f, 0.30f);                 // cerrar puerta
+            busy = false;
+        }
+
+        IEnumerator AnimateDoor(CarController c, float targetAngle, float dur)
+        {
+            if (c.driverDoor == null) yield break;
+            float from = doorAngle;
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / Mathf.Max(0.05f, dur);
+                doorAngle = Mathf.Lerp(from, targetAngle, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t)));
+                c.driverDoor.localRotation = Quaternion.Euler(0f, doorAngle, 0f);
+                yield return null;
+            }
+            doorAngle = targetAngle;
+            c.driverDoor.localRotation = Quaternion.Euler(0f, doorAngle, 0f);
         }
 
         void SetBodyVisible(bool v)
@@ -122,8 +166,7 @@ namespace FolkloreArchives
 
         void OnGUI()
         {
-            // prompt "E para subir" cuando estás cerca y a pie
-            if (car != null) return;
+            if (car != null || busy) return;
             bool near = false;
             foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
                 if (Vector3.Distance(transform.position, c.transform.position) < enterRange) { near = true; break; }
