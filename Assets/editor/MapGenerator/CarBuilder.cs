@@ -26,8 +26,8 @@ namespace FolkloreArchives.MapGen
         // y lo meto adentro de la carcasa PSX. Estos 3 los calibro con capturas para que
         // encaje en la cabina.
         const string DonorFbx     = "Assets/ExternalAssets/SedanDonor/Model/Mesh/Car_Sedan.FBX";
-        const float  InteriorScale = 0.30f;
-        static readonly Vector3 InteriorOffset = new Vector3(0f, 0.35f, -0.20f);
+        const float  InteriorScale = 0.13f;
+        static readonly Vector3 InteriorOffset = new Vector3(0f, 0.20f, 0.0f);
         const float  InteriorYaw   = 0f;
 
         // Colores del interior (PS1 apagado).
@@ -63,7 +63,7 @@ namespace FolkloreArchives.MapGen
                 Debug.LogWarning("[CarBuilder] No encuentro " + SedanObj + " — hacé clic en Unity para importar y regenerá.");
             }
 
-            AddDonorInterior(car.transform);   // interior REAL del scailman (asientos/tablero/volante)
+            var steer = AddDonorInterior(car.transform);   // interior REAL del scailman
 
             var col = car.AddComponent<BoxCollider>();
             col.center = new Vector3(0f, 0.60f, 0.03f);
@@ -72,10 +72,15 @@ namespace FolkloreArchives.MapGen
             car.AddComponent<Rigidbody>();
             var ctrl = car.AddComponent<FolkloreArchives.CarController>();
             ctrl.driverDoor = null;
-            ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   new Vector3(-0.42f, 1.08f,  0.18f));
-            ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", new Vector3( 0.42f, 1.08f,  0.18f));
-            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    new Vector3(-0.42f, 1.08f, -0.90f));
-            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    new Vector3( 0.42f, 1.08f, -0.90f));
+
+            // asiento del CONDUCTOR: detrás y arriba del volante (auto-alineado al Steerwheel).
+            Vector3 dSeat = new Vector3(-0.42f, 1.08f, 0.18f); // fallback si no hay volante
+            if (steer != null)
+                dSeat = car.transform.InverseTransformPoint(steer.position) + new Vector3(0f, 0.20f, -0.32f);
+            ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   dSeat);
+            ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", dSeat + new Vector3(0.84f, 0f, 0f));
+            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, -1.10f));
+            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    dSeat + new Vector3(0.84f, 0f, -1.10f));
 
             car.transform.position = pos + Vector3.up * 0.05f;
             car.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
@@ -103,13 +108,14 @@ namespace FolkloreArchives.MapGen
         // ---------- INTERIOR DONANTE (scailman) ----------
         // Instancia el FBX del scailman, se queda SOLO con el interior + volante
         // (borra chasis/vidrios/puertas/ruedas/luces) y lo mete escalado en la carcasa.
-        static void AddDonorInterior(Transform car)
+        // Devuelve el transform del VOLANTE (Steerwheel) para alinear la cámara del asiento.
+        static Transform AddDonorInterior(Transform car)
         {
             var donor = AssetDatabase.LoadAssetAtPath<GameObject>(DonorFbx);
             if (donor == null)
             {
                 Debug.LogWarning("[CarBuilder] Falta importar " + DonorFbx + " — hacé FOCO en Unity para que importe el FBX y regenerá.");
-                return;
+                return null;
             }
             var inst = (GameObject)Object.Instantiate(donor, car);
             inst.name = "Interior";
@@ -130,7 +136,14 @@ namespace FolkloreArchives.MapGen
             inst.transform.localScale = Vector3.one * InteriorScale;
             inst.transform.localPosition = InteriorOffset;
             inst.transform.localRotation = Quaternion.Euler(0f, InteriorYaw, 0f);
-            Debug.Log($"<color=cyan>[CarBuilder] Interior donante (scailman) colocado. Escala {InteriorScale}, offset {InteriorOffset}.</color>");
+
+            // encontrar el VOLANTE para alinear la cámara del conductor
+            Transform steer = null;
+            foreach (var t in inst.GetComponentsInChildren<Transform>(true))
+                if (t.name.ToLower().Contains("steer")) { steer = t; break; }
+
+            Debug.Log($"<color=cyan>[CarBuilder] Interior donante (scailman) colocado. Escala {InteriorScale}, offset {InteriorOffset}. Volante {(steer!=null?"OK":"NO encontrado")}.</color>");
+            return steer;
         }
 
         // ---------- INTERIOR procedural (MÍNIMO y SEGURO) — YA NO SE USA ----------
