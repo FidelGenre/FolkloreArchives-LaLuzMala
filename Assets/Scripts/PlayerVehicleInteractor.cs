@@ -65,11 +65,7 @@ namespace FolkloreArchives
                 else if (target != null)   // a pie, apuntando algo del auto
                 {
                     if (target.isSeat)
-                    {
-                        var door = NearestDoor(target.car, target.part.position);
-                        if (door != null && openDoors.Contains(door))
-                            StartCoroutine(SitRoutine(target.car, target.part, door));      // asiento con puerta abierta → subir
-                    }
+                        StartCoroutine(SitRoutine(target.car, target.part, NearestDoor(target.car, target.part.position))); // apunto el asiento → subir
                     else
                         StartCoroutine(SetDoor(target.car, target.part, !openDoors.Contains(target.part))); // puerta → abrir/cerrar
                 }
@@ -268,11 +264,7 @@ namespace FolkloreArchives
             }
             else if (target != null)
             {
-                if (target.isSeat)
-                {
-                    var door = NearestDoor(target.car, target.part.position);
-                    msg = (door != null && openDoors.Contains(door)) ? "[ E ] Subir" : "Abrí la puerta primero";
-                }
+                if (target.isSeat) msg = "[ E ] Subir";
                 else msg = openDoors.Contains(target.part) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
             }
             if (msg == null) return;

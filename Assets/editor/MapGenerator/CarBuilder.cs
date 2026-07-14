@@ -153,8 +153,8 @@ namespace FolkloreArchives.MapGen
         {
             if (seat == null) return;
             var bc = seat.gameObject.AddComponent<BoxCollider>();
-            bc.center = Vector3.zero;
-            bc.size = new Vector3(0.5f, 0.75f, 0.5f);
+            bc.center = new Vector3(0f, -0.35f, 0f);   // baja al asiento (el ancla está a la altura del ojo)
+            bc.size = new Vector3(0.85f, 1.25f, 0.85f); // grande, fácil de apuntar
             bc.isTrigger = true;
             var ci = seat.gameObject.AddComponent<FolkloreArchives.CarInteractable>();
             ci.car = ctrl; ci.part = seat; ci.isSeat = true;
