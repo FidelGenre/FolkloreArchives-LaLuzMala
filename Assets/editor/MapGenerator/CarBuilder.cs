@@ -85,8 +85,8 @@ namespace FolkloreArchives.MapGen
                 dSeat = car.transform.InverseTransformPoint(steer.position) + new Vector3(0f, 0.42f, -0.30f);
             ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   dSeat);
             ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", dSeat + new Vector3(0.84f, 0f, 0f));
-            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, -1.10f));
-            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    dSeat + new Vector3(0.84f, 0f, -1.10f));
+            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, -1.55f));
+            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    dSeat + new Vector3(0.84f, 0f, -1.55f));
 
             car.transform.position = pos + Vector3.up * 0.05f;
             car.transform.rotation = Quaternion.Euler(0f, yaw, 0f);

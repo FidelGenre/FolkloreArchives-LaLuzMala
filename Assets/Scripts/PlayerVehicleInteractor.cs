@@ -80,29 +80,57 @@ namespace FolkloreArchives
 
         void TryEnter()
         {
-            CarController bestCar = null; Transform bestSeat = null; float bestD = float.MaxValue;
+            // Elijo la PUERTA más cercana a donde estoy; de ahí sale el asiento (así coinciden).
+            CarController bestCar = null; Transform bestDoor = null; float bestD = enterRange;
             foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
             {
-                if (Vector3.Distance(transform.position, c.transform.position) > enterRange + 3f) continue;
-                foreach (var s in Seats(c))
+                if (Vector3.Distance(transform.position, c.transform.position) > enterRange + 4f) continue;
+                if (c.doors == null) continue;
+                foreach (var d in c.doors)
                 {
-                    if (s == null) continue;
-                    float d = Vector3.Distance(transform.position, s.position);
-                    if (d < bestD) { bestD = d; bestCar = c; bestSeat = s; }
+                    if (d == null) continue;
+                    float dist = Vector3.Distance(transform.position, d.position);
+                    if (dist < bestD) { bestD = dist; bestCar = c; bestDoor = d; }
                 }
             }
-            if (bestCar != null && bestD < enterRange + 2.5f)
-                StartCoroutine(EnterRoutine(bestCar, bestSeat));
+            if (bestCar == null)
+            {
+                // fallback (auto sin puertas): asiento más cercano
+                Transform bestSeat = null; float sd = enterRange + 1.5f;
+                foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
+                    foreach (var s in Seats(c))
+                    {
+                        if (s == null) continue;
+                        float d = Vector3.Distance(transform.position, s.position);
+                        if (d < sd) { sd = d; bestSeat = s; bestCar = c; }
+                    }
+                if (bestCar != null) StartCoroutine(EnterRoutine(bestCar, bestSeat, null));
+                return;
+            }
+            Transform seat = NearestSeat(bestCar, bestDoor.position);
+            StartCoroutine(EnterRoutine(bestCar, seat, bestDoor));
         }
 
-        IEnumerator EnterRoutine(CarController c, Transform seat)
+        Transform NearestSeat(CarController c, Vector3 to)
+        {
+            Transform best = null; float bd = float.MaxValue;
+            foreach (var s in Seats(c))
+            {
+                if (s == null) continue;
+                float d = Vector3.Distance(s.position, to);
+                if (d < bd) { bd = d; best = s; }
+            }
+            return best;
+        }
+
+        IEnumerator EnterRoutine(CarController c, Transform seat, Transform door)
         {
             busy = true;
             if (explorer != null) explorer.enabled = false;
             if (cc != null) cc.enabled = false;
             SetBodyVisible(false);
 
-            Transform door = NearestDoor(c, seat);
+            if (door == null) door = NearestDoor(c, seat);
             yield return AnimateDoor(c, door, true, 0.32f);
 
             cam.SetParent(null, true);
@@ -136,17 +164,31 @@ namespace FolkloreArchives
             Transform door = NearestDoor(c, seat);
             yield return AnimateDoor(c, door, true, 0.30f);
 
-            cam.SetParent(camParent, false);
-            cam.localPosition = camLocalPos;
-            cam.localRotation = camLocalRot;
-
-            // bajar al costado, al lado de la puerta
+            // ubicar al jugador al lado de la puerta (cuerpo oculto todavía)
             Vector3 sideDir = (seat.position - c.transform.position); sideDir.y = 0f;
             if (sideDir.sqrMagnitude < 0.01f) sideDir = -c.transform.right;
             Vector3 side = c.transform.position + sideDir.normalized * 1.8f + Vector3.up * 1.5f;
             if (Physics.Raycast(side + Vector3.up * 2f, Vector3.down, out var hit, 8f))
                 side.y = hit.point.y + 0.1f;
             transform.position = side;
+
+            // deslizar la cámara del asiento hasta el ojo del jugador afuera (salida SUAVE)
+            cam.SetParent(null, true);
+            Vector3 p0 = cam.position; Quaternion r0 = cam.rotation;
+            Vector3 targetPos = camParent.TransformPoint(camLocalPos);
+            Quaternion targetRot = camParent.rotation * camLocalRot;
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / Mathf.Max(0.05f, enterDuration);
+                float e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
+                cam.position = Vector3.Lerp(p0, targetPos, e);
+                cam.rotation = Quaternion.Slerp(r0, targetRot, e);
+                yield return null;
+            }
+            cam.SetParent(camParent, false);
+            cam.localPosition = camLocalPos;
+            cam.localRotation = camLocalRot;
 
             SetBodyVisible(true);
             if (cc != null) cc.enabled = true;
