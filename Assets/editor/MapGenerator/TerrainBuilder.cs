@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 7;
+        const int SplatVersion = 8;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -135,7 +135,7 @@ namespace FolkloreArchives.MapGen
                             Mathf.Min(BuilderUtils.DistToScaryPaths(p),
                             Mathf.Min(BuilderUtils.DistToExtraTrails(p),
                                       BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
-            if (dFootTr < 5.0f + footNoise) return true;
+            if (dFootTr < 2.5f + footNoise) return true;
             if (Vector2.Distance(p, MapLayout.Campsite) < 18f) return true;
             if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f) return true;
             if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f) return true;
@@ -388,7 +388,7 @@ namespace FolkloreArchives.MapGen
                                     Mathf.Min(BuilderUtils.DistToScaryPaths(p),
                                     Mathf.Min(BuilderUtils.DistToExtraTrails(p),
                                               BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
-                    if (dFootTr < 5.0f + footNoise) trail = 1f;   // franja ancha: más barro visible entre las matas
+                    if (dFootTr < 2.5f + footNoise) trail = 1f;   // sendero angosto: el pasto verde llega hasta el borde del camino
                     // CLAROS de barro: campamento, rancho de la vieja y su galpón (owner:
                     // esos lugares pisados tienen que ser tierra/barro, no pasto).
                     if (Vector2.Distance(p, MapLayout.Campsite) < MapLayout.CampsiteClearRadius + 2f) trail = 1f;
