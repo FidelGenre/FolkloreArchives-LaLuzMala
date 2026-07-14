@@ -76,7 +76,7 @@ namespace FolkloreArchives.MapGen
             // asiento del CONDUCTOR: detrás y arriba del volante (auto-alineado al Steerwheel).
             Vector3 dSeat = new Vector3(-0.42f, 1.08f, 0.18f); // fallback si no hay volante
             if (steer != null)
-                dSeat = car.transform.InverseTransformPoint(steer.position) + new Vector3(0f, 0.20f, -0.32f);
+                dSeat = car.transform.InverseTransformPoint(steer.position) + new Vector3(0f, 0.45f, -0.30f);
             ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   dSeat);
             ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", dSeat + new Vector3(0.84f, 0f, 0f));
             ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, -1.10f));
