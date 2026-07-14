@@ -36,8 +36,8 @@ namespace FolkloreArchives.MapGen
                 shell.name = "Body";
                 shell.transform.localPosition = Vector3.zero;
                 shell.transform.localScale = Vector3.one * ModelScale;
-                // El modelo mira a -Z; girarlo 180° para que el frente sea +Z (adelante).
-                shell.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                // El frente del modelo ya es +Z (adelante) → sin giro extra.
+                shell.transform.localRotation = Quaternion.identity;
                 ApplyTexture(shell);
             }
             else
