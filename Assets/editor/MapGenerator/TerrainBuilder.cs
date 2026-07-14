@@ -153,7 +153,7 @@ namespace FolkloreArchives.MapGen
             int res = td.detailResolution;
             int cleared = 0;
             var layers = new int[nproto][,];
-            for (int i = 0; i < nproto; i++) layers[i] = td.GetDetailLayer(0, 0, i);
+            for (int i = 0; i < nproto; i++) layers[i] = td.GetDetailLayer(0, 0, res, res, i);
             for (int zi = 0; zi < res; zi++)
             {
                 float wz = zi / (float)(res - 1) * MapLayout.MapSize;
