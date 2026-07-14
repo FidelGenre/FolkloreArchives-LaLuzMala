@@ -22,6 +22,14 @@ namespace FolkloreArchives.MapGen
         // Escala GLOBAL extra encima de ModelScale (agranda TODO el auto junto).
         const float CarSize = 1.35f;
 
+        // Interior DONANTE (scailman FBX): agarro solo Interior/InteriorPanel/Steerwheel
+        // y lo meto adentro de la carcasa PSX. Estos 3 los calibro con capturas para que
+        // encaje en la cabina.
+        const string DonorFbx     = "Assets/ExternalAssets/SedanDonor/Model/Mesh/Car_Sedan.FBX";
+        const float  InteriorScale = 1.0f;
+        static readonly Vector3 InteriorOffset = new Vector3(0f, 0.30f, 0f);
+        const float  InteriorYaw   = 0f;
+
         // Colores del interior (PS1 apagado).
         static readonly Color SeatColor  = new Color(0.16f, 0.13f, 0.12f);
         static readonly Color DashColor  = new Color(0.09f, 0.09f, 0.10f);
@@ -55,8 +63,7 @@ namespace FolkloreArchives.MapGen
                 Debug.LogWarning("[CarBuilder] No encuentro " + SedanObj + " — hacé clic en Unity para importar y regenerá.");
             }
 
-            BuildInterior(car.transform);
-            var door = BuildDriverDoor(car.transform);
+            AddDonorInterior(car.transform);   // interior REAL del scailman (asientos/tablero/volante)
 
             var col = car.AddComponent<BoxCollider>();
             col.center = new Vector3(0f, 0.60f, 0.03f);
@@ -64,7 +71,7 @@ namespace FolkloreArchives.MapGen
 
             car.AddComponent<Rigidbody>();
             var ctrl = car.AddComponent<FolkloreArchives.CarController>();
-            ctrl.driverDoor = door;
+            ctrl.driverDoor = null;
             ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   new Vector3(-0.42f, 1.08f,  0.18f));
             ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", new Vector3( 0.42f, 1.08f,  0.18f));
             ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    new Vector3(-0.42f, 1.08f, -0.90f));
@@ -93,7 +100,40 @@ namespace FolkloreArchives.MapGen
             }
         }
 
-        // ---------- INTERIOR procedural (MÍNIMO y SEGURO) ----------
+        // ---------- INTERIOR DONANTE (scailman) ----------
+        // Instancia el FBX del scailman, se queda SOLO con el interior + volante
+        // (borra chasis/vidrios/puertas/ruedas/luces) y lo mete escalado en la carcasa.
+        static void AddDonorInterior(Transform car)
+        {
+            var donor = AssetDatabase.LoadAssetAtPath<GameObject>(DonorFbx);
+            if (donor == null)
+            {
+                Debug.LogWarning("[CarBuilder] Falta importar " + DonorFbx + " — hacé FOCO en Unity para que importe el FBX y regenerá.");
+                return;
+            }
+            var inst = (GameObject)Object.Instantiate(donor, car);
+            inst.name = "Interior";
+
+            // borrar todo lo que NO es interior (chasis, vidrios, puertas, ruedas, luces).
+            // OJO: "Steerwheel" contiene "wheel" → lo excluyo del borrado.
+            var kill = new System.Collections.Generic.List<GameObject>();
+            foreach (var t in inst.GetComponentsInChildren<Transform>(true))
+            {
+                if (t == inst.transform) continue;
+                string n = t.name.ToLower();
+                bool isWheel = n.Contains("wheel") && !n.Contains("steer");
+                if (n.Contains("chassis") || n.Contains("window") || n.Contains("door") || n.Contains("light") || isWheel)
+                    kill.Add(t.gameObject);
+            }
+            foreach (var g in kill) if (g != null) Object.DestroyImmediate(g);
+
+            inst.transform.localScale = Vector3.one * InteriorScale;
+            inst.transform.localPosition = InteriorOffset;
+            inst.transform.localRotation = Quaternion.Euler(0f, InteriorYaw, 0f);
+            Debug.Log($"<color=cyan>[CarBuilder] Interior donante (scailman) colocado. Escala {InteriorScale}, offset {InteriorOffset}.</color>");
+        }
+
+        // ---------- INTERIOR procedural (MÍNIMO y SEGURO) — YA NO SE USA ----------
         // Solo tablero + volante + radio, ubicados relativos al asiento del conductor
         // (adelante y abajo de la vista) para que SIEMPRE queden adentro de la cabina y
         // en cámara, sin atravesar la carrocería. Nada de paneles/asientos anchos que
