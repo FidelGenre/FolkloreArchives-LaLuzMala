@@ -30,6 +30,7 @@ namespace FolkloreArchives
 
         CarController car;      // null = a pie
         Transform mySeat, myDoor;
+        CarInteractable currentTarget;   // lo que apunta la mira este frame
         bool busy;
         float lookYaw, lookPitch;
         readonly Dictionary<Transform, Quaternion> doorClosed = new Dictionary<Transform, Quaternion>();
@@ -49,25 +50,28 @@ namespace FolkloreArchives
             var kb = Keyboard.current;
             if (kb == null || SettingsMenu.IsOpen || busy) return;
 
+            currentTarget = RaycastTarget();    // la MIRA (centro de pantalla), una vez por frame
+
             if (kb.eKey.wasPressedThisFrame)
             {
+                var target = currentTarget;
                 if (car != null)   // sentado
                 {
-                    if (myDoor != null && openDoors.Contains(myDoor))
-                        StartCoroutine(SetDoor(car, myDoor, false));   // cerrar la puerta desde adentro
+                    if (target != null && !target.isSeat && target.part == myDoor)
+                        StartCoroutine(SetDoor(car, myDoor, !openDoors.Contains(myDoor))); // apunto mi puerta → abrir/cerrar
                     else
-                        StartCoroutine(ExitRoutine());                 // bajarse
+                        StartCoroutine(ExitRoutine());                                     // apunto afuera → bajar
                 }
-                else               // a pie
+                else if (target != null)   // a pie, apuntando algo del auto
                 {
-                    var (seat, sdoor, sc) = NearestOpenSeat();
-                    if (seat != null)
-                        StartCoroutine(SitRoutine(sc, seat, sdoor));   // pegado al asiento → sentarse
-                    else
+                    if (target.isSeat)
                     {
-                        var (dc, dd) = FindNearestDoor(transform.position, doorRange);
-                        if (dd != null) StartCoroutine(SetDoor(dc, dd, !openDoors.Contains(dd))); // abrir/cerrar
+                        var door = NearestDoor(target.car, target.part.position);
+                        if (door != null && openDoors.Contains(door))
+                            StartCoroutine(SitRoutine(target.car, target.part, door));      // asiento con puerta abierta → subir
                     }
+                    else
+                        StartCoroutine(SetDoor(target.car, target.part, !openDoors.Contains(target.part))); // puerta → abrir/cerrar
                 }
             }
 
@@ -82,6 +86,20 @@ namespace FolkloreArchives
                     cam.localEulerAngles = new Vector3(lookPitch, lookYaw, 0f);
                 }
             }
+        }
+
+        // MIRA invisible: qué parte del auto apunta el centro de la pantalla.
+        CarInteractable RaycastTarget()
+        {
+            if (cam == null) return null;
+            var hits = Physics.RaycastAll(cam.position, cam.forward, 4.5f, ~0, QueryTriggerInteraction.Collide);
+            CarInteractable best = null; float bd = float.MaxValue;
+            foreach (var h in hits)
+            {
+                var ci = h.collider.GetComponentInParent<CarInteractable>();
+                if (ci != null && h.distance < bd) { bd = h.distance; best = ci; }
+            }
+            return best;
         }
 
         static Transform[] Seats(CarController c) => new[] { c.driverSeat, c.frontPassenger, c.rearLeft, c.rearRight };
@@ -240,14 +258,22 @@ namespace FolkloreArchives
         void OnGUI()
         {
             if (busy) return;
+            var target = currentTarget;
             string msg = null;
             if (car != null)
-                msg = (myDoor != null && openDoors.Contains(myDoor)) ? "[ E ] Cerrar puerta" : "[ E ] Bajar";
-            else
             {
-                var (seat, _, _) = NearestOpenSeat();
-                if (seat != null) msg = "[ E ] Subir";
-                else { var (_, dd) = FindNearestDoor(transform.position, doorRange); if (dd != null) msg = openDoors.Contains(dd) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta"; }
+                if (target != null && !target.isSeat && target.part == myDoor)
+                    msg = openDoors.Contains(myDoor) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
+                else msg = "[ E ] Bajar";
+            }
+            else if (target != null)
+            {
+                if (target.isSeat)
+                {
+                    var door = NearestDoor(target.car, target.part.position);
+                    msg = (door != null && openDoors.Contains(door)) ? "[ E ] Subir" : "Abrí la puerta primero";
+                }
+                else msg = openDoors.Contains(target.part) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
             }
             if (msg == null) return;
             var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };

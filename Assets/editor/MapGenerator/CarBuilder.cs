@@ -88,6 +88,9 @@ namespace FolkloreArchives.MapGen
             ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, -1.55f));
             ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    dSeat + new Vector3(0.84f, 0f, -1.55f));
 
+            // Colliders + marcadores para la MIRA (raycast): puertas y asientos.
+            AddInteractColliders(ctrl);
+
             car.transform.position = pos + Vector3.up * 0.05f;
             car.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
             return car;
@@ -121,6 +124,40 @@ namespace FolkloreArchives.MapGen
                 }
                 r.sharedMaterials = mats;
             }
+        }
+
+        // Colliders-trigger + CarInteractable en cada puerta (sobre su malla) y cada asiento.
+        static void AddInteractColliders(FolkloreArchives.CarController ctrl)
+        {
+            if (ctrl.doors != null)
+                foreach (var door in ctrl.doors)
+                {
+                    if (door == null) continue;
+                    var mf = door.GetComponentInChildren<MeshFilter>();
+                    if (mf == null || mf.sharedMesh == null) continue;
+                    var host = mf.gameObject;
+                    var bc = host.AddComponent<BoxCollider>();
+                    bc.center = mf.sharedMesh.bounds.center;
+                    bc.size = mf.sharedMesh.bounds.size * 1.05f;
+                    bc.isTrigger = true;
+                    var ci = host.AddComponent<FolkloreArchives.CarInteractable>();
+                    ci.car = ctrl; ci.part = door; ci.isSeat = false;
+                }
+            SeatCollider(ctrl.driverSeat, ctrl);
+            SeatCollider(ctrl.frontPassenger, ctrl);
+            SeatCollider(ctrl.rearLeft, ctrl);
+            SeatCollider(ctrl.rearRight, ctrl);
+        }
+
+        static void SeatCollider(Transform seat, FolkloreArchives.CarController ctrl)
+        {
+            if (seat == null) return;
+            var bc = seat.gameObject.AddComponent<BoxCollider>();
+            bc.center = Vector3.zero;
+            bc.size = new Vector3(0.5f, 0.75f, 0.5f);
+            bc.isTrigger = true;
+            var ci = seat.gameObject.AddComponent<FolkloreArchives.CarInteractable>();
+            ci.car = ctrl; ci.part = seat; ci.isSeat = true;
         }
 
         static Transform Seat(Transform car, string name, Vector3 lpos)
