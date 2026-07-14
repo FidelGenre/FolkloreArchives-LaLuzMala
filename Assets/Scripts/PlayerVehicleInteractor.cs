@@ -173,17 +173,20 @@ namespace FolkloreArchives
             var c = car; var seat = mySeat; var door = myDoor;
             car = null; mySeat = null; myDoor = null; c.driving = false;
 
+            // dirección que estaba mirando al tocar E (horizontal) → salgo mirando igual
+            Vector3 lookFwd = cam.forward; lookFwd.y = 0f;
+            Quaternion keepYaw = lookFwd.sqrMagnitude > 0.001f ? Quaternion.LookRotation(lookFwd) : transform.rotation;
+
             if (door != null && !openDoors.Contains(door)) { yield return AnimateDoor(c, door, true, 0.30f); openDoors.Add(door); }
 
-            // posición + orientación de bajada: al costado del auto, sobre el PISO,
-            // MIRANDO hacia afuera (salida natural, sin giros raros).
+            // bajar JUSTO al lado de la puerta (no lejos), sobre el piso, mirando para el mismo lado
             Vector3 sideDir = (seat.position - c.transform.position); sideDir.y = 0f;
             if (sideDir.sqrMagnitude < 0.01f) sideDir = -c.transform.right;
             sideDir.Normalize();
-            Vector3 side = c.transform.position + sideDir * 2.8f;
+            Vector3 side = c.transform.position + sideDir * 1.5f;
             side.y = GroundYIgnoring(c, side) + 0.05f;
             transform.position = side;
-            transform.rotation = Quaternion.LookRotation(sideDir);   // el jugador mira hacia afuera
+            transform.rotation = keepYaw;   // dejarlo mirando para donde miraba
             lookYaw = 0f; lookPitch = 0f;
 
             // deslizar la cámara del asiento hasta el ojo del jugador (SUAVE, camino corto)
