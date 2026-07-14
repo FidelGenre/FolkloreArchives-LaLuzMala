@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 6;
+        const int SplatVersion = 7;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -77,7 +77,7 @@ namespace FolkloreArchives.MapGen
         {
             var sv = SceneView.lastActiveSceneView;
             if (sv == null) { Debug.LogWarning("Abrí una ventana Scene primero."); return; }
-            var t = Object.FindFirstObjectByType<Terrain>();
+            var t = Terrain.activeTerrain;
             float y = t != null ? t.SampleHeight(new Vector3(MapLayout.Campsite.x, 0f, MapLayout.Campsite.y)) : 12f;
             var center = new Vector3(MapLayout.Campsite.x, y, MapLayout.Campsite.y);
             sv.LookAt(center, Quaternion.Euler(72f, 0f, 0f), 22f); // picado cerrado, bien cerca
@@ -443,10 +443,17 @@ namespace FolkloreArchives.MapGen
                     // se reparte entre pasto y barro (capa Muddy) con manchones Perlin
                     // grandes, para que el suelo del mapa lea marrón/barro con parches
                     // verdes en vez de verde uniforme. Palanca: MapLayout.BaseMudBlend.
-                    float mudNoise = Mathf.PerlinNoise(wx * 0.016f + 37.2f, wz * 0.016f + 91.4f);
-                    float baseMud = Mathf.Clamp01(MapLayout.BaseMudBlend + (mudNoise - 0.5f) * 0.45f);
-                    w1 += w0 * baseMud;
-                    w0 *= 1f - baseMud;
+                    // Con BaseMudBlend=0 el owner quiere el BOSQUE 100% VERDE (nada de
+                    // barro moteado en el piso del bosque). Solo si BaseMudBlend>0 se
+                    // reparte pasto/barro por ruido. El barro de caminos/claros (w4) es
+                    // aparte y no depende de esto.
+                    if (MapLayout.BaseMudBlend > 0f)
+                    {
+                        float mudNoise = Mathf.PerlinNoise(wx * 0.016f + 37.2f, wz * 0.016f + 91.4f);
+                        float baseMud = Mathf.Clamp01(MapLayout.BaseMudBlend + (mudNoise - 0.5f) * 0.45f);
+                        w1 += w0 * baseMud;
+                        w0 *= 1f - baseMud;
+                    }
 
                     // NIEVE en los picos altos: por altura del terreno. La nieve pisa
                     // las demás capas arriba de la línea de nieve (SnowLine).
