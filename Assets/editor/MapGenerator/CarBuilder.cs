@@ -26,8 +26,8 @@ namespace FolkloreArchives.MapGen
         // y lo meto adentro de la carcasa PSX. Estos 3 los calibro con capturas para que
         // encaje en la cabina.
         const string DonorFbx     = "Assets/ExternalAssets/SedanDonor/Model/Mesh/Car_Sedan.FBX";
-        const float  InteriorScale = 1.0f;
-        static readonly Vector3 InteriorOffset = new Vector3(0f, 0.30f, 0f);
+        const float  InteriorScale = 0.30f;
+        static readonly Vector3 InteriorOffset = new Vector3(0f, 0.35f, -0.20f);
         const float  InteriorYaw   = 0f;
 
         // Colores del interior (PS1 apagado).
