@@ -1566,8 +1566,8 @@ namespace FolkloreArchives.MapGen
                     float footNoiseG = Mathf.PerlinNoise(p.x * 0.25f, p.y * 0.25f) * 0.3f;
                     if (TerrainBuilder.DistToFootTrail(p) < TerrainBuilder.FootTrailHalfWidth + footNoiseG)
                     {
-                        if (shortIdx >= 0 && Random.value < 0.5f)   // ~50% de las celdas: surtido, no parejo
-                            maps[shortIdx][zi, xi] = 1 + Random.Range(0, 2);
+                        if (shortIdx >= 0 && Random.value < 0.25f)  // ~25% de las celdas: ralo, el BARRO manda
+                            maps[shortIdx][zi, xi] = 1;
                         _mudGrassCleared++;
                         continue;
                     }

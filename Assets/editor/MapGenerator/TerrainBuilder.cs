@@ -177,7 +177,7 @@ namespace FolkloreArchives.MapGen
                 for (int xi = 0; xi < res; xi++)
                 {
                     float wx = xi / (float)(res - 1) * MapLayout.MapSizeX;
-                    if (!IsClearing(new Vector2(wx, wz))) continue; // solo pelar CLAROS; los senderos llevan pasto corto (SetupGrass)
+                    if (!IsMudSpot(new Vector2(wx, wz))) continue; // pelar el pasto ALTO sobre todo el barro (claros + senderos) para que el barro se vea; el pasto CORTO ralo lo repone SetupGrass en el rebuild
                     for (int i = 0; i < nproto; i++)
                         if (layers[i][zi, xi] != 0) { layers[i][zi, xi] = 0; cleared++; }
                 }
