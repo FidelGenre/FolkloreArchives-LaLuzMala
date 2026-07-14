@@ -1,12 +1,11 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
-//  PlayerVehicleInteractor.cs — subir/bajar del auto, MANUAL.
-//    E  → si la puerta más cercana está CERRADA: la abre (no te sienta).
-//         si está ABIERTA: te subís a ESE asiento (despacio).
-//         si ya estás sentado: te bajás (despacio).
-//    Q  → abre/cierra a mano la puerta más cercana (para cerrarla al subir).
-//  Solo manejás si te subís del lado del conductor. Mientras manejás,
-//  el mouse mueve la vista (free-look acotado).
+//  PlayerVehicleInteractor.cs — subir/bajar del auto, MANUAL, con E.
+//    Afuera, cerca de una PUERTA:  E abre / cierra esa puerta.
+//    Afuera, PEGADO a un asiento (puerta abierta):  E te sienta.
+//    Sentado con la puerta ABIERTA:  E cierra la puerta.
+//    Sentado con la puerta cerrada:  E te baja (abre y desliza afuera).
+//  Solo manejás desde el asiento del conductor. Mouse = free-look.
 // ============================================================
 using System.Collections;
 using System.Collections.Generic;
@@ -17,21 +16,19 @@ namespace FolkloreArchives
 {
     public class PlayerVehicleInteractor : MonoBehaviour
     {
-        public float enterRange = 4.5f;
-        public float lookYawLimit = 120f;
-        public float lookPitchLimit = 45f;
-        public float lookSensitivity = 0.08f;
+        public float doorRange = 3.5f;   // distancia para abrir/cerrar una puerta
+        public float sitRange  = 1.8f;   // distancia (chica) para sentarte: hay que estar PEGADO
+        public float lookYawLimit = 120f, lookPitchLimit = 45f, lookSensitivity = 0.08f;
         public float enterDuration = 0.6f;
         public float doorOpenDeg = 72f;
 
         CharacterController cc;
         MapExplorer explorer;
         Transform cam, camParent;
-        Vector3 camLocalPos;
-        Quaternion camLocalRot;
+        Vector3 camLocalPos; Quaternion camLocalRot;
         Renderer[] bodyRenderers;
 
-        CarController car;      // auto en el que estoy; null = a pie
+        CarController car;      // null = a pie
         Transform mySeat, myDoor;
         bool busy;
         float lookYaw, lookPitch;
@@ -52,32 +49,28 @@ namespace FolkloreArchives
             var kb = Keyboard.current;
             if (kb == null || SettingsMenu.IsOpen || busy) return;
 
-            // Q: abrir/cerrar a mano la puerta más cercana
-            if (kb.qKey.wasPressedThisFrame)
-            {
-                Vector3 from = car != null && cam != null ? cam.position : transform.position;
-                var (dc, dd) = FindNearestDoor(from);
-                if (dd != null) StartCoroutine(SetDoor(dc, dd, !openDoors.Contains(dd)));
-            }
-
-            // E: abrir puerta / sentarse / bajarse
             if (kb.eKey.wasPressedThisFrame)
             {
-                if (car != null) StartCoroutine(ExitRoutine());
-                else
+                if (car != null)   // sentado
                 {
-                    var (dc, dd) = FindNearestDoor(transform.position);
-                    if (dd != null)
+                    if (myDoor != null && openDoors.Contains(myDoor))
+                        StartCoroutine(SetDoor(car, myDoor, false));   // cerrar la puerta desde adentro
+                    else
+                        StartCoroutine(ExitRoutine());                 // bajarse
+                }
+                else               // a pie
+                {
+                    var (seat, sdoor, sc) = NearestOpenSeat();
+                    if (seat != null)
+                        StartCoroutine(SitRoutine(sc, seat, sdoor));   // pegado al asiento → sentarse
+                    else
                     {
-                        if (openDoors.Contains(dd))
-                            StartCoroutine(SitRoutine(dc, NearestSeat(dc, dd.position), dd));   // abierta → subir
-                        else
-                            StartCoroutine(SetDoor(dc, dd, true));                              // cerrada → abrir
+                        var (dc, dd) = FindNearestDoor(transform.position, doorRange);
+                        if (dd != null) StartCoroutine(SetDoor(dc, dd, !openDoors.Contains(dd))); // abrir/cerrar
                     }
                 }
             }
 
-            // free-look mientras manejo/voy de acompañante
             if (car != null && cam != null && Cursor.lockState == CursorLockMode.Locked)
             {
                 var mouse = Mouse.current;
@@ -93,13 +86,12 @@ namespace FolkloreArchives
 
         static Transform[] Seats(CarController c) => new[] { c.driverSeat, c.frontPassenger, c.rearLeft, c.rearRight };
 
-        (CarController, Transform) FindNearestDoor(Vector3 from)
+        (CarController, Transform) FindNearestDoor(Vector3 from, float range)
         {
-            CarController bc = null; Transform bd = null; float best = enterRange;
+            CarController bc = null; Transform bd = null; float best = range;
             foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
             {
                 if (c.doors == null) continue;
-                if (Vector3.Distance(from, c.transform.position) > enterRange + 5f) continue;
                 foreach (var d in c.doors)
                 {
                     if (d == null) continue;
@@ -110,11 +102,30 @@ namespace FolkloreArchives
             return (bc, bd);
         }
 
-        Transform NearestSeat(CarController c, Vector3 to)
+        Transform NearestDoor(CarController c, Vector3 to)
         {
+            if (c.doors == null) return null;
             Transform best = null; float bd = float.MaxValue;
-            foreach (var s in Seats(c)) { if (s == null) continue; float d = Vector3.Distance(s.position, to); if (d < bd) { bd = d; best = s; } }
+            foreach (var d in c.doors) { if (d == null) continue; float dd = Vector3.Distance(d.position, to); if (dd < bd) { bd = dd; best = d; } }
             return best;
+        }
+
+        // asiento PEGADO (dentro de sitRange) cuya puerta esté ABIERTA
+        (Transform, Transform, CarController) NearestOpenSeat()
+        {
+            Transform bs = null, bd = null; CarController bc = null; float best = sitRange;
+            foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
+                foreach (var s in Seats(c))
+                {
+                    if (s == null) continue;
+                    float d = Vector3.Distance(transform.position, s.position);
+                    if (d < best)
+                    {
+                        Transform door = NearestDoor(c, s.position);
+                        if (door != null && openDoors.Contains(door)) { best = d; bs = s; bd = door; bc = c; }
+                    }
+                }
+            return (bs, bd, bc);
         }
 
         IEnumerator SetDoor(CarController c, Transform door, bool open)
@@ -132,23 +143,13 @@ namespace FolkloreArchives
             if (cc != null) cc.enabled = false;
             SetBodyVisible(false);
 
-            cam.SetParent(null, true);
-            Vector3 p0 = cam.position; Quaternion r0 = cam.rotation;
-            float t = 0f;
-            while (t < 1f)
-            {
-                t += Time.deltaTime / Mathf.Max(0.05f, enterDuration);
-                float e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
-                cam.position = Vector3.Lerp(p0, seat.position, e);
-                cam.rotation = Quaternion.Slerp(r0, seat.rotation, e);
-                yield return null;
-            }
+            yield return Glide(cam, seat.position, seat.rotation);
             cam.SetParent(seat, false);
             cam.localPosition = Vector3.zero; cam.localRotation = Quaternion.identity;
             lookYaw = 0f; lookPitch = 0f;
 
             car = c; mySeat = seat; myDoor = door;
-            c.driving = (seat == c.driverSeat);   // solo manejás en el asiento del conductor
+            c.driving = (seat == c.driverSeat);
             busy = false;
         }
 
@@ -158,37 +159,58 @@ namespace FolkloreArchives
             var c = car; var seat = mySeat; var door = myDoor;
             car = null; mySeat = null; myDoor = null; c.driving = false;
 
-            // si la puerta está cerrada, abrirla para poder bajar
             if (door != null && !openDoors.Contains(door)) { yield return AnimateDoor(c, door, true, 0.30f); openDoors.Add(door); }
 
-            // ubicar al jugador al lado de la puerta (cuerpo oculto)
+            // posición de bajada: al costado del auto, sobre el PISO (ignorando el propio auto)
             Vector3 sideDir = (seat.position - c.transform.position); sideDir.y = 0f;
             if (sideDir.sqrMagnitude < 0.01f) sideDir = -c.transform.right;
-            Vector3 side = c.transform.position + sideDir.normalized * 1.8f + Vector3.up * 1.5f;
-            if (Physics.Raycast(side + Vector3.up * 2f, Vector3.down, out var hit, 8f)) side.y = hit.point.y + 0.1f;
+            Vector3 side = c.transform.position + sideDir.normalized * 2.2f;
+            side.y = GroundYIgnoring(c, side) + 0.05f;
             transform.position = side;
 
-            // deslizar la cámara del asiento hasta el ojo del jugador afuera (SUAVE)
-            cam.SetParent(null, true);
-            Vector3 p0 = cam.position; Quaternion r0 = cam.rotation;
+            // deslizar la cámara del asiento hasta el ojo del jugador (SUAVE)
             Vector3 targetPos = camParent.TransformPoint(camLocalPos);
             Quaternion targetRot = camParent.rotation * camLocalRot;
-            float t = 0f;
-            while (t < 1f)
-            {
-                t += Time.deltaTime / Mathf.Max(0.05f, enterDuration);
-                float e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
-                cam.position = Vector3.Lerp(p0, targetPos, e);
-                cam.rotation = Quaternion.Slerp(r0, targetRot, e);
-                yield return null;
-            }
+            yield return Glide(cam, targetPos, targetRot);
             cam.SetParent(camParent, false);
             cam.localPosition = camLocalPos; cam.localRotation = camLocalRot;
 
             SetBodyVisible(true);
             if (cc != null) cc.enabled = true;
             if (explorer != null) explorer.enabled = true;
-            busy = false;   // la puerta queda ABIERTA; se cierra con Q
+            busy = false;
+        }
+
+        // desliza un transform (la cámara) hasta pos/rot en el mundo
+        IEnumerator Glide(Transform tr, Vector3 pos, Quaternion rot)
+        {
+            tr.SetParent(null, true);
+            Vector3 p0 = tr.position; Quaternion r0 = tr.rotation;
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / Mathf.Max(0.05f, enterDuration);
+                float e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
+                tr.position = Vector3.Lerp(p0, pos, e);
+                tr.rotation = Quaternion.Slerp(r0, rot, e);
+                yield return null;
+            }
+        }
+
+        // altura del piso bajo 'p', ignorando el collider del auto (para no spawnear arriba)
+        float GroundYIgnoring(CarController c, Vector3 p)
+        {
+            Vector3 start = p + Vector3.up * 4f;
+            var hits = Physics.RaycastAll(start, Vector3.down, 14f, ~0, QueryTriggerInteraction.Ignore);
+            float bestY = c.transform.position.y; float bestDist = float.MaxValue;
+            foreach (var h in hits)
+            {
+                var t = h.collider.transform;
+                if (t == c.transform || t.IsChildOf(c.transform)) continue; // ignorar el auto
+                float d = start.y - h.point.y;
+                if (d >= 0f && d < bestDist) { bestDist = d; bestY = h.point.y; }
+            }
+            return bestY;
         }
 
         IEnumerator AnimateDoor(CarController c, Transform door, bool open, float dur)
@@ -198,8 +220,7 @@ namespace FolkloreArchives
             Quaternion closed = doorClosed[door];
             float sign = c.transform.InverseTransformPoint(door.position).x < 0f ? 1f : -1f;
             Quaternion openRot = closed * Quaternion.Euler(0f, sign * doorOpenDeg, 0f);
-            Quaternion from = door.localRotation;
-            Quaternion to = open ? openRot : closed;
+            Quaternion from = door.localRotation, to = open ? openRot : closed;
             float t = 0f;
             while (t < 1f)
             {
@@ -219,18 +240,20 @@ namespace FolkloreArchives
         void OnGUI()
         {
             if (busy) return;
-            string msg;
-            if (car != null) msg = "[ E ] Bajar    [ Q ] Puerta";
+            string msg = null;
+            if (car != null)
+                msg = (myDoor != null && openDoors.Contains(myDoor)) ? "[ E ] Cerrar puerta" : "[ E ] Bajar";
             else
             {
-                var (_, dd) = FindNearestDoor(transform.position);
-                if (dd == null) return;
-                msg = openDoors.Contains(dd) ? "[ E ] Subir    [ Q ] Cerrar puerta" : "[ E ] Abrir puerta    [ Q ] Puerta";
+                var (seat, _, _) = NearestOpenSeat();
+                if (seat != null) msg = "[ E ] Subir";
+                else { var (_, dd) = FindNearestDoor(transform.position, doorRange); if (dd != null) msg = openDoors.Contains(dd) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta"; }
             }
-            var style = new GUIStyle(GUI.skin.label) { fontSize = 19, alignment = TextAnchor.MiddleCenter };
+            if (msg == null) return;
+            var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
             style.normal.textColor = Color.white;
-            GUI.Box(new Rect(Screen.width / 2 - 190, Screen.height - 90, 380, 32), GUIContent.none);
-            GUI.Label(new Rect(Screen.width / 2 - 190, Screen.height - 90, 380, 32), msg, style);
+            GUI.Box(new Rect(Screen.width / 2 - 140, Screen.height - 90, 280, 32), GUIContent.none);
+            GUI.Label(new Rect(Screen.width / 2 - 140, Screen.height - 90, 280, 32), msg, style);
         }
     }
 }
