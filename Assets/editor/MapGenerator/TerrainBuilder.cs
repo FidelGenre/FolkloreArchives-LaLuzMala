@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 8;
+        const int SplatVersion = 9;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -136,7 +136,7 @@ namespace FolkloreArchives.MapGen
                             Mathf.Min(BuilderUtils.DistToExtraTrails(p),
                                       BuilderUtils.DistToPolyline(p, MapLayout.BeachPath))));
             if (dFootTr < 2.5f + footNoise) return true;
-            if (Vector2.Distance(p, MapLayout.Campsite) < 18f) return true;
+            if (Vector2.Distance(p, MapLayout.Campsite) < 12f) return true;
             if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f) return true;
             if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f) return true;
             if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f) return true;
@@ -433,7 +433,7 @@ namespace FolkloreArchives.MapGen
 
                     // CLAROS PISADOS = BARRO Ground071 SÍ O SÍ (pisa asfalto/arena/pasto/
                     // lo que sea). Campamento, rancho, galpón, cabaña abandonada.
-                    if (Vector2.Distance(p, MapLayout.Campsite) < 18f
+                    if (Vector2.Distance(p, MapLayout.Campsite) < 12f
                      || Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f
                      || Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f
                      || Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f)
