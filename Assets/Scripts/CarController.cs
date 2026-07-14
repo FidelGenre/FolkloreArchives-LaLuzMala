@@ -33,6 +33,9 @@ namespace FolkloreArchives
         public Transform driverDoor;      // pivote de la puerta
         public float doorOpenAngle = -68f; // grados que abre
 
+        [Header("Puertas del modelo (para abrir/cerrar)")]
+        public Transform[] doors;          // todas las puertas separadas del FBX
+
         [HideInInspector] public bool driving = false;
 
         Rigidbody rb;

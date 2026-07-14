@@ -34,6 +34,7 @@ namespace FolkloreArchives.MapGen
 
             var donor = AssetDatabase.LoadAssetAtPath<GameObject>(CarFbx);
             Transform steer = null;
+            Transform[] carDoors = new Transform[0];
             if (donor != null)
             {
                 var inst = (GameObject)Object.Instantiate(donor, car.transform);
@@ -53,10 +54,16 @@ namespace FolkloreArchives.MapGen
 
                 TintMoody(inst);
 
+                var doorList = new System.Collections.Generic.List<Transform>();
                 foreach (var t in inst.GetComponentsInChildren<Transform>(true))
-                    if (t.name.ToLower().Contains("steer")) { steer = t; break; }
+                {
+                    string n = t.name.ToLower();
+                    if (steer == null && n.Contains("steer")) steer = t;
+                    if (n.Contains("door")) doorList.Add(t);
+                }
+                carDoors = doorList.ToArray();
 
-                Debug.Log($"<color=cyan>[CarBuilder] scailman completo. escala {scale:0.000}, largo {TargetLength}m. Volante {(steer!=null?"OK":"NO")}.</color>");
+                Debug.Log($"<color=cyan>[CarBuilder] scailman completo. escala {scale:0.000}, largo {TargetLength}m. Volante {(steer!=null?"OK":"NO")}, puertas {_doors.Length}.</color>");
             }
             else
             {
@@ -70,11 +77,12 @@ namespace FolkloreArchives.MapGen
             car.AddComponent<Rigidbody>();
             var ctrl = car.AddComponent<FolkloreArchives.CarController>();
             ctrl.driverDoor = null;
+            ctrl.doors = carDoors;
 
             // Asiento del conductor: detrás y arriba del volante (auto-alineado).
             Vector3 dSeat = new Vector3(-0.42f, 1.0f, 0.2f);
             if (steer != null)
-                dSeat = car.transform.InverseTransformPoint(steer.position) + new Vector3(0f, 0.28f, -0.30f);
+                dSeat = car.transform.InverseTransformPoint(steer.position) + new Vector3(0f, 0.42f, -0.30f);
             ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   dSeat);
             ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", dSeat + new Vector3(0.84f, 0f, 0f));
             ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, -1.10f));
