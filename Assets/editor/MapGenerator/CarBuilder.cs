@@ -106,50 +106,53 @@ namespace FolkloreArchives.MapGen
             return b;
         }
 
-        // Estiliza el auto: chapa con textura de ÓXIDO/mugre, vidrios oscuros, ruedas
-        // negras, todo MATE (sin plástico). Las partes se distinguen por el nombre.
+        // Estiliza el auto: MANTIENE el color original de cada parte, lo pone MATE (sin
+        // plástico) y le suma un óxido/mugre SUTIL (manchitas chicas) encima. Las ventanas
+        // quedan apenas sucias (no negras).
         static void StyleCar(GameObject inst)
         {
-            var rust   = CarRustTex();
-            var body   = CarMat("car_body_rust", Color.white,                   rust); // chapa oxidada
-            var glass  = CarMat("car_glass2",    new Color(0.06f, 0.07f, 0.09f), null); // vidrio oscuro
-            var rubber = CarMat("car_rubber",    new Color(0.05f, 0.05f, 0.05f), null); // gomas/ruedas
+            var grunge = CarRustTex();
             foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
             {
-                string n = r.name.ToLower();
                 var ms = r.sharedMaterials;
                 for (int i = 0; i < ms.Length; i++)
                 {
-                    if (n.Contains("window") || n.Contains("glass")) ms[i] = glass;
-                    else if (n.Contains("wheel") || n.Contains("tire")) ms[i] = rubber;
-                    else if (n.Contains("light")) ms[i] = MatteCopy(ms[i]);   // luces: dejo su color, solo mate
-                    else ms[i] = body;                                        // chapa/interior: óxido
+                    if (ms[i] == null) continue;
+                    var m = new Material(ms[i]);   // copia → mantiene el color original de la parte
+                    if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+                    if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0f);
+                    if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
+                    if (m.HasProperty("_SpecularHighlights")) m.SetFloat("_SpecularHighlights", 0f);
+                    // óxido/mugre SUTIL encima (solo si la parte no trae ya su propia textura)
+                    if (m.HasProperty("_BaseMap") && m.GetTexture("_BaseMap") == null)
+                    { m.SetTexture("_BaseMap", grunge); m.SetTextureScale("_BaseMap", new Vector2(2f, 2f)); }
+                    else if (m.mainTexture == null) { m.mainTexture = grunge; m.mainTextureScale = new Vector2(2f, 2f); }
+                    ms[i] = m;
                 }
                 r.sharedMaterials = ms;
             }
         }
 
-        // Textura procedural de ÓXIDO + mugre (colores cálidos apagados), point filter (PSX).
+        // Textura SUTIL de óxido/mugre: casi toda BLANCA (no cambia el color de la parte),
+        // con manchitas chicas de óxido y de mugre oscura. Point filter (PSX).
         static Texture2D CarRustTex()
         {
-            string path = MapLayout.GeneratedFolder + "/tex_car_rust.asset";
-            var ex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            if (ex != null) return ex;
+            string path = MapLayout.GeneratedFolder + "/tex_car_grunge.asset";
+            AssetDatabase.DeleteAsset(path);   // regenerar (por si cambió la fórmula)
             int size = 256;
             var tex = new Texture2D(size, size, TextureFormat.RGB24, false)
             { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
             var rnd = new System.Random(777);
-            Color paint = new Color(0.36f, 0.33f, 0.29f); // pintura vieja apagada
-            Color rustC = new Color(0.42f, 0.21f, 0.09f); // óxido
-            Color dark  = new Color(0.11f, 0.10f, 0.09f); // manchas oscuras
+            Color rustC = new Color(0.5f, 0.28f, 0.14f); // color del óxido
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)
                 {
-                    float patch = Mathf.PerlinNoise(x * 0.03f + 5f, y * 0.03f + 9f);       // parches de óxido
-                    float grain = Mathf.PerlinNoise(x * 0.13f, y * 0.13f) * 0.6f + (float)rnd.NextDouble() * 0.4f;
-                    Color c = Color.Lerp(paint, rustC, Mathf.SmoothStep(0.45f, 0.78f, patch));
-                    c = Color.Lerp(c, dark, Mathf.Clamp01(grain - 0.7f) * 0.9f);           // manchas/mugre
-                    c *= Mathf.Lerp(0.82f, 1.06f, grain);                                  // variación de brillo
+                    Color c = Color.white;   // base: NO cambia el color de la parte
+                    float rustP = Mathf.PerlinNoise(x * 0.05f + 3f, y * 0.05f + 7f);
+                    if (rustP > 0.66f) c = Color.Lerp(c, rustC, Mathf.SmoothStep(0.66f, 0.86f, rustP) * 0.7f); // parches de óxido chicos
+                    float grime = Mathf.PerlinNoise(x * 0.16f + 20f, y * 0.16f + 20f);
+                    if (grime > 0.70f) c *= Mathf.Lerp(1f, 0.55f, Mathf.SmoothStep(0.70f, 0.92f, grime));      // manchas oscuras chicas
+                    c *= Mathf.Lerp(0.94f, 1.0f, (float)rnd.NextDouble());   // grano muy leve
                     tex.SetPixel(x, y, c);
                 }
             tex.Apply();
