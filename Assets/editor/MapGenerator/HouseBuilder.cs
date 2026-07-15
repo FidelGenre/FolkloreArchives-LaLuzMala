@@ -1,6 +1,6 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
-//  HouseBuilder.cs — "la casa de la vieja" en OldLadyRanch (398,625).
+//  HouseBuilder.cs — "la casa de la vieja" en OldLadyRanch (ver MapLayout.cs).
 //  Rediseño en PLANTA EN "L" (opción A del owner), estilo casa de
 //  campo patagónica: base de canto rodado + revoque verde-oliva,
 //  techos de chapa a DOS AGUAS que se cruzan a distinta altura,
