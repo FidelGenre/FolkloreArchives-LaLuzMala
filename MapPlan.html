@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LA LUZ MALA — Editor de Plano</title>
 <style>
-  :root { --bg:#14161c; --panel:#1c2029; --ink:#e7e3d8; --line:#8a8f7a; --accent:#d8a24a; --node:#c9563c; }
+  :root { --bg:#14161c; --panel:#1c2029; --ink:#e7e3d8; --line:#8a8f7a; --accent:#d8a24a; --node:#c9563c; --idea:#3f9c8f; }
   * { box-sizing:border-box; }
   body { margin:0; font-family:system-ui,Segoe UI,sans-serif; background:var(--bg); color:var(--ink); display:flex; height:100vh; overflow:hidden; }
   #stage { flex:1; position:relative; }
@@ -31,6 +31,11 @@
   .node-label { font:600 13px system-ui; fill:var(--ink); paint-order:stroke; stroke:#0d0f14; stroke-width:4px; pointer-events:none; user-select:none; }
   .node-circ { fill:var(--node); stroke:#0d0f14; stroke-width:2; cursor:grab; }
   .node-circ.sel { stroke:var(--accent); stroke-width:3; }
+  .node-circ.idea { fill:var(--idea); }
+  .dot.idea { background:var(--idea); }
+  .desc { padding:10px 14px; font-size:12px; color:#cfc7b4; border-top:1px solid #000; line-height:1.5; max-height:210px; overflow:auto; }
+  .desc b { color:var(--accent); }
+  .desc .tag { display:inline-block; font-size:10px; background:#243a37; color:#8fd6c8; border:1px solid #3f9c8f; border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:middle; }
   .wp { fill:#e0c060; stroke:#0d0f14; stroke-width:1.5; cursor:grab; }
   .wp.sel { stroke:var(--accent); stroke-width:2.5; }
   .edge { stroke:var(--line); stroke-width:3; fill:none; opacity:.8; cursor:copy; }
@@ -61,6 +66,7 @@
     <input type="file" id="file" accept="application/json" style="display:none">
   </div>
   <div id="list"></div>
+  <div id="desc" class="desc"></div>
   <div class="hint">
     <b>Norte = arriba.</b> Rueda = zoom · arrastrar fondo = mover vista.<br>
     <b>Caminos:</b> arrastrá los <span style="color:#e0c060">puntitos amarillos</span> para curvarlos ·
@@ -106,6 +112,21 @@ let nodes = [
   {id:'mirW',  name:'MIRADOR OESTE',            varName:'LakeLookout',      x:270, z:530},
   {id:'cabE',  name:'CABAÑA ESTE',              varName:'CabinEast',        x:683, z:327},
   {id:'mirE',  name:'MIRADOR ESTE',             varName:'LookoutEast',      x:698, z:609},
+  // ---- IDEAS NUEVAS (áreas + puntos de interés + folklore) — todavía NO construidas (turquesa) ----
+  {id:'estepa',   name:'ESTEPA (campo abierto)',        type:'idea', x:1150, z:250, desc:'Pasto seco pajizo, viento fuerte, cielo enorme. Alambrados rotos, esqueletos de oveja, un molino oxidado girando. Silencio y exposición → la Luz Mala se ve venir de lejos. Rompe el "todo bosque".'},
+  {id:'molino',   name:'Molino de viento oxidado',      type:'idea', x:1078, z:198, desc:'Molino australiano oxidado girando con el viento, chirriando. Hito visible de lejos en la estepa.'},
+  {id:'mallin',   name:'MALLÍN (pantano)',              type:'idea', x:600,  z:820, desc:'Hondonada con agua estancada, juncos, troncos podridos, niebla baja. Pasarelas de madera podridas. Te ralentiza, chapotea, huele a muerte.'},
+  {id:'roquedal', name:'ROQUEDAL / CAÑADÓN',            type:'idea', x:70,   z:835, desc:'Afloramiento de piedra, un barranco, cuevas. Verticalidad y ecos. Escondites y emboscadas.'},
+  {id:'quemado',  name:'BOSQUE QUEMADO',                type:'idea', x:470,  z:745, desc:'Troncos negros parados, ceniza, sin hojas — un incendio viejo. Se ve TODO pero está muerto. Inquietante por contraste con el bosque vivo.'},
+  {id:'orilla',   name:'ORILLA DEL LAGO (niebla/muelle)',type:'idea', x:150, z:770, desc:'Playa de canto rodado, niebla sobre el agua, un muelle podrido. Leyenda: El Cuero, el cuero-bicho del lago que arrastra y ahoga.'},
+  {id:'estancia', name:'ESTANCIA + EL FAMILIAR',        type:'idea', x:1120, z:420, desc:'Casco de estancia con galpón de esquila. El patrón alimentaba al FAMILIAR (perro/víbora negra del demonio) con peones a cambio de prosperidad. Cadenas en el galpón, manchas de sangre. Ata con el perro y con la vieja.'},
+  {id:'difunta',  name:'SANTUARIO DIFUNTA CORREA',      type:'idea', x:660,  z:72,  desc:'Al borde de la ruta: montaña de BOTELLAS DE AGUA, banderas rojas descoloridas. Marca de "acá pasó algo". Hito muy visible desde la ruta.'},
+  {id:'gauchito', name:'ERMITA GAUCHITO GIL',           type:'idea', x:150,  z:120, desc:'Ermita ROJA en un cruce — un faro de color en la noche. Velas, banderas rojas. Sirve de hito/brújula.'},
+  {id:'capilla',  name:'CAPILLA ANEGADA',               type:'idea', x:520,  z:885, desc:'Capilla vieja medio hundida en el mallín/lago, el campanario asomando del agua. Terror puro. Una campana que suena sola.'},
+  {id:'ahorcado', name:'ÁRBOL DEL AHORCADO / CEMENTERIO',type:'idea', x:700, z:730, desc:'Pocas cruces de madera torcidas + la tumba sin nombre. Un árbol solitario con una soga colgando. Ánimas.'},
+  {id:'ypf',      name:'ESTACIÓN YPF ABANDONADA',       type:'idea', x:1060, z:56,  desc:'Surtidores oxidados, un Falcon tirado, un tubo de luz parpadeando. Punto de "civilización muerta" sobre la ruta.'},
+  {id:'antena',   name:'ANTENA / REPETIDORA (cerro)',   type:'idea', x:1275, z:660, desc:'Torre altísima con luz roja parpadeante, visible de TODO el mapa. La brújula natural del jugador de noche.'},
+  {id:'corrales', name:'CORRALES / BAÑADERO',           type:'idea', x:1185, z:335, desc:'Postes, alambres, huesos de oveja, un bañadero. Un perro guardián (¿el tuyo?). Pegado a la estancia.'},
 ];
 // Caminos: cada pt es {node:'id'} (sigue a esa zona) o {x,z} (waypoint libre editable)
 let paths = [
@@ -180,11 +201,30 @@ function render(){
     const isSel = sel&&sel.kind==='node'&&sel.id===n.id;
     const c=document.createElementNS(svg.namespaceURI,'circle');
     c.setAttribute('cx',sx(n.x)); c.setAttribute('cy',sy(n.z)); c.setAttribute('r',12);
-    c.setAttribute('class','node-circ'+(isSel?' sel':'')); c.dataset.id=n.id;
+    c.setAttribute('class','node-circ'+(n.type==='idea'?' idea':'')+(isSel?' sel':'')); c.dataset.id=n.id;
     svg.appendChild(c);
     svg.appendChild(textEl(sx(n.x)+16, sy(n.z)+5, n.name, {class:'node-label'}));
   });
   renderList();
+  updateDesc();
+}
+
+// Panel de descripción: muestra la idea del nodo seleccionado (o una ayuda por defecto).
+function updateDesc(){
+  const box=document.getElementById('desc');
+  if(sel && sel.kind==='node'){
+    const n=nodeById(sel.id);
+    if(n){
+      const tag = n.type==='idea'
+        ? '<span class="tag">IDEA · sin construir</span>'
+        : '<span class="tag" style="background:#3a2a24;color:#e6a892;border-color:#c9563c">EN EL JUEGO</span>';
+      box.innerHTML = '<b>'+n.name+'</b>'+tag+'<br>'+(n.desc||'(sin descripción)')
+        +'<br><span style="color:#8f8b7a">x '+Math.round(n.x)+', z '+Math.round(n.z)+'</span>';
+      return;
+    }
+  }
+  box.innerHTML = '<b>Ideas del mapa</b> — los puntos <span style="color:var(--idea)">turquesa</span> son ideas nuevas. Hacé clic en uno para leer la idea.<br>'
+    +'<span style="color:#8f8b7a">Guías anti-perderse: la RUTA es el eje; seguí el RÍO, la línea de POSTES caídos o el ALAMBRADO. Hitos visibles de lejos: antena, molino, Difunta Correa, capilla.</span>';
 }
 function lineEl(x1,y1,x2,y2,stroke,w){ const l=document.createElementNS(svg.namespaceURI,'line'); l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2); if(stroke)l.setAttribute('stroke',stroke); if(w)l.setAttribute('stroke-width',w); return l; }
 function pathEl(d,cls){ const p=document.createElementNS(svg.namespaceURI,'path'); p.setAttribute('d',d); p.setAttribute('class',cls); return p; }
@@ -195,7 +235,7 @@ function renderList(){
   nodes.forEach(n=>{
     const isSel = sel&&sel.kind==='node'&&sel.id===n.id;
     const r=document.createElement('div'); r.className='row'+(isSel?' sel':'');
-    const dot=document.createElement('span'); dot.className='dot'; r.appendChild(dot);
+    const dot=document.createElement('span'); dot.className='dot'+(n.type==='idea'?' idea':''); r.appendChild(dot);
     const inp=document.createElement('input'); inp.className='nm-input'; inp.value=n.name;
     inp.addEventListener('input', ()=>{ n.name=inp.value; });        // renombra al escribir
     inp.addEventListener('change', ()=>{ render(); });               // refresca la etiqueta del mapa al salir
