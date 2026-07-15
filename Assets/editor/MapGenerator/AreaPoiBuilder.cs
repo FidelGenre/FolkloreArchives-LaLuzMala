@@ -408,7 +408,9 @@ namespace FolkloreArchives.MapGen
             var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.55f, 0.55f, 0.57f)); // gris concreto claro (piso de estación)
             if (asphalt.HasProperty("_Smoothness")) asphalt.SetFloat("_Smoothness", 0f);          // mate, no plástico
             if (asphalt.HasProperty("_SpecularHighlights")) asphalt.SetFloat("_SpecularHighlights", 0f);
-            float padTop = p.y + 0.06f;
+            // clearance de 25cm sobre el terreno (evita z-fighting con el suelo de abajo,
+            // que ya no se pinta como pavimento — ver TerrainBuilder).
+            float padTop = p.y + 0.25f;
             BuilderUtils.Prim(PrimitiveType.Cube, "PlayonAsfalto", g, new Vector3(p.x, padTop - 0.15f, p.z),
                 new Vector3(2f * MapLayout.YpfPadHalfX - 4f, 0.3f, MapLayout.YpfPadNorth - 2f), asphalt);
             p.y = padTop;   // todo lo de la estación se apoya sobre el playón

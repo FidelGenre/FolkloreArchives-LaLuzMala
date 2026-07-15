@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 21;
+        const int SplatVersion = 22;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -515,8 +515,11 @@ namespace FolkloreArchives.MapGen
                      || Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f)
                     { w0 = 0f; w1 = 0f; w2 = 0f; w3 = 0f; w5 = 0f; w7 = 0f; w4 = 1f; }
 
-                    // PLAYÓN de la ESTACIÓN YPF = ASFALTO (capa pavimento), no tierra ni pasto.
-                    if (MapLayout.InYpfPad(p)) { w0 = 0f; w1 = 0f; w3 = 0f; w4 = 0f; w5 = 0f; w7 = 0f; w2 = 1f; }
+                    // El playón de la YPF tiene su PROPIO mesh de piso (AreaPoiBuilder) por
+                    // encima del terreno — pintar el terreno de abajo como pavimento (capa
+                    // asfalto oscuro de la RUTA) quedaba casi a la misma altura del mesh y
+                    // producía z-fighting (manchas oscuras parpadeantes). No hace falta
+                    // pintar nada especial ahí: el mesh tapa el terreno igual.
 
                     // SUELO BASE EMBARRADO: lo que quedaba como pasto verde puro (w0)
                     // se reparte entre pasto y barro (capa Muddy) con manchones Perlin
