@@ -146,12 +146,13 @@ namespace FolkloreArchives.MapGen
         // PLATAFORMA de la YPF: lote plano al NORTE del asfalto (la "entrada" a la estación),
         // para que no quede sobre el borde alto de la ruta. Aplanado por TerrainBuilder,
         // sin árboles/pasto (ForestBuilder) y con piso de tierra (splat).
-        public const float YpfPadHalfX = 15f;   // medio ancho del lote (x) desde YpfStation.x
-        public const float YpfPadNorth = 28f;   // cuánto se mete al norte del asfalto (z)
+        public const float YpfPadHalfX = 20f;   // medio ancho del lote (x) desde YpfStation.x (cubre la estación ancha)
+        public const float YpfPadNorth = 34f;   // cuánto se mete al norte del asfalto (z)
+        public const float YpfPadSouth = 3f;    // cuánto baja al sur (hacia el asfalto) para que la entrada pegue con la ruta
         public static bool InYpfPad(Vector2 p)
         {
             float dz = p.y - PavedRouteZAt(p.x);
-            return Mathf.Abs(p.x - YpfStation.x) < YpfPadHalfX && dz > -2f && dz < YpfPadNorth;
+            return Mathf.Abs(p.x - YpfStation.x) < YpfPadHalfX && dz > -YpfPadSouth && dz < YpfPadNorth;
         }
         // Caminos que salen del campamento: ahora en S (curvas suaves Catmull-Rom con
         // puntos que zigzaguean) en vez de líneas rectas (pedido del owner).
