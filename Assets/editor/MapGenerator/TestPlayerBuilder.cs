@@ -178,6 +178,19 @@ namespace FolkloreArchives.MapGen
                 r.sharedMaterials = ms;
             }
 
+            // OJOS + NARIZ: el FBX no trae textura (los ojos estaban pintados en ella).
+            // eye.l / eye.r / nose son HUESOS del rig → les cuelgo esferas oscuras (siguen
+            // la cabeza al animarse).
+            int eyes = 0;
+            foreach (var t in model.GetComponentsInChildren<Transform>(true))
+            {
+                string n = t.name.ToLower();
+                if (n.Contains("end") || n.Contains("target") || n.Contains("pole")) continue;
+                if (n.Contains("eye"))       { AddBall(t, 0.05f, dark); eyes++; }
+                else if (n.Contains("nose")) { AddBall(t, 0.06f, dark); eyes++; }
+            }
+            Debug.Log($"<color=cyan>[Dog] ojos/nariz agregados: {eyes}</color>");
+
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;
             dogCtrl.mode = FolkloreArchives.DogController.Mode.Follow;
@@ -267,6 +280,23 @@ namespace FolkloreArchives.MapGen
         }
 
         static string ClipName(UnityEditor.Animations.AnimatorState s) => s.motion != null ? s.motion.name : "(none)";
+
+        // esfera oscura (ojo/nariz) colgada de un hueso, de ~worldSize metros reales
+        // (compenso la escala del hueso para que no dependa del escalado del perro).
+        static void AddBall(Transform bone, float worldSize, Material m)
+        {
+            var s = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            s.name = "Ball_" + bone.name;
+            Object.DestroyImmediate(s.GetComponent<Collider>());
+            s.transform.SetParent(bone, false);
+            s.transform.localPosition = Vector3.zero;
+            Vector3 ls = bone.lossyScale;
+            s.transform.localScale = new Vector3(
+                worldSize / Mathf.Max(0.0001f, ls.x),
+                worldSize / Mathf.Max(0.0001f, ls.y),
+                worldSize / Mathf.Max(0.0001f, ls.z));
+            s.GetComponent<Renderer>().sharedMaterial = m;
+        }
 
         // material URP MATE (sin brillo ni metal) — evita el look plástico.
         static Material MatteMat(string name, Color c)
