@@ -160,12 +160,21 @@ namespace FolkloreArchives.MapGen
             dogAnim.runtimeAnimatorController = BuildDogAnimator(glbPath);
             dogAnim.applyRootMotion = false;   // el CharacterController mueve; la animación solo anima
 
-            // pelo marrón (el FBX vino sin textura)
-            var fur = BuilderUtils.Mat("dog_fur", new Color(0.34f, 0.25f, 0.17f));
+            // materiales MATE (sin brillo, para que no parezca plástico). El FBX vino sin
+            // textura y tiene partes separadas (eye/nose/tongue/mouth/ear): pinto cada una.
+            var fur    = MatteMat("dog_fur",    new Color(0.34f, 0.25f, 0.17f)); // pelo marrón
+            var dark   = MatteMat("dog_dark",   new Color(0.03f, 0.03f, 0.03f)); // ojos + nariz
+            var tongue = MatteMat("dog_tongue", new Color(0.55f, 0.24f, 0.26f)); // lengua/boca
             foreach (var r in model.GetComponentsInChildren<Renderer>(true))
             {
                 var ms = r.sharedMaterials;
-                for (int i = 0; i < ms.Length; i++) ms[i] = fur;
+                for (int i = 0; i < ms.Length; i++)
+                {
+                    string key = ((ms[i] != null ? ms[i].name : "") + " " + r.name).ToLower();
+                    if (key.Contains("eye") || key.Contains("nose") || key.Contains("iris") || key.Contains("pupil")) ms[i] = dark;
+                    else if (key.Contains("tongue") || key.Contains("mouth")) ms[i] = tongue;
+                    else ms[i] = fur;
+                }
                 r.sharedMaterials = ms;
             }
 
@@ -258,5 +267,16 @@ namespace FolkloreArchives.MapGen
         }
 
         static string ClipName(UnityEditor.Animations.AnimatorState s) => s.motion != null ? s.motion.name : "(none)";
+
+        // material URP MATE (sin brillo ni metal) — evita el look plástico.
+        static Material MatteMat(string name, Color c)
+        {
+            var m = BuilderUtils.Mat(name, c);
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0f);
+            if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
+            if (m.HasProperty("_SpecularHighlights")) m.SetFloat("_SpecularHighlights", 0f);
+            return m;
+        }
     }
 }
