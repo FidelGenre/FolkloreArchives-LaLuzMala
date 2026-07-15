@@ -159,6 +159,8 @@ namespace FolkloreArchives.MapGen
             if (dogAnim == null) dogAnim = model.AddComponent<Animator>();
             dogAnim.runtimeAnimatorController = BuildDogAnimator(glbPath);
             dogAnim.applyRootMotion = false;   // el CharacterController mueve; la animación solo anima
+            var psxAnim = model.AddComponent<FolkloreArchives.PsxAnimator>(); // animación choppy PS1
+            psxAnim.fps = 12f;
 
             // El perro usa VERTEX COLORS (no textura): con el shader LowPolyVertexColor
             // salen ojos/nariz/boca/lengua/pelo tal cual el modelo original, mate.
