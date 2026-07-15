@@ -171,9 +171,14 @@ namespace FolkloreArchives.MapGen
                 dogMat = AssetDatabase.LoadAssetAtPath<Material>(mp);
                 if (dogMat == null) { dogMat = new Material(vcShader); AssetDatabase.CreateAsset(dogMat, mp); }
                 dogMat.shader = vcShader;
-                if (dogMat.HasProperty("_BaseColor")) dogMat.SetColor("_BaseColor", new Color(0.58f, 0.52f, 0.46f)); // oscurece los vertex colors (estaba muy claro)
-                if (dogMat.HasProperty("_PsxSnap")) dogMat.SetFloat("_PsxSnap", 0f);            // sin efectos PS1: limpio como el humano
-                if (dogMat.HasProperty("_PsxColorLevels")) dogMat.SetFloat("_PsxColorLevels", 0f);  // sin bandas: color/luz suaves
+                if (dogMat.HasProperty("_BaseColor")) dogMat.SetColor("_BaseColor", new Color(0.82f, 0.77f, 0.70f)); // tono cálido, un toque oscuro
+                if (dogMat.HasProperty("_BaseMap"))
+                {
+                    dogMat.SetTexture("_BaseMap", DogGrungeTex());          // grunge que rompe el color plano
+                    dogMat.SetTextureScale("_BaseMap", new Vector2(3f, 3f)); // grano más fino
+                }
+                if (dogMat.HasProperty("_PsxSnap")) dogMat.SetFloat("_PsxSnap", 0f);
+                if (dogMat.HasProperty("_PsxColorLevels")) dogMat.SetFloat("_PsxColorLevels", 0f);
             }
             else dogMat = MatteMat("dog_fur", new Color(0.34f, 0.25f, 0.17f)); // fallback si falta el shader
             foreach (var r in model.GetComponentsInChildren<Renderer>(true))
@@ -289,6 +294,32 @@ namespace FolkloreArchives.MapGen
                 worldSize / Mathf.Max(0.0001f, ls.y),
                 worldSize / Mathf.Max(0.0001f, ls.z));
             s.GetComponent<Renderer>().sharedMaterial = m;
+        }
+
+        // Textura de GRUNGE procedural (grano/mugre) que multiplica los vertex colors del
+        // perro para romper el color plano y que se integre con el entorno sucio/PSX.
+        // filterMode Point + baja resolución = crocante estilo PS1.
+        static Texture2D DogGrungeTex()
+        {
+            string path = MapLayout.GeneratedFolder + "/tex_dog_grunge.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return existing;
+            int size = 128;
+            var tex = new Texture2D(size, size, TextureFormat.RGB24, false)
+            { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+            var rnd = new System.Random(1234);
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float n = Mathf.PerlinNoise(x * 0.09f, y * 0.09f) * 0.55f
+                            + Mathf.PerlinNoise(x * 0.33f + 7f, y * 0.33f + 3f) * 0.30f
+                            + (float)rnd.NextDouble() * 0.15f;
+                    float v = Mathf.Lerp(0.55f, 1.0f, Mathf.Clamp01(n)); // mancha, sin ennegrecer de más
+                    tex.SetPixel(x, y, new Color(v, v, v));
+                }
+            tex.Apply();
+            AssetDatabase.CreateAsset(tex, path);
+            return tex;
         }
 
         // material URP MATE (sin brillo ni metal) — evita el look plástico.
