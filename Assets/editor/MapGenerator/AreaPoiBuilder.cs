@@ -351,9 +351,9 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Label(g, "ANTENA", p + Vector3.up * 32f);
 
             float h = 28f;
-            // torre real descargada (RadioTower/) — parada con tilt -90 en X (venía acostada).
+            // torre real descargada (RadioTower/) — se para sola (auto-stand si vino acostada).
             // Si no está, torre reticulada procedural.
-            if (SpawnModel(DirTower, g, p, h, 0f, true, "TorreAntena", new Vector3(-90f, 0f, 0f)) == null)
+            if (SpawnModel(DirTower, g, p, h, 0f, true, "TorreAntena") == null)
             {
                 for (int i = 0; i < 4; i++)
                 {
@@ -649,6 +649,16 @@ namespace FolkloreArchives.MapGen
             inst.transform.rotation = Quaternion.Euler(0f, yaw, 0f) * (tilt.HasValue ? Quaternion.Euler(tilt.Value) : Quaternion.identity);
             inst.transform.localScale = Vector3.one;
             var b = ModelBounds(inst);
+            // PARAR modelos que vinieron ACOSTADOS: si se pide por ALTO pero el eje
+            // vertical (Y) no es el más largo, roto para que el eje más largo quede vertical
+            // (ej. torres exportadas de costado). Solo si no se dio un tilt manual.
+            if (byHeight && !tilt.HasValue)
+            {
+                if (b.size.z > b.size.y * 1.3f && b.size.z >= b.size.x)
+                { inst.transform.rotation = Quaternion.Euler(90f, 0f, 0f) * inst.transform.rotation; b = ModelBounds(inst); }
+                else if (b.size.x > b.size.y * 1.3f && b.size.x >= b.size.z)
+                { inst.transform.rotation = Quaternion.Euler(0f, 0f, 90f) * inst.transform.rotation; b = ModelBounds(inst); }
+            }
             float dim = byHeight ? b.size.y : Mathf.Max(b.size.x, b.size.z);
             if (dim > 0.001f)
             {
