@@ -408,11 +408,24 @@ namespace FolkloreArchives.MapGen
             var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.55f, 0.55f, 0.57f)); // gris concreto claro (piso de estación)
             if (asphalt.HasProperty("_Smoothness")) asphalt.SetFloat("_Smoothness", 0f);          // mate, no plástico
             if (asphalt.HasProperty("_SpecularHighlights")) asphalt.SetFloat("_SpecularHighlights", 0f);
-            // clearance de 25cm sobre el terreno (evita z-fighting con el suelo de abajo,
-            // que ya no se pinta como pavimento — ver TerrainBuilder).
-            float padTop = p.y + 0.25f;
-            BuilderUtils.Prim(PrimitiveType.Cube, "PlayonAsfalto", g, new Vector3(p.x, padTop - 0.15f, p.z),
-                new Vector3(2f * MapLayout.YpfPadHalfX - 4f, 0.3f, MapLayout.YpfPadNorth - 2f), asphalt);
+            // El terreno de abajo puede tener lomas/pozos (el aplanado real solo pasa con
+            // Rebuild Terrain, que no siempre se hace). En vez de depender de eso, MIDO la
+            // altura real en 9 puntos del lote y hago un bloque GRUESO cuyo TOPE queda por
+            // encima del punto más alto y la BASE bien enterrada bajo el más bajo → cubre
+            // cualquier desnivel sin rebuild, no más pasto/tierra asomando.
+            float halfX = MapLayout.YpfPadHalfX - 2f, halfZ = (MapLayout.YpfPadNorth - 1f) * 0.5f;
+            float maxH = float.MinValue, minH = float.MaxValue;
+            for (int sx = -1; sx <= 1; sx++)
+                for (int sz = -1; sz <= 1; sz++)
+                {
+                    float hh = t.SampleHeight(new Vector3(p.x + sx * halfX, 0f, p.z + sz * halfZ));
+                    maxH = Mathf.Max(maxH, hh); minH = Mathf.Min(minH, hh);
+                }
+            float padTop = maxH + 0.12f;
+            float padBottom = minH - 3f;   // bien enterrado, cubre cualquier bache
+            BuilderUtils.Prim(PrimitiveType.Cube, "PlayonAsfalto", g,
+                new Vector3(p.x, (padTop + padBottom) * 0.5f, p.z),
+                new Vector3(halfX * 2f, padTop - padBottom, halfZ * 2f), asphalt);
             p.y = padTop;   // todo lo de la estación se apoya sobre el playón
 
             // La estación ENTERA es el modelo descargado: GasStationProps trae TIENDA +
@@ -628,27 +641,12 @@ namespace FolkloreArchives.MapGen
         // Productos/cajones del exhibidor del modelo de la YPF que quedan "tirados" afuera.
         // Se ocultan por nombre para dejar la estación limpia (estructura + surtidores +
         // cartel quedan). Si oculta de más/menos, se ajusta la lista.
-        // Nombres EXACTOS (sacados de la jerarquía real del GLB, no adivinados) de los
-        // objetos SUELTOS que el autor dejó afuera como "catálogo" (cajones, góndolas,
-        // caja registradora, golosinas, heladera suelta, tacho de basura) + el piso propio
-        // del modelo bajo el techo ("Sidewalk"/"Sidewalk_01" - usamos nuestro playón gris
-        // en su lugar) + los árboles/arbustos que trae el modelo (chocan con el bosque).
-        // La ESTRUCTURA (tienda "6twelve", techo "The_ceiling", surtidores, cartel
-        // "6twelve_Sign", baños) y el INTERIOR de la tienda (heladeras de pared, mostrador,
-        // management_008/010/011, etc.) NO están en esta lista → se quedan.
+        // Por pedido del owner: dejar TODO el catálogo (cajones, góndolas, heladera suelta,
+        // etc.) visible AFUERA como venía del modelo — lo reacomoda él a mano después.
+        // Solo se oculta el piso propio del modelo bajo el techo ("Sidewalk"/"Sidewalk_01"),
+        // que duplicaba nuestro playón gris.
         static readonly System.Collections.Generic.HashSet<string> YpfClutter = new System.Collections.Generic.HashSet<string>(
-            new[] {
-                "Sidewalk", "Sidewalk_01",
-                "Shelving.003", "Shelf_Metal", "Checker", "Board", "Desk",
-                "Boxs", "Boxs_001", "Boxs_002", "Boxs_003", "Boxs_004", "Boxs_005", "Boxs_006", "Boxs_007", "Boxs_008",
-                "Candy", "Candy_001", "Candy_002", "Candy_004", "Candy_005", "Cigars", "Pack_lighters",
-                "Gadgets", "Gadgets_01",
-                "Management_001", "Management_002", "Management_003", "Management_004", "Management_005",
-                "Coffee_machine", "Others", "Others_01",
-                "ice_slush_machine", "ice_slush_machine.001",
-                "Fridge", "ICE", "Dumpster", "Trash", "Trash_001", "Trash_002", "Trash_003",
-                "Tree", "Tree_01", "Bush",
-            }, System.StringComparer.OrdinalIgnoreCase);
+            new[] { "Sidewalk", "Sidewalk_01" }, System.StringComparer.OrdinalIgnoreCase);
         static void HideCatalogClutter(GameObject inst)
         {
             int hid = 0;
