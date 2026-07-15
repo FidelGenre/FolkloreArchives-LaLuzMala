@@ -399,7 +399,14 @@ namespace FolkloreArchives.MapGen
         // ---------------- ESTACIÓN YPF ----------------
         static void YpfStation(Transform parent, Terrain t)
         {
-            var p = RoadShoulder(t, MapLayout.YpfStation, 16f);   // centro de la estación
+            // Posición y tamaño del lote SIEMPRE derivados de YpfPadNearZ/FarZ (única fuente
+            // de verdad, la misma que usan TerrainBuilder/ForestBuilder para despejar/limpiar
+            // el lote) — así el modelo, el mesh del piso y la zona despejada SIEMPRE coinciden,
+            // y el borde cercano queda BIEN pasado el hombro de asfalto de la ruta (no pisa la ruta).
+            float roadZHere = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
+            float nearZ = roadZHere + MapLayout.YpfPadNearZ, farZ = roadZHere + MapLayout.YpfPadFarZ;
+            float centerZ = (nearZ + farZ) * 0.5f;
+            var p = BuilderUtils.Ground(t, MapLayout.YpfStation.x, centerZ);   // centro del lote
             var g = BuilderUtils.Group(parent, "EstacionYPF", p);
             BuilderUtils.Label(g, "ESTACION YPF", p + Vector3.up * 8f);
 
@@ -413,7 +420,7 @@ namespace FolkloreArchives.MapGen
             // altura real en 9 puntos del lote y hago un bloque GRUESO cuyo TOPE queda por
             // encima del punto más alto y la BASE bien enterrada bajo el más bajo → cubre
             // cualquier desnivel sin rebuild, no más pasto/tierra asomando.
-            float halfX = MapLayout.YpfPadHalfX - 2f, halfZ = (MapLayout.YpfPadNorth - 1f) * 0.5f;
+            float halfX = MapLayout.YpfPadHalfX - 2f, halfZ = (farZ - nearZ) * 0.5f - 1f;
             float maxH = float.MinValue, minH = float.MaxValue;
             for (int sx = -1; sx <= 1; sx++)
                 for (int sz = -1; sz <= 1; sz++)

@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 22;
+        const int SplatVersion = 23;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -352,7 +352,7 @@ namespace FolkloreArchives.MapGen
             {
                 float padRoadZ = MapLayout.PavedRouteZAt(wx);
                 float dxPad = Mathf.Abs(wx - MapLayout.YpfStation.x) - MapLayout.YpfPadHalfX;   // <=0 dentro
-                float dzPad = Mathf.Max((padRoadZ - MapLayout.YpfPadSouth) - wz, wz - (padRoadZ + MapLayout.YpfPadNorth)); // <=0 dentro
+                float dzPad = Mathf.Max((padRoadZ + MapLayout.YpfPadNearZ) - wz, wz - (padRoadZ + MapLayout.YpfPadFarZ)); // <=0 dentro
                 float padOut = Mathf.Max(0f, Mathf.Max(dxPad, dzPad));
                 if (padOut < 10f)
                     a = Mathf.Lerp(MapLayout.RoadSurfaceHeight, a, Mathf.SmoothStep(0f, 1f, padOut / 10f));

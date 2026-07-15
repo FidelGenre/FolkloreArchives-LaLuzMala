@@ -147,12 +147,15 @@ namespace FolkloreArchives.MapGen
         // para que no quede sobre el borde alto de la ruta. Aplanado por TerrainBuilder,
         // sin árboles/pasto (ForestBuilder) y con piso de tierra (splat).
         public const float YpfPadHalfX = 20f;   // medio ancho del lote (x) desde YpfStation.x (cubre la estación ancha)
-        public const float YpfPadNorth = 34f;   // cuánto se mete al norte del asfalto (z)
-        public const float YpfPadSouth = 3f;    // cuánto baja al sur (hacia el asfalto) para que la entrada pegue con la ruta
+        // La ruta pintada tiene un HOMBRO de asfalto de ~12-14m al norte del centro (ver
+        // TerrainBuilder.PaintTextures, Strip(dPavCentre,12f,14f) del lado norte) — el
+        // lote tiene que arrancar BIEN pasado eso, si no queda pegado/superpuesto al asfalto.
+        public const float YpfPadNearZ = 20f;   // borde CERCANO (sur) del lote, distancia al centro de la ruta — pasa el hombro de asfalto
+        public const float YpfPadFarZ  = 54f;   // borde LEJANO (norte) del lote, distancia al centro de la ruta
         public static bool InYpfPad(Vector2 p)
         {
             float dz = p.y - PavedRouteZAt(p.x);
-            return Mathf.Abs(p.x - YpfStation.x) < YpfPadHalfX && dz > -YpfPadSouth && dz < YpfPadNorth;
+            return Mathf.Abs(p.x - YpfStation.x) < YpfPadHalfX && dz > YpfPadNearZ && dz < YpfPadFarZ;
         }
         // Caminos que salen del campamento: ahora en S (curvas suaves Catmull-Rom con
         // puntos que zigzaguean) en vez de líneas rectas (pedido del owner).
