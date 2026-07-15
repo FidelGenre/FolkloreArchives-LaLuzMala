@@ -20,6 +20,18 @@ namespace FolkloreArchives.MapGen
         const string RockDir = "Assets/HQP STUDIOS/Rocks and Terrains Pack - Low Poly/Models/Rocks/Block Rocks/Block Rocks/";
         const string SedanObj = "Assets/ExternalAssets/PSXCars/Sedan/Car5.obj";
 
+        // modelos DESCARGADOS (Sketchfab) — el owner los pone en estas carpetas. El código
+        // los carga con fallback a lo procedural si todavía no están (busca cualquier
+        // .fbx/.glb/.gltf/.obj dentro de la carpeta, sin importar el nombre interno).
+        const string DirWindmill = "Assets/ExternalAssets/Windmill";
+        const string DirTower    = "Assets/ExternalAssets/RadioTower";
+        const string DirDock     = "Assets/ExternalAssets/Dock";
+        const string DirDeadTree = "Assets/ExternalAssets/DeadTree";
+        const string DirBarn     = "Assets/ExternalAssets/BarnShed";
+        const string DirFence    = "Assets/ExternalAssets/ChainFence";
+        const string DirGasProps = "Assets/ExternalAssets/GasStationProps";
+        const string DirChurch   = "Assets/ExternalAssets/Church";
+
         // materiales (compartidos, cacheados como asset por BuilderUtils.Mat)
         static Material Rust, MetalDark, Wood, ShrineRed, FlagRed, Bottle, Bone, Reed,
                         Rope, Ash, Burnt, DarkWater, Candle, RedLight, StoneGrey;
@@ -56,6 +68,7 @@ namespace FolkloreArchives.MapGen
             Corrales(root, t);
             YpfStation(root, t);
             Estancia(root, t);
+            Capilla(root, t);
 
             // set-dressing fijo → static batching (menos draw calls). Excepto luces.
             BuilderUtils.MarkStaticRecursive(root);
@@ -71,6 +84,9 @@ namespace FolkloreArchives.MapGen
             var mp = BuilderUtils.Ground(t, MapLayout.Molino);
             var mill = BuilderUtils.Group(g, "MolinoOxidado", mp);
             BuilderUtils.Label(mill, "MOLINO", mp + Vector3.up * 10f);
+            // molino real descargado (Windmill/) — si no está, molino procedural
+            if (SpawnModel(DirWindmill, mill, mp, 8f, 0f, true, "MolinoModelo") == null)
+            {
             float towerH = 7.5f;
             // 4 patas que convergen (torre reticulada baja)
             for (int i = 0; i < 4; i++)
@@ -100,6 +116,7 @@ namespace FolkloreArchives.MapGen
             // veleta (cola)
             BuilderUtils.Prim(PrimitiveType.Cube, "Vane", mill, hub + new Vector3(0f, 0.1f, -1.2f),
                 new Vector3(0.05f, 0.9f, 1.4f), Rust);
+            } // fin fallback procedural del molino
 
             // alambrado (2 tiradas) + huesos de oveja
             Fence(g, t, MapLayout.EstepaCenter + new Vector2(-18, -6), MapLayout.EstepaCenter + new Vector2(20, 2), 6f);
@@ -192,11 +209,18 @@ namespace FolkloreArchives.MapGen
             var g = BuilderUtils.Group(parent, "BosqueQuemado", p);
             BuilderUtils.Label(g, "BOSQUE QUEMADO", p + Vector3.up * 8f);
 
+            // árbol muerto real (DeadTree/) esparcido, o troncos negros procedurales
+            var deadSrc = FindModelInFolder(DirDeadTree);
             for (int i = 0; i < 22; i++)
             {
                 Vector2 o = Random.insideUnitCircle * 16f;
                 Vector3 rp = BuilderUtils.Ground(t, MapLayout.BurntForest.x + o.x, MapLayout.BurntForest.y + o.y);
                 float h = Random.Range(3.5f, 6.5f);
+                if (deadSrc != null)
+                {
+                    SpawnModelFrom(deadSrc, g, rp, h, Random.Range(0f, 360f), true, "ArbolMuerto" + i);
+                    continue;
+                }
                 float lean = Random.Range(0f, 14f);
                 // tronco negro cónico (sin follaje) — cilindro fino y alto
                 var trunk = BuilderUtils.Prim(PrimitiveType.Cylinder, "TroncoQuemado" + i, g,
@@ -217,19 +241,24 @@ namespace FolkloreArchives.MapGen
             var g = BuilderUtils.Group(parent, "OrillaLago", p);
             BuilderUtils.Label(g, "ORILLA DEL LAGO", p + Vector3.up * 7f);
 
-            // muelle de tablones apuntando hacia el centro del lago
+            // muelle: modelo real (Dock/) apuntando al lago, o tablones procedurales
             Vector2 toLake = (MapLayout.CentralLakeCenter - MapLayout.LakeShore).normalized;
             float deckY = MapLayout.CentralLakeLevel + 0.6f;
-            for (int i = 0; i < 8; i++)
+            float dockYaw = Mathf.Atan2(toLake.x, toLake.y) * Mathf.Rad2Deg;
+            var dockPos = new Vector3(MapLayout.LakeShore.x, deckY, MapLayout.LakeShore.y);
+            if (SpawnModel(DirDock, g, dockPos, 12f, dockYaw, false, "MuelleModelo") == null)
             {
-                Vector2 plankXZ = MapLayout.LakeShore + toLake * (i * 1.6f + 1f);
-                Vector3 pk = new Vector3(plankXZ.x, deckY, plankXZ.y);
-                BuilderUtils.Prim(PrimitiveType.Cube, "Tabla" + i, g, pk, new Vector3(2.0f, 0.12f, 1.6f), Wood,
-                    new Vector3(0f, Random.Range(-4f, 4f), 0f));
-                if (i % 2 == 0) // pilotes
-                    BuilderUtils.Prim(PrimitiveType.Cylinder, "Pilote" + i, g,
-                        new Vector3(plankXZ.x, MapLayout.CentralLakeBed + 1f, plankXZ.y),
-                        new Vector3(0.18f, (deckY - MapLayout.CentralLakeBed) * 0.5f + 0.5f, 0.18f), Wood);
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector2 plankXZ = MapLayout.LakeShore + toLake * (i * 1.6f + 1f);
+                    Vector3 pk = new Vector3(plankXZ.x, deckY, plankXZ.y);
+                    BuilderUtils.Prim(PrimitiveType.Cube, "Tabla" + i, g, pk, new Vector3(2.0f, 0.12f, 1.6f), Wood,
+                        new Vector3(0f, Random.Range(-4f, 4f), 0f));
+                    if (i % 2 == 0) // pilotes
+                        BuilderUtils.Prim(PrimitiveType.Cylinder, "Pilote" + i, g,
+                            new Vector3(plankXZ.x, MapLayout.CentralLakeBed + 1f, plankXZ.y),
+                            new Vector3(0.18f, (deckY - MapLayout.CentralLakeBed) * 0.5f + 0.5f, 0.18f), Wood);
+                }
             }
             // unos juncos en el borde
             for (int i = 0; i < 12; i++)
@@ -290,10 +319,13 @@ namespace FolkloreArchives.MapGen
             var g = BuilderUtils.Group(parent, "ArbolDelAhorcado", p);
             BuilderUtils.Label(g, "ARBOL DEL AHORCADO", p + Vector3.up * 8f);
 
-            // árbol solitario seco (tronco + rama gruesa horizontal)
-            BuilderUtils.Prim(PrimitiveType.Cylinder, "Tronco", g, p + Vector3.up * 2.6f, new Vector3(0.5f, 2.6f, 0.5f), Wood);
+            // árbol solitario: modelo real (DeadTree/) o tronco+rama procedural
             Vector3 branch = p + new Vector3(0f, 4.6f, 0f);
-            BuilderUtils.Prim(PrimitiveType.Cylinder, "Rama", g, branch, new Vector3(0.22f, 1.6f, 0.22f), Wood, new Vector3(0f, 0f, 90f));
+            if (SpawnModel(DirDeadTree, g, p, 6.5f, Random.Range(0f, 360f), true, "ArbolAhorcado") == null)
+            {
+                BuilderUtils.Prim(PrimitiveType.Cylinder, "Tronco", g, p + Vector3.up * 2.6f, new Vector3(0.5f, 2.6f, 0.5f), Wood);
+                BuilderUtils.Prim(PrimitiveType.Cylinder, "Rama", g, branch, new Vector3(0.22f, 1.6f, 0.22f), Wood, new Vector3(0f, 0f, 90f));
+            }
             // soga colgando
             Vector3 knot = branch + new Vector3(1.3f, 0f, 0f);
             BuilderUtils.Prim(PrimitiveType.Cylinder, "Soga", g, knot + Vector3.down * 0.9f, new Vector3(0.04f, 0.9f, 0.04f), Rope);
@@ -319,16 +351,20 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Label(g, "ANTENA", p + Vector3.up * 32f);
 
             float h = 28f;
-            for (int i = 0; i < 4; i++)
+            // torre real descargada (RadioTower/) — si no está, torre reticulada procedural
+            if (SpawnModel(DirTower, g, p, h, 0f, true, "TorreAntena") == null)
             {
-                float ang = (i * 90f + 45f) * Mathf.Deg2Rad;
-                Vector3 baseP = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 2.2f;
-                Vector3 topP  = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 0.4f + Vector3.up * h;
-                Beam(g, baseP, topP, 0.14f, MetalDark);
+                for (int i = 0; i < 4; i++)
+                {
+                    float ang = (i * 90f + 45f) * Mathf.Deg2Rad;
+                    Vector3 baseP = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 2.2f;
+                    Vector3 topP  = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 0.4f + Vector3.up * h;
+                    Beam(g, baseP, topP, 0.14f, MetalDark);
+                }
+                for (float y = 3f; y < h; y += 4f)
+                    RingRungs(g, p, Mathf.Lerp(2.0f, 0.5f, y / h), y, MetalDark);
             }
-            for (float y = 3f; y < h; y += 4f)
-                RingRungs(g, p, Mathf.Lerp(2.0f, 0.5f, y / h), y, MetalDark);
-            // baliza roja
+            // baliza roja (siempre, arriba de la torre real o procedural)
             var beacon = BuilderUtils.Prim(PrimitiveType.Sphere, "Baliza", g, p + Vector3.up * (h + 0.6f), Vector3.one * 0.6f, RedLight);
             DestroyCol(beacon);
             var l = new GameObject("BalizaLuz").AddComponent<Light>();
@@ -345,10 +381,14 @@ namespace FolkloreArchives.MapGen
 
             // corral cuadrado de postes + alambre
             Vector2 c = MapLayout.Corrales; float s = 9f;
-            Fence(g, t, c + new Vector2(-s, -s), c + new Vector2(s, -s), 3f);
-            Fence(g, t, c + new Vector2(s, -s), c + new Vector2(s, s), 3f);
-            Fence(g, t, c + new Vector2(s, s), c + new Vector2(-s, s), 3f);
-            Fence(g, t, c + new Vector2(-s, s), c + new Vector2(-s, -s), 3f);
+            var corners = new[] { c + new Vector2(-s, -s), c + new Vector2(s, -s), c + new Vector2(s, s), c + new Vector2(-s, s) };
+            var fenceSrc = FindModelInFolder(DirFence);   // cerco de cadena real (ChainFence/) o postes procedurales
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 a = corners[i], b = corners[(i + 1) % 4];
+                if (fenceSrc != null) FenceLineModel(fenceSrc, g, t, a, b);
+                else Fence(g, t, a, b, 3f);
+            }
             // bañadero (pileta larga angosta)
             BuilderUtils.Prim(PrimitiveType.Cube, "Banadero", g, p + Vector3.up * 0.3f, new Vector3(4f, 0.6f, 1.0f), StoneGrey);
             BuilderUtils.Prim(PrimitiveType.Cube, "Agua", g, p + Vector3.up * 0.45f, new Vector3(3.7f, 0.3f, 0.75f), DarkWater);
@@ -366,12 +406,15 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Prim(PrimitiveType.Cube, "Techo", g, p + Vector3.up * 4.2f, new Vector3(9f, 0.4f, 6f), MetalDark);
             BuilderUtils.Prim(PrimitiveType.Cube, "ColA", g, p + new Vector3(-3.5f, 2f, -2f), new Vector3(0.4f, 4f, 0.4f), MetalDark);
             BuilderUtils.Prim(PrimitiveType.Cube, "ColB", g, p + new Vector3(3.5f, 2f, 2f), new Vector3(0.4f, 4f, 0.4f), MetalDark);
-            // 2 surtidores
-            for (int i = 0; i < 2; i++)
+            // surtidores: modelo real (GasStationProps/) o cajas procedurales
+            if (SpawnModel(DirGasProps, g, p, 5f, 0f, false, "SurtidoresModelo") == null)
             {
-                Vector3 sp = p + new Vector3((i - 0.5f) * 3.5f, 0.9f, 0f);
-                BuilderUtils.Prim(PrimitiveType.Cube, "Surtidor" + i, g, sp, new Vector3(0.7f, 1.8f, 0.9f), Rust);
-                BuilderUtils.Prim(PrimitiveType.Cube, "Display" + i, g, sp + new Vector3(0f, 0.4f, 0.48f), new Vector3(0.5f, 0.4f, 0.06f), MetalDark);
+                for (int i = 0; i < 2; i++)
+                {
+                    Vector3 sp = p + new Vector3((i - 0.5f) * 3.5f, 0.9f, 0f);
+                    BuilderUtils.Prim(PrimitiveType.Cube, "Surtidor" + i, g, sp, new Vector3(0.7f, 1.8f, 0.9f), Rust);
+                    BuilderUtils.Prim(PrimitiveType.Cube, "Display" + i, g, sp + new Vector3(0f, 0.4f, 0.48f), new Vector3(0.5f, 0.4f, 0.06f), MetalDark);
+                }
             }
             // tubo de luz parpadeante (por ahora fija, blanca fría)
             WarmPoint(g, p + Vector3.up * 3.9f, 12f, 1.6f, new Color(0.8f, 0.85f, 1f));
@@ -411,13 +454,38 @@ namespace FolkloreArchives.MapGen
             Vector3 bp = p + new Vector3(-14f, 0f, 6f);
             var barn = BuilderUtils.Group(g, "GalponEsquila", bp);
             BuilderUtils.Label(barn, "GALPON (EL FAMILIAR)", bp + Vector3.up * 6f);
-            BuilderUtils.Prim(PrimitiveType.Cube, "Paredes", barn, bp + Vector3.up * 2f, new Vector3(9f, 4f, 12f), Rust);
-            BuilderUtils.Prim(PrimitiveType.Cube, "TechoA", barn, bp + Vector3.up * 4.4f, new Vector3(6f, 0.2f, 12.5f), MetalDark, new Vector3(0f, 0f, 28f));
-            BuilderUtils.Prim(PrimitiveType.Cube, "TechoB", barn, bp + Vector3.up * 4.4f, new Vector3(6f, 0.2f, 12.5f), MetalDark, new Vector3(0f, 0f, -28f));
-            // portón oscuro + "cadenas" colgando (marcador de El Familiar)
-            BuilderUtils.Prim(PrimitiveType.Cube, "Porton", barn, bp + new Vector3(0f, 1.8f, 6.1f), new Vector3(3.5f, 3.6f, 0.2f), MetalDark);
+            // galpón real (BarnShed/) o nave procedural
+            if (SpawnModel(DirBarn, barn, bp, 13f, 90f, false, "GalponModelo") == null)
+            {
+                BuilderUtils.Prim(PrimitiveType.Cube, "Paredes", barn, bp + Vector3.up * 2f, new Vector3(9f, 4f, 12f), Rust);
+                BuilderUtils.Prim(PrimitiveType.Cube, "TechoA", barn, bp + Vector3.up * 4.4f, new Vector3(6f, 0.2f, 12.5f), MetalDark, new Vector3(0f, 0f, 28f));
+                BuilderUtils.Prim(PrimitiveType.Cube, "TechoB", barn, bp + Vector3.up * 4.4f, new Vector3(6f, 0.2f, 12.5f), MetalDark, new Vector3(0f, 0f, -28f));
+                BuilderUtils.Prim(PrimitiveType.Cube, "Porton", barn, bp + new Vector3(0f, 1.8f, 6.1f), new Vector3(3.5f, 3.6f, 0.2f), MetalDark);
+            }
+            // "cadenas" colgando (marcador de El Familiar) — siempre
             for (int i = 0; i < 3; i++)
                 BuilderUtils.Prim(PrimitiveType.Cylinder, "Cadena" + i, barn, bp + new Vector3(-1f + i, 2.6f, 6.3f), new Vector3(0.05f, 0.7f, 0.05f), MetalDark);
+        }
+
+        // ---------------- CAPILLA ANEGADA (modelo descargado) ----------------
+        static void Capilla(Transform parent, Terrain t)
+        {
+            Vector2 xz = MapLayout.Capilla;
+            float groundY = t.SampleHeight(new Vector3(xz.x, 0f, xz.y));
+            var g = BuilderUtils.Group(parent, "CapillaAnegada", new Vector3(xz.x, groundY, xz.y));
+            BuilderUtils.Label(g, "CAPILLA ANEGADA", new Vector3(xz.x, groundY + 9f, xz.y));
+
+            // medio HUNDIDA: apoyo el fondo ~2.5m bajo el nivel del suelo del río → el
+            // campanario/techo asoma del agua.
+            var sunk = new Vector3(xz.x, groundY - 2.5f, xz.y);
+            if (SpawnModel(DirChurch, g, sunk, 11f, Random.Range(0f, 360f), false, "CapillaModelo") == null)
+            {
+                // placeholder procedural: nave + campanario + cruz asomando
+                BuilderUtils.Prim(PrimitiveType.Cube, "Nave", g, new Vector3(xz.x, groundY + 0.5f, xz.y), new Vector3(6f, 4f, 9f), StoneGrey);
+                BuilderUtils.Prim(PrimitiveType.Cube, "Campanario", g, new Vector3(xz.x, groundY + 3f, xz.y - 4f), new Vector3(2.2f, 5f, 2.2f), StoneGrey);
+                BuilderUtils.Prim(PrimitiveType.Cube, "CruzV", g, new Vector3(xz.x, groundY + 6.5f, xz.y - 4f), new Vector3(0.2f, 1.3f, 0.2f), Wood);
+                BuilderUtils.Prim(PrimitiveType.Cube, "CruzH", g, new Vector3(xz.x, groundY + 6.2f, xz.y - 4f), new Vector3(0.8f, 0.2f, 0.2f), Wood);
+            }
         }
 
         // ================= helpers =================
@@ -470,6 +538,28 @@ namespace FolkloreArchives.MapGen
             }
         }
 
+        // tilea el modelo de cerco entre a y b (repite el segmento a lo largo de la línea).
+        static void FenceLineModel(GameObject src, Transform parent, Terrain t, Vector2 a, Vector2 b)
+        {
+            // largo nativo del segmento (lado mayor XZ)
+            var probe = (GameObject)Object.Instantiate(src);
+            probe.transform.localScale = Vector3.one;
+            var pb = ModelBounds(probe);
+            float segLen = Mathf.Max(pb.size.x, pb.size.z);
+            Object.DestroyImmediate(probe);
+            if (segLen < 0.3f) segLen = 2f;
+
+            float total = Vector2.Distance(a, b);
+            int n = Mathf.Max(1, Mathf.RoundToInt(total / segLen));
+            float yaw = Mathf.Atan2((b - a).x, (b - a).y) * Mathf.Rad2Deg;
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 xz = Vector2.Lerp(a, b, (i + 0.5f) / n);
+                Vector3 gp = BuilderUtils.Ground(t, xz.x, xz.y);
+                SpawnModelFrom(src, parent, gp, segLen, yaw, false, "Cerco" + i); // escala ~nativa
+            }
+        }
+
         // banderas rojas descoloridas en palitos
         static void RedFlags(Transform parent, Vector3 center, int count, float radius)
         {
@@ -510,6 +600,61 @@ namespace FolkloreArchives.MapGen
         {
             var c = g.GetComponent<Collider>();
             if (c != null) Object.DestroyImmediate(c);
+        }
+
+        // ---- carga de MODELOS DESCARGADOS ----
+        // busca el primer modelo (GameObject) dentro de una carpeta; null si no está.
+        static GameObject FindModelInFolder(string folder)
+        {
+            if (!AssetDatabase.IsValidFolder(folder)) return null;
+            var guids = AssetDatabase.FindAssets("t:GameObject", new[] { folder });
+            foreach (var gu in guids)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(gu);
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (go != null) return go;
+            }
+            return null;
+        }
+
+        // bounds (world) combinados de todos los renderers de una instancia.
+        static Bounds ModelBounds(GameObject inst)
+        {
+            var rends = inst.GetComponentsInChildren<Renderer>();
+            if (rends.Length == 0) return new Bounds(inst.transform.position, Vector3.one);
+            var b = rends[0].bounds;
+            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+            return b;
+        }
+
+        // instancia el modelo de `folder`, lo escala para que su lado mayor (XZ) o su ALTO
+        // sea ~targetSize, lo APOYA en el piso en `pos` (con yaw). Devuelve null si el
+        // modelo todavía no está descargado (→ el caller arma la versión procedural).
+        static GameObject SpawnModel(string folder, Transform parent, Vector3 pos, float targetSize, float yaw, bool byHeight = false, string name = null)
+        {
+            var src = FindModelInFolder(folder);
+            if (src == null) return null;
+            return SpawnModelFrom(src, parent, pos, targetSize, yaw, byHeight, name);
+        }
+
+        // igual que SpawnModel pero con el modelo ya encontrado (para instanciar en loop
+        // sin re-buscar en la carpeta cada vez).
+        static GameObject SpawnModelFrom(GameObject src, Transform parent, Vector3 pos, float targetSize, float yaw, bool byHeight = false, string name = null)
+        {
+            var inst = (GameObject)Object.Instantiate(src, parent);
+            if (name != null) inst.name = name;
+            inst.transform.position = pos;
+            inst.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            inst.transform.localScale = Vector3.one;
+            var b = ModelBounds(inst);
+            float dim = byHeight ? b.size.y : Mathf.Max(b.size.x, b.size.z);
+            if (dim > 0.001f)
+            {
+                inst.transform.localScale = Vector3.one * (targetSize / dim);
+                b = ModelBounds(inst);
+            }
+            inst.transform.position += new Vector3(0f, pos.y - b.min.y, 0f); // apoyar el fondo en el piso
+            return inst;
         }
     }
 }

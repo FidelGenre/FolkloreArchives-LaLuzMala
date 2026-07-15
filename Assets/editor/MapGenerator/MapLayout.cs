@@ -138,6 +138,7 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 Antenna       = new Vector2(705f, 652f);  // antena/repetidora (cerro)
         public static readonly Vector2 Corrales      = new Vector2(1005f, 558f); // corrales/bañadero (junto a la estancia)
         public static readonly Vector2 Estancia      = new Vector2(975f, 515f);  // estancia + galpón (El Familiar)
+        public static readonly Vector2 Capilla       = new Vector2(592f, 528f);  // capilla anegada (medio hundida en el río)
         // Sobre la RUTA (z derivado de la curva real del asfalto):
         public static readonly Vector2 DifuntaCorrea = new Vector2(590f, PavedRouteZAt(590f)); // santuario Difunta Correa
         public static readonly Vector2 GauchitoGil   = new Vector2(331f, PavedRouteZAt(331f)); // ermita Gauchito Gil (en el desvío)
