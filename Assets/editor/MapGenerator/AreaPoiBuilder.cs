@@ -405,7 +405,7 @@ namespace FolkloreArchives.MapGen
 
             // PLAYÓN de ASFALTO (mesh plano) — garantiza pavimento plano bajo la estación
             // SIN depender del rebuild del terreno. La estación y el Falcon se apoyan encima.
-            var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.46f, 0.46f, 0.48f)); // gris concreto claro (piso de estación)
+            var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.55f, 0.55f, 0.57f)); // gris concreto claro (piso de estación)
             if (asphalt.HasProperty("_Smoothness")) asphalt.SetFloat("_Smoothness", 0f);          // mate, no plástico
             if (asphalt.HasProperty("_SpecularHighlights")) asphalt.SetFloat("_SpecularHighlights", 0f);
             float padTop = p.y + 0.06f;
@@ -626,9 +626,14 @@ namespace FolkloreArchives.MapGen
         // Productos/cajones del exhibidor del modelo de la YPF que quedan "tirados" afuera.
         // Se ocultan por nombre para dejar la estación limpia (estructura + surtidores +
         // cartel quedan). Si oculta de más/menos, se ajusta la lista.
-        // Solo lo SUELTO de afuera (cajones, basura, hielo). Las cosas de adentro de la
-        // tienda (heladeras, góndolas, golosinas, caja) se DEJAN.
-        static readonly string[] YpfClutter = { "Boxs", "Dumpster", "ICE", "Deposit" };
+        // Lo SUELTO/exhibidor de AFUERA (cajones, basura, góndolas, caja registradora) +
+        // el asfalto propio del modelo (usamos nuestro playón gris). Las HELADERAS de pared
+        // (Fridge) y la estructura (tienda, techo, surtidores, cartel) se DEJAN → la tienda
+        // queda con cosas adentro y afuera limpio.
+        static readonly string[] YpfClutter = {
+            "Boxs", "Dumpster", "ICE", "Deposit", "Candy", "Cigars", "Coffee", "Foods",
+            "Gadgets", "Frying", "Dispenser", "Desk", "Checker", "Chair", "Asphalt"
+        };
         static void HideCatalogClutter(GameObject inst)
         {
             int hid = 0;
