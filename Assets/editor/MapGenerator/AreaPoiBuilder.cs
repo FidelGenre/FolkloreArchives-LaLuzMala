@@ -415,24 +415,17 @@ namespace FolkloreArchives.MapGen
             var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.55f, 0.55f, 0.57f)); // gris concreto claro (piso de estación)
             if (asphalt.HasProperty("_Smoothness")) asphalt.SetFloat("_Smoothness", 0f);          // mate, no plástico
             if (asphalt.HasProperty("_SpecularHighlights")) asphalt.SetFloat("_SpecularHighlights", 0f);
-            // El terreno de abajo puede tener lomas/pozos (el aplanado real solo pasa con
-            // Rebuild Terrain, que no siempre se hace). En vez de depender de eso, MIDO la
-            // altura real en 9 puntos del lote y hago un bloque GRUESO cuyo TOPE queda por
-            // encima del punto más alto y la BASE bien enterrada bajo el más bajo → cubre
-            // cualquier desnivel sin rebuild, no más pasto/tierra asomando.
+            // Playón FINO apoyado en la altura del CENTRO del lote (no en los extremos: un
+            // lote de 36x32m puede pisar una loma real del terreno en una punta, e intentar
+            // "cubrirla" con un bloque grueso termina siendo un cubo gigante flotando). Para
+            // que quede perfectamente parejo sin ningún borde asomando hace falta aplanar el
+            // TERRENO de verdad una vez: Tools > Rebuild Terrain (forzar) — el código de
+            // HeightAt() ya aplana este lote a la altura de la ruta, solo falta ese paso.
             float halfX = MapLayout.YpfPadHalfX - 2f, halfZ = (farZ - nearZ) * 0.5f - 1f;
-            float maxH = float.MinValue, minH = float.MaxValue;
-            for (int sx = -1; sx <= 1; sx++)
-                for (int sz = -1; sz <= 1; sz++)
-                {
-                    float hh = t.SampleHeight(new Vector3(p.x + sx * halfX, 0f, p.z + sz * halfZ));
-                    maxH = Mathf.Max(maxH, hh); minH = Mathf.Min(minH, hh);
-                }
-            float padTop = maxH + 0.12f;
-            float padBottom = minH - 3f;   // bien enterrado, cubre cualquier bache
+            float padTop = p.y + 0.12f;
             BuilderUtils.Prim(PrimitiveType.Cube, "PlayonAsfalto", g,
-                new Vector3(p.x, (padTop + padBottom) * 0.5f, p.z),
-                new Vector3(halfX * 2f, padTop - padBottom, halfZ * 2f), asphalt);
+                new Vector3(p.x, padTop - 0.15f, p.z),
+                new Vector3(halfX * 2f, 0.3f, halfZ * 2f), asphalt);
             p.y = padTop;   // todo lo de la estación se apoya sobre el playón
 
             // La estación ENTERA es el modelo descargado: GasStationProps trae TIENDA +
