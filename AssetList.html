@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LA LUZ MALA — Assets & Distinción de Áreas</title>
+<style>
+  :root{ --bg:#14161c; --panel:#1c2029; --ink:#e7e3d8; --mut:#9a9684; --accent:#d8a24a;
+         --have:#4a9d5c; --proc:#5b8fd8; --dl:#d86a4a; --idea:#3f9c8f; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:system-ui,Segoe UI,sans-serif; background:var(--bg); color:var(--ink);
+        line-height:1.5; padding:0 0 60px; }
+  header{ padding:22px 28px 16px; border-bottom:1px solid #000; background:#12141a; position:sticky; top:0; z-index:5; }
+  h1{ margin:0; font-size:20px; letter-spacing:.5px; }
+  h1 small{ display:block; color:var(--mut); font-weight:400; font-size:12px; margin-top:4px; }
+  h2{ margin:30px 28px 10px; font-size:16px; color:var(--accent); border-left:3px solid var(--accent); padding-left:10px; }
+  .wrap{ padding:0 28px; }
+  p.lead{ margin:14px 28px; color:#cfc7b4; max-width:900px; }
+  .legend{ margin:8px 28px 0; display:flex; flex-wrap:wrap; gap:14px; font-size:12px; }
+  .pill{ display:inline-flex; align-items:center; gap:6px; }
+  .sw{ width:12px; height:12px; border-radius:3px; display:inline-block; }
+  table{ border-collapse:collapse; width:100%; font-size:13px; margin-top:6px; }
+  th,td{ border:1px solid #2c313d; padding:8px 10px; text-align:left; vertical-align:top; }
+  th{ background:#232833; color:#d8d3c4; position:sticky; }
+  tr:nth-child(even) td{ background:#191d25; }
+  td.area{ font-weight:600; white-space:nowrap; }
+  .tag{ font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px; white-space:nowrap; display:inline-block; }
+  .t-have{ background:#1e3a26; color:#7fd695; border:1px solid var(--have); }
+  .t-proc{ background:#1c2b44; color:#8fb8ea; border:1px solid var(--proc); }
+  .t-dl{ background:#3a221a; color:#eaa088; border:1px solid var(--dl); }
+  a{ color:#8fc8e0; }
+  code{ background:#0f1116; padding:1px 5px; border-radius:4px; font-size:12px; color:#cdb98a; }
+  .mut{ color:var(--mut); }
+  .box{ margin:14px 28px; background:#12141a; border:1px solid #2c313d; border-radius:8px; padding:14px 16px; max-width:900px; }
+  .box b{ color:var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>LA LUZ MALA — Assets & Distinción de Áreas
+    <small>Qué hago yo · qué reutilizás · qué descargás. Va con el MapPlan.</small></h1>
+</header>
+
+<h2>1 · ¿Cada área es distinta? SÍ — no es todo el mismo bosque</h2>
+<p class="lead">Cada zona cambia <b>5 cosas a la vez</b> (piso, vegetación, niebla/luz, sonido y densidad de árboles).
+Así, aunque los caminos te lleven, <b>sabés dónde estás por cómo se ve y suena</b>, no es laberinto ciego.</p>
+<div class="wrap">
+<table>
+  <tr><th>Área</th><th>Piso</th><th>Vegetación</th><th>Niebla / Luz</th><th>Sonido</th><th>Árboles</th></tr>
+  <tr><td class="area">Bosque (actual)</td><td>verde + barro</td><td>lengas densas, pasto</td><td>media, cerrada, oscura</td><td>chicharras, ramas</td><td>MUCHOS</td></tr>
+  <tr><td class="area">Estepa</td><td>pasto seco pajizo / tierra</td><td>coirón (mata baja), casi sin árboles</td><td>despejado, cielo abierto, viento</td><td>viento fuerte constante</td><td>casi 0</td></tr>
+  <tr><td class="area">Mallín (pantano)</td><td>barro oscuro + charcos</td><td>juncos, totora, troncos podridos</td><td>niebla BAJA densa</td><td>ranas, chapoteo, mosquitos</td><td>pocos, muertos</td></tr>
+  <tr><td class="area">Roquedal / cañadón</td><td>piedra gris, grava</td><td>casi nada, líquenes</td><td>seca, ecos, sombras duras</td><td>goteo, eco, viento en piedra</td><td>0</td></tr>
+  <tr><td class="area">Bosque quemado</td><td>ceniza gris/negra</td><td>nada, troncos negros pelados</td><td>gris, se ve lejos, sin techo</td><td>crujidos, ceniza al viento</td><td>MUCHOS (negros, sin hojas)</td></tr>
+  <tr><td class="area">Orilla del lago</td><td>canto rodado / arena</td><td>juncos en el borde</td><td>niebla sobre el agua</td><td>agua, olas suaves, viento</td><td>pocos</td></tr>
+</table>
+</div>
+<div class="box">Todo esto lo controlan sistemas que <b>ya existen</b> en tu proyecto: el <b>splatmap</b> (textura de piso por zona),
+la <b>densidad de pasto/detail</b>, la <b>niebla del DayNightController</b> y el audio ambiente. O sea la variedad de áreas
+la puedo hacer yo <b>sin que descargues nada</b> — lo que se descarga son los <b>props/edificios</b> puntuales.</div>
+
+<h2>2 · Assets por lugar (14) — qué necesita cada uno</h2>
+<div class="legend">
+  <span class="pill"><span class="sw" style="background:var(--have)"></span> <b>YA LO TENÉS</b> — reutilizo lo que hay</span>
+  <span class="pill"><span class="sw" style="background:var(--proc)"></span> <b>PROCEDURAL</b> — lo genero yo, no descargás</span>
+  <span class="pill"><span class="sw" style="background:var(--dl)"></span> <b>DESCARGAR</b> — conviene un modelo</span>
+</div>
+<div class="wrap">
+<table>
+  <tr><th>Lugar</th><th>Qué lleva</th><th>Estado</th><th>De dónde sale / qué bajar</th></tr>
+
+  <tr><td class="area">ESTEPA + Molino</td><td>campo abierto, coirón, alambrado, huesos, molino girando</td>
+      <td><span class="tag t-proc">PROCEDURAL</span></td>
+      <td>Piso seco + coirón + alambrados + molino low-poly: lo hago yo. <span class="mut">(Si querés un molino más lindo: Poly Pizza → “windmill”.)</span></td></tr>
+
+  <tr><td class="area">MALLÍN (pantano)</td><td>barro, charcos, juncos, totora, niebla baja, pasarelas</td>
+      <td><span class="tag t-proc">PROCEDURAL</span></td>
+      <td>Piso barro+agua, juncos (billboards), pasarelas de tablones, niebla: lo hago yo.</td></tr>
+
+  <tr><td class="area">ROQUEDAL / cañadón</td><td>rocas grandes, barranco, cuevas</td>
+      <td><span class="tag t-have">YA LO TENÉS</span></td>
+      <td>Uso <code>HQP STUDIOS/Rocks and Terrains Pack</code> que ya está en el proyecto.</td></tr>
+
+  <tr><td class="area">BOSQUE QUEMADO</td><td>troncos negros parados, ceniza, sin hojas</td>
+      <td><span class="tag t-have">YA LO TENÉS</span></td>
+      <td>Reutilizo tus árboles (<code>ALanTree</code>/<code>ForestPack</code>) tintados negros y sin follaje.</td></tr>
+
+  <tr><td class="area">ORILLA DEL LAGO</td><td>canto rodado, niebla, muelle podrido</td>
+      <td><span class="tag t-proc">PROCEDURAL</span></td>
+      <td>Piso de canto rodado + muelle de tablones + niebla sobre agua: lo hago yo.</td></tr>
+
+  <tr><td class="area">DIFUNTA CORREA</td><td>pila de botellas, banderas rojas, cruz</td>
+      <td><span class="tag t-proc">PROCEDURAL</span></td>
+      <td>Pila de botellas + banderas + cruz: lo hago yo. <span class="mut">(Botella linda opcional: Poly Pizza → “bottle”.)</span></td></tr>
+
+  <tr><td class="area">GAUCHITO GIL</td><td>ermita roja, velas, banderas rojas</td>
+      <td><span class="tag t-proc">PROCEDURAL</span></td>
+      <td>Ermita chica (cajón + techo) roja + velas + banderas: lo hago yo.</td></tr>
+
+  <tr><td class="area">ÁRBOL DEL AHORCADO / cementerio</td><td>cruces torcidas, soga, tumba</td>
+      <td><span class="tag t-proc">PROCEDURAL</span></td>
+      <td>Cruces + soga + reuso tu <code>Grave</code>: lo hago yo.</td></tr>
+
+  <tr><td class="area">ANTENA / repetidora</td><td>torre alta, luz roja parpadeante</td>
+      <td><span class="tag t-proc">PROCEDURAL</span></td>
+      <td>Torre reticulada + luz roja: lo hago yo. <span class="mut">(Torre linda opcional: Poly Pizza → “radio tower / pylon”.)</span></td></tr>
+
+  <tr><td class="area">CORRALES / bañadero</td><td>postes, alambre, huesos, bañadero</td>
+      <td><span class="tag t-proc">PROCEDURAL</span></td>
+      <td>Postes + alambre + pileta de bañadero: lo hago yo.</td></tr>
+
+  <tr><td class="area">ESTACIÓN YPF</td><td>surtidores, Falcon tirado, tubo parpadeando</td>
+      <td><span class="tag t-have">YA LO TENÉS</span> <span class="tag t-proc">+ PROC</span></td>
+      <td>Falcon = <code>PSXCars/Sedan</code> (ya está). Surtidores + techo + luz: procedural. <span class="mut">(Surtidor lindo opcional: Sketchfab → “gas pump lowpoly”.)</span></td></tr>
+
+  <tr><td class="area">ESTANCIA + EL FAMILIAR</td><td>casco rural + galpón de esquila, cadenas</td>
+      <td><span class="tag t-have">CASA OK</span> <span class="tag t-dl">GALPÓN/BESTIA</span></td>
+      <td>Casa = <code>ALP_Assets/country house01</code> (ya está). <b>Galpón grande</b> y <b>El Familiar</b> (bestia negra) conviene bajarlos — o los hago con tu perro tintado negro + ojos rojos. Ver abajo ⬇️.</td></tr>
+
+  <tr><td class="area">CAPILLA ANEGADA</td><td>capilla vieja hundida, campanario</td>
+      <td><span class="tag t-dl">DESCARGAR</span></td>
+      <td><b>Lo único que falta sí o sí.</b> No hay ninguna iglesia en el proyecto. Ver abajo ⬇️.</td></tr>
+</table>
+</div>
+
+<h2>3 · Para descargar (poquito) — modelos PSX / low-poly gratis</h2>
+<p class="lead">Solo <b>1 obligatorio</b> (capilla) y 2 opcionales que mejoran mucho. Buscá “low poly” o “PSX”, bajá <code>.fbx</code>/<code>.glb</code>/<code>.obj</code> y me decís y lo integro.</p>
+<div class="wrap">
+<table>
+  <tr><th>Qué</th><th>Prioridad</th><th>Dónde (gratis)</th><th>Qué buscar</th></tr>
+  <tr><td class="area">Capilla / iglesia chica</td><td><span class="tag t-dl">OBLIGATORIO</span></td>
+      <td><a href="https://poly.pizza" target="_blank">poly.pizza</a> · <a href="https://sketchfab.com" target="_blank">Sketchfab</a> (filtro Downloadable + CC)</td>
+      <td>“church low poly”, “chapel”, “small church PSX”</td></tr>
+  <tr><td class="area">El Familiar (bestia / perro negro)</td><td><span class="tag t-proc">OPCIONAL</span></td>
+      <td><a href="https://sketchfab.com" target="_blank">Sketchfab</a></td>
+      <td>“hellhound low poly”, “black dog”, “demon dog PSX” <span class="mut">(si no, uso tu perro tintado negro + ojos rojos)</span></td></tr>
+  <tr><td class="area">Galpón / barn grande</td><td><span class="tag t-proc">OPCIONAL</span></td>
+      <td><a href="https://poly.pizza" target="_blank">poly.pizza</a> · <a href="https://quaternius.com" target="_blank">Quaternius</a> (CC0)</td>
+      <td>“barn”, “shed”, “farm building” <span class="mut">(si no, lo hago procedural)</span></td></tr>
+  <tr><td class="area">Surtidor de nafta</td><td><span class="tag t-proc">OPCIONAL</span></td>
+      <td><a href="https://poly.pizza" target="_blank">poly.pizza</a></td>
+      <td>“gas pump”, “fuel pump” <span class="mut">(si no, procedural)</span></td></tr>
+  <tr><td class="area">Molino australiano</td><td><span class="tag t-proc">OPCIONAL</span></td>
+      <td><a href="https://poly.pizza" target="_blank">poly.pizza</a></td>
+      <td>“windmill farm” <span class="mut">(si no, procedural)</span></td></tr>
+</table>
+</div>
+<div class="box"><b>Resumen:</b> de 14 lugares, <b>4 ya los tenés</b>, <b>~9 los hago procedural</b> (sin bajar nada) y
+<b>solo la capilla es descarga obligatoria</b>. Todo lo demás es opcional “si querés que quede más lindo”.</div>
+
+</body>
+</html>
