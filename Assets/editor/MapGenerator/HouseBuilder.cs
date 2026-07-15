@@ -677,11 +677,7 @@ namespace FolkloreArchives.MapGen
         //    (UseAlpHouse=false para volver a ella).
         const bool UseAlpHouse = true;
         const string AlpHousePrefab = "Assets/ALP_Assets/country house01/Prefabs/House_Prefab.prefab";
-        // giro: entrada mirando hacia el CAMPAMENTO. Con la vieja en su posición nueva
-        // (235,388) tras el intercambio con Campo de Caza, el campamento (410,442) queda
-        // al este-noreste → yaw = atan2(dx,dz) ≈ 72°. (Antes era 180°, cuando el
-        // campamento quedaba casi derecho al sur desde la posición vieja de la casa.)
-        const float AlpHouseYaw = 72f;
+        const float AlpHouseYaw = 180f;    // giro (ajustar por captura: entrada hacia el camino)
         const float AlpHouseScale = 1.35f; // agrandada: puertas/techos por encima del jugador (2.4m)
         const bool UseNappinFurniture = false; // muebles nappin OFF (el owner usará un pack de muebles viejos)
         const float AlpHouseDropY = 0f;    // ajuste fino de altura (si flota/se hunde)
