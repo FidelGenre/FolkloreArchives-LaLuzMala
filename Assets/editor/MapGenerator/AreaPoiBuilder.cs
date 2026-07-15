@@ -405,7 +405,9 @@ namespace FolkloreArchives.MapGen
 
             // PLAYÓN de ASFALTO (mesh plano) — garantiza pavimento plano bajo la estación
             // SIN depender del rebuild del terreno. La estación y el Falcon se apoyan encima.
-            var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.12f, 0.12f, 0.13f));
+            var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.23f, 0.23f, 0.25f));
+            if (asphalt.HasProperty("_Smoothness")) asphalt.SetFloat("_Smoothness", 0f);          // mate, no plástico
+            if (asphalt.HasProperty("_SpecularHighlights")) asphalt.SetFloat("_SpecularHighlights", 0f);
             float padTop = p.y + 0.06f;
             BuilderUtils.Prim(PrimitiveType.Cube, "PlayonAsfalto", g, new Vector3(p.x, padTop - 0.15f, p.z),
                 new Vector3(2f * MapLayout.YpfPadHalfX - 4f, 0.3f, MapLayout.YpfPadNorth - 2f), asphalt);
@@ -414,7 +416,9 @@ namespace FolkloreArchives.MapGen
             // La estación ENTERA es el modelo descargado: GasStationProps trae TIENDA +
             // TECHO + SURTIDORES + CARTEL, todo junto. Se escala a ~24m (el conjunto es
             // ancho) y mira a la ruta (yaw 180). Si el modelo no está, se arma procedural.
-            if (SpawnModel(DirGasProps, g, p, 24f, 180f, false, "EstacionModelo", new Vector3(-90f, 0f, 0f)) == null)
+            var st = SpawnModel(DirGasProps, g, p, 24f, 180f, false, "EstacionModelo", new Vector3(-90f, 0f, 0f));
+            if (st != null) HideCatalogClutter(st);   // oculta la fila de cajones/productos sueltos del exhibidor
+            if (st == null)
             {
                 // --- fallback procedural (solo si NO está el modelo) ---
                 BuilderUtils.Prim(PrimitiveType.Cube, "Techo", g, p + Vector3.up * 4.2f, new Vector3(9f, 0.4f, 6f), MetalDark);
@@ -617,6 +621,24 @@ namespace FolkloreArchives.MapGen
         {
             var c = g.GetComponent<Collider>();
             if (c != null) Object.DestroyImmediate(c);
+        }
+
+        // Productos/cajones del exhibidor del modelo de la YPF que quedan "tirados" afuera.
+        // Se ocultan por nombre para dejar la estación limpia (estructura + surtidores +
+        // cartel quedan). Si oculta de más/menos, se ajusta la lista.
+        static readonly string[] YpfClutter = {
+            "Boxs", "Candy", "Cigars", "Coffee", "Foods", "Gadgets", "Frying",
+            "Deposit", "Dispenser", "ICE", "Dumpster", "Fridge"
+        };
+        static void HideCatalogClutter(GameObject inst)
+        {
+            int hid = 0;
+            foreach (var tr in inst.GetComponentsInChildren<Transform>(true))
+            {
+                foreach (var k in YpfClutter)
+                    if (tr.name.StartsWith(k, System.StringComparison.OrdinalIgnoreCase))
+                    { tr.gameObject.SetActive(false); hid++; break; }
+            }
         }
 
         // ---- carga de MODELOS DESCARGADOS ----
