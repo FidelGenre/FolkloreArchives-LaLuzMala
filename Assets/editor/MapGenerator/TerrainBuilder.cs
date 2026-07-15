@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 17;
+        const int SplatVersion = 18;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -447,7 +447,6 @@ namespace FolkloreArchives.MapGen
                     if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f) trail = 1f;
                     if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f) trail = 1f;
                     if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f) trail = 1f;
-                    if (MapLayout.InYpfPad(p)) trail = 1f;   // lote de tierra de la estación YPF
                     // orillas arenosas del río: una franja de arena a lo largo de toda
                     // la ribera, enmascarada por ALTURA — desde justo bajo la línea de
                     // agua (7m) hasta ~2m por encima. Así la bajada del campamento al
@@ -491,6 +490,9 @@ namespace FolkloreArchives.MapGen
                      || Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f
                      || Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f)
                     { w0 = 0f; w1 = 0f; w2 = 0f; w3 = 0f; w5 = 0f; w7 = 0f; w4 = 1f; }
+
+                    // PLAYÓN de la ESTACIÓN YPF = ASFALTO (capa pavimento), no tierra ni pasto.
+                    if (MapLayout.InYpfPad(p)) { w0 = 0f; w1 = 0f; w3 = 0f; w4 = 0f; w5 = 0f; w7 = 0f; w2 = 1f; }
 
                     // SUELO BASE EMBARRADO: lo que quedaba como pasto verde puro (w0)
                     // se reparte entre pasto y barro (capa Muddy) con manchones Perlin
