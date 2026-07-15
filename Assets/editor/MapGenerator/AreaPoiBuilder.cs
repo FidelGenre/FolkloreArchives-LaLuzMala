@@ -351,8 +351,9 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Label(g, "ANTENA", p + Vector3.up * 32f);
 
             float h = 28f;
-            // torre real descargada (RadioTower/) — si no está, torre reticulada procedural
-            if (SpawnModel(DirTower, g, p, h, 0f, true, "TorreAntena") == null)
+            // torre real descargada (RadioTower/) — parada con tilt -90 en X (venía acostada).
+            // Si no está, torre reticulada procedural.
+            if (SpawnModel(DirTower, g, p, h, 0f, true, "TorreAntena", new Vector3(-90f, 0f, 0f)) == null)
             {
                 for (int i = 0; i < 4; i++)
                 {
@@ -398,7 +399,7 @@ namespace FolkloreArchives.MapGen
         // ---------------- ESTACIÓN YPF ----------------
         static void YpfStation(Transform parent, Terrain t)
         {
-            var p = RoadShoulder(t, MapLayout.YpfStation, 11f);
+            var p = RoadShoulder(t, MapLayout.YpfStation, 16f);   // sobre el lote plano, corrida del asfalto
             var g = BuilderUtils.Group(parent, "EstacionYPF", p);
             BuilderUtils.Label(g, "ESTACION YPF", p + Vector3.up * 8f);
 
@@ -407,7 +408,7 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Prim(PrimitiveType.Cube, "ColA", g, p + new Vector3(-3.5f, 2f, -2f), new Vector3(0.4f, 4f, 0.4f), MetalDark);
             BuilderUtils.Prim(PrimitiveType.Cube, "ColB", g, p + new Vector3(3.5f, 2f, 2f), new Vector3(0.4f, 4f, 0.4f), MetalDark);
             // surtidores: modelo real (GasStationProps/) o cajas procedurales
-            if (SpawnModel(DirGasProps, g, p, 5f, 0f, false, "SurtidoresModelo") == null)
+            if (SpawnModel(DirGasProps, g, p, 7f, 0f, false, "SurtidoresModelo") == null)
             {
                 for (int i = 0; i < 2; i++)
                 {
@@ -630,21 +631,22 @@ namespace FolkloreArchives.MapGen
         // instancia el modelo de `folder`, lo escala para que su lado mayor (XZ) o su ALTO
         // sea ~targetSize, lo APOYA en el piso en `pos` (con yaw). Devuelve null si el
         // modelo todavía no está descargado (→ el caller arma la versión procedural).
-        static GameObject SpawnModel(string folder, Transform parent, Vector3 pos, float targetSize, float yaw, bool byHeight = false, string name = null)
+        static GameObject SpawnModel(string folder, Transform parent, Vector3 pos, float targetSize, float yaw, bool byHeight = false, string name = null, Vector3? tilt = null)
         {
             var src = FindModelInFolder(folder);
             if (src == null) return null;
-            return SpawnModelFrom(src, parent, pos, targetSize, yaw, byHeight, name);
+            return SpawnModelFrom(src, parent, pos, targetSize, yaw, byHeight, name, tilt);
         }
 
         // igual que SpawnModel pero con el modelo ya encontrado (para instanciar en loop
-        // sin re-buscar en la carpeta cada vez).
-        static GameObject SpawnModelFrom(GameObject src, Transform parent, Vector3 pos, float targetSize, float yaw, bool byHeight = false, string name = null)
+        // sin re-buscar en la carpeta cada vez). `tilt` = rotación previa para parar modelos
+        // que vienen acostados (ej. torres exportadas con eje Z arriba).
+        static GameObject SpawnModelFrom(GameObject src, Transform parent, Vector3 pos, float targetSize, float yaw, bool byHeight = false, string name = null, Vector3? tilt = null)
         {
             var inst = (GameObject)Object.Instantiate(src, parent);
             if (name != null) inst.name = name;
             inst.transform.position = pos;
-            inst.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            inst.transform.rotation = Quaternion.Euler(0f, yaw, 0f) * (tilt.HasValue ? Quaternion.Euler(tilt.Value) : Quaternion.identity);
             inst.transform.localScale = Vector3.one;
             var b = ModelBounds(inst);
             float dim = byHeight ? b.size.y : Mathf.Max(b.size.x, b.size.z);

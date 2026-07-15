@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 16;
+        const int SplatVersion = 17;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -322,6 +322,18 @@ namespace FolkloreArchives.MapGen
                 a = Mathf.Lerp(lotGrade, a, Mathf.SmoothStep(0f, 1f, lotDist / 12f));
             }
 
+            // PLATAFORMA de la ESTACIÓN YPF: rectángulo al norte del asfalto aplanado a la
+            // altura de la ruta, con borde suave de 10m → queda un lote plano con "entrada"
+            // desde la ruta (antes la estación caía sobre el borde alto del bosque).
+            {
+                float roadZ = MapLayout.PavedRouteZAt(wx);
+                float dxPad = Mathf.Abs(wx - MapLayout.YpfStation.x) - MapLayout.YpfPadHalfX;   // <=0 dentro
+                float dzPad = Mathf.Max((roadZ - 2f) - wz, wz - (roadZ + MapLayout.YpfPadNorth)); // <=0 dentro
+                float padOut = Mathf.Max(0f, Mathf.Max(dxPad, dzPad));
+                if (padOut < 10f)
+                    a = Mathf.Lerp(MapLayout.RoadSurfaceHeight, a, Mathf.SmoothStep(0f, 1f, padOut / 10f));
+            }
+
             return a;
         }
 
@@ -435,6 +447,7 @@ namespace FolkloreArchives.MapGen
                     if (Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f) trail = 1f;
                     if (Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f) trail = 1f;
                     if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f) trail = 1f;
+                    if (MapLayout.InYpfPad(p)) trail = 1f;   // lote de tierra de la estación YPF
                     // orillas arenosas del río: una franja de arena a lo largo de toda
                     // la ribera, enmascarada por ALTURA — desde justo bajo la línea de
                     // agua (7m) hasta ~2m por encima. Así la bajada del campamento al

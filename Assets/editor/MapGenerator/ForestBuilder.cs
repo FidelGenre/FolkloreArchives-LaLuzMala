@@ -441,6 +441,7 @@ namespace FolkloreArchives.MapGen
                     if (Vector2.Distance(p, MapLayout.BurntForest) < 24f) continue;  // quemado: solo troncos negros (props)
                     if (Vector2.Distance(p, MapLayout.Estancia) < 16f) continue;     // casco de estancia
                     if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;     // corrales
+                    if (MapLayout.InYpfPad(p)) continue;                             // lote de la estación YPF
 
                     bool inField = Vector2.Distance(p, MapLayout.HuntingField) < 45f;
                     float prob;
@@ -1588,6 +1589,7 @@ namespace FolkloreArchives.MapGen
                     if (Vector2.Distance(p, MapLayout.BurntForest) < 24f) continue;
                     if (Vector2.Distance(p, MapLayout.Estancia) < 16f) continue;
                     if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;
+                    if (MapLayout.InYpfPad(p)) continue;   // lote de la estación YPF: sin pasto
 
                     float southDg = MapLayout.PavedRouteZAt(p.x) - p.y;
                     if (southDg > MapLayout.ShoreVegFar) continue; // out in the water

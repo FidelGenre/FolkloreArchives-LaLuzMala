@@ -143,6 +143,16 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 DifuntaCorrea = new Vector2(590f, PavedRouteZAt(590f)); // santuario Difunta Correa
         public static readonly Vector2 GauchitoGil   = new Vector2(331f, PavedRouteZAt(331f)); // ermita Gauchito Gil (en el desvío)
         public static readonly Vector2 YpfStation    = new Vector2(854f, PavedRouteZAt(854f)); // estación YPF abandonada
+        // PLATAFORMA de la YPF: lote plano al NORTE del asfalto (la "entrada" a la estación),
+        // para que no quede sobre el borde alto de la ruta. Aplanado por TerrainBuilder,
+        // sin árboles/pasto (ForestBuilder) y con piso de tierra (splat).
+        public const float YpfPadHalfX = 15f;   // medio ancho del lote (x) desde YpfStation.x
+        public const float YpfPadNorth = 28f;   // cuánto se mete al norte del asfalto (z)
+        public static bool InYpfPad(Vector2 p)
+        {
+            float dz = p.y - PavedRouteZAt(p.x);
+            return Mathf.Abs(p.x - YpfStation.x) < YpfPadHalfX && dz > -2f && dz < YpfPadNorth;
+        }
         // Caminos que salen del campamento: ahora en S (curvas suaves Catmull-Rom con
         // puntos que zigzaguean) en vez de líneas rectas (pedido del owner).
         public static readonly Vector2[] DirtRoad   = Snake(new[] { DirtTurnoff, new Vector2(346, 251), Campsite }, 14f, 8f); // ruta de tierra en S
