@@ -171,12 +171,17 @@ namespace FolkloreArchives.MapGen
                 dogMat = AssetDatabase.LoadAssetAtPath<Material>(mp);
                 if (dogMat == null) { dogMat = new Material(vcShader); AssetDatabase.CreateAsset(dogMat, mp); }
                 dogMat.shader = vcShader;
-                if (dogMat.HasProperty("_BaseColor")) dogMat.SetColor("_BaseColor", new Color(0.82f, 0.77f, 0.70f)); // tono cálido, un toque oscuro
+                if (dogMat.HasProperty("_BaseColor")) dogMat.SetColor("_BaseColor", Color.white);
                 if (dogMat.HasProperty("_BaseMap"))
                 {
-                    dogMat.SetTexture("_BaseMap", DogGrungeTex());          // grunge que rompe el color plano
-                    dogMat.SetTextureScale("_BaseMap", new Vector2(3f, 3f)); // grano más fino
+                    dogMat.SetTexture("_BaseMap", DogGrungeTex());          // grunge que te gustó (textura de piel)
+                    dogMat.SetTextureScale("_BaseMap", new Vector2(3f, 3f));
                 }
+                // cuerpo PLANO marrón (el de antes) + detalles (boca/dientes/lengua) por vertex-color
+                if (dogMat.HasProperty("_FlatBodyOn")) dogMat.SetFloat("_FlatBodyOn", 1f);
+                if (dogMat.HasProperty("_FlatColor")) dogMat.SetColor("_FlatColor", new Color(0.46f, 0.33f, 0.21f)); // marrón (compensado por el grunge)
+                if (dogMat.HasProperty("_BodyRef")) dogMat.SetColor("_BodyRef", new Color(0.72f, 0.60f, 0.46f));     // tan del cuerpo a reemplazar
+                if (dogMat.HasProperty("_DetailSharp")) dogMat.SetFloat("_DetailSharp", 4f);
                 if (dogMat.HasProperty("_PsxSnap")) dogMat.SetFloat("_PsxSnap", 0f);
                 if (dogMat.HasProperty("_PsxColorLevels")) dogMat.SetFloat("_PsxColorLevels", 0f);
             }
@@ -188,6 +193,16 @@ namespace FolkloreArchives.MapGen
                 r.sharedMaterials = ms;
             }
             Debug.Log($"<color=cyan>[Dog] shader vertex-color {(vcShader != null ? "OK" : "NO (fallback color plano)")}</color>");
+
+            // OJOS + NARIZ procedurales (esferas oscuras en los huesos) — como antes.
+            var darkBall = MatteMat("dog_dark", new Color(0.03f, 0.03f, 0.03f));
+            foreach (var bone in model.GetComponentsInChildren<Transform>(true))
+            {
+                string bn = bone.name.ToLower();
+                if (bn.Contains("end") || bn.Contains("target") || bn.Contains("pole")) continue;
+                if (bn.Contains("eye"))       AddBall(bone, 0.05f, darkBall);
+                else if (bn.Contains("nose")) AddBall(bone, 0.06f, darkBall);
+            }
 
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;

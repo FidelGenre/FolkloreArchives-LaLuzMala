@@ -14,6 +14,12 @@ Shader "Folklore/LowPolyVertexColor"
         // --- PSX (0 = apagado). El perro los prende para el look PS1 ---
         _PsxSnap ("PSX Vertex Snap (0=off, ~80=fuerte)", Float) = 0
         _PsxColorLevels ("PSX Color Levels (0=off, ~24)", Float) = 0
+        // --- CUERPO PLANO: reemplaza el vertex-color del CUERPO por un color plano,
+        //     manteniendo los DETALLES (boca/dientes/lengua/etc.). 0 = apagado ---
+        _FlatBodyOn ("Flat Body (0=off)", Float) = 0
+        _FlatColor ("Flat Body Color", Color) = (0.34,0.25,0.17,1)
+        _BodyRef ("Body Vertex Ref (tan del cuerpo)", Color) = (0.72,0.60,0.46,1)
+        _DetailSharp ("Detail Sharpness", Float) = 4
     }
     SubShader
     {
@@ -43,6 +49,10 @@ Shader "Folklore/LowPolyVertexColor"
                 half4 _BaseColor;
                 float _PsxSnap;
                 float _PsxColorLevels;
+                half4 _FlatColor;
+                half4 _BodyRef;
+                float _FlatBodyOn;
+                float _DetailSharp;
             CBUFFER_END
 
             struct Attributes
@@ -93,7 +103,16 @@ Shader "Folklore/LowPolyVertexColor"
             {
                 UNITY_SETUP_INSTANCE_ID(IN);
                 half4 tex = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
-                half3 albedo = tex.rgb * _BaseColor.rgb * IN.color.rgb; // ← vertex color
+                // CUERPO PLANO: donde el vertex-color se parece al tan del cuerpo → color
+                // plano marrón; donde es un DETALLE distinto (boca/dientes/lengua/orejas)
+                // → mantiene el vertex-color. Los ojos/nariz van aparte (esferas).
+                half3 vc = IN.color.rgb;
+                if (_FlatBodyOn > 0.0)
+                {
+                    half d = saturate(distance(vc, _BodyRef.rgb) * _DetailSharp);
+                    vc = lerp(_FlatColor.rgb, vc, d);
+                }
+                half3 albedo = tex.rgb * _BaseColor.rgb * vc;
 
                 float3 n = normalize(IN.normalWS);
                 Light mainLight = GetMainLight();
