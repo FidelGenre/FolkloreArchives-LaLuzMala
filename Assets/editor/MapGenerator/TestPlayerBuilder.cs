@@ -159,8 +159,7 @@ namespace FolkloreArchives.MapGen
             if (dogAnim == null) dogAnim = model.AddComponent<Animator>();
             dogAnim.runtimeAnimatorController = BuildDogAnimator(glbPath);
             dogAnim.applyRootMotion = false;   // el CharacterController mueve; la animación solo anima
-            var psxAnim = model.AddComponent<FolkloreArchives.PsxAnimator>(); // animación choppy PS1
-            psxAnim.fps = 12f;
+            // (sin PsxAnimator: animación suave/limpia como el humano)
 
             // El perro usa VERTEX COLORS (no textura): con el shader LowPolyVertexColor
             // salen ojos/nariz/boca/lengua/pelo tal cual el modelo original, mate.
@@ -173,8 +172,8 @@ namespace FolkloreArchives.MapGen
                 if (dogMat == null) { dogMat = new Material(vcShader); AssetDatabase.CreateAsset(dogMat, mp); }
                 dogMat.shader = vcShader;
                 if (dogMat.HasProperty("_BaseColor")) dogMat.SetColor("_BaseColor", new Color(0.58f, 0.52f, 0.46f)); // oscurece los vertex colors (estaba muy claro)
-                if (dogMat.HasProperty("_PsxSnap")) dogMat.SetFloat("_PsxSnap", 0f);            // sin vertex-snap: no tiembla al estar quieto
-                if (dogMat.HasProperty("_PsxColorLevels")) dogMat.SetFloat("_PsxColorLevels", 40f); // bandas de color + luz plana (PS1, estable)
+                if (dogMat.HasProperty("_PsxSnap")) dogMat.SetFloat("_PsxSnap", 0f);            // sin efectos PS1: limpio como el humano
+                if (dogMat.HasProperty("_PsxColorLevels")) dogMat.SetFloat("_PsxColorLevels", 0f);  // sin bandas: color/luz suaves
             }
             else dogMat = MatteMat("dog_fur", new Color(0.34f, 0.25f, 0.17f)); // fallback si falta el shader
             foreach (var r in model.GetComponentsInChildren<Renderer>(true))
