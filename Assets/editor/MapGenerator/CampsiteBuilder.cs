@@ -25,24 +25,9 @@ namespace FolkloreArchives.MapGen
         const string CampDir    = "Assets/ExternalAssets/CampsitePS1/";
         const string CampTexDir = CampDir + "Textures/";
 
-        // Cantidad de objetos de dressing que se registran para persistencia (IDs
-        // 0..PersistCount-1). Debe coincidir con la cantidad de Reg(...) en Build.
-        // ⚠ Si agregás/sacás/reordenás objetos, actualizá esto y re-guardá el layout.
-        public const int PersistCount = 9;
-
-        // Nombre base de cada objeto registrado, EN EL MISMO ORDEN que los Reg(...) de
-        // Build. Lo usa CampsitePersistence para migrar una escena vieja (objetos aún
-        // sin el prefijo "Camp_##_") y así capturar ediciones hechas antes de existir
-        // la persistencia. Debe seguir el orden/ID de Build.
-        public static readonly string[] PersistNames =
-        {
-            "Campfire", "LogSeat", "LogSeat", "LogSeat", "Firewood",
-            "Tents_Orange", "Tents_Green", "Tents_DarkBlue", "PicnicTable",
-        };
-
         public static void Build(Transform camp, Terrain t, Vector2 c)
         {
-            CampsitePersistence.Begin();   // carga overrides manuales guardados (si hay)
+            _regId = 0;   // reinicia el contador del layout horneado
 
             var bark     = MatTex("camp_bark",     BarkTex(),     new Color(0.52f, 0.37f, 0.23f), 3f);
             var barkGrey = MatTex("camp_bark_grey",BarkTex(),     new Color(0.60f, 0.55f, 0.48f), 3f); // tronco pelado/seco
@@ -65,7 +50,43 @@ namespace FolkloreArchives.MapGen
             Reg(PicnicTable(camp, t, bark, c.x + 5.6f, c.y - 0.6f, 90f));                     // 8 mesa
         }
 
-        static void Reg(GameObject go) => CampsitePersistence.Register(go);
+        // La persistencia del campamento de los protagonistas se sacó (menú Save/Clear).
+        // Para NO perder el layout que el owner ajustó a mano, esas transforms se
+        // HORNEARON acá: Reg() le aplica a cada objeto (en su orden de creación = su ID)
+        // la posición/rotación/escala local final que tenía guardada. Es fijo, sin JSON.
+        // ⚠ Si reordenás/agregás objetos arriba, actualizá esta tabla en el mismo orden.
+        static int _regId;
+        static readonly (Vector3 pos, Vector3 euler, Vector3 scale)[] BakedLayout =
+        {
+            // 0 Campfire
+            (new Vector3(0f, 0f, 0f),               new Vector3(0f, 0f, 0f),               new Vector3(1f, 1f, 1f)),
+            // 1 LogSeat sur
+            (new Vector3(0f, 0.3602352f, -2.5f),    new Vector3(0f, 0f, 270f),             new Vector3(0.72f, 1.7f, 0.72f)),
+            // 2 LogSeat oeste
+            (new Vector3(-2.600006f, 0.3376131f, 0.1000061f), new Vector3(90f, 0f, 0f),    new Vector3(0.68f, 1.5f, 0.68f)),
+            // 3 LogSeat este
+            (new Vector3(2.64f, 0.3402357f, 0.1f),  new Vector3(82.00004f, 277.9999f, 269.9999f), new Vector3(0.68f, 2.1135f, 0.68f)),
+            // 4 Firewood
+            (new Vector3(-3.200012f, 0.000123f, -2.600006f), new Vector3(0f, 0f, 0f),      new Vector3(1f, 1f, 1f)),
+            // 5 Tents_Orange
+            (new Vector3(-5.33f, 0.5432062f, 4.98f),new Vector3(0f, 349.8486f, 0f),        new Vector3(2f, 2f, 2f)),
+            // 6 Tents_Green
+            (new Vector3(4.220001f, 0.5453339f, 5.940002f), new Vector3(0f, 65.82005f, 0f),new Vector3(2f, 2f, 2f)),
+            // 7 Tents_DarkBlue
+            (new Vector3(2.25f, 0.5453339f, -7.12f),new Vector3(0f, 191.0853f, 0f),        new Vector3(2f, 2f, 2f)),
+            // 8 PicnicTable
+            (new Vector3(6.84f, 0.0002356f, -1.57f),new Vector3(0f, 99.76956f, 0f),        new Vector3(1.5f, 1.5f, 1.5f)),
+        };
+
+        static void Reg(GameObject go)
+        {
+            int id = _regId++;
+            if (go == null || id >= BakedLayout.Length) return;
+            var b = BakedLayout[id];
+            go.transform.localPosition    = b.pos;
+            go.transform.localEulerAngles = b.euler;
+            go.transform.localScale       = b.scale;
+        }
 
         // ── Fogata: modelo PS1 + disco de ceniza + brasa emisiva + luz ────────
         static GameObject FirePit(Transform camp, Terrain t, Vector2 c, Material charcoal, Material fire)

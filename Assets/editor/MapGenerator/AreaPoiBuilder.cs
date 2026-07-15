@@ -399,9 +399,17 @@ namespace FolkloreArchives.MapGen
         // ---------------- ESTACIÓN YPF ----------------
         static void YpfStation(Transform parent, Terrain t)
         {
-            var p = RoadShoulder(t, MapLayout.YpfStation, 16f);   // sobre el lote plano, corrida del asfalto
+            var p = RoadShoulder(t, MapLayout.YpfStation, 16f);   // centro de la estación
             var g = BuilderUtils.Group(parent, "EstacionYPF", p);
             BuilderUtils.Label(g, "ESTACION YPF", p + Vector3.up * 8f);
+
+            // PLAYÓN de ASFALTO (mesh plano) — garantiza pavimento plano bajo la estación
+            // SIN depender del rebuild del terreno. La estación y el Falcon se apoyan encima.
+            var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.12f, 0.12f, 0.13f));
+            float padTop = p.y + 0.06f;
+            BuilderUtils.Prim(PrimitiveType.Cube, "PlayonAsfalto", g, new Vector3(p.x, padTop - 0.15f, p.z),
+                new Vector3(2f * MapLayout.YpfPadHalfX - 4f, 0.3f, MapLayout.YpfPadNorth - 2f), asphalt);
+            p.y = padTop;   // todo lo de la estación se apoya sobre el playón
 
             // La estación ENTERA es el modelo descargado: GasStationProps trae TIENDA +
             // TECHO + SURTIDORES + CARTEL, todo junto. Se escala a ~24m (el conjunto es

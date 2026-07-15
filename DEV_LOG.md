@@ -7,6 +7,17 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-13 — Campamento ladrones ×1.6: fix altura de ranchos + árboles en el medio
+
+(Continuación del CriminalCampBuilder.) Al escalar el camp ×1.6:
+- `Shack` tenía H/T/ridgeY/doorH HARDCODEADOS → los ranchos se hacían más anchos pero NO
+  más altos ("quedó igual"). Ahora `Shack` recibe `sc` y escala TODAS las medidas.
+- Árboles/arbustos se excluían solo 12m de `MainCriminalCamp` → quedaban en el medio del
+  camp agrandado. Subido a **24m** en `ScatterTrees` y `ScatterBushes` (pasto ya en 26m).
+  ⚠️ Bosque cacheado → **Rebuild Forest (forzar)** + Generate.
+
+---
+
 ## 2026-07-11 — Casa: muebles Kenney (color plano) → pack nappin texturizado
 
 El owner quiere que la casa de la vieja se vea más creíble. Los muebles Kenney son

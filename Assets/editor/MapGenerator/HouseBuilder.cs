@@ -739,12 +739,11 @@ namespace FolkloreArchives.MapGen
         // Tabla de muebles (modelo, x local, z local, yaw, alturaObjetivo[m], baseY[m]).
         // Coords locales (planta en L): x 0..16 (O→E), z 0..14 (S→N), piso y=0.
         // baseY>0 = colgado de la pared (alacenas altas, campana, espejo).
-        // El ÍNDICE de cada fila es el ID ESTABLE del mueble (nombre "Furn_##_modelo")
-        // que usa FurniturePersistence para guardar/restaurar ediciones manuales.
-        // ⚠ Si REORDENÁS o INSERTÁS filas, los IDs cambian y el furniture_layout.json
-        //   guardado se desalinea → volvé a "Save Furniture Layout" después de editar.
-        // ⚠ Posiciones/rotaciones/alturas son 1er pase estimado → mover a mano en la
-        //   escena y guardar con el menú (el "facing" nativo de los modelos varía).
+        // El ÍNDICE de cada fila da el nombre "Furn_##_modelo" del objeto en la escena.
+        // (La persistencia de muebles se sacó: los muebles se colocan siempre por código;
+        //  las ediciones a mano ya no sobreviven a un regenerate.)
+        // ⚠ Posiciones/rotaciones/alturas son 1er pase estimado → ajustar acá en la tabla
+        //   (el "facing" nativo de los modelos varía).
         public static readonly (string m, float x, float z, float ry, float h, float by)[] FurnitureItems =
         {
                 // Muebles del pack nappin (NAP_*) donde hay equivalente; los que nappin no
@@ -800,7 +799,6 @@ namespace FolkloreArchives.MapGen
 
         static void BuildFurnitureKenney(Transform group, float floorWorldY)
         {
-            FurniturePersistence.Load();   // carga overrides manuales guardados (si hay)
             for (int i = 0; i < FurnitureItems.Length; i++)
             {
                 var it = FurnitureItems[i];
@@ -811,9 +809,6 @@ namespace FolkloreArchives.MapGen
         static void PlaceFurniture(Transform group, int id, string model, float lx, float lz,
                                    float rotY, float targetH, float baseY, float floorWorldY)
         {
-            // Ediciones manuales guardadas: si este mueble fue BORRADO a mano, no lo creo.
-            if (FurniturePersistence.IsDeleted(id)) return;
-
             bool isPs1 = model.StartsWith("PS1_");
             bool isNap = model.StartsWith("NAP_");
             string path = isNap ? NappinDir + model.Substring(4) + ".prefab"
@@ -844,16 +839,6 @@ namespace FolkloreArchives.MapGen
                         : isPs1 ? ps1
                         : KenneyMat(i < src.Length && src[i] != null ? src[i].name : null);
                 r.sharedMaterials = outMats;
-            }
-
-            // Si hay override manual guardado, lo aplico TAL CUAL y salteo la colocación
-            // procedural (el transform guardado ya es la ubicación final deseada).
-            if (FurniturePersistence.TryGetTransform(id, out var pos, out var euler, out var scale))
-            {
-                inst.transform.localScale    = scale;
-                inst.transform.localRotation = Quaternion.Euler(euler);
-                inst.transform.localPosition = pos;
-                return;
             }
 
             // Colocación procedural (1er pase): yaw (preservando r0), escala a la altura

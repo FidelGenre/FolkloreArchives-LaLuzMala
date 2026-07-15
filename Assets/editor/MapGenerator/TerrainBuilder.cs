@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 19;
+        const int SplatVersion = 20;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -177,7 +177,8 @@ namespace FolkloreArchives.MapGen
                 for (int xi = 0; xi < res; xi++)
                 {
                     float wx = xi / (float)(res - 1) * MapLayout.MapSizeX;
-                    if (!IsClearing(new Vector2(wx, wz))) continue; // pelar SOLO los claros (campamento/rancho/etc.); en los senderos el pasto se queda (owner) y el barro asoma por la textura del splat
+                    var cp = new Vector2(wx, wz);
+                    if (!IsClearing(cp) && !MapLayout.InYpfPad(cp)) continue; // pelar los claros (campamento/rancho/etc.) + el playón de la YPF; en los senderos el pasto se queda
                     for (int i = 0; i < nproto; i++)
                         if (layers[i][zi, xi] != 0) { layers[i][zi, xi] = 0; cleared++; }
                 }
