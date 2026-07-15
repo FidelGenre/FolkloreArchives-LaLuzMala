@@ -326,9 +326,9 @@ namespace FolkloreArchives.MapGen
             // altura de la ruta, con borde suave de 10m → queda un lote plano con "entrada"
             // desde la ruta (antes la estación caía sobre el borde alto del bosque).
             {
-                float roadZ = MapLayout.PavedRouteZAt(wx);
+                float padRoadZ = MapLayout.PavedRouteZAt(wx);
                 float dxPad = Mathf.Abs(wx - MapLayout.YpfStation.x) - MapLayout.YpfPadHalfX;   // <=0 dentro
-                float dzPad = Mathf.Max((roadZ - 2f) - wz, wz - (roadZ + MapLayout.YpfPadNorth)); // <=0 dentro
+                float dzPad = Mathf.Max((padRoadZ - 2f) - wz, wz - (padRoadZ + MapLayout.YpfPadNorth)); // <=0 dentro
                 float padOut = Mathf.Max(0f, Mathf.Max(dxPad, dzPad));
                 if (padOut < 10f)
                     a = Mathf.Lerp(MapLayout.RoadSurfaceHeight, a, Mathf.SmoothStep(0f, 1f, padOut / 10f));
