@@ -133,7 +133,7 @@ namespace FolkloreArchives.MapGen
             model.name = "Model";
             model.transform.SetParent(dog.transform);
             model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            model.transform.localRotation = Quaternion.identity; // el perro nuevo ya mira a +Z (adelante)
             model.transform.localScale = Vector3.one;
 
             var rends = model.GetComponentsInChildren<Renderer>();
