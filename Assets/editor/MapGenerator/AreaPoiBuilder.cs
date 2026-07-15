@@ -626,23 +626,35 @@ namespace FolkloreArchives.MapGen
         // Productos/cajones del exhibidor del modelo de la YPF que quedan "tirados" afuera.
         // Se ocultan por nombre para dejar la estación limpia (estructura + surtidores +
         // cartel quedan). Si oculta de más/menos, se ajusta la lista.
-        // Lo SUELTO/exhibidor de AFUERA (cajones, basura, góndolas, caja registradora) +
-        // el asfalto propio del modelo (usamos nuestro playón gris). Las HELADERAS de pared
-        // (Fridge) y la estructura (tienda, techo, surtidores, cartel) se DEJAN → la tienda
-        // queda con cosas adentro y afuera limpio.
-        static readonly string[] YpfClutter = {
-            "Boxs", "Dumpster", "ICE", "Deposit", "Candy", "Cigars", "Coffee", "Foods",
-            "Gadgets", "Frying", "Dispenser", "Desk", "Checker", "Chair", "Asphalt"
-        };
+        // Nombres EXACTOS (sacados de la jerarquía real del GLB, no adivinados) de los
+        // objetos SUELTOS que el autor dejó afuera como "catálogo" (cajones, góndolas,
+        // caja registradora, golosinas, heladera suelta, tacho de basura) + el piso propio
+        // del modelo bajo el techo ("Sidewalk"/"Sidewalk_01" - usamos nuestro playón gris
+        // en su lugar) + los árboles/arbustos que trae el modelo (chocan con el bosque).
+        // La ESTRUCTURA (tienda "6twelve", techo "The_ceiling", surtidores, cartel
+        // "6twelve_Sign", baños) y el INTERIOR de la tienda (heladeras de pared, mostrador,
+        // management_008/010/011, etc.) NO están en esta lista → se quedan.
+        static readonly System.Collections.Generic.HashSet<string> YpfClutter = new System.Collections.Generic.HashSet<string>(
+            new[] {
+                "Sidewalk", "Sidewalk_01",
+                "Shelving.003", "Shelf_Metal", "Checker", "Board", "Desk",
+                "Boxs", "Boxs_001", "Boxs_002", "Boxs_003", "Boxs_004", "Boxs_005", "Boxs_006", "Boxs_007", "Boxs_008",
+                "Candy", "Candy_001", "Candy_002", "Candy_004", "Candy_005", "Cigars", "Pack_lighters",
+                "Gadgets", "Gadgets_01",
+                "Management_001", "Management_002", "Management_003", "Management_004", "Management_005",
+                "Coffee_machine", "Others", "Others_01",
+                "ice_slush_machine", "ice_slush_machine.001",
+                "Fridge", "ICE", "Dumpster", "Trash", "Trash_001", "Trash_002", "Trash_003",
+                "Tree", "Tree_01", "Bush",
+            }, System.StringComparer.OrdinalIgnoreCase);
         static void HideCatalogClutter(GameObject inst)
         {
             int hid = 0;
             foreach (var tr in inst.GetComponentsInChildren<Transform>(true))
             {
-                foreach (var k in YpfClutter)
-                    if (tr.name.StartsWith(k, System.StringComparison.OrdinalIgnoreCase))
-                    { tr.gameObject.SetActive(false); hid++; break; }
+                if (YpfClutter.Contains(tr.name)) { tr.gameObject.SetActive(false); hid++; }
             }
+            Debug.Log($"<color=cyan>[YPF] {hid} objetos sueltos/piso propio ocultados del modelo.</color>");
         }
 
         // ---- carga de MODELOS DESCARGADOS ----
