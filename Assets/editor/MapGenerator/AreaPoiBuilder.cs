@@ -403,20 +403,21 @@ namespace FolkloreArchives.MapGen
             var g = BuilderUtils.Group(parent, "EstacionYPF", p);
             BuilderUtils.Label(g, "ESTACION YPF", p + Vector3.up * 8f);
 
-            // techo (canopy) sobre 2 columnas
-            BuilderUtils.Prim(PrimitiveType.Cube, "Techo", g, p + Vector3.up * 4.2f, new Vector3(9f, 0.4f, 6f), MetalDark);
-            BuilderUtils.Prim(PrimitiveType.Cube, "ColA", g, p + new Vector3(-3.5f, 2f, -2f), new Vector3(0.4f, 4f, 0.4f), MetalDark);
-            BuilderUtils.Prim(PrimitiveType.Cube, "ColB", g, p + new Vector3(3.5f, 2f, 2f), new Vector3(0.4f, 4f, 0.4f), MetalDark);
-            // tienda/kiosco (a un costado del playón): cajón + techo + puerta + vidriera sucia
-            Vector3 tp = p + new Vector3(-8f, 0f, 3.5f);
-            BuilderUtils.Prim(PrimitiveType.Cube, "Tienda", g, tp + Vector3.up * 1.5f, new Vector3(5f, 3f, 4f), Rust);
-            BuilderUtils.Prim(PrimitiveType.Cube, "TiendaTecho", g, tp + Vector3.up * 3.15f, new Vector3(5.5f, 0.3f, 4.5f), MetalDark);
-            BuilderUtils.Prim(PrimitiveType.Cube, "TiendaPuerta", g, tp + new Vector3(1.4f, 1f, 2.02f), new Vector3(1.1f, 2f, 0.1f), MetalDark);
-            var tv = BuilderUtils.Prim(PrimitiveType.Cube, "TiendaVidriera", g, tp + new Vector3(-1.2f, 1.6f, 2.02f), new Vector3(2.2f, 1.3f, 0.1f), Bottle);
-            DestroyCol(tv);
-            // surtidores: modelo real (GasStationProps/) o cajas procedurales
-            if (SpawnModel(DirGasProps, g, p, 7f, 0f, false, "SurtidoresModelo") == null)
+            // La estación ENTERA es el modelo descargado: GasStationProps trae TIENDA +
+            // TECHO + SURTIDORES + CARTEL, todo junto. Se escala a ~24m (el conjunto es
+            // ancho) y mira a la ruta (yaw 180). Si el modelo no está, se arma procedural.
+            if (SpawnModel(DirGasProps, g, p, 24f, 180f, false, "EstacionModelo") == null)
             {
+                // --- fallback procedural (solo si NO está el modelo) ---
+                BuilderUtils.Prim(PrimitiveType.Cube, "Techo", g, p + Vector3.up * 4.2f, new Vector3(9f, 0.4f, 6f), MetalDark);
+                BuilderUtils.Prim(PrimitiveType.Cube, "ColA", g, p + new Vector3(-3.5f, 2f, -2f), new Vector3(0.4f, 4f, 0.4f), MetalDark);
+                BuilderUtils.Prim(PrimitiveType.Cube, "ColB", g, p + new Vector3(3.5f, 2f, 2f), new Vector3(0.4f, 4f, 0.4f), MetalDark);
+                Vector3 tp = p + new Vector3(-8f, 0f, 3.5f);
+                BuilderUtils.Prim(PrimitiveType.Cube, "Tienda", g, tp + Vector3.up * 1.5f, new Vector3(5f, 3f, 4f), Rust);
+                BuilderUtils.Prim(PrimitiveType.Cube, "TiendaTecho", g, tp + Vector3.up * 3.15f, new Vector3(5.5f, 0.3f, 4.5f), MetalDark);
+                BuilderUtils.Prim(PrimitiveType.Cube, "TiendaPuerta", g, tp + new Vector3(1.4f, 1f, 2.02f), new Vector3(1.1f, 2f, 0.1f), MetalDark);
+                var tv = BuilderUtils.Prim(PrimitiveType.Cube, "TiendaVidriera", g, tp + new Vector3(-1.2f, 1.6f, 2.02f), new Vector3(2.2f, 1.3f, 0.1f), Bottle);
+                DestroyCol(tv);
                 for (int i = 0; i < 2; i++)
                 {
                     Vector3 sp = p + new Vector3((i - 0.5f) * 3.5f, 0.9f, 0f);
