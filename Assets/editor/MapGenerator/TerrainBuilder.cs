@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 15;
+        const int SplatVersion = 16;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -332,7 +332,7 @@ namespace FolkloreArchives.MapGen
             // texturas seamless 128px del pack PSX. La RUTA ASFALTADA y la NIEVE siguen
             // como estaban: el pack PSX no trae asfalto ni nieve.
             bool psx = MapLayout.UsePsxGround;
-            var layers = new TerrainLayer[7];
+            var layers = new TerrainLayer[8];
             // capa 0 (base) = PASTO VERDE (el bosque general queda verde). El barro
             // (Ground071) va SOLO en caminos/claros vía las otras capas.
             layers[0] = (psx ? PsxLayer("PSX_Seamless_WildForestGrass_128px",   6f) : null)
@@ -350,10 +350,11 @@ namespace FolkloreArchives.MapGen
             layers[5] = (psx ? PsxLayer("PSX_Seamless_ForestGravel_Ground_128px", 5f) : null)
                         ?? PackLayer("Sand_TerrainLayer",     "sand",     new Color(0.76f, 0.70f, 0.50f));
             layers[6] = CreateLayer("snow", new Color(0.92f, 0.94f, 0.98f)); // nieve de los picos
+            layers[7] = AshGroundLayer(); // ceniza del bosque quemado (área nueva)
             td.terrainLayers = layers;
 
             int res = td.alphamapResolution;
-            float[,,] map = new float[res, res, 7];
+            float[,,] map = new float[res, res, 8];
             for (int zi = 0; zi < res; zi++)
             {
                 for (int xi = 0; xi < res; xi++)
@@ -362,13 +363,35 @@ namespace FolkloreArchives.MapGen
                     float wz = zi / (float)(res - 1) * MapLayout.MapSize;
                     var p = new Vector2(wx, wz);
 
-                    float dirt = 0f, dry = 0f;
+                    float dirt = 0f, dry = 0f, sand = 0f, ash = 0f;
 
                     // dry grass: hunting field + criminal hill area
                     float df = Vector2.Distance(p, MapLayout.HuntingField);
                     float dm = Vector2.Distance(p, MapLayout.MainCriminalCamp);
                     if (df < 55f) dry = Mathf.Max(dry, 0.85f * (1f - Mathf.Clamp01((df - 35f) / 20f)));
                     if (dm < 130f) dry = Mathf.Max(dry, 0.6f * (1f - Mathf.Clamp01((dm - 80f) / 50f)));
+
+                    // ===== ÁREAS NUEVAS (MapPlan): cada zona con su PISO propio =====
+                    // ESTEPA: pasto seco pajizo (capa dry) — grande y abierta
+                    float dEst = Vector2.Distance(p, MapLayout.EstepaCenter);
+                    if (dEst < 46f) dry = Mathf.Max(dry, 0.92f * (1f - Mathf.Clamp01((dEst - 28f) / 18f)));
+                    // MALLÍN: barro oscuro mojado (capa dirt)
+                    float dMal = Vector2.Distance(p, MapLayout.Mallin);
+                    if (dMal < 24f) dirt = Mathf.Max(dirt, 0.95f * (1f - Mathf.Clamp01((dMal - 13f) / 11f)));
+                    // ROQUEDAL: grava/piedra (capa sand/gravel)
+                    float dRoq = Vector2.Distance(p, MapLayout.Roquedal);
+                    if (dRoq < 22f) sand = Mathf.Max(sand, 0.92f * (1f - Mathf.Clamp01((dRoq - 12f) / 10f)));
+                    // ORILLA DEL LAGO: canto rodado (grava)
+                    float dSho = Vector2.Distance(p, MapLayout.LakeShore);
+                    if (dSho < 16f) sand = Mathf.Max(sand, 0.88f * (1f - Mathf.Clamp01((dSho - 8f) / 8f)));
+                    // ESTANCIA + CORRALES: tierra pisada (dirt)
+                    float dEsta = Vector2.Distance(p, MapLayout.Estancia);
+                    if (dEsta < 22f) dirt = Mathf.Max(dirt, 0.8f * (1f - Mathf.Clamp01((dEsta - 13f) / 9f)));
+                    float dCor = Vector2.Distance(p, MapLayout.Corrales);
+                    if (dCor < 15f) dirt = Mathf.Max(dirt, 0.85f * (1f - Mathf.Clamp01((dCor - 8f) / 7f)));
+                    // BOSQUE QUEMADO: CENIZA (capa ash nueva, gris muy oscuro)
+                    float dBur = Vector2.Distance(p, MapLayout.BurntForest);
+                    if (dBur < 24f) ash = Mathf.Max(ash, 0.9f * (1f - Mathf.Clamp01((dBur - 14f) / 10f)));
 
                     // river banks
                     float dr = BuilderUtils.DistToPolyline(p, MapLayout.River);
@@ -417,13 +440,12 @@ namespace FolkloreArchives.MapGen
                     // agua (7m) hasta ~2m por encima. Así la bajada del campamento al
                     // agua (y la plataforma de pesca, a 8.2m) es arena, pero el cauce
                     // hondo (3.5m) y el terreno alto quedan como estaban.
-                    float sand = 0f;
                     if (dr < 34f)
                     {
                         float hBank = HeightAt(wx, wz);
                         float fadeIn  = Mathf.Clamp01((hBank - 6.2f) / 0.8f);  // aparece llegando al agua
                         float fadeOut = 1f - Mathf.Clamp01((hBank - 9.2f) / 1.3f); // muere ladera arriba
-                        sand = fadeIn * fadeOut;
+                        sand = Mathf.Max(sand, fadeIn * fadeOut);
                     }
 
                     // paved route: asymmetric shoulder widths, not a symmetric strip.
@@ -446,7 +468,8 @@ namespace FolkloreArchives.MapGen
                     float w5 = sand * (1f - w2 - w4);
                     float w1 = dirt * (1f - w2 - w4 - w5);
                     float w3 = dry * (1f - w2 - w4 - w5 - w1);
-                    float w0 = Mathf.Max(0f, 1f - w1 - w2 - w3 - w4 - w5);
+                    float w7 = ash * (1f - w2 - w4 - w5 - w1 - w3);   // ceniza (bosque quemado)
+                    float w0 = Mathf.Max(0f, 1f - w1 - w2 - w3 - w4 - w5 - w7);
 
                     // CLAROS PISADOS = BARRO Ground071 SÍ O SÍ (pisa asfalto/arena/pasto/
                     // lo que sea). Campamento, rancho, galpón, cabaña abandonada.
@@ -454,7 +477,7 @@ namespace FolkloreArchives.MapGen
                      || Vector2.Distance(p, MapLayout.OldLadyHouseCenter) < 12f
                      || Vector2.Distance(p, MapLayout.OldLadyBarnCenter) < 8f
                      || Vector2.Distance(p, MapLayout.AbandonedCabin) < 13f)
-                    { w0 = 0f; w1 = 0f; w2 = 0f; w3 = 0f; w5 = 0f; w4 = 1f; }
+                    { w0 = 0f; w1 = 0f; w2 = 0f; w3 = 0f; w5 = 0f; w7 = 0f; w4 = 1f; }
 
                     // SUELO BASE EMBARRADO: lo que quedaba como pasto verde puro (w0)
                     // se reparte entre pasto y barro (capa Muddy) con manchones Perlin
@@ -485,6 +508,7 @@ namespace FolkloreArchives.MapGen
                     map[zi, xi, 4] = w4 * keep;
                     map[zi, xi, 5] = w5 * keep;
                     map[zi, xi, 6] = snow;
+                    map[zi, xi, 7] = w7 * keep;
                 }
             }
             td.SetAlphamaps(0, 0, map);
@@ -657,6 +681,15 @@ namespace FolkloreArchives.MapGen
             layer.specular = Color.black;   // el piso PSX es mate, sin brillos
             layer.metallic = 0f;
             layer.smoothness = 0f;
+            EditorUtility.SetDirty(layer);
+            return layer;
+        }
+
+        // Ceniza del BOSQUE QUEMADO: gris muy oscuro, mate, textura ruidosa procedural.
+        static TerrainLayer AshGroundLayer()
+        {
+            var layer = CreateLayer("ashground", new Color(0.12f, 0.11f, 0.10f));
+            layer.tileSize = new Vector2(6f, 6f);
             EditorUtility.SetDirty(layer);
             return layer;
         }

@@ -434,6 +434,13 @@ namespace FolkloreArchives.MapGen
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 12f) continue;
                     if (Vector2.Distance(p, MapLayout.SecondaryCamp) < 8f) continue;
                     if (Vector2.Distance(p, MapLayout.HostageArea) < 6f) continue;
+                    // ÁREAS NUEVAS abiertas (MapPlan): sin árboles vivos para que se lean distintas
+                    if (Vector2.Distance(p, MapLayout.EstepaCenter) < 38f) continue; // estepa = campo abierto
+                    if (Vector2.Distance(p, MapLayout.Mallin) < 22f) continue;       // pantano (mallín)
+                    if (Vector2.Distance(p, MapLayout.Roquedal) < 20f) continue;     // roquedal (piedra)
+                    if (Vector2.Distance(p, MapLayout.BurntForest) < 24f) continue;  // quemado: solo troncos negros (props)
+                    if (Vector2.Distance(p, MapLayout.Estancia) < 16f) continue;     // casco de estancia
+                    if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;     // corrales
 
                     bool inField = Vector2.Distance(p, MapLayout.HuntingField) < 45f;
                     float prob;
@@ -1567,6 +1574,20 @@ namespace FolkloreArchives.MapGen
 
                     // claro del campamento de los ladrones (suelo pisado bajo ranchos/fuego)
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 26f) continue;
+
+                    // ===== ÁREAS NUEVAS (MapPlan): vegetación propia de cada zona =====
+                    // ESTEPA: nada de pasto verde — coirón SECO y RALO (mata baja pajiza).
+                    if (Vector2.Distance(p, MapLayout.EstepaCenter) < 40f)
+                    {
+                        if (Random.value < 0.35f) maps[1][zi, xi] = 1 + Random.Range(0, 2); // pasto dry ralo (índice 1 = grassDry)
+                        continue;
+                    }
+                    // MALLÍN / ROQUEDAL / QUEMADO / ESTANCIA / CORRALES: suelo pelado (barro/piedra/ceniza asoma)
+                    if (Vector2.Distance(p, MapLayout.Mallin) < 22f) continue;
+                    if (Vector2.Distance(p, MapLayout.Roquedal) < 20f) continue;
+                    if (Vector2.Distance(p, MapLayout.BurntForest) < 24f) continue;
+                    if (Vector2.Distance(p, MapLayout.Estancia) < 16f) continue;
+                    if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;
 
                     float southDg = MapLayout.PavedRouteZAt(p.x) - p.y;
                     if (southDg > MapLayout.ShoreVegFar) continue; // out in the water
