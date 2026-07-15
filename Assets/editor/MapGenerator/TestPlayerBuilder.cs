@@ -159,7 +159,7 @@ namespace FolkloreArchives.MapGen
             if (dogAnim == null) dogAnim = model.AddComponent<Animator>();
             dogAnim.runtimeAnimatorController = BuildDogAnimator(glbPath);
             dogAnim.applyRootMotion = false;   // el CharacterController mueve; la animación solo anima
-            dogAnim.speed = 0.8f;              // un poco más lento (la cola movía muy rápido)
+            dogAnim.speed = 0.6f;              // más lento (la cola movía muy rápido)
             // (sin PsxAnimator: animación suave/limpia como el humano)
 
             // El perro usa VERTEX COLORS (no textura): con el shader LowPolyVertexColor
@@ -206,7 +206,7 @@ namespace FolkloreArchives.MapGen
                 else if (bn.Contains("nose"))
                 {
                     var nb = AddBall(bone, 0.06f, darkBall);
-                    nb.transform.position = bone.position - model.transform.up * 0.04f + model.transform.forward * 0.11f;
+                    nb.transform.position = bone.position - model.transform.up * 0.04f + model.transform.forward * 0.05f;
                 }
             }
 
