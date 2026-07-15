@@ -171,6 +171,8 @@ namespace FolkloreArchives.MapGen
                 if (dogMat == null) { dogMat = new Material(vcShader); AssetDatabase.CreateAsset(dogMat, mp); }
                 dogMat.shader = vcShader;
                 if (dogMat.HasProperty("_BaseColor")) dogMat.SetColor("_BaseColor", new Color(0.58f, 0.52f, 0.46f)); // oscurece los vertex colors (estaba muy claro)
+                if (dogMat.HasProperty("_PsxSnap")) dogMat.SetFloat("_PsxSnap", 85f);          // temblor PS1
+                if (dogMat.HasProperty("_PsxColorLevels")) dogMat.SetFloat("_PsxColorLevels", 24f); // bandas de color PS1
             }
             else dogMat = MatteMat("dog_fur", new Color(0.34f, 0.25f, 0.17f)); // fallback si falta el shader
             foreach (var r in model.GetComponentsInChildren<Renderer>(true))

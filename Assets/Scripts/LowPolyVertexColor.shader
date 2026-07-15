@@ -11,6 +11,9 @@ Shader "Folklore/LowPolyVertexColor"
     {
         _BaseMap ("Base Map", 2D) = "white" {}
         _BaseColor ("Base Color", Color) = (1,1,1,1)
+        // --- PSX (0 = apagado). El perro los prende para el look PS1 ---
+        _PsxSnap ("PSX Vertex Snap (0=off, ~80=fuerte)", Float) = 0
+        _PsxColorLevels ("PSX Color Levels (0=off, ~24)", Float) = 0
     }
     SubShader
     {
@@ -38,6 +41,8 @@ Shader "Folklore/LowPolyVertexColor"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
+                float _PsxSnap;
+                float _PsxColorLevels;
             CBUFFER_END
 
             struct Attributes
@@ -67,6 +72,16 @@ Shader "Folklore/LowPolyVertexColor"
                 float3 wp = TransformObjectToWorld(IN.positionOS.xyz);
                 OUT.positionWS = wp;
                 OUT.positionCS = TransformWorldToHClip(wp);
+                // PSX vertex snapping: la posición salta a una grilla de baja resolución
+                // (el "temblor" clásico de PS1). Solo si _PsxSnap > 0.
+                if (_PsxSnap > 0.0)
+                {
+                    float4 c = OUT.positionCS;
+                    c.xyz /= c.w;
+                    c.xy = round(c.xy * _PsxSnap) / _PsxSnap;
+                    c.xyz *= c.w;
+                    OUT.positionCS = c;
+                }
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
                 OUT.color = IN.color;
@@ -100,6 +115,9 @@ Shader "Folklore/LowPolyVertexColor"
                 #endif
 
                 col = MixFog(col, IN.fogFactor);
+                // PSX: poca profundidad de color (bandas). Solo si _PsxColorLevels > 0.
+                if (_PsxColorLevels > 0.0)
+                    col = floor(col * _PsxColorLevels) / _PsxColorLevels;
                 return half4(col, 1.0);
             }
             ENDHLSL
