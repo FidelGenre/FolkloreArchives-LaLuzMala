@@ -125,6 +125,23 @@ namespace FolkloreArchives.MapGen
 
         // Where the dirt road leaves the paved route - kept exactly on the curve.
         public static readonly Vector2 DirtTurnoff = new Vector2(331f, PavedRouteZAt(331f)); // desvío del plano (oeste)
+
+        // ------------- ZONAS/POIs NUEVOS (ideas del MapPlan) — los construye AreaPoiBuilder -------------
+        // Van DESPUÉS de DirtTurnoff/PavedRoute para que los de la ruta puedan usar PavedRouteZAt.
+        public static readonly Vector2 EstepaCenter  = new Vector2(247f, 200f);  // estepa (campo abierto ventoso), sobre Camino13
+        public static readonly Vector2 Molino        = new Vector2(210f, 178f);  // molino de viento oxidado
+        public static readonly Vector2 Mallin        = new Vector2(480f, 615f);  // pantano (mallín), sobre Camino14
+        public static readonly Vector2 Roquedal      = new Vector2(190f, 525f);  // afloramiento de piedra, sobre Camino10
+        public static readonly Vector2 BurntForest   = new Vector2(335f, 490f);  // bosque quemado, sobre Camino12
+        public static readonly Vector2 LakeShore     = new Vector2(178f, 600f);  // orilla del lago + muelle
+        public static readonly Vector2 HangedTree    = new Vector2(765f, 505f);  // árbol del ahorcado + cementerio (pegado a la Tumba)
+        public static readonly Vector2 Antenna       = new Vector2(705f, 652f);  // antena/repetidora (cerro)
+        public static readonly Vector2 Corrales      = new Vector2(1005f, 558f); // corrales/bañadero (junto a la estancia)
+        public static readonly Vector2 Estancia      = new Vector2(975f, 515f);  // estancia + galpón (El Familiar)
+        // Sobre la RUTA (z derivado de la curva real del asfalto):
+        public static readonly Vector2 DifuntaCorrea = new Vector2(590f, PavedRouteZAt(590f)); // santuario Difunta Correa
+        public static readonly Vector2 GauchitoGil   = new Vector2(331f, PavedRouteZAt(331f)); // ermita Gauchito Gil (en el desvío)
+        public static readonly Vector2 YpfStation    = new Vector2(854f, PavedRouteZAt(854f)); // estación YPF abandonada
         // Caminos que salen del campamento: ahora en S (curvas suaves Catmull-Rom con
         // puntos que zigzaguean) en vez de líneas rectas (pedido del owner).
         public static readonly Vector2[] DirtRoad   = Snake(new[] { DirtTurnoff, new Vector2(346, 251), Campsite }, 14f, 8f); // ruta de tierra en S

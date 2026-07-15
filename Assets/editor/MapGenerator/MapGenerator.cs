@@ -89,6 +89,7 @@ namespace FolkloreArchives.MapGen
             // montañas (mantiene cielo + montañas, funciona con niebla, sin 2ª cámara).
             // SilhouetteMountainBuilder.Build(root.transform);
             // MountainRingBuilder.Build(root.transform, terrain); // montañas 3D reales HQP
+            AreaPoiBuilder.Build(root.transform, terrain);   // zonas/POIs nuevos del MapPlan (estepa, mallín, roquedal, quemado, orilla, Difunta Correa, Gauchito Gil, ahorcado, antena, corrales, YPF, estancia)
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
             CarBuilder.Build(root.transform, terrain);       // Renault 12 procedural (auto manejable) — estacionado en el campamento
             LuzMalaBuilder.Build(root.transform, terrain);   // La Luz Mala (aparece de noche)
