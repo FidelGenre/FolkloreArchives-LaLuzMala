@@ -88,7 +88,8 @@ namespace FolkloreArchives.MapGen
             // rompía el skybox/día-noche en URP. El camino correcto es un SKYBOX con
             // montañas (mantiene cielo + montañas, funciona con niebla, sin 2ª cámara).
             // SilhouetteMountainBuilder.Build(root.transform);
-            // MountainRingBuilder.Build(root.transform, terrain); // montañas 3D reales HQP
+            // MountainRingBuilder.Build(root.transform, terrain); // anillo LEJANO (desactivado, rompía skybox con cámara de fondo)
+            MountainRingBuilder.BuildCentralLakeMountains(root.transform, terrain); // montañas 3D REALES cerca del lago central (owner: "que sean de assets")
             AreaPoiBuilder.Build(root.transform, terrain);   // zonas/POIs nuevos del MapPlan (estepa, mallín, roquedal, quemado, orilla, Difunta Correa, Gauchito Gil, ahorcado, antena, corrales, YPF, estancia)
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
             CarBuilder.Build(root.transform, terrain);       // Renault 12 procedural (auto manejable) — estacionado en el campamento

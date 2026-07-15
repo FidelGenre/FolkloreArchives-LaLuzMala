@@ -91,5 +91,64 @@ namespace FolkloreArchives.MapGen
             go.layer = layer;
             foreach (Transform c in go.transform) SetLayerRecursive(c.gameObject, layer);
         }
+
+        // ── Montañas del LAGO CENTRAL ("Montaña y Lago") ──────────────────────
+        // A diferencia del anillo (lejano, capa Backdrop, cámara aparte), estas van
+        // CERCA de verdad, apoyadas en la altura real del terreno (que ya tiene la
+        // loma/pico procedural ahí — CentralPeakHeight en TerrainBuilder) y en la
+        // capa NORMAL (las dibuja la cámara principal, se ven de cerca caminando).
+        // Le dan la roca/silueta real que el terreno solo (verde liso) no tiene —
+        // el pedido del owner: "que las montañas sean de assets" tipo foto de lago
+        // de camping (pico rocoso detrás del agua).
+        const float LakeMountainScale    = 9f;   // mucho más grandes que el anillo (están cerca)
+        const float LakeMountainHeightMin = 1.6f;
+        const float LakeMountainHeightMax = 2.3f;
+        const float LakeMountainSinkY     = -6f; // hundida en la base del terreno (que no se vea el corte)
+
+        [UnityEditor.MenuItem("Tools/Folklore Archives/Rebuild Central Lake Mountains")]
+        public static void RebuildCentralLakeMountains()
+        {
+            var root = GameObject.Find(MapLayout.RootName);
+            var terrain = Terrain.activeTerrain;
+            if (root == null || terrain == null)
+            { Debug.LogWarning("Generá el mapa primero (Tools > Folklore Archives > Generate Greybox Map)."); return; }
+            var old = root.transform.Find("CentralLakeMountains");
+            if (old != null) Object.DestroyImmediate(old.gameObject);
+            BuildCentralLakeMountains(root.transform, terrain);
+        }
+
+        public static void BuildCentralLakeMountains(Transform parent, Terrain terrain)
+        {
+            var prefabs = new List<GameObject>();
+            for (int i = 1; i <= 20; i++)
+            {
+                var p = AssetDatabase.LoadAssetAtPath<GameObject>(Dir + "Mountain_L_" + i.ToString("00") + "_LOD.prefab");
+                if (p != null) prefabs.Add(p);
+            }
+            if (prefabs.Count == 0) { Debug.LogWarning("CentralLakeMountains: no encontré montañas HQP en " + Dir); return; }
+
+            var group = new GameObject("CentralLakeMountains");
+            group.transform.SetParent(parent);
+
+            int placed = 0;
+            foreach (var peak in MapLayout.CentralPeaks)
+            {
+                float gy = terrain.SampleHeight(new Vector3(peak.x, 0f, peak.y));
+                var pf = prefabs[Random.Range(0, prefabs.Count)];
+                var m = (GameObject)PrefabUtility.InstantiatePrefab(pf, group.transform);
+                m.name = "LakeMountain_" + placed;
+                m.transform.position = new Vector3(peak.x, gy + LakeMountainSinkY, peak.y);
+                float yaw = Mathf.Atan2(MapLayout.CentralLakeCenter.x - peak.x, MapLayout.CentralLakeCenter.y - peak.y) * Mathf.Rad2Deg
+                            + Random.Range(-20f, 20f); // mirando hacia el lago (+ variación)
+                m.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                float s = LakeMountainScale * Random.Range(0.85f, 1.15f);
+                m.transform.localScale = new Vector3(s, s * Random.Range(LakeMountainHeightMin, LakeMountainHeightMax), s);
+                m.isStatic = true;
+                foreach (var r in m.GetComponentsInChildren<Renderer>())
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                placed++;
+            }
+            Debug.Log($"<color=lime>CentralLakeMountains: {placed} montaña(s) reales colocadas en el lago central.</color>");
+        }
     }
 }
