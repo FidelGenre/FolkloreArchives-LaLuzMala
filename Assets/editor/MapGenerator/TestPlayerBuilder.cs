@@ -170,7 +170,7 @@ namespace FolkloreArchives.MapGen
                 dogMat = AssetDatabase.LoadAssetAtPath<Material>(mp);
                 if (dogMat == null) { dogMat = new Material(vcShader); AssetDatabase.CreateAsset(dogMat, mp); }
                 dogMat.shader = vcShader;
-                if (dogMat.HasProperty("_BaseColor")) dogMat.SetColor("_BaseColor", Color.white);
+                if (dogMat.HasProperty("_BaseColor")) dogMat.SetColor("_BaseColor", new Color(0.58f, 0.52f, 0.46f)); // oscurece los vertex colors (estaba muy claro)
             }
             else dogMat = MatteMat("dog_fur", new Color(0.34f, 0.25f, 0.17f)); // fallback si falta el shader
             foreach (var r in model.GetComponentsInChildren<Renderer>(true))
