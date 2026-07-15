@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 25;
+        const int SplatVersion = 26;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -228,7 +228,7 @@ namespace FolkloreArchives.MapGen
             return h;
         }
 
-        static float HeightAt(float wx, float wz)
+        public static float HeightAt(float wx, float wz)
         {
             var p = new Vector2(wx, wz);
 
@@ -387,10 +387,11 @@ namespace FolkloreArchives.MapGen
                         ?? PackLayer("Sand_TerrainLayer",     "sand",     new Color(0.76f, 0.70f, 0.50f));
             layers[6] = CreateLayer("snow", new Color(0.92f, 0.94f, 0.98f)); // nieve de los picos
             layers[7] = AshGroundLayer(); // ceniza del bosque quemado (área nueva)
+            layers[8] = RockLayer();      // roca gris de las montañas (arriba de RockLine)
             td.terrainLayers = layers;
 
             int res = td.alphamapResolution;
-            float[,,] map = new float[res, res, 8];
+            float[,,] map = new float[res, res, 9];
             for (int zi = 0; zi < res; zi++)
             {
                 for (int xi = 0; xi < res; xi++)
@@ -537,9 +538,17 @@ namespace FolkloreArchives.MapGen
                         w0 *= 1f - baseMud;
                     }
 
+                    // ROCA de montaña: entre RockLine y SnowLine el pasto/bosque le va
+                    // cediendo el piso a roca gris desnuda (como una montaña de verdad:
+                    // verde abajo → roca en el medio → nieve arriba). No pisa la ruta ni
+                    // los claros (w2/w4 quedan afuera, esas alturas son bajas igual).
+                    float hSnow = HeightAt(wx, wz);
+                    float rock = Mathf.SmoothStep(0f, 1f, (hSnow - MapLayout.RockLine) / (MapLayout.SnowLine - MapLayout.RockLine));
+                    float rockRemain = 1f - rock;
+                    w0 *= rockRemain; w1 *= rockRemain; w3 *= rockRemain; w5 *= rockRemain; w7 *= rockRemain;
+
                     // NIEVE en los picos altos: por altura del terreno. La nieve pisa
                     // las demás capas arriba de la línea de nieve (SnowLine).
-                    float hSnow = HeightAt(wx, wz);
                     float snow = Mathf.SmoothStep(0f, 1f, (hSnow - MapLayout.SnowLine) / 14f);
                     float keep = 1f - snow;
 
@@ -551,6 +560,7 @@ namespace FolkloreArchives.MapGen
                     map[zi, xi, 5] = w5 * keep;
                     map[zi, xi, 6] = snow;
                     map[zi, xi, 7] = w7 * keep;
+                    map[zi, xi, 8] = rock * keep;
                 }
             }
             td.SetAlphamaps(0, 0, map);
@@ -732,6 +742,17 @@ namespace FolkloreArchives.MapGen
         {
             var layer = CreateLayer("ashground", new Color(0.12f, 0.11f, 0.10f));
             layer.tileSize = new Vector2(6f, 6f);
+            EditorUtility.SetDirty(layer);
+            return layer;
+        }
+
+        // ROCA de las montañas: gris piedra, textura ruidosa procedural (mismo método que
+        // ash/las demás capas de color liso). Mate, sin brillos.
+        static TerrainLayer RockLayer()
+        {
+            var layer = CreateLayer("mountainrock", new Color(0.40f, 0.40f, 0.42f));
+            layer.tileSize = new Vector2(10f, 10f);
+            layer.smoothness = 0f;
             EditorUtility.SetDirty(layer);
             return layer;
         }

@@ -255,6 +255,11 @@ namespace FolkloreArchives.MapGen
         public const float CentralPeakHeight = 92f;   // picos ALTOS con nieve (antes 46)
         public const float CentralPeakSigma  = 44f;   // más puntiagudos (antes 56)
         public const float SnowLine          = 82f;   // altura donde empieza la nieve en los picos
+        // MONTAÑA PROCEDURAL (owner: "que las montañas sean de assets" -> se probó con un
+        // modelo 3D real y quedó gigante/deforme; se vuelve a 100% procedural pero con una
+        // banda de ROCA GRIS + línea de árboles reales, para que no sea una loma toda verde).
+        public const float TreeLine = 56f;   // ForestBuilder no pone árboles arriba de esta altura (línea de árboles real)
+        public const float RockLine = 50f;   // TerrainBuilder empieza a mezclar roca gris arriba de esta altura (llega a 100% roca en SnowLine)
 
         // Paths that must feel scary: narrow + dense dry forest tunnel on top
         public static readonly Vector2[][] ScaryPaths = { PathB, CriminalsToSecondary, GraveToCriminals };

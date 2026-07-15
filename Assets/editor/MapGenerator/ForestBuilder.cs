@@ -375,6 +375,11 @@ namespace FolkloreArchives.MapGen
                 {
                     var p = new Vector2(x + Random.Range(-jitter, jitter), z + Random.Range(-jitter, jitter));
 
+                    // LÍNEA DE ÁRBOLES: en las montañas altas (picos del lago central,
+                    // laderas) no crecen árboles arriba de cierta altura — deja ver la
+                    // roca/nieve del terreno (montaña real, no loma toda verde).
+                    if (TerrainBuilder.HeightAt(p.x, p.y) > MapLayout.TreeLine) continue;
+
                     // LAKESIDE SHORE (between the guardrail and the water): a few small
                     // young pines scattered on the grassy embankment. Handled before the
                     // road exclusion below so they can grow right behind the guardrail.
