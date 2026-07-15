@@ -182,12 +182,12 @@ namespace FolkloreArchives.MapGen
             // eye.l / eye.r / nose son HUESOS del rig → les cuelgo esferas oscuras (siguen
             // la cabeza al animarse).
             int eyes = 0;
-            foreach (var t in model.GetComponentsInChildren<Transform>(true))
+            foreach (var bone in model.GetComponentsInChildren<Transform>(true))
             {
-                string n = t.name.ToLower();
+                string n = bone.name.ToLower();
                 if (n.Contains("end") || n.Contains("target") || n.Contains("pole")) continue;
-                if (n.Contains("eye"))       { AddBall(t, 0.05f, dark); eyes++; }
-                else if (n.Contains("nose")) { AddBall(t, 0.06f, dark); eyes++; }
+                if (n.Contains("eye"))       { AddBall(bone, 0.05f, dark); eyes++; }
+                else if (n.Contains("nose")) { AddBall(bone, 0.06f, dark); eyes++; }
             }
             Debug.Log($"<color=cyan>[Dog] ojos/nariz agregados: {eyes}</color>");
 
