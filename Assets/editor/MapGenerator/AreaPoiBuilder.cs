@@ -406,7 +406,7 @@ namespace FolkloreArchives.MapGen
             // La estación ENTERA es el modelo descargado: GasStationProps trae TIENDA +
             // TECHO + SURTIDORES + CARTEL, todo junto. Se escala a ~24m (el conjunto es
             // ancho) y mira a la ruta (yaw 180). Si el modelo no está, se arma procedural.
-            if (SpawnModel(DirGasProps, g, p, 24f, 180f, false, "EstacionModelo") == null)
+            if (SpawnModel(DirGasProps, g, p, 24f, 180f, false, "EstacionModelo", new Vector3(-90f, 0f, 0f)) == null)
             {
                 // --- fallback procedural (solo si NO está el modelo) ---
                 BuilderUtils.Prim(PrimitiveType.Cube, "Techo", g, p + Vector3.up * 4.2f, new Vector3(9f, 0.4f, 6f), MetalDark);
