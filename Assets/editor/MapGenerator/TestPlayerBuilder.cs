@@ -160,36 +160,26 @@ namespace FolkloreArchives.MapGen
             dogAnim.runtimeAnimatorController = BuildDogAnimator(glbPath);
             dogAnim.applyRootMotion = false;   // el CharacterController mueve; la animación solo anima
 
-            // materiales MATE (sin brillo, para que no parezca plástico). El FBX vino sin
-            // textura y tiene partes separadas (eye/nose/tongue/mouth/ear): pinto cada una.
-            var fur    = MatteMat("dog_fur",    new Color(0.34f, 0.25f, 0.17f)); // pelo marrón
-            var dark   = MatteMat("dog_dark",   new Color(0.03f, 0.03f, 0.03f)); // ojos + nariz
-            var tongue = MatteMat("dog_tongue", new Color(0.55f, 0.24f, 0.26f)); // lengua/boca
+            // El perro usa VERTEX COLORS (no textura): con el shader LowPolyVertexColor
+            // salen ojos/nariz/boca/lengua/pelo tal cual el modelo original, mate.
+            var vcShader = Shader.Find("Folklore/LowPolyVertexColor");
+            Material dogMat;
+            if (vcShader != null)
+            {
+                string mp = MapLayout.GeneratedFolder + "/mat_dog_vc.mat";
+                dogMat = AssetDatabase.LoadAssetAtPath<Material>(mp);
+                if (dogMat == null) { dogMat = new Material(vcShader); AssetDatabase.CreateAsset(dogMat, mp); }
+                dogMat.shader = vcShader;
+                if (dogMat.HasProperty("_BaseColor")) dogMat.SetColor("_BaseColor", Color.white);
+            }
+            else dogMat = MatteMat("dog_fur", new Color(0.34f, 0.25f, 0.17f)); // fallback si falta el shader
             foreach (var r in model.GetComponentsInChildren<Renderer>(true))
             {
                 var ms = r.sharedMaterials;
-                for (int i = 0; i < ms.Length; i++)
-                {
-                    string key = ((ms[i] != null ? ms[i].name : "") + " " + r.name).ToLower();
-                    if (key.Contains("eye") || key.Contains("nose") || key.Contains("iris") || key.Contains("pupil")) ms[i] = dark;
-                    else if (key.Contains("tongue") || key.Contains("mouth")) ms[i] = tongue;
-                    else ms[i] = fur;
-                }
+                for (int i = 0; i < ms.Length; i++) ms[i] = dogMat;
                 r.sharedMaterials = ms;
             }
-
-            // OJOS + NARIZ: el FBX no trae textura (los ojos estaban pintados en ella).
-            // eye.l / eye.r / nose son HUESOS del rig → les cuelgo esferas oscuras (siguen
-            // la cabeza al animarse).
-            int eyes = 0;
-            foreach (var bone in model.GetComponentsInChildren<Transform>(true))
-            {
-                string n = bone.name.ToLower();
-                if (n.Contains("end") || n.Contains("target") || n.Contains("pole")) continue;
-                if (n.Contains("eye"))       { AddBall(bone, 0.05f, dark); eyes++; }
-                else if (n.Contains("nose")) { AddBall(bone, 0.06f, dark); eyes++; }
-            }
-            Debug.Log($"<color=cyan>[Dog] ojos/nariz agregados: {eyes}</color>");
+            Debug.Log($"<color=cyan>[Dog] shader vertex-color {(vcShader != null ? "OK" : "NO (fallback color plano)")}</color>");
 
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;
