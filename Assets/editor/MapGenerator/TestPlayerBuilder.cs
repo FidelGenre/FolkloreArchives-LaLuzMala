@@ -5,6 +5,7 @@
 //  Paste into:  Assets/Editor/MapGenerator/TestPlayerBuilder.cs
 // ============================================================
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -104,12 +105,12 @@ namespace FolkloreArchives.MapGen
         // PartyController en la persona para poder alternar el control con G.
         static void BuildDogAndParty(GameObject player, GameObject personCamGO, Vector2 playerXZ, Terrain t)
         {
-            const string glbPath = "Assets/ExternalAssets/Dog/PS1_Dog.glb";
+            const string glbPath = "Assets/ExternalAssets/DogAnim/Dog.fbx";  // perro riggeado + animado (WildPoly3D, CC-BY)
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(glbPath);
             if (prefab == null)
             {
                 Debug.LogWarning("Perro: no encontré/importé " + glbPath +
-                    " (¿instalaste glTFast y le diste foco a Unity para importar?). Sigo sin perro.");
+                    " (dale FOCO a Unity para que importe el FBX). Sigo sin perro.");
                 return;
             }
 
@@ -153,10 +154,25 @@ namespace FolkloreArchives.MapGen
             }
             else Debug.LogWarning("Rufus: el modelo no tiene Renderers para medir — queda a escala 1.");
 
+            // Animator con las animaciones reales (Idle/Walk/Run/Lie) del FBX.
+            var dogAnim = model.GetComponentInChildren<Animator>();
+            if (dogAnim == null) dogAnim = model.AddComponent<Animator>();
+            dogAnim.runtimeAnimatorController = BuildDogAnimator(glbPath);
+            dogAnim.applyRootMotion = false;   // el CharacterController mueve; la animación solo anima
+
+            // pelo marrón (el FBX vino sin textura)
+            var fur = BuilderUtils.Mat("dog_fur", new Color(0.34f, 0.25f, 0.17f));
+            foreach (var r in model.GetComponentsInChildren<Renderer>(true))
+            {
+                var ms = r.sharedMaterials;
+                for (int i = 0; i < ms.Length; i++) ms[i] = fur;
+                r.sharedMaterials = ms;
+            }
+
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;
             dogCtrl.mode = FolkloreArchives.DogController.Mode.Follow;
-            dog.AddComponent<FolkloreArchives.DogWalkAnim>(); // patas se mueven al caminar
+            // (ya no se usa DogWalkAnim: el perro tiene animaciones reales)
 
             // cámara 1ª persona del perro: en el HOCICO mirando adelante (igual que
             // online). Como el modelo está girado 180°, la cabeza queda en +Z. Calculo
@@ -198,5 +214,49 @@ namespace FolkloreArchives.MapGen
             party.personCam = personCamGO.GetComponent<Camera>();
             party.dogCam    = dogCam;
         }
+
+        // Crea un AnimatorController con estados Idle/Walk/Run/Lie usando los clips del
+        // FBX (matchea por nombre). Pone los clips en LOOP (si no, se congelan). El
+        // DogController hace animator.CrossFade("Idle"/"Walk"/"Run"/"Lie").
+        static AnimatorController BuildDogAnimator(string fbxPath)
+        {
+            // asegurar loop en todos los clips del FBX
+            var importer = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
+            if (importer != null)
+            {
+                var anims = importer.clipAnimations;
+                if (anims == null || anims.Length == 0) anims = importer.defaultClipAnimations;
+                bool changed = false;
+                for (int i = 0; i < anims.Length; i++)
+                    if (!anims[i].loopTime) { anims[i].loopTime = true; changed = true; }
+                if (changed) { importer.clipAnimations = anims; importer.SaveAndReimport(); }
+            }
+
+            var clips = new System.Collections.Generic.List<AnimationClip>();
+            foreach (var a in AssetDatabase.LoadAllAssetsAtPath(fbxPath))
+                if (a is AnimationClip c && !c.name.StartsWith("__preview")) clips.Add(c);
+
+            System.Func<string[], AnimationClip> find = keys =>
+            {
+                foreach (var k in keys)
+                    foreach (var c in clips)
+                        if (c.name.ToLower().Contains(k)) return c;
+                return clips.Count > 0 ? clips[0] : null;
+            };
+
+            string path = MapLayout.GeneratedFolder + "/DogAnimator.controller";
+            AssetDatabase.DeleteAsset(path);
+            var ctrl = AnimatorController.CreateAnimatorControllerAtPath(path);
+            var sm = ctrl.layers[0].stateMachine;
+            var idle = sm.AddState("Idle"); idle.motion = find(new[] { "idle" });
+            var walk = sm.AddState("Walk"); walk.motion = find(new[] { "walk" });
+            var run  = sm.AddState("Run");  run.motion  = find(new[] { "run" });
+            var lie  = sm.AddState("Lie");  lie.motion  = find(new[] { "lie", "lay", "sit", "sleep" });
+            sm.defaultState = idle;
+            Debug.Log($"<color=cyan>[Dog] Animator: {clips.Count} clips. Idle={ClipName(idle)} Walk={ClipName(walk)} Run={ClipName(run)} Lie={ClipName(lie)}</color>");
+            return ctrl;
+        }
+
+        static string ClipName(UnityEditor.Animations.AnimatorState s) => s.motion != null ? s.motion.name : "(none)";
     }
 }

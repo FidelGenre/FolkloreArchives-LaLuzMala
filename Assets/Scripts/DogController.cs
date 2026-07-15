@@ -45,9 +45,18 @@ namespace FolkloreArchives
         float standHeight, camBaseY;
         float pitch;   // mirar arriba/abajo (grados); parte del ángulo base de la cámara
 
+        // --- animación (perro riggeado: Idle/Walk/Run/Lie) ---
+        Animator animator;
+        int curAnim;
+        static readonly int H_Idle = Animator.StringToHash("Idle");
+        static readonly int H_Walk = Animator.StringToHash("Walk");
+        static readonly int H_Run  = Animator.StringToHash("Run");
+        static readonly int H_Lie  = Animator.StringToHash("Lie");
+
         void Start()
         {
             cc = GetComponent<CharacterController>();
+            animator = GetComponentInChildren<Animator>();
             standHeight = cc.height;
             var camGo = GetComponentInChildren<Camera>(true);
             if (camGo != null)
@@ -94,8 +103,21 @@ namespace FolkloreArchives
                     _nextAutoJump = Time.time + 0.6f;   // cooldown para no saltar en loop
                 }
             }
+
+            UpdateAnim(new Vector2(planar.x, planar.z).magnitude);
         }
         float _nextAutoJump;
+
+        // elige la animación según la velocidad y el modo. Quieto (Idle mode) = echado (Lie).
+        void UpdateAnim(float speed)
+        {
+            if (animator == null) return;
+            int target;
+            if (speed > runSpeed * 0.6f) target = H_Run;
+            else if (speed > 0.25f)      target = H_Walk;
+            else                         target = (mode == Mode.Idle) ? H_Lie : H_Idle;
+            if (target != curAnim) { animator.CrossFade(target, 0.18f); curAnim = target; }
+        }
 
         // Espacio = saltar (si está en el piso). El perro NO se agacha (pedido del dueño).
         void Jump(bool grounded)
