@@ -98,7 +98,7 @@ Shader "Folklore/LowPolyVertexColor"
                 float3 n = normalize(IN.normalWS);
                 Light mainLight = GetMainLight();
                 half ndl = saturate(dot(n, mainLight.direction)) * 0.5 + 0.5;
-                if (_PsxSnap > 0.0) ndl = ndl * 0.5 + 0.5; // aplana la luz (menos gradiente = menos plástico)
+                if (_PsxColorLevels > 0.0) ndl = ndl * 0.5 + 0.5; // aplana la luz (menos plástico) — va con el modo PSX de color
                 half3 col = albedo * (mainLight.color * ndl + SampleSH(n));
 
                 #if defined(_ADDITIONAL_LIGHTS)
