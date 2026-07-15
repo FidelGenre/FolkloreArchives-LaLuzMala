@@ -52,7 +52,7 @@ namespace FolkloreArchives.MapGen
                 b = WorldBounds(inst);
                 inst.transform.localPosition -= new Vector3(b.center.x, b.min.y, b.center.z);
 
-                TintMoody(inst);
+                StyleCar(inst);
 
                 var doorList = new System.Collections.Generic.List<Transform>();
                 foreach (var t in inst.GetComponentsInChildren<Transform>(true))
@@ -104,6 +104,82 @@ namespace FolkloreArchives.MapGen
             Bounds b = rs[0].bounds;
             for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
             return b;
+        }
+
+        // Estiliza el auto: chapa con textura de ÓXIDO/mugre, vidrios oscuros, ruedas
+        // negras, todo MATE (sin plástico). Las partes se distinguen por el nombre.
+        static void StyleCar(GameObject inst)
+        {
+            var rust   = CarRustTex();
+            var body   = CarMat("car_body_rust", Color.white,                   rust); // chapa oxidada
+            var glass  = CarMat("car_glass2",    new Color(0.06f, 0.07f, 0.09f), null); // vidrio oscuro
+            var rubber = CarMat("car_rubber",    new Color(0.05f, 0.05f, 0.05f), null); // gomas/ruedas
+            foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
+            {
+                string n = r.name.ToLower();
+                var ms = r.sharedMaterials;
+                for (int i = 0; i < ms.Length; i++)
+                {
+                    if (n.Contains("window") || n.Contains("glass")) ms[i] = glass;
+                    else if (n.Contains("wheel") || n.Contains("tire")) ms[i] = rubber;
+                    else if (n.Contains("light")) ms[i] = MatteCopy(ms[i]);   // luces: dejo su color, solo mate
+                    else ms[i] = body;                                        // chapa/interior: óxido
+                }
+                r.sharedMaterials = ms;
+            }
+        }
+
+        // Textura procedural de ÓXIDO + mugre (colores cálidos apagados), point filter (PSX).
+        static Texture2D CarRustTex()
+        {
+            string path = MapLayout.GeneratedFolder + "/tex_car_rust.asset";
+            var ex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (ex != null) return ex;
+            int size = 256;
+            var tex = new Texture2D(size, size, TextureFormat.RGB24, false)
+            { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+            var rnd = new System.Random(777);
+            Color paint = new Color(0.36f, 0.33f, 0.29f); // pintura vieja apagada
+            Color rustC = new Color(0.42f, 0.21f, 0.09f); // óxido
+            Color dark  = new Color(0.11f, 0.10f, 0.09f); // manchas oscuras
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float patch = Mathf.PerlinNoise(x * 0.03f + 5f, y * 0.03f + 9f);       // parches de óxido
+                    float grain = Mathf.PerlinNoise(x * 0.13f, y * 0.13f) * 0.6f + (float)rnd.NextDouble() * 0.4f;
+                    Color c = Color.Lerp(paint, rustC, Mathf.SmoothStep(0.45f, 0.78f, patch));
+                    c = Color.Lerp(c, dark, Mathf.Clamp01(grain - 0.7f) * 0.9f);           // manchas/mugre
+                    c *= Mathf.Lerp(0.82f, 1.06f, grain);                                  // variación de brillo
+                    tex.SetPixel(x, y, c);
+                }
+            tex.Apply();
+            AssetDatabase.CreateAsset(tex, path);
+            return tex;
+        }
+
+        static Material CarMat(string name, Color c, Texture2D tex)
+        {
+            var m = BuilderUtils.Mat(name, c);
+            if (tex != null)
+            {
+                if (m.HasProperty("_BaseMap")) { m.SetTexture("_BaseMap", tex); m.SetTextureScale("_BaseMap", new Vector2(1.5f, 1.5f)); }
+                else m.mainTexture = tex;
+            }
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0f);
+            if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
+            if (m.HasProperty("_SpecularHighlights")) m.SetFloat("_SpecularHighlights", 0f);
+            return m;
+        }
+
+        static Material MatteCopy(Material src)
+        {
+            if (src == null) return null;
+            var m = new Material(src);
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0f);
+            if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
+            return m;
         }
 
         // Tinte oscuro/sucio + poco brillo (Falcon viejo de terror).
