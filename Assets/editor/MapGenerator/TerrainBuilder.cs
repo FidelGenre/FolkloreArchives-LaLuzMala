@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 20;
+        const int SplatVersion = 21;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -49,6 +49,7 @@ namespace FolkloreArchives.MapGen
                 Debug.Log("<color=yellow>[SPLAT] version nueva → re-pintando el barro + despejando pasto sobre el barro (una vez)…</color>");
                 PaintTextures(td);
                 ClearGrassOnMud(td); // el pasto cacheado también tapa el barro: despejarlo acá
+                ClearTreesOnPad(td); // despejar árboles del playón de la YPF
                 EditorUtility.SetDirty(td);
                 AssetDatabase.SaveAssets();
                 EditorPrefs.SetInt(SplatVersionKey, SplatVersion);
@@ -107,6 +108,7 @@ namespace FolkloreArchives.MapGen
             if (td == null) { Debug.LogWarning("No hay terreno cacheado — hacé Generate primero, después Repaint."); return; }
             PaintTextures(td);
             ClearGrassOnMud(td);
+            ClearTreesOnPad(td); // despejar árboles del playón de la YPF
             EditorUtility.SetDirty(td);
             AssetDatabase.SaveAssets();
 
@@ -185,6 +187,27 @@ namespace FolkloreArchives.MapGen
             }
             for (int i = 0; i < nproto; i++) td.SetDetailLayer(0, 0, i, layers[i]);
             Debug.Log($"<color=cyan>[Repaint] pasto despejado sobre el barro: {cleared} celdas detail limpiadas.</color>");
+        }
+
+        // Quita los árboles/arbustos (treeInstances) que caen sobre el PLAYÓN de la YPF,
+        // sobre el terreno cacheado, para que el lote quede despejado sin rebuild del bosque.
+        static void ClearTreesOnPad(TerrainData td)
+        {
+            var size = td.size;
+            var kept = new System.Collections.Generic.List<TreeInstance>();
+            int removed = 0;
+            foreach (var ti in td.treeInstances)
+            {
+                float wx = ti.position.x * size.x;
+                float wz = ti.position.z * size.z;
+                if (MapLayout.InYpfPad(new Vector2(wx, wz))) { removed++; continue; }
+                kept.Add(ti);
+            }
+            if (removed > 0)
+            {
+                td.treeInstances = kept.ToArray();
+                Debug.Log($"<color=cyan>[YPF] {removed} árboles/arbustos despejados del playón.</color>");
+            }
         }
 
         // Pure procedural heightmap (normalised 0..1), no hand-edits applied.
