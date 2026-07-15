@@ -194,14 +194,19 @@ namespace FolkloreArchives.MapGen
             }
             Debug.Log($"<color=cyan>[Dog] shader vertex-color {(vcShader != null ? "OK" : "NO (fallback color plano)")}</color>");
 
-            // OJOS + NARIZ procedurales (esferas oscuras en los huesos) — como antes.
+            // OJOS + NARIZ procedurales (esferas oscuras). La nariz va BAJADA y adelantada
+            // al hocico (el hueso "nose" está muy alto → si no, quedaba arriba y doble).
             var darkBall = MatteMat("dog_dark", new Color(0.03f, 0.03f, 0.03f));
             foreach (var bone in model.GetComponentsInChildren<Transform>(true))
             {
                 string bn = bone.name.ToLower();
                 if (bn.Contains("end") || bn.Contains("target") || bn.Contains("pole")) continue;
-                if (bn.Contains("eye"))       AddBall(bone, 0.05f, darkBall);
-                else if (bn.Contains("nose")) AddBall(bone, 0.06f, darkBall);
+                if (bn.Contains("eye")) AddBall(bone, 0.05f, darkBall);
+                else if (bn.Contains("nose"))
+                {
+                    var nb = AddBall(bone, 0.06f, darkBall);
+                    nb.transform.position = bone.position - model.transform.up * 0.12f + model.transform.forward * 0.10f;
+                }
             }
 
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
@@ -296,7 +301,7 @@ namespace FolkloreArchives.MapGen
 
         // esfera oscura (ojo/nariz) colgada de un hueso, de ~worldSize metros reales
         // (compenso la escala del hueso para que no dependa del escalado del perro).
-        static void AddBall(Transform bone, float worldSize, Material m)
+        static GameObject AddBall(Transform bone, float worldSize, Material m)
         {
             var s = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             s.name = "Ball_" + bone.name;
@@ -309,6 +314,7 @@ namespace FolkloreArchives.MapGen
                 worldSize / Mathf.Max(0.0001f, ls.y),
                 worldSize / Mathf.Max(0.0001f, ls.z));
             s.GetComponent<Renderer>().sharedMaterial = m;
+            return s;
         }
 
         // Textura de GRUNGE procedural (grano/mugre) que multiplica los vertex colors del
