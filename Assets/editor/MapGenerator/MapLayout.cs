@@ -81,18 +81,18 @@ namespace FolkloreArchives.MapGen
         public static bool InRect(Vector2 p, Vector2 mn, Vector2 mx, float m) =>
             p.x > mn.x - m && p.x < mx.x + m && p.y > mn.y - m && p.y < mx.y + m;
         public static readonly Vector2 HuntingField     = new Vector2(279f, 438f);  // "CAMPO DE CAZA" (oeste)
-        public static readonly Vector2 Grave            = new Vector2(543f, 333f);  // "TUMBA" — este, frente al Mirador Este
-        public static readonly Vector2 MainCriminalCamp = new Vector2(634f, 277f);  // "DELINCUENTES PRINCIPAL" (este)
-        public static readonly Vector2 SecondaryCamp    = new Vector2(659f, 418f);  // "CAMPAMENTO SECUNDARIO" (este)
-        public static readonly Vector2 HostageArea      = new Vector2(642f, 347f);  // "REHENES" (este)
+        public static readonly Vector2 Grave            = new Vector2(543f, 253f);  // "TUMBA" — este, frente al Mirador Este
+        public static readonly Vector2 MainCriminalCamp = new Vector2(634f, 197f);  // "DELINCUENTES PRINCIPAL" (este)
+        public static readonly Vector2 SecondaryCamp    = new Vector2(659f, 338f);  // "CAMPAMENTO SECUNDARIO" (este)
+        public static readonly Vector2 HostageArea      = new Vector2(642f, 267f);  // "REHENES" (este)
         public static readonly Vector2 LakeMountain     = new Vector2(95f, 451f);  // "MONTAÑA Y LAGO" — lago (oeste lejano)
         public static readonly Vector2 WrongTurnDeath   = new Vector2(130f, 155f);  // "MUERTE CAMINO EQUIVOCADO" (oeste, spur)
         public static readonly Vector2 LakeLookout      = new Vector2(189f, 371f);  // "MIRADOR OESTE" (centro del cuarteto oeste)
         public static readonly Vector2 AbandonedCabin   = new Vector2(261f, 177f);  // "CABAÑA OESTE" — antes del campamento
         // Zonas NUEVAS del plano de dos lados:
         public static readonly Vector2 EscapePoint      = new Vector2(562f, 53f);   // "ESCAPE" — sobre la ruta (z de la ruta a x803)
-        public static readonly Vector2 CabinEast        = new Vector2(478f, 229f);  // "CABAÑA ESTE" — bajando de la Tumba al Escape
-        public static readonly Vector2 LookoutEast      = new Vector2(489f, 426f);  // "MIRADOR ESTE" — orilla este del río
+        public static readonly Vector2 CabinEast        = new Vector2(478f, 149f);  // "CABAÑA ESTE" — bajando de la Tumba al Escape
+        public static readonly Vector2 LookoutEast      = new Vector2(489f, 346f);  // "MIRADOR ESTE" — orilla este del río
 
         // ------------- Lote de la casa de la vieja (HouseBuilder) -------------
         // Bounds en world XZ del cerco (deben coincidir con la valla de HouseBuilder:
@@ -140,10 +140,10 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 Roquedal      = new Vector2(133f, 368f);  // afloramiento de piedra, sobre Camino10
         public static readonly Vector2 BurntForest   = new Vector2(234f, 343f);  // bosque quemado, sobre Camino12
         public static readonly Vector2 LakeShore     = new Vector2(125f, 420f);  // orilla del lago + muelle
-        public static readonly Vector2 HangedTree    = new Vector2(536f, 354f);  // árbol del ahorcado + cementerio (pegado a la Tumba)
-        public static readonly Vector2 Antenna       = new Vector2(493f, 456f);  // antena/repetidora (cerro)
-        public static readonly Vector2 Corrales      = new Vector2(704f, 391f); // corrales/bañadero (junto a la estancia)
-        public static readonly Vector2 Estancia      = new Vector2(683f, 361f);  // estancia + galpón (El Familiar)
+        public static readonly Vector2 HangedTree    = new Vector2(536f, 274f);  // árbol del ahorcado + cementerio (pegado a la Tumba)
+        public static readonly Vector2 Antenna       = new Vector2(493f, 376f);  // antena/repetidora (cerro)
+        public static readonly Vector2 Corrales      = new Vector2(704f, 311f); // corrales/bañadero (junto a la estancia)
+        public static readonly Vector2 Estancia      = new Vector2(683f, 281f);  // estancia + galpón (El Familiar)
         public static readonly Vector2 Capilla       = new Vector2(414f, 370f);  // capilla anegada (medio hundida en el río)
         // Sobre la RUTA (z derivado de la curva real del asfalto):
         public static readonly Vector2 DifuntaCorrea = new Vector2(413f, PavedRouteZAt(413f)); // santuario Difunta Correa
@@ -170,8 +170,8 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] PathA      = Snake(new[] { LakeMountain, OldLadyRanch, Campsite }, 20f, 10f);
         // PathB = sendero de MIEDO (este, peligro): Tumba → Rehenes → Delincuentes.
         public static readonly Vector2[] PathB      = Snake(new[] { Grave, HostageArea, MainCriminalCamp }, 20f, 10f);
-        public static readonly Vector2[] GraveToCriminals     = Snake(new[] { Grave, new Vector2(594f, 306f), MainCriminalCamp }, 18f, 8f);
-        public static readonly Vector2[] CriminalsToSecondary = Snake(new[] { MainCriminalCamp, new Vector2(707f, 363f), SecondaryCamp }, 18f, 8f);
+        public static readonly Vector2[] GraveToCriminals     = Snake(new[] { Grave, new Vector2(594f, 226f), MainCriminalCamp }, 18f, 8f);
+        public static readonly Vector2[] CriminalsToSecondary = Snake(new[] { MainCriminalCamp, new Vector2(707f, 283f), SecondaryCamp }, 18f, 8f);
 
         // River runs along the east edge, next to the campsite. Smooth wavy
         // Catmull-Rom curve (same technique as the paved route) instead of a few
@@ -223,14 +223,14 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] Camino12 = { LakeLookout, new Vector2(282f, 314f), Campsite };             // c20: mirador oeste → campamento
         public static readonly Vector2[] Camino13 = { WrongTurnDeath, new Vector2(173f, 131f), DirtTurnoff };       // c13: muerte camino equivocado → desvío
         // Cruce del río + red del ESTE (peligro):
-        public static readonly Vector2[] Camino14 = { HuntingField, new Vector2(392f, 420f), LookoutEast };         // c12: campo de caza → (cruza el río) → mirador este (antes iba desde la vieja)
-        public static readonly Vector2[] Camino15 = { Campsite, new Vector2(374f, 379f), LookoutEast };             // c21: campamento → mirador este
-        public static readonly Vector2[] Camino16 = { LookoutEast, new Vector2(543f, 438f), Grave };                // mt: mirador este → tumba
-        public static readonly Vector2[] Camino17 = { SecondaryCamp, new Vector2(617f, 433f), Grave };              // st: secundario → tumba
-        public static readonly Vector2[] Camino18 = { SecondaryCamp, new Vector2(546f, 331f), LookoutEast };        // tMirE: secundario → mirador este
-        public static readonly Vector2[] Camino19 = { MainCriminalCamp, new Vector2(643f, 317f), HostageArea };     // cr: delincuentes → rehenes
+        public static readonly Vector2[] Camino14 = { HuntingField, new Vector2(392f, 380f), LookoutEast };         // c12: campo de caza → (cruza el río) → mirador este (antes iba desde la vieja)
+        public static readonly Vector2[] Camino15 = { Campsite, new Vector2(374f, 339f), LookoutEast };             // c21: campamento → mirador este
+        public static readonly Vector2[] Camino16 = { LookoutEast, new Vector2(543f, 358f), Grave };                // mt: mirador este → tumba
+        public static readonly Vector2[] Camino17 = { SecondaryCamp, new Vector2(617f, 353f), Grave };              // st: secundario → tumba
+        public static readonly Vector2[] Camino18 = { SecondaryCamp, new Vector2(546f, 251f), LookoutEast };        // tMirE: secundario → mirador este
+        public static readonly Vector2[] Camino19 = { MainCriminalCamp, new Vector2(643f, 237f), HostageArea };     // cr: delincuentes → rehenes
         public static readonly Vector2[] Camino20 = { Grave, CabinEast, EscapePoint };                            // c15: tumba → cabaña este → escape
-        public static readonly Vector2[] Camino21 = { MainCriminalCamp, new Vector2(566f, 188f), EscapePoint };     // c16e: delincuentes → escape
+        public static readonly Vector2[] Camino21 = { MainCriminalCamp, new Vector2(566f, 108f), EscapePoint };     // c16e: delincuentes → escape
         // caminito corto de la puerta de la casa al portón del galpón
         public static readonly Vector2[] BarnPath = {
             new Vector2(169f, 267f), new Vector2(165f, 270f), new Vector2(160f, 274f)
