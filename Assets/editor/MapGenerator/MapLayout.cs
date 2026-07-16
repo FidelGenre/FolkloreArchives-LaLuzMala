@@ -54,30 +54,30 @@ namespace FolkloreArchives.MapGen
         //  sits exactly on the road wherever the road is at x=620.)
         // Coordenadas del PLANO FINAL del owner (MapPlan.html). Layout de dos lados:
         // OESTE = humano, ESTE = peligro, río al medio (~x595).
-        public static readonly Vector2 Campsite         = new Vector2(215f, 232f);  // campamento (oeste, cerca del río)
+        public static readonly Vector2 Campsite         = new Vector2(270f, 232f);  // campamento — corrido al este, pegado al río (owner: "que tenga vistas")
         // INTERCAMBIADOS (owner, editor de plano): VIEJA <-> CAMPO DE CAZA. Posición EXACTA
         // de VIEJA ajustada a mano por el owner en el editor de plano (235,388). Todo el
         // combo de la vieja (casa/galpón/huellas/lote/BarnPath) se recalcula desde ese
         // ancla con los MISMOS offsets relativos originales, para no perder su forma.
-        public static readonly Vector2 OldLadyRanch     = new Vector2(124f, 204f);  // "VIEJA" (waypoint del camino)
+        public static readonly Vector2 OldLadyRanch     = new Vector2(155f, 155f);  // "VIEJA" (waypoint del camino) — alejada del lago (owner: quedó muy pegada)
         // centro real de la CASA de la vieja: corrida al costado del camino (PathA pasa
         // por OldLadyRanch). Lo usan HouseBuilder (dónde colocar la casa) y ForestBuilder
         // (dónde despejar el pasto bajo la huella). Un solo punto → siempre alineados.
-        public static readonly Vector2 OldLadyHouseCenter = new Vector2(127f, 204f);
+        public static readonly Vector2 OldLadyHouseCenter = new Vector2(158f, 155f);
         // galpón/granero de la vieja: a la IZQUIERDA y un poco atrás de la casa (oeste
         // + algo al norte), cerca. Lo usan HouseBuilder (colocar) y ForestBuilder
         // (despejar pasto/árboles bajo él).
-        public static readonly Vector2 OldLadyBarnCenter = new Vector2(120f, 208f);
+        public static readonly Vector2 OldLadyBarnCenter = new Vector2(151f, 159f);
 
         // HUELLAS rectangulares (min/max en x,z world) de la casa y el galpón, para que
         // ForestBuilder despeje el pasto EXACTO bajo cada edificio (el despeje por radio
         // dejaba pasto atravesando el piso en las esquinas). Ajustar si sobra/falta.
         // (mapa reducido 0.7: el CENTRO se movió con el resto, pero el TAMAÑO de la huella
         //  se mantiene porque el edificio NO se achicó.)
-        public static readonly Vector2 OldLadyHouseFootMin = new Vector2(118f, 195f);
-        public static readonly Vector2 OldLadyHouseFootMax = new Vector2(139f, 213f);
-        public static readonly Vector2 OldLadyBarnFootMin  = new Vector2(115f, 204f);
-        public static readonly Vector2 OldLadyBarnFootMax  = new Vector2(123f, 214f);
+        public static readonly Vector2 OldLadyHouseFootMin = new Vector2(149f, 146f);
+        public static readonly Vector2 OldLadyHouseFootMax = new Vector2(170f, 164f);
+        public static readonly Vector2 OldLadyBarnFootMin  = new Vector2(146f, 155f);
+        public static readonly Vector2 OldLadyBarnFootMax  = new Vector2(154f, 165f);
         public static bool InRect(Vector2 p, Vector2 mn, Vector2 mx, float m) =>
             p.x > mn.x - m && p.x < mx.x + m && p.y > mn.y - m && p.y < mx.y + m;
         public static readonly Vector2 HuntingField     = new Vector2(209f, 329f);  // "CAMPO DE CAZA" (oeste)
@@ -100,8 +100,8 @@ namespace FolkloreArchives.MapGen
         // x[-6..30] z[-7..19] → world abajo). TerrainBuilder aplana este rectángulo a
         // OldLadyLotHeight y ForestBuilder no pone árboles adentro (+ un margen).
         // Ajustar si cambia la valla o el centrado de la casa.
-        public static readonly Vector2 OldLadyLotMin = new Vector2(108f, 190f);
-        public static readonly Vector2 OldLadyLotMax = new Vector2(144f, 216f);
+        public static readonly Vector2 OldLadyLotMin = new Vector2(139f, 141f);
+        public static readonly Vector2 OldLadyLotMax = new Vector2(175f, 167f);
         public const float OldLadyLotHeight = 25.5f;   // nivel plano del lote (≈ altura natural ahí)
 
         // Claro sin pasto alrededor del campamento del jugador (fogata + troncos +
@@ -236,7 +236,7 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] Camino21 = { MainCriminalCamp, new Vector2(425f, 81f), EscapePoint };     // c16e: delincuentes → escape
         // caminito corto de la puerta de la casa al portón del galpón
         public static readonly Vector2[] BarnPath = {
-            new Vector2(127f, 200f), new Vector2(124f, 203f), new Vector2(120f, 206f)
+            new Vector2(158f, 151f), new Vector2(155f, 154f), new Vector2(151f, 157f)
         };
         // Todos ondulados en S (no líneas rectas).
         public static readonly Vector2[][] ExtraTrails = {

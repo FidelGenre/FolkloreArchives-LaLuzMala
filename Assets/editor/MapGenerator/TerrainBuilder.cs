@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 32;
+        const int SplatVersion = 33;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -297,9 +297,16 @@ namespace FolkloreArchives.MapGen
                 a = Mathf.Min(a, bed);
             }
 
-            // flat clearing for the campsite (tents, campfire)
+            // flat clearing for the campsite (tents, campfire): aplana a la altura NATURAL
+            // del terreno de alrededor (sampleada 55m al oeste, lejos del río) en vez de un
+            // número fijo — un fijo (era 12f) queda hundido/flotando según dónde esté el
+            // campamento; esto se auto-ajusta si se mueve (owner: "quedó hundido").
             float dc = Vector2.Distance(p, MapLayout.Campsite);
-            if (dc < 40f) a = Mathf.Lerp(12f, a, Mathf.SmoothStep(0f, 1f, (dc - 15f) / 25f));
+            if (dc < 40f)
+            {
+                float campGrade = HeightAt(MapLayout.Campsite.x - 55f, MapLayout.Campsite.y);
+                a = Mathf.Lerp(campGrade, a, Mathf.SmoothStep(0f, 1f, (dc - 15f) / 25f));
+            }
 
             // riverbed carve (last, so it always wins)
             float dr = BuilderUtils.DistToPolyline(p, MapLayout.River);
