@@ -368,7 +368,7 @@ namespace FolkloreArchives.MapGen
             // texturas seamless 128px del pack PSX. La RUTA ASFALTADA y la NIEVE siguen
             // como estaban: el pack PSX no trae asfalto ni nieve.
             bool psx = MapLayout.UsePsxGround;
-            var layers = new TerrainLayer[8];
+            var layers = new TerrainLayer[9];
             // capa 0 (base) = PASTO VERDE (el bosque general queda verde). El barro
             // (Ground071) va SOLO en caminos/claros vía las otras capas.
             layers[0] = (psx ? PsxLayer("PSX_Seamless_WildForestGrass_128px",   6f) : null)
