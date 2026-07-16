@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
         // The map is now LONGER in x than in z, so the paved road has a long approach
         // before it reaches the inhabited area. `MapSize` keeps its old meaning (the z
         // extent) since most z-axis code already uses it; `MapSizeX` is the x extent.
-        public const float MapSize  = 660f;        // z extent (metres) — recortado al contenido (owner: sacar terreno sobrante del borde)
+        public const float MapSize  = 550f;        // z extent (metres) — recortado más al norte (owner: sobraba terreno arriba), pico más alto ahora en z≈486
         public const float MapSizeX = 800f;        // x extent (metres) — recortado el este vacío (la ruta seguía de largo sin nada)
         public const float MaxHeight = 135f;       // subido para picos nevados altos (antes 60)
         public const string RootName = "FOLKLORE_MAP";
@@ -85,7 +85,7 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 MainCriminalCamp = new Vector2(634f, 197f);  // "DELINCUENTES PRINCIPAL" (este)
         public static readonly Vector2 SecondaryCamp    = new Vector2(659f, 338f);  // "CAMPAMENTO SECUNDARIO" (este)
         public static readonly Vector2 HostageArea      = new Vector2(642f, 267f);  // "REHENES" (este)
-        public static readonly Vector2 LakeMountain     = new Vector2(95f, 451f);  // "MONTAÑA Y LAGO" — lago (oeste lejano)
+        public static readonly Vector2 LakeMountain     = new Vector2(95f, 391f);  // "MONTAÑA Y LAGO" — lago (oeste lejano)
         public static readonly Vector2 WrongTurnDeath   = new Vector2(130f, 155f);  // "MUERTE CAMINO EQUIVOCADO" (oeste, spur)
         public static readonly Vector2 LakeLookout      = new Vector2(189f, 371f);  // "MIRADOR OESTE" (centro del cuarteto oeste)
         public static readonly Vector2 AbandonedCabin   = new Vector2(261f, 177f);  // "CABAÑA OESTE" — antes del campamento
@@ -137,9 +137,9 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 EstepaCenter  = new Vector2(173f, 140f);  // estepa (campo abierto ventoso), sobre Camino13
         public static readonly Vector2 Molino        = new Vector2(147f, 125f);  // molino de viento oxidado
         public static readonly Vector2 Mallin        = new Vector2(336f, 431f);  // pantano (mallín), sobre Camino14
-        public static readonly Vector2 Roquedal      = new Vector2(133f, 368f);  // afloramiento de piedra, sobre Camino10
+        public static readonly Vector2 Roquedal      = new Vector2(133f, 308f);  // afloramiento de piedra, sobre Camino10
         public static readonly Vector2 BurntForest   = new Vector2(234f, 343f);  // bosque quemado, sobre Camino12
-        public static readonly Vector2 LakeShore     = new Vector2(125f, 420f);  // orilla del lago + muelle
+        public static readonly Vector2 LakeShore     = new Vector2(125f, 360f);  // orilla del lago + muelle
         public static readonly Vector2 HangedTree    = new Vector2(536f, 274f);  // árbol del ahorcado + cementerio (pegado a la Tumba)
         public static readonly Vector2 Antenna       = new Vector2(493f, 376f);  // antena/repetidora (cerro)
         public static readonly Vector2 Corrales      = new Vector2(704f, 311f); // corrales/bañadero (junto a la estancia)
@@ -221,7 +221,7 @@ namespace FolkloreArchives.MapGen
         // Camino14 pasó de OldLadyRanch (ahora lejos, en el oeste) a HuntingField (ahora
         // cerca del cruce del río, donde antes estaba la vieja).
         public static readonly Vector2[] Camino9  = { HuntingField, new Vector2(203f, 301f), Campsite };            // c10: campo de caza → campamento
-        public static readonly Vector2[] Camino10 = { LakeMountain, new Vector2(140f, 364f), OldLadyRanch };        // c16: lago → vieja (antes iba a campo de caza)
+        public static readonly Vector2[] Camino10 = { LakeMountain, new Vector2(140f, 304f), OldLadyRanch };        // c16: lago → vieja (antes iba a campo de caza)
         public static readonly Vector2[] Camino11 = { OldLadyRanch, new Vector2(218f, 392f), LakeLookout };         // tMirW: vieja → mirador oeste
         public static readonly Vector2[] Camino12 = { LakeLookout, new Vector2(282f, 314f), Campsite };             // c20: mirador oeste → campamento
         public static readonly Vector2[] Camino13 = { WrongTurnDeath, new Vector2(173f, 131f), DirtTurnoff };       // c13: muerte camino equivocado → desvío
@@ -250,7 +250,7 @@ namespace FolkloreArchives.MapGen
         // ===== ZONA CENTRAL: montañas + lago gigante (owner: unir Campo de Caza +
         // Montaña y Lago en una gran cuenca de montañas con un lago enorme, sin camino
         // entre ellas — se cruza el terreno natural). Todo tuneable acá.
-        public static readonly Vector2 CentralLakeCenter = new Vector2(95f, 451f); // = "Montaña y Lago" (oeste lejano)
+        public static readonly Vector2 CentralLakeCenter = new Vector2(95f, 391f); // = "Montaña y Lago" (oeste lejano)
         public const float CentralLakeRadius = 65f;   // lago (radio pedido por el owner)
         public const float CentralLakeLevel  = 11f;   // altura del plano de agua
         public const float CentralLakeBed    = 3f;    // fondo carvado (bajo el agua)
@@ -259,7 +259,7 @@ namespace FolkloreArchives.MapGen
         // fondo del lado opuesto al muelle/playa (LakeShore), no repartidos por todos
         // lados. A ~45-63m entre sí (antes ~180-195m) + CentralPeakSigma=44 → los picos se
         // funden en un solo macizo visual, como telón de fondo detrás del agua.
-        public static readonly Vector2[] CentralPeaks = { new Vector2(21f, 504f), new Vector2(53f, 522f), new Vector2(35f, 546f) };
+        public static readonly Vector2[] CentralPeaks = { new Vector2(21f, 444f), new Vector2(53f, 462f), new Vector2(35f, 486f) };
         public const float CentralPeakHeight = 92f;   // picos ALTOS con nieve (antes 46)
         public const float CentralPeakSigma  = 44f;   // más puntiagudos (antes 56)
         public const float SnowLine          = 82f;   // altura donde empieza la nieve en los picos
