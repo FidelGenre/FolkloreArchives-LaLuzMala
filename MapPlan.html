@@ -38,10 +38,13 @@
   .desc .tag { display:inline-block; font-size:10px; background:#243a37; color:#8fd6c8; border:1px solid #3f9c8f; border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:middle; }
   .wp { fill:#e0c060; stroke:#0d0f14; stroke-width:1; cursor:grab; }
   .wp.sel { stroke:var(--accent); stroke-width:1.6; }
-  .edge { stroke:var(--line); stroke-width:1.8; fill:none; opacity:.8; cursor:copy; }
+  .wp.linked { fill:#14161c; stroke:#e0c060; stroke-width:1.4; cursor:grab; }
+  .wp.linked.sel { stroke:var(--accent); }
+  .edge { stroke:var(--line); stroke-width:1.8; fill:none; opacity:.8; cursor:pointer; }
   .edge.paved { stroke:#5b5f52; stroke-width:3.5; }
   .edge.river { stroke:#3a6b8a; stroke-width:4; opacity:.85; }
   .edge.dirt { stroke:#7a6a4a; stroke-dasharray:6 5; }
+  .edge.sel { stroke:var(--accent) !important; stroke-width:5; opacity:1; }
   .edge-label { font:600 7.5px system-ui; fill:#b9b49f; paint-order:stroke; stroke:#0d0f14; stroke-width:2.5px; pointer-events:none; }
 </style>
 </head>
@@ -70,8 +73,10 @@
   <div class="hint">
     <b>Norte = arriba.</b> Rueda = zoom · arrastrar fondo = mover vista.<br>
     <b>Caminos:</b> arrastrá los <span style="color:#e0c060">puntitos amarillos</span> para curvarlos ·
-    <b>doble clic en un camino</b> = agregar punto · <b>doble clic en un puntito</b> = borrarlo.<br>
-    <b>Puntos (zonas):</b> arrastrar = mover · doble clic = renombrar.
+    <b>doble clic en un camino</b> = agregar punto · <b>doble clic en un puntito</b> = borrarlo ·
+    <b>clic en la línea</b> = seleccionar el camino ENTERO (después "Borrar seleccionado" lo borra todo, sirve para ríos).<br>
+    <b>Puntitos huecos</b> = enganchados a un lugar (lo siguen solos) · agarralos y arrastrá para <b>desengancharlos</b>.<br>
+    <b>Puntos (zonas):</b> arrastrar = mover (arrastra los caminos enganchados con él) · doble clic = renombrar.
     <textarea id="out" readonly placeholder="Aquí aparecen las coordenadas al Copiar…"></textarea>
   </div>
 </div>
@@ -96,36 +101,36 @@ function resetView(){ view={x:0,y:0,w:W,h:H}; applyView(); }
 // Zonas (world x, z) + nombre de variable en MapLayout.cs
 // Layout de DOS LADOS reconstruido del plano del owner: OESTE = humano, ESTE = peligro.
 let nodes = [
-  {id:'desvio',name:'DESVÍO (ruta→tierra)',    varName:'DirtTurnoff',      x:174, z:18},
+  {id:'desvio',name:'DESVÍO (ruta→tierra)', short:'DESVÍO',    varName:'DirtTurnoff',      x:174, z:18},
   {id:'camp',  name:'CAMPAMENTO',               varName:'Campsite',         x:215, z:232},
-  {id:'playa', name:'PLAYA DE PESCA',           varName:'RiverBeach',       x:275, z:190},
+  {id:'playa', name:'PLAYA DE PESCA', short:'PLAYA',           varName:'RiverBeach',       x:275, z:190},
   {id:'vieja', name:'VIEJA',                    varName:'OldLadyRanch',     x:124, z:204},
-  {id:'lakemt',name:'MONTAÑA Y LAGO',           varName:'LakeMountain',     x:71, z:338},
-  {id:'hunt',  name:'CAMPO DE CAZA',            varName:'HuntingField',     x:209, z:329},
-  {id:'wrong', name:'MUERTE CAMINO EQUIVOCADO', varName:'WrongTurnDeath',   x:98, z:116},
+  {id:'lakemt',name:'MONTAÑA Y LAGO', short:'LAGO',           varName:'LakeMountain',     x:71, z:338},
+  {id:'hunt',  name:'CAMPO DE CAZA', short:'CAZA',            varName:'HuntingField',     x:209, z:329},
+  {id:'wrong', name:'MUERTE CAMINO EQUIVOCADO', short:'MUERTE', varName:'WrongTurnDeath',   x:98, z:116},
   {id:'grave', name:'TUMBA',                    varName:'Grave',            x:407, z:250},
   {id:'reh',   name:'REHENES',                  varName:'HostageArea',      x:482, z:260},
-  {id:'crim',  name:'DELINCUENTES PRINCIPAL',   varName:'MainCriminalCamp', x:476, z:208},
+  {id:'crim',  name:'DELINCUENTES PRINCIPAL', short:'DELINCUENTES',   varName:'MainCriminalCamp', x:476, z:208},
   {id:'escape',name:'ESCAPE',                   varName:'EscapePoint',      x:422, z:22},
-  {id:'cabW',  name:'CABAÑA OESTE',             varName:'AbandonedCabin',   x:196, z:133},
-  {id:'mirW',  name:'MIRADOR OESTE',            varName:'LakeLookout',      x:142, z:278},
-  {id:'cabE',  name:'CABAÑA ESTE',              varName:'CabinEast',        x:359, z:172},
-  {id:'mirE',  name:'MIRADOR ESTE',             varName:'LookoutEast',      x:367, z:320},
+  {id:'cabW',  name:'CABAÑA OESTE', short:'CABAÑA O.',             varName:'AbandonedCabin',   x:196, z:133},
+  {id:'mirW',  name:'MIRADOR OESTE', short:'MIRADOR O.',            varName:'LakeLookout',      x:142, z:278},
+  {id:'cabE',  name:'CABAÑA ESTE', short:'CABAÑA E.',              varName:'CabinEast',        x:359, z:172},
+  {id:'mirE',  name:'MIRADOR ESTE', short:'MIRADOR E.',             varName:'LookoutEast',      x:367, z:320},
   // ---- IDEAS NUEVAS (áreas + puntos de interés + folklore) — todavía NO construidas (turquesa) ----
-  {id:'estepa',   name:'ESTEPA (campo abierto)',        type:'idea', x:130, z:105, desc:'Pasto seco pajizo, viento fuerte, cielo enorme. Alambrados rotos, esqueletos de oveja, un molino oxidado girando. Silencio y exposición → la Luz Mala se ve venir de lejos. Rompe el "todo bosque". [sobre el Camino 13 / camino equivocado]'},
-  {id:'molino',   name:'Molino de viento oxidado',      type:'idea', x:110, z:94, desc:'Molino australiano oxidado girando con el viento, chirriando. Hito visible de lejos en la estepa.'},
-  {id:'mallin',   name:'MALLÍN (pantano)',              type:'idea', x:252, z:323, desc:'Hondonada con agua estancada, juncos, troncos podridos, niebla baja. Pasarelas de madera podridas. Te ralentiza, chapotea, huele a muerte. [sobre el Camino 12, entre la vieja y el mirador este]'},
-  {id:'roquedal', name:'ROQUEDAL / CAÑADÓN',            type:'idea', x:100, z:276, desc:'Afloramiento de piedra, un barranco, cuevas. Verticalidad y ecos. Escondites y emboscadas. [sobre el Camino 16, subiendo a la montaña]'},
-  {id:'quemado',  name:'BOSQUE QUEMADO',                type:'idea', x:176, z:257, desc:'Troncos negros parados, ceniza, sin hojas — un incendio viejo. Se ve TODO pero está muerto. Inquietante por contraste con el bosque vivo. [sobre el Camino 20, mirador oeste ↔ campamento]'},
-  {id:'orilla',   name:'ORILLA DEL LAGO (niebla/muelle)',type:'idea', x:68, z:332, desc:'Playa de canto rodado, niebla sobre el agua, un muelle podrido. Leyenda: El Cuero, el cuero-bicho del lago que arrastra y ahoga. [en la punta del Camino A, junto a la montaña y lago]'},
-  {id:'estancia', name:'ESTANCIA + EL FAMILIAR',        type:'idea', x:512, z:271, desc:'Casco de estancia con galpón de esquila. El patrón alimentaba al FAMILIAR (perro/víbora negra del demonio) con peones a cambio de prosperidad. Cadenas en el galpón, manchas de sangre. Ata con el perro y con la vieja. [sobre el camino Delincuentes↔Secundario, lado este]'},
-  {id:'difunta',  name:'SANTUARIO DIFUNTA CORREA',      type:'idea', x:310, z:27,  desc:'Al borde de la RUTA: montaña de BOTELLAS DE AGUA, banderas rojas descoloridas. Marca de "acá pasó algo". Hito muy visible desde la ruta, en el cruce del río.'},
-  {id:'gauchito', name:'ERMITA GAUCHITO GIL',           type:'idea', x:158, z:32,  desc:'Ermita ROJA en el CRUCE de la ruta con el desvío de tierra — un faro de color en la noche. Velas, banderas rojas. Sirve de hito/brújula.'},
-  {id:'capilla',  name:'CAPILLA ANEGADA',               type:'idea', x:311, z:278, desc:'Capilla vieja medio hundida en el RÍO, el campanario asomando del agua. Terror puro. Una campana que suena sola. [sendero corto desde el Camino 21]'},
-  {id:'ahorcado', name:'ÁRBOL DEL AHORCADO / CEMENTERIO',type:'idea', x:402, z:266, desc:'Pocas cruces de madera torcidas + la tumba sin nombre. Un árbol solitario con una soga colgando. Ánimas. [pegado a la TUMBA que ya existe]'},
-  {id:'ypf',      name:'ESTACIÓN YPF ABANDONADA',       type:'idea', x:449, z:31,  desc:'Surtidores oxidados, un Falcon tirado, un tubo de luz parpadeando. Punto de "civilización muerta" sobre la RUTA, en el cruce del escape.'},
-  {id:'antena',   name:'ANTENA / REPETIDORA (cerro)',   type:'idea', x:370, z:342, desc:'Torre altísima con luz roja parpadeante, visible de TODO el mapa. La brújula natural del jugador de noche. [sobre el cerro del mirador este]'},
-  {id:'corrales', name:'CORRALES / BAÑADERO',           type:'idea', x:528, z:293, desc:'Postes, alambres, huesos de oveja, un bañadero. Un perro guardián (¿el tuyo?). Pegado a la estancia.'},
+  {id:'estepa',   name:'ESTEPA (campo abierto)', short:'ESTEPA',        type:'idea', x:130, z:105, desc:'Pasto seco pajizo, viento fuerte, cielo enorme. Alambrados rotos, esqueletos de oveja, un molino oxidado girando. Silencio y exposición → la Luz Mala se ve venir de lejos. Rompe el "todo bosque". [sobre el Camino 13 / camino equivocado]'},
+  {id:'molino',   name:'Molino de viento oxidado', short:'MOLINO',      type:'idea', x:110, z:94, desc:'Molino australiano oxidado girando con el viento, chirriando. Hito visible de lejos en la estepa.'},
+  {id:'mallin',   name:'MALLÍN (pantano)', short:'MALLÍN',              type:'idea', x:252, z:323, desc:'Hondonada con agua estancada, juncos, troncos podridos, niebla baja. Pasarelas de madera podridas. Te ralentiza, chapotea, huele a muerte. [sobre el Camino 12, entre la vieja y el mirador este]'},
+  {id:'roquedal', name:'ROQUEDAL / CAÑADÓN', short:'ROQUEDAL',            type:'idea', x:100, z:276, desc:'Afloramiento de piedra, un barranco, cuevas. Verticalidad y ecos. Escondites y emboscadas. [sobre el Camino 16, subiendo a la montaña]'},
+  {id:'quemado',  name:'BOSQUE QUEMADO', short:'QUEMADO',                type:'idea', x:176, z:257, desc:'Troncos negros parados, ceniza, sin hojas — un incendio viejo. Se ve TODO pero está muerto. Inquietante por contraste con el bosque vivo. [sobre el Camino 20, mirador oeste ↔ campamento]'},
+  {id:'orilla',   name:'ORILLA DEL LAGO (niebla/muelle)', short:'ORILLA',type:'idea', x:68, z:332, desc:'Playa de canto rodado, niebla sobre el agua, un muelle podrido. Leyenda: El Cuero, el cuero-bicho del lago que arrastra y ahoga. [en la punta del Camino A, junto a la montaña y lago]'},
+  {id:'estancia', name:'ESTANCIA + EL FAMILIAR', short:'ESTANCIA',        type:'idea', x:512, z:271, desc:'Casco de estancia con galpón de esquila. El patrón alimentaba al FAMILIAR (perro/víbora negra del demonio) con peones a cambio de prosperidad. Cadenas en el galpón, manchas de sangre. Ata con el perro y con la vieja. [sobre el camino Delincuentes↔Secundario, lado este]'},
+  {id:'difunta',  name:'SANTUARIO DIFUNTA CORREA', short:'DIFUNTA CORREA',      type:'idea', x:310, z:27,  desc:'Al borde de la RUTA: montaña de BOTELLAS DE AGUA, banderas rojas descoloridas. Marca de "acá pasó algo". Hito muy visible desde la ruta, en el cruce del río.'},
+  {id:'gauchito', name:'ERMITA GAUCHITO GIL', short:'GAUCHITO GIL',           type:'idea', x:158, z:32,  desc:'Ermita ROJA en el CRUCE de la ruta con el desvío de tierra — un faro de color en la noche. Velas, banderas rojas. Sirve de hito/brújula.'},
+  {id:'capilla',  name:'CAPILLA ANEGADA', short:'CAPILLA',               type:'idea', x:311, z:278, desc:'Capilla vieja medio hundida en el RÍO, el campanario asomando del agua. Terror puro. Una campana que suena sola. [sendero corto desde el Camino 21]'},
+  {id:'ahorcado', name:'ÁRBOL DEL AHORCADO / CEMENTERIO', short:'AHORCADO',type:'idea', x:402, z:266, desc:'Pocas cruces de madera torcidas + la tumba sin nombre. Un árbol solitario con una soga colgando. Ánimas. [pegado a la TUMBA que ya existe]'},
+  {id:'ypf',      name:'ESTACIÓN YPF ABANDONADA', short:'YPF',       type:'idea', x:449, z:31,  desc:'Surtidores oxidados, un Falcon tirado, un tubo de luz parpadeando. Punto de "civilización muerta" sobre la RUTA, en el cruce del escape.'},
+  {id:'antena',   name:'ANTENA / REPETIDORA (cerro)', short:'ANTENA',   type:'idea', x:370, z:342, desc:'Torre altísima con luz roja parpadeante, visible de TODO el mapa. La brújula natural del jugador de noche. [sobre el cerro del mirador este]'},
+  {id:'corrales', name:'CORRALES / BAÑADERO', short:'CORRALES',           type:'idea', x:528, z:293, desc:'Postes, alambres, huesos de oveja, un bañadero. Un perro guardián (¿el tuyo?). Pegado a la estancia.'},
 ];
 // Caminos: cada pt es {node:'id'} (sigue a esa zona) o {x,z} (waypoint libre editable)
 let paths = [
@@ -181,21 +186,24 @@ function render(){
   svg.appendChild(g);
   svg.appendChild(textEl(24,34,'N ↑',{fill:'#6f7565','font-size':'22','font-weight':'700'}));
 
-  // caminos (curvas suaves)
+  // caminos (curvas suaves) — clic en la línea = seleccionar el camino ENTERO (para poder
+  // borrarlo con "Borrar seleccionado"); doble clic = insertar un punto (ver dblclick).
   paths.forEach(p=>{
     const scr=p.pts.map(pt=>{ const w=resolve(pt); return {x:sx(w.x), y:sy(w.z)}; });
-    const path=pathEl(smooth(scr), 'edge '+p.cls); path.dataset.path=p.id; svg.appendChild(path);
+    const isSelPath = sel&&sel.kind==='path'&&sel.pid===p.id;
+    const path=pathEl(smooth(scr), 'edge '+p.cls+(isSelPath?' sel':'')); path.dataset.path=p.id; svg.appendChild(path);
     const mid=scr[Math.floor(scr.length/2)];
     if(p.name) svg.appendChild(textEl(mid.x+5, mid.y-5, p.name, {class:'edge-label'}));
   });
-  // handles de waypoints libres
+  // handles de waypoints: libres (amarillo lleno) y enganchados a un lugar (hueco,
+  // mismo color de borde) — agarrar un enganchado con el mouse lo desengancha (ver pointerdown).
   paths.forEach(p=>{
     p.pts.forEach((pt,i)=>{
-      if(pt.node) return; // los que siguen a una zona no son handles
       const isSel = sel&&sel.kind==='wp'&&sel.pid===p.id&&sel.idx===i;
+      const w=resolve(pt);
       const c=document.createElementNS(svg.namespaceURI,'circle');
-      c.setAttribute('cx',sx(pt.x)); c.setAttribute('cy',sy(pt.z)); c.setAttribute('r',4);
-      c.setAttribute('class','wp'+(isSel?' sel':'')); c.dataset.wp=p.id+':'+i;
+      c.setAttribute('cx',sx(w.x)); c.setAttribute('cy',sy(w.z)); c.setAttribute('r',pt.node?3.2:4);
+      c.setAttribute('class','wp'+(pt.node?' linked':'')+(isSel?' sel':'')); c.dataset.wp=p.id+':'+i;
       svg.appendChild(c);
     });
   });
@@ -206,7 +214,7 @@ function render(){
     c.setAttribute('cx',sx(n.x)); c.setAttribute('cy',sy(n.z)); c.setAttribute('r',7);
     c.setAttribute('class','node-circ'+(n.type==='idea'?' idea':'')+(isSel?' sel':'')); c.dataset.id=n.id;
     svg.appendChild(c);
-    svg.appendChild(textEl(sx(n.x)+10, sy(n.z)+3, n.name, {class:'node-label'}));
+    svg.appendChild(textEl(sx(n.x)+10, sy(n.z)+3, n.short||n.name, {class:'node-label'}));
   });
   renderList();
   updateDesc();
@@ -215,6 +223,14 @@ function render(){
 // Panel de descripción: muestra la idea del nodo seleccionado (o una ayuda por defecto).
 function updateDesc(){
   const box=document.getElementById('desc');
+  if(sel && sel.kind==='path'){
+    const p=pathById(sel.pid);
+    if(p){
+      box.innerHTML = '<b>'+(p.name||'(camino sin nombre)')+'</b> <span class="tag">CAMINO seleccionado</span><br>'
+        +'<span style="color:#8f8b7a">'+p.pts.length+' puntos · clase: '+(p.cls||'sendero')+'<br>"Borrar seleccionado" lo borra ENTERO.</span>';
+      return;
+    }
+  }
   if(sel && sel.kind==='node'){
     const n=nodeById(sel.id);
     if(n){
@@ -255,8 +271,17 @@ function toWorld(evt){ const pt=svg.createSVGPoint(); pt.x=evt.clientX; pt.y=evt
 svg.addEventListener('pointerdown', e=>{
   const id=e.target.dataset && e.target.dataset.id;
   const wp=e.target.dataset && e.target.dataset.wp;
+  const pid=e.target.dataset && e.target.dataset.path;
   if(id){ dragging={kind:'node',id}; sel={kind:'node',id}; svg.setPointerCapture(e.pointerId); render(); }
-  else if(wp){ const [pid,idx]=wp.split(':'); dragging={kind:'wp',pid,idx:+idx}; sel={kind:'wp',pid,idx:+idx}; svg.setPointerCapture(e.pointerId); render(); }
+  else if(wp){
+    const [wpid,idx]=wp.split(':');
+    const path=pathById(wpid); const pt=path.pts[+idx];
+    // si el punto está enganchado a un lugar, agarrarlo lo DESENGANCHA (queda libre en su
+    // posición actual) — así se puede separar y arrastrar como cualquier otro puntito.
+    if(pt.node){ const w=resolve(pt); pt.x=Math.round(w.x); pt.z=Math.round(w.z); delete pt.node; }
+    dragging={kind:'wp',pid:wpid,idx:+idx}; sel={kind:'wp',pid:wpid,idx:+idx}; svg.setPointerCapture(e.pointerId); render();
+  }
+  else if(pid){ sel={kind:'path',pid}; render(); }   // clic en la línea = seleccionar el camino entero
   else { panning=true; panStart={cx:e.clientX,cy:e.clientY,vx:view.x,vy:view.y}; svg.setPointerCapture(e.pointerId); svg.style.cursor='grabbing'; }
 });
 svg.addEventListener('pointermove', e=>{
@@ -307,6 +332,7 @@ document.getElementById('addRiver').onclick=()=>{
 document.getElementById('del').onclick=()=>{
   if(!sel) return;
   if(sel.kind==='node'){ nodes=nodes.filter(n=>n.id!==sel.id); paths.forEach(p=>{ p.pts=p.pts.filter(pt=>pt.node!==sel.id); }); }
+  else if(sel.kind==='path'){ paths=paths.filter(p=>p.id!==sel.pid); }   // borra el camino/río ENTERO
   else { const p=pathById(sel.pid); if(p && p.pts.length>2) p.pts.splice(sel.idx,1); }
   sel=null; render();
 };
