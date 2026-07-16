@@ -154,6 +154,9 @@ namespace FolkloreArchives.MapGen
                     new Vector3(halfLen * 2f, 1.1f, 0.15f), woodMat);
                 BuilderUtils.Prim(PrimitiveType.Cube, "RailS", fb, new Vector3(bx, deckY + 0.65f, bz - 2.1f),
                     new Vector3(halfLen * 2f, 1.1f, 0.15f), woodMat);
+                // owner: que cruce más "de costado" → giro el puente 40° (queda en diagonal,
+                // no perpendicular al río). Los hijos ya están puestos → rotar el grupo los lleva.
+                fb.rotation = Quaternion.Euler(0f, 40f, 0f);
             }
 
             // a warm lantern at the player's campsite so it reads as a safe, lit haven

@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 28;
+        const int SplatVersion = 29;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -257,11 +257,13 @@ namespace FolkloreArchives.MapGen
 
             // enclosing ridges: west / north / far-east walls of hills
             // (skipped near the paved route so the road stays flat)
-            // (mapa reducido 0.7: umbrales de posición escalados 900→630, 150→105, 110→77)
-            float ridge = Mathf.Clamp01((wz - 630f) / 100f); // north, always
-            if (wz > 105f)
+            // umbrales RELATIVOS a MapSize/MapSizeX → se auto-ajustan si se recorta el mapa
+            // (owner recortó el terreno sobrante de los bordes).
+            float wWest = MapLayout.MapSizeX * 0.08f;
+            float ridge = Mathf.Clamp01((wz - MapLayout.MapSize * 0.9f) / 70f); // north, always
+            if (wz > MapLayout.MapSize * 0.15f)
             {
-                ridge = Mathf.Max(ridge, Mathf.Clamp01((77f - wx) / 77f)); // west
+                ridge = Mathf.Max(ridge, Mathf.Clamp01((wWest - wx) / wWest)); // west
                 ridge = Mathf.Max(ridge, Mathf.Clamp01((wx - (MapLayout.MapSizeX - 60f)) / 60f));  // far east (follows the wider map)
             }
             a += ridge * ridge * 16f * (0.7f + Mathf.PerlinNoise(wx * 0.02f, wz * 0.02f) * 0.6f);

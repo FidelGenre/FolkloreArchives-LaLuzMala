@@ -16,8 +16,8 @@ namespace FolkloreArchives.MapGen
         // The map is now LONGER in x than in z, so the paved road has a long approach
         // before it reaches the inhabited area. `MapSize` keeps its old meaning (the z
         // extent) since most z-axis code already uses it; `MapSizeX` is the x extent.
-        public const float MapSize  = 700f;        // z extent (metres) — mapa reducido 0.7 (owner: "muy grande")
-        public const float MapSizeX = 980f;        // x extent (metres) — mapa reducido 0.7
+        public const float MapSize  = 660f;        // z extent (metres) — recortado al contenido (owner: sacar terreno sobrante del borde)
+        public const float MapSizeX = 800f;        // x extent (metres) — recortado el este vacío (la ruta seguía de largo sin nada)
         public const float MaxHeight = 135f;       // subido para picos nevados altos (antes 60)
         public const string RootName = "FOLKLORE_MAP";
         public const string GeneratedFolder = "Assets/_FolkloreArchives/Generated";
