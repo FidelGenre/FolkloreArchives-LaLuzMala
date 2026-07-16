@@ -129,32 +129,31 @@ let nodes = [
 ];
 // Caminos: cada pt es {node:'id'} (sigue a esa zona) o {x,z} (waypoint libre editable)
 let paths = [
-  {id:'ruta',   name:'RUTA (asfalto)', cls:'paved', pts:[{x:-10,z:19},{x:158,z:17},{x:310,z:14},{x:449,z:17},{x:746,z:20}]},
-  {id:'rio',    name:'RÍO', cls:'river', pts:[{x:315,z:567},{x:311,z:368},{x:313,z:231},{x:314,z:63},{x:311,z:-21}]},
-  {id:'rio2',   name:'RÍO', cls:'river', pts:[{x:110,z:318},{x:238,z:251},{x:291,z:187},{x:311,z:141}]},
-  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{x:171,z:19},{x:182,z:132},{x:215,z:232}]},
-  {id:'caminoA',name:'Camino A', cls:'', pts:[{x:71,z:338},{x:208,z:333},{x:215,z:232}]},
-  {id:'c16', name:'CAMINO 16', cls:'', pts:[{x:71,z:338},{x:105,z:273},{x:124,z:204}]},
-  {id:'c10', name:'CAMINO 10', cls:'', pts:[{x:209,z:329},{x:152,z:226},{x:215,z:232}]},
-  {id:'c12', name:'CAMINO 12', cls:'', pts:[{x:209,z:329},{x:294,z:315},{x:365,z:319}]},
-  {id:'mt',  name:'Mirador–Tumba', cls:'', pts:[{x:366,z:318},{x:407,z:329},{x:434,z:332}]},
-  {id:'playaP', name:'Sendero playa', cls:'', pts:[{x:215,z:232},{x:237,z:197},{x:274,z:190}]},
-  {id:'gc',  name:'Tumba–Delincuentes', cls:'', pts:[{x:411,z:250},{x:446,z:230},{x:478,z:208}]},
-  {id:'cr',  name:'Rehenes', cls:'', pts:[{x:479,z:208},{x:482,z:238},{x:482,z:260}]},
-  {id:'c15', name:'CAMINO 15', cls:'', pts:[{x:405,z:248},{x:360,z:173},{x:423,z:26}]},
-  {id:'c16e',name:'CAMINO 16', cls:'', pts:[{x:476,z:209},{x:425,z:141},{x:422,z:23}]},
-  {id:'c13', name:'CAMINO 13', cls:'', pts:[{x:95,z:116},{x:130,z:98},{x:170,z:77}]},
-  {id:'tMirW', name:'Subida mirador O', cls:'dirt', pts:[{x:206,z:332},{x:164,z:294},{x:142,z:278}]},
-  {id:'tMirE', name:'Subida mirador E', cls:'dirt', pts:[{x:493,z:314},{x:410,z:248},{x:364,z:317}]},
-  {id:'c20', name:'CAMINO 20', cls:'', pts:[{x:145,z:280},{x:212,z:236},{x:218,z:227}]},
+  {id:'ruta', name:'RUTA (asfalto)', cls:'paved', pts:[{x:-10,z:19},{x:158,z:17},{x:310,z:14},{x:449,z:17},{x:746,z:20}]},
+  {id:'rio', name:'RÍO', cls:'river', pts:[{x:315,z:567},{x:311,z:368},{x:313,z:231},{x:314,z:63},{x:311,z:-21}]},
+  {id:'rio2', name:'RÍO', cls:'river', pts:[{x:110,z:318},{x:238,z:251},{x:291,z:187},{x:311,z:141}]},
+  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{node:'desvio'},{x:182,z:132},{node:'camp'}]},
+  {id:'caminoA', name:'Camino A', cls:'', pts:[{node:'lakemt'},{x:208,z:333},{node:'camp'}]},
+  {id:'c16', name:'CAMINO 16', cls:'', pts:[{node:'lakemt'},{x:105,z:273},{node:'vieja'}]},
+  {id:'c10', name:'CAMINO 10', cls:'', pts:[{node:'hunt'},{x:152,z:226},{node:'camp'}]},
+  {id:'c12', name:'CAMINO 12', cls:'', pts:[{node:'hunt'},{x:294,z:315},{node:'mirE'}]},
+  {id:'mt', name:'Mirador–Tumba', cls:'', pts:[{node:'mirE'},{x:407,z:329},{x:434,z:332}]},
+  {id:'playaP', name:'Sendero playa', cls:'', pts:[{node:'camp'},{x:237,z:197},{node:'playa'}]},
+  {id:'gc', name:'Tumba–Delincuentes', cls:'', pts:[{node:'grave'},{x:446,z:230},{node:'crim'}]},
+  {id:'cr', name:'Rehenes', cls:'', pts:[{node:'crim'},{x:482,z:238},{node:'reh'}]},
+  {id:'c15', name:'CAMINO 15', cls:'', pts:[{node:'grave'},{x:360,z:173},{node:'escape'}]},
+  {id:'c16e', name:'CAMINO 16', cls:'', pts:[{node:'crim'},{x:425,z:141},{node:'escape'}]},
+  {id:'c13', name:'CAMINO 13', cls:'', pts:[{node:'wrong'},{x:130,z:98},{x:170,z:77}]},
+  {id:'tMirW', name:'Subida mirador O', cls:'dirt', pts:[{node:'hunt'},{x:164,z:294},{node:'mirW'}]},
+  {id:'tMirE', name:'Subida mirador E', cls:'dirt', pts:[{x:493,z:314},{x:410,z:248},{node:'mirE'}]},
+  {id:'c20', name:'CAMINO 20', cls:'', pts:[{node:'mirW'},{x:212,z:236},{node:'camp'}]},
   {id:'c21', name:'CAMINO 21', cls:'', pts:[{x:221,z:233},{x:281,z:284},{x:295,z:314}]},
-  // ---- CONECTORES nuevos para que los caminos LLEVEN a las ideas (no senderos vacíos) ----
-  {id:'iNW',       name:'Ruta→estepa',        cls:'dirt', pts:[{x:174,z:18},{x:173,z:50},{x:170,z:77}]},           // liga la ruta con el NW (estepa/molino, sobre C13)
-  {id:'iCapilla',  name:'Sendero capilla',    cls:'',     pts:[{x:295,z:314},{x:305,z:294},{x:311,z:278}]},          // C21 → capilla anegada (río)
-  {id:'iAhorcado', name:'Sendero ahorcado',   cls:'',     pts:[{x:411,z:250},{x:405,z:257},{x:402,z:266}]},          // tumba → árbol del ahorcado
-  {id:'iAntena',   name:'Subida antena',      cls:'dirt', pts:[{x:367,z:320},{x:369,z:332},{x:370,z:342}]},          // mirador este → antena (cerro)
-  {id:'iEstancia', name:'Camino estancia',    cls:'dirt', pts:[{x:476,z:208},{x:500,z:237},{x:512,z:271}]},          // delincuentes → estancia
-  {id:'iCorrales', name:'',                   cls:'',     pts:[{x:512,z:271},{x:523,z:283},{x:528,z:293}]},          // estancia → corrales
+  {id:'iNW', name:'Ruta→estepa', cls:'dirt', pts:[{node:'desvio'},{x:173,z:50},{x:170,z:77}]},
+  {id:'iCapilla', name:'Sendero capilla', cls:'', pts:[{x:295,z:314},{x:305,z:294},{node:'capilla'}]},
+  {id:'iAhorcado', name:'Sendero ahorcado', cls:'', pts:[{node:'grave'},{x:405,z:257},{node:'ahorcado'}]},
+  {id:'iAntena', name:'Subida antena', cls:'dirt', pts:[{node:'mirE'},{x:369,z:332},{node:'antena'}]},
+  {id:'iEstancia', name:'Camino estancia', cls:'dirt', pts:[{node:'crim'},{x:500,z:237},{node:'estancia'}]},
+  {id:'iCorrales', name:'', cls:'', pts:[{node:'estancia'},{x:523,z:283},{node:'corrales'}]}
 ];
 
 let sel=null, dragging=null, panning=false, panStart=null;
