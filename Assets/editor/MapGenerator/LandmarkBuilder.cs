@@ -142,7 +142,7 @@ namespace FolkloreArchives.MapGen
             // así el cruce a pie no queda bloqueado por agua. Se apoya en la altura de
             // las orillas (sampleada) para no flotar. Cruce ~ (598, 590).
             {
-                float bx = 419f, bz = 413f, halfLen = 42f;   // mapa reducido 0.7: (598,590)→(419,413); halfLen (largo del puente) se mantiene
+                float bx = 314f, bz = 310f, halfLen = 42f;   // 2ª pasada 0.75: (419,413)→(314,310); halfLen (largo del puente) se mantiene
                 float wy = t.SampleHeight(new Vector3(bx - halfLen, 0f, bz));
                 float ey = t.SampleHeight(new Vector3(bx + halfLen, 0f, bz));
                 float deckY = Mathf.Max(wy, ey) + 0.15f;

@@ -126,7 +126,7 @@ namespace FolkloreArchives.MapGen
             // río al centro del mapa recortado (MapSize=550) — antes el plano medía 1200m
             // de largo (sobraba, hecho para el mapa grande viejo) y sobresalía flotando en
             // el vacío más allá del borde recortado. Ahora cubre el mapa + margen chico.
-            water.transform.position = new Vector3(416f, 9.6f, MapLayout.MapSize * 0.5f);
+            water.transform.position = new Vector3(312f, 9.6f, MapLayout.MapSize * 0.5f);
             water.transform.localScale = new Vector3(18f, 1f, (MapLayout.MapSize + 160f) / 10f);
             // Share the SAME material as the lake (mat_lakewater) so the river and
             // lake read as one body of water instead of two slightly-different tones.

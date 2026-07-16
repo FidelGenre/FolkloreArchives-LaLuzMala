@@ -47,7 +47,7 @@
 </head>
 <body>
 <div id="stage">
-  <svg id="svg" viewBox="0 0 980 700" preserveAspectRatio="xMidYMid meet"></svg>
+  <svg id="svg" viewBox="0 0 600 413" preserveAspectRatio="xMidYMid meet"></svg>
 </div>
 <div id="side">
   <h1>LA LUZ MALA — Editor de Plano <small>Arrastrá puntos y curvas. Coincide con el juego (x, z).</small></h1>
@@ -76,7 +76,7 @@
   </div>
 </div>
 <script>
-const W=980, H=700;
+const W=600, H=413;
 const svg = document.getElementById('svg');
 const sx = x => x;
 const sy = z => H - z; // z invertido: Norte arriba
@@ -96,68 +96,68 @@ function resetView(){ view={x:0,y:0,w:W,h:H}; applyView(); }
 // Zonas (world x, z) + nombre de variable en MapLayout.cs
 // Layout de DOS LADOS reconstruido del plano del owner: OESTE = humano, ESTE = peligro.
 let nodes = [
-  {id:'desvio',name:'DESVÍO (ruta→tierra)',    varName:'DirtTurnoff',      x:232, z:24},
-  {id:'camp',  name:'CAMPAMENTO',               varName:'Campsite',         x:287, z:309},
-  {id:'playa', name:'PLAYA DE PESCA',           varName:'RiverBeach',       x:367, z:253},
-  {id:'vieja', name:'VIEJA',                    varName:'OldLadyRanch',     x:165, z:272},
-  {id:'lakemt',name:'MONTAÑA Y LAGO',           varName:'LakeMountain',     x:95, z:451},
-  {id:'hunt',  name:'CAMPO DE CAZA',            varName:'HuntingField',     x:279, z:438},
-  {id:'wrong', name:'MUERTE CAMINO EQUIVOCADO', varName:'WrongTurnDeath',   x:130, z:155},
-  {id:'grave', name:'TUMBA',                    varName:'Grave',            x:543, z:333},
-  {id:'sec',   name:'CAMPAMENTO SECUNDARIO',    varName:'SecondaryCamp',    x:659, z:418},
-  {id:'reh',   name:'REHENES',                  varName:'HostageArea',      x:642, z:347},
-  {id:'crim',  name:'DELINCUENTES PRINCIPAL',   varName:'MainCriminalCamp', x:634, z:277},
-  {id:'escape',name:'ESCAPE',                   varName:'EscapePoint',      x:562, z:29},
-  {id:'cabW',  name:'CABAÑA OESTE',             varName:'AbandonedCabin',   x:261, z:177},
-  {id:'mirW',  name:'MIRADOR OESTE',            varName:'LakeLookout',      x:189, z:371},
-  {id:'cabE',  name:'CABAÑA ESTE',              varName:'CabinEast',        x:478, z:229},
-  {id:'mirE',  name:'MIRADOR ESTE',             varName:'LookoutEast',      x:489, z:426},
+  {id:'desvio',name:'DESVÍO (ruta→tierra)',    varName:'DirtTurnoff',      x:174, z:18},
+  {id:'camp',  name:'CAMPAMENTO',               varName:'Campsite',         x:215, z:232},
+  {id:'playa', name:'PLAYA DE PESCA',           varName:'RiverBeach',       x:275, z:190},
+  {id:'vieja', name:'VIEJA',                    varName:'OldLadyRanch',     x:124, z:204},
+  {id:'lakemt',name:'MONTAÑA Y LAGO',           varName:'LakeMountain',     x:71, z:338},
+  {id:'hunt',  name:'CAMPO DE CAZA',            varName:'HuntingField',     x:209, z:329},
+  {id:'wrong', name:'MUERTE CAMINO EQUIVOCADO', varName:'WrongTurnDeath',   x:98, z:116},
+  {id:'grave', name:'TUMBA',                    varName:'Grave',            x:407, z:250},
+  {id:'sec',   name:'CAMPAMENTO SECUNDARIO',    varName:'SecondaryCamp',    x:494, z:314},
+  {id:'reh',   name:'REHENES',                  varName:'HostageArea',      x:482, z:260},
+  {id:'crim',  name:'DELINCUENTES PRINCIPAL',   varName:'MainCriminalCamp', x:476, z:208},
+  {id:'escape',name:'ESCAPE',                   varName:'EscapePoint',      x:422, z:22},
+  {id:'cabW',  name:'CABAÑA OESTE',             varName:'AbandonedCabin',   x:196, z:133},
+  {id:'mirW',  name:'MIRADOR OESTE',            varName:'LakeLookout',      x:142, z:278},
+  {id:'cabE',  name:'CABAÑA ESTE',              varName:'CabinEast',        x:359, z:172},
+  {id:'mirE',  name:'MIRADOR ESTE',             varName:'LookoutEast',      x:367, z:320},
   // ---- IDEAS NUEVAS (áreas + puntos de interés + folklore) — todavía NO construidas (turquesa) ----
-  {id:'estepa',   name:'ESTEPA (campo abierto)',        type:'idea', x:173, z:140, desc:'Pasto seco pajizo, viento fuerte, cielo enorme. Alambrados rotos, esqueletos de oveja, un molino oxidado girando. Silencio y exposición → la Luz Mala se ve venir de lejos. Rompe el "todo bosque". [sobre el Camino 13 / camino equivocado]'},
-  {id:'molino',   name:'Molino de viento oxidado',      type:'idea', x:147, z:125, desc:'Molino australiano oxidado girando con el viento, chirriando. Hito visible de lejos en la estepa.'},
-  {id:'mallin',   name:'MALLÍN (pantano)',              type:'idea', x:336, z:431, desc:'Hondonada con agua estancada, juncos, troncos podridos, niebla baja. Pasarelas de madera podridas. Te ralentiza, chapotea, huele a muerte. [sobre el Camino 12, entre la vieja y el mirador este]'},
-  {id:'roquedal', name:'ROQUEDAL / CAÑADÓN',            type:'idea', x:133, z:368, desc:'Afloramiento de piedra, un barranco, cuevas. Verticalidad y ecos. Escondites y emboscadas. [sobre el Camino 16, subiendo a la montaña]'},
-  {id:'quemado',  name:'BOSQUE QUEMADO',                type:'idea', x:234, z:343, desc:'Troncos negros parados, ceniza, sin hojas — un incendio viejo. Se ve TODO pero está muerto. Inquietante por contraste con el bosque vivo. [sobre el Camino 20, mirador oeste ↔ campamento]'},
-  {id:'orilla',   name:'ORILLA DEL LAGO (niebla/muelle)',type:'idea', x:90, z:442, desc:'Playa de canto rodado, niebla sobre el agua, un muelle podrido. Leyenda: El Cuero, el cuero-bicho del lago que arrastra y ahoga. [en la punta del Camino A, junto a la montaña y lago]'},
-  {id:'estancia', name:'ESTANCIA + EL FAMILIAR',        type:'idea', x:683, z:361, desc:'Casco de estancia con galpón de esquila. El patrón alimentaba al FAMILIAR (perro/víbora negra del demonio) con peones a cambio de prosperidad. Cadenas en el galpón, manchas de sangre. Ata con el perro y con la vieja. [sobre el camino Delincuentes↔Secundario, lado este]'},
-  {id:'difunta',  name:'SANTUARIO DIFUNTA CORREA',      type:'idea', x:413, z:36,  desc:'Al borde de la RUTA: montaña de BOTELLAS DE AGUA, banderas rojas descoloridas. Marca de "acá pasó algo". Hito muy visible desde la ruta, en el cruce del río.'},
-  {id:'gauchito', name:'ERMITA GAUCHITO GIL',           type:'idea', x:210, z:43,  desc:'Ermita ROJA en el CRUCE de la ruta con el desvío de tierra — un faro de color en la noche. Velas, banderas rojas. Sirve de hito/brújula.'},
-  {id:'capilla',  name:'CAPILLA ANEGADA',               type:'idea', x:414, z:370, desc:'Capilla vieja medio hundida en el RÍO, el campanario asomando del agua. Terror puro. Una campana que suena sola. [sendero corto desde el Camino 21]'},
-  {id:'ahorcado', name:'ÁRBOL DEL AHORCADO / CEMENTERIO',type:'idea', x:536, z:354, desc:'Pocas cruces de madera torcidas + la tumba sin nombre. Un árbol solitario con una soga colgando. Ánimas. [pegado a la TUMBA que ya existe]'},
-  {id:'ypf',      name:'ESTACIÓN YPF ABANDONADA',       type:'idea', x:598, z:41,  desc:'Surtidores oxidados, un Falcon tirado, un tubo de luz parpadeando. Punto de "civilización muerta" sobre la RUTA, en el cruce del escape.'},
-  {id:'antena',   name:'ANTENA / REPETIDORA (cerro)',   type:'idea', x:493, z:456, desc:'Torre altísima con luz roja parpadeante, visible de TODO el mapa. La brújula natural del jugador de noche. [sobre el cerro del mirador este]'},
-  {id:'corrales', name:'CORRALES / BAÑADERO',           type:'idea', x:704, z:391, desc:'Postes, alambres, huesos de oveja, un bañadero. Un perro guardián (¿el tuyo?). Pegado a la estancia.'},
+  {id:'estepa',   name:'ESTEPA (campo abierto)',        type:'idea', x:130, z:105, desc:'Pasto seco pajizo, viento fuerte, cielo enorme. Alambrados rotos, esqueletos de oveja, un molino oxidado girando. Silencio y exposición → la Luz Mala se ve venir de lejos. Rompe el "todo bosque". [sobre el Camino 13 / camino equivocado]'},
+  {id:'molino',   name:'Molino de viento oxidado',      type:'idea', x:110, z:94, desc:'Molino australiano oxidado girando con el viento, chirriando. Hito visible de lejos en la estepa.'},
+  {id:'mallin',   name:'MALLÍN (pantano)',              type:'idea', x:252, z:323, desc:'Hondonada con agua estancada, juncos, troncos podridos, niebla baja. Pasarelas de madera podridas. Te ralentiza, chapotea, huele a muerte. [sobre el Camino 12, entre la vieja y el mirador este]'},
+  {id:'roquedal', name:'ROQUEDAL / CAÑADÓN',            type:'idea', x:100, z:276, desc:'Afloramiento de piedra, un barranco, cuevas. Verticalidad y ecos. Escondites y emboscadas. [sobre el Camino 16, subiendo a la montaña]'},
+  {id:'quemado',  name:'BOSQUE QUEMADO',                type:'idea', x:176, z:257, desc:'Troncos negros parados, ceniza, sin hojas — un incendio viejo. Se ve TODO pero está muerto. Inquietante por contraste con el bosque vivo. [sobre el Camino 20, mirador oeste ↔ campamento]'},
+  {id:'orilla',   name:'ORILLA DEL LAGO (niebla/muelle)',type:'idea', x:68, z:332, desc:'Playa de canto rodado, niebla sobre el agua, un muelle podrido. Leyenda: El Cuero, el cuero-bicho del lago que arrastra y ahoga. [en la punta del Camino A, junto a la montaña y lago]'},
+  {id:'estancia', name:'ESTANCIA + EL FAMILIAR',        type:'idea', x:512, z:271, desc:'Casco de estancia con galpón de esquila. El patrón alimentaba al FAMILIAR (perro/víbora negra del demonio) con peones a cambio de prosperidad. Cadenas en el galpón, manchas de sangre. Ata con el perro y con la vieja. [sobre el camino Delincuentes↔Secundario, lado este]'},
+  {id:'difunta',  name:'SANTUARIO DIFUNTA CORREA',      type:'idea', x:310, z:27,  desc:'Al borde de la RUTA: montaña de BOTELLAS DE AGUA, banderas rojas descoloridas. Marca de "acá pasó algo". Hito muy visible desde la ruta, en el cruce del río.'},
+  {id:'gauchito', name:'ERMITA GAUCHITO GIL',           type:'idea', x:158, z:32,  desc:'Ermita ROJA en el CRUCE de la ruta con el desvío de tierra — un faro de color en la noche. Velas, banderas rojas. Sirve de hito/brújula.'},
+  {id:'capilla',  name:'CAPILLA ANEGADA',               type:'idea', x:311, z:278, desc:'Capilla vieja medio hundida en el RÍO, el campanario asomando del agua. Terror puro. Una campana que suena sola. [sendero corto desde el Camino 21]'},
+  {id:'ahorcado', name:'ÁRBOL DEL AHORCADO / CEMENTERIO',type:'idea', x:402, z:266, desc:'Pocas cruces de madera torcidas + la tumba sin nombre. Un árbol solitario con una soga colgando. Ánimas. [pegado a la TUMBA que ya existe]'},
+  {id:'ypf',      name:'ESTACIÓN YPF ABANDONADA',       type:'idea', x:449, z:31,  desc:'Surtidores oxidados, un Falcon tirado, un tubo de luz parpadeando. Punto de "civilización muerta" sobre la RUTA, en el cruce del escape.'},
+  {id:'antena',   name:'ANTENA / REPETIDORA (cerro)',   type:'idea', x:370, z:342, desc:'Torre altísima con luz roja parpadeante, visible de TODO el mapa. La brújula natural del jugador de noche. [sobre el cerro del mirador este]'},
+  {id:'corrales', name:'CORRALES / BAÑADERO',           type:'idea', x:528, z:293, desc:'Postes, alambres, huesos de oveja, un bañadero. Un perro guardián (¿el tuyo?). Pegado a la estancia.'},
 ];
 // Caminos: cada pt es {node:'id'} (sigue a esa zona) o {x,z} (waypoint libre editable)
 let paths = [
-  {id:'ruta',   name:'RUTA (asfalto)', cls:'paved', pts:[{x:-14,z:25},{x:210,z:22},{x:413,z:18},{x:598,z:22},{x:994,z:27}]},
-  {id:'rio',    name:'RÍO', cls:'river', pts:[{x:420,z:756},{x:414,z:490},{x:417,z:308},{x:419,z:84},{x:414,z:-28}]},
-  {id:'rio2',   name:'RÍO', cls:'river', pts:[{x:147,z:424},{x:317,z:335},{x:388,z:249},{x:415,z:188}]},
-  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{x:228,z:25},{x:242,z:176},{x:287,z:309}]},
-  {id:'caminoA',name:'Camino A', cls:'', pts:[{x:95,z:451},{x:277,z:444},{x:287,z:309}]},
-  {id:'c16', name:'CAMINO 16', cls:'', pts:[{x:95,z:451},{x:140,z:364},{x:165,z:272}]},
-  {id:'c10', name:'CAMINO 10', cls:'', pts:[{x:279,z:438},{x:203,z:301},{x:287,z:309}]},
-  {id:'c12', name:'CAMINO 12', cls:'', pts:[{x:279,z:438},{x:392,z:420},{x:486,z:425}]},
-  {id:'mt',  name:'Mirador–Tumba', cls:'', pts:[{x:488,z:424},{x:543,z:438},{x:579,z:443}]},
-  {id:'playaP', name:'Sendero playa', cls:'', pts:[{x:287,z:309},{x:316,z:263},{x:365,z:253}]},
-  {id:'st',  name:'Secundario–Tumba', cls:'', pts:[{x:659,z:421},{x:617,z:433},{x:582,z:443}]},
-  {id:'gc',  name:'Tumba–Delincuentes', cls:'', pts:[{x:548,z:333},{x:594,z:306},{x:637,z:277}]},
-  {id:'cs',  name:'Delincuentes–Secundario', cls:'', pts:[{x:635,z:274},{x:707,z:363},{x:663,z:419}]},
-  {id:'cr',  name:'Rehenes', cls:'', pts:[{x:638,z:277},{x:643,z:317},{x:643,z:347}]},
-  {id:'c15', name:'CAMINO 15', cls:'', pts:[{x:540,z:330},{x:480,z:230},{x:564,z:34}]},
-  {id:'c16e',name:'CAMINO 16', cls:'', pts:[{x:634,z:279},{x:566,z:188},{x:562,z:31}]},
-  {id:'c13', name:'CAMINO 13', cls:'', pts:[{x:127,z:155},{x:173,z:131},{x:227,z:102}]},
-  {id:'tMirW', name:'Subida mirador O', cls:'dirt', pts:[{x:275,z:442},{x:218,z:392},{x:189,z:371}]},
-  {id:'tMirE', name:'Subida mirador E', cls:'dirt', pts:[{x:657,z:419},{x:546,z:331},{x:485,z:422}]},
-  {id:'c20', name:'CAMINO 20', cls:'', pts:[{x:193,z:373},{x:282,z:314},{x:291,z:303}]},
-  {id:'c21', name:'CAMINO 21', cls:'', pts:[{x:294,z:311},{x:374,z:379},{x:393,z:418}]},
+  {id:'ruta',   name:'RUTA (asfalto)', cls:'paved', pts:[{x:-10,z:19},{x:158,z:17},{x:310,z:14},{x:449,z:17},{x:746,z:20}]},
+  {id:'rio',    name:'RÍO', cls:'river', pts:[{x:315,z:567},{x:311,z:368},{x:313,z:231},{x:314,z:63},{x:311,z:-21}]},
+  {id:'rio2',   name:'RÍO', cls:'river', pts:[{x:110,z:318},{x:238,z:251},{x:291,z:187},{x:311,z:141}]},
+  {id:'tierra', name:'Ruta de tierra', cls:'dirt', pts:[{x:171,z:19},{x:182,z:132},{x:215,z:232}]},
+  {id:'caminoA',name:'Camino A', cls:'', pts:[{x:71,z:338},{x:208,z:333},{x:215,z:232}]},
+  {id:'c16', name:'CAMINO 16', cls:'', pts:[{x:71,z:338},{x:105,z:273},{x:124,z:204}]},
+  {id:'c10', name:'CAMINO 10', cls:'', pts:[{x:209,z:329},{x:152,z:226},{x:215,z:232}]},
+  {id:'c12', name:'CAMINO 12', cls:'', pts:[{x:209,z:329},{x:294,z:315},{x:365,z:319}]},
+  {id:'mt',  name:'Mirador–Tumba', cls:'', pts:[{x:366,z:318},{x:407,z:329},{x:434,z:332}]},
+  {id:'playaP', name:'Sendero playa', cls:'', pts:[{x:215,z:232},{x:237,z:197},{x:274,z:190}]},
+  {id:'st',  name:'Secundario–Tumba', cls:'', pts:[{x:494,z:316},{x:463,z:325},{x:437,z:332}]},
+  {id:'gc',  name:'Tumba–Delincuentes', cls:'', pts:[{x:411,z:250},{x:446,z:230},{x:478,z:208}]},
+  {id:'cs',  name:'Delincuentes–Secundario', cls:'', pts:[{x:476,z:206},{x:530,z:272},{x:497,z:314}]},
+  {id:'cr',  name:'Rehenes', cls:'', pts:[{x:479,z:208},{x:482,z:238},{x:482,z:260}]},
+  {id:'c15', name:'CAMINO 15', cls:'', pts:[{x:405,z:248},{x:360,z:173},{x:423,z:26}]},
+  {id:'c16e',name:'CAMINO 16', cls:'', pts:[{x:476,z:209},{x:425,z:141},{x:422,z:23}]},
+  {id:'c13', name:'CAMINO 13', cls:'', pts:[{x:95,z:116},{x:130,z:98},{x:170,z:77}]},
+  {id:'tMirW', name:'Subida mirador O', cls:'dirt', pts:[{x:206,z:332},{x:164,z:294},{x:142,z:278}]},
+  {id:'tMirE', name:'Subida mirador E', cls:'dirt', pts:[{x:493,z:314},{x:410,z:248},{x:364,z:317}]},
+  {id:'c20', name:'CAMINO 20', cls:'', pts:[{x:145,z:280},{x:212,z:236},{x:218,z:227}]},
+  {id:'c21', name:'CAMINO 21', cls:'', pts:[{x:221,z:233},{x:281,z:284},{x:295,z:314}]},
   // ---- CONECTORES nuevos para que los caminos LLEVEN a las ideas (no senderos vacíos) ----
-  {id:'iNW',       name:'Ruta→estepa',        cls:'dirt', pts:[{x:232,z:24},{x:230,z:67},{x:227,z:102}]},           // liga la ruta con el NW (estepa/molino, sobre C13)
-  {id:'iCapilla',  name:'Sendero capilla',    cls:'',     pts:[{x:393,z:418},{x:406,z:392},{x:414,z:370}]},          // C21 → capilla anegada (río)
-  {id:'iAhorcado', name:'Sendero ahorcado',   cls:'',     pts:[{x:548,z:333},{x:540,z:343},{x:536,z:354}]},          // tumba → árbol del ahorcado
-  {id:'iAntena',   name:'Subida antena',      cls:'dirt', pts:[{x:489,z:426},{x:492,z:442},{x:493,z:456}]},          // mirador este → antena (cerro)
-  {id:'iEstancia', name:'Camino estancia',    cls:'dirt', pts:[{x:634,z:277},{x:666,z:316},{x:683,z:361}]},          // delincuentes → estancia
-  {id:'iCorrales', name:'',                   cls:'',     pts:[{x:683,z:361},{x:697,z:377},{x:704,z:391}]},          // estancia → corrales
+  {id:'iNW',       name:'Ruta→estepa',        cls:'dirt', pts:[{x:174,z:18},{x:173,z:50},{x:170,z:77}]},           // liga la ruta con el NW (estepa/molino, sobre C13)
+  {id:'iCapilla',  name:'Sendero capilla',    cls:'',     pts:[{x:295,z:314},{x:305,z:294},{x:311,z:278}]},          // C21 → capilla anegada (río)
+  {id:'iAhorcado', name:'Sendero ahorcado',   cls:'',     pts:[{x:411,z:250},{x:405,z:257},{x:402,z:266}]},          // tumba → árbol del ahorcado
+  {id:'iAntena',   name:'Subida antena',      cls:'dirt', pts:[{x:367,z:320},{x:369,z:332},{x:370,z:342}]},          // mirador este → antena (cerro)
+  {id:'iEstancia', name:'Camino estancia',    cls:'dirt', pts:[{x:476,z:208},{x:500,z:237},{x:512,z:271}]},          // delincuentes → estancia
+  {id:'iCorrales', name:'',                   cls:'',     pts:[{x:512,z:271},{x:523,z:283},{x:528,z:293}]},          // estancia → corrales
 ];
 
 let sel=null, dragging=null, panning=false, panStart=null;
