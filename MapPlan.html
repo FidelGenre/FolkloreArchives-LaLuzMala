@@ -28,21 +28,21 @@
   .row .co { color:#9a9684; font-variant-numeric:tabular-nums; }
   .hint { padding:10px 14px; font-size:11px; color:#8f8b7a; border-top:1px solid #000; line-height:1.5; }
   textarea { width:100%; height:100px; background:#0f1116; color:#cfc7b4; border:1px solid #333; border-radius:6px; font:11px/1.4 monospace; padding:8px; resize:none; }
-  .node-label { font:600 13px system-ui; fill:var(--ink); paint-order:stroke; stroke:#0d0f14; stroke-width:4px; pointer-events:none; user-select:none; }
-  .node-circ { fill:var(--node); stroke:#0d0f14; stroke-width:2; cursor:grab; }
-  .node-circ.sel { stroke:var(--accent); stroke-width:3; }
+  .node-label { font:600 8px system-ui; fill:var(--ink); paint-order:stroke; stroke:#0d0f14; stroke-width:2.5px; pointer-events:none; user-select:none; }
+  .node-circ { fill:var(--node); stroke:#0d0f14; stroke-width:1.3; cursor:grab; }
+  .node-circ.sel { stroke:var(--accent); stroke-width:2; }
   .node-circ.idea { fill:var(--idea); }
   .dot.idea { background:var(--idea); }
   .desc { padding:10px 14px; font-size:12px; color:#cfc7b4; border-top:1px solid #000; line-height:1.5; max-height:210px; overflow:auto; }
   .desc b { color:var(--accent); }
   .desc .tag { display:inline-block; font-size:10px; background:#243a37; color:#8fd6c8; border:1px solid #3f9c8f; border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:middle; }
-  .wp { fill:#e0c060; stroke:#0d0f14; stroke-width:1.5; cursor:grab; }
-  .wp.sel { stroke:var(--accent); stroke-width:2.5; }
-  .edge { stroke:var(--line); stroke-width:3; fill:none; opacity:.8; cursor:copy; }
-  .edge.paved { stroke:#5b5f52; stroke-width:6; }
-  .edge.river { stroke:#3a6b8a; stroke-width:7; opacity:.85; }
-  .edge.dirt { stroke:#7a6a4a; stroke-dasharray:9 7; }
-  .edge-label { font:600 12px system-ui; fill:#b9b49f; paint-order:stroke; stroke:#0d0f14; stroke-width:4px; pointer-events:none; }
+  .wp { fill:#e0c060; stroke:#0d0f14; stroke-width:1; cursor:grab; }
+  .wp.sel { stroke:var(--accent); stroke-width:1.6; }
+  .edge { stroke:var(--line); stroke-width:1.8; fill:none; opacity:.8; cursor:copy; }
+  .edge.paved { stroke:#5b5f52; stroke-width:3.5; }
+  .edge.river { stroke:#3a6b8a; stroke-width:4; opacity:.85; }
+  .edge.dirt { stroke:#7a6a4a; stroke-dasharray:6 5; }
+  .edge-label { font:600 7.5px system-ui; fill:#b9b49f; paint-order:stroke; stroke:#0d0f14; stroke-width:2.5px; pointer-events:none; }
 </style>
 </head>
 <body>
@@ -180,8 +180,8 @@ function smooth(pts){
 function render(){
   svg.innerHTML='';
   const g=document.createElementNS(svg.namespaceURI,'g');
-  for(let x=0;x<=W;x+=100) g.appendChild(lineEl(sx(x),0,sx(x),H,'#232732',1));
-  for(let z=0;z<=H;z+=100) g.appendChild(lineEl(0,sy(z),W,sy(z),'#232732',1));
+  for(let x=0;x<=W;x+=50) g.appendChild(lineEl(sx(x),0,sx(x),H,'#232732',1));
+  for(let z=0;z<=H;z+=50) g.appendChild(lineEl(0,sy(z),W,sy(z),'#232732',1));
   svg.appendChild(g);
   svg.appendChild(textEl(24,34,'N ↑',{fill:'#6f7565','font-size':'22','font-weight':'700'}));
 
@@ -190,7 +190,7 @@ function render(){
     const scr=p.pts.map(pt=>{ const w=resolve(pt); return {x:sx(w.x), y:sy(w.z)}; });
     const path=pathEl(smooth(scr), 'edge '+p.cls); path.dataset.path=p.id; svg.appendChild(path);
     const mid=scr[Math.floor(scr.length/2)];
-    if(p.name) svg.appendChild(textEl(mid.x+8, mid.y-8, p.name, {class:'edge-label'}));
+    if(p.name) svg.appendChild(textEl(mid.x+5, mid.y-5, p.name, {class:'edge-label'}));
   });
   // handles de waypoints libres
   paths.forEach(p=>{
@@ -198,7 +198,7 @@ function render(){
       if(pt.node) return; // los que siguen a una zona no son handles
       const isSel = sel&&sel.kind==='wp'&&sel.pid===p.id&&sel.idx===i;
       const c=document.createElementNS(svg.namespaceURI,'circle');
-      c.setAttribute('cx',sx(pt.x)); c.setAttribute('cy',sy(pt.z)); c.setAttribute('r',7);
+      c.setAttribute('cx',sx(pt.x)); c.setAttribute('cy',sy(pt.z)); c.setAttribute('r',4);
       c.setAttribute('class','wp'+(isSel?' sel':'')); c.dataset.wp=p.id+':'+i;
       svg.appendChild(c);
     });
@@ -207,10 +207,10 @@ function render(){
   nodes.forEach(n=>{
     const isSel = sel&&sel.kind==='node'&&sel.id===n.id;
     const c=document.createElementNS(svg.namespaceURI,'circle');
-    c.setAttribute('cx',sx(n.x)); c.setAttribute('cy',sy(n.z)); c.setAttribute('r',12);
+    c.setAttribute('cx',sx(n.x)); c.setAttribute('cy',sy(n.z)); c.setAttribute('r',7);
     c.setAttribute('class','node-circ'+(n.type==='idea'?' idea':'')+(isSel?' sel':'')); c.dataset.id=n.id;
     svg.appendChild(c);
-    svg.appendChild(textEl(sx(n.x)+16, sy(n.z)+5, n.name, {class:'node-label'}));
+    svg.appendChild(textEl(sx(n.x)+10, sy(n.z)+3, n.name, {class:'node-label'}));
   });
   renderList();
   updateDesc();
