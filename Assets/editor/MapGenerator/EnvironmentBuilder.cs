@@ -123,8 +123,11 @@ namespace FolkloreArchives.MapGen
             var water = GameObject.CreatePrimitive(PrimitiveType.Plane);
             water.name = "River_Water";
             water.transform.SetParent(parent);
-            water.transform.position = new Vector3(416f, 9.6f, 350f);  // río al centro (mapa reducido 0.7: 595→416, 500→350)
-            water.transform.localScale = new Vector3(18f, 1f, 120f);
+            // río al centro del mapa recortado (MapSize=550) — antes el plano medía 1200m
+            // de largo (sobraba, hecho para el mapa grande viejo) y sobresalía flotando en
+            // el vacío más allá del borde recortado. Ahora cubre el mapa + margen chico.
+            water.transform.position = new Vector3(416f, 9.6f, MapLayout.MapSize * 0.5f);
+            water.transform.localScale = new Vector3(18f, 1f, (MapLayout.MapSize + 160f) / 10f);
             // Share the SAME material as the lake (mat_lakewater) so the river and
             // lake read as one body of water instead of two slightly-different tones.
             var wmat = BuilderUtils.Mat("lakewater", new Color(0.05f, 0.11f, 0.16f), 0.2f);
