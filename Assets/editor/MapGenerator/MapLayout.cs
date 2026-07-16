@@ -83,7 +83,6 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 HuntingField     = new Vector2(209f, 329f);  // "CAMPO DE CAZA" (oeste)
         public static readonly Vector2 Grave            = new Vector2(407f, 190f);  // "TUMBA" — este, frente al Mirador Este
         public static readonly Vector2 MainCriminalCamp = new Vector2(476f, 148f);  // "DELINCUENTES PRINCIPAL" (este)
-        public static readonly Vector2 SecondaryCamp    = new Vector2(494f, 254f);  // "CAMPAMENTO SECUNDARIO" (este)
         public static readonly Vector2 HostageArea      = new Vector2(482f, 200f);  // "REHENES" (este)
         public static readonly Vector2 LakeMountain     = new Vector2(71f, 293f);  // "MONTAÑA Y LAGO" — lago (oeste lejano)
         public static readonly Vector2 WrongTurnDeath   = new Vector2(98f, 116f);  // "MUERTE CAMINO EQUIVOCADO" (oeste, spur)
@@ -171,7 +170,6 @@ namespace FolkloreArchives.MapGen
         // PathB = sendero de MIEDO (este, peligro): Tumba → Rehenes → Delincuentes.
         public static readonly Vector2[] PathB      = Snake(new[] { Grave, HostageArea, MainCriminalCamp }, 20f, 10f);
         public static readonly Vector2[] GraveToCriminals     = Snake(new[] { Grave, new Vector2(446f, 170f), MainCriminalCamp }, 18f, 8f);
-        public static readonly Vector2[] CriminalsToSecondary = Snake(new[] { MainCriminalCamp, new Vector2(530f, 212f), SecondaryCamp }, 18f, 8f);
 
         // River runs along the east edge, next to the campsite. Smooth wavy
         // Catmull-Rom curve (same technique as the paved route) instead of a few
@@ -229,8 +227,6 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] Camino14 = { HuntingField, new Vector2(294f, 285f), LookoutEast };         // c12: campo de caza → (cruza el río) → mirador este (antes iba desde la vieja)
         public static readonly Vector2[] Camino15 = { Campsite, new Vector2(281f, 254f), LookoutEast };             // c21: campamento → mirador este
         public static readonly Vector2[] Camino16 = { LookoutEast, new Vector2(407f, 269f), Grave };                // mt: mirador este → tumba
-        public static readonly Vector2[] Camino17 = { SecondaryCamp, new Vector2(463f, 265f), Grave };              // st: secundario → tumba
-        public static readonly Vector2[] Camino18 = { SecondaryCamp, new Vector2(410f, 188f), LookoutEast };        // tMirE: secundario → mirador este
         public static readonly Vector2[] Camino19 = { MainCriminalCamp, new Vector2(482f, 178f), HostageArea };     // cr: delincuentes → rehenes
         public static readonly Vector2[] Camino20 = { Grave, CabinEast, EscapePoint };                            // c15: tumba → cabaña este → escape
         public static readonly Vector2[] Camino21 = { MainCriminalCamp, new Vector2(425f, 81f), EscapePoint };     // c16e: delincuentes → escape
@@ -242,8 +238,8 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[][] ExtraTrails = {
             Snake(Camino9, 16f, 8f), Snake(Camino10, 16f, 8f), Snake(Camino11, 16f, 8f),
             Snake(Camino12, 16f, 8f), Snake(Camino13, 16f, 8f), Snake(Camino14, 18f, 8f),
-            Snake(Camino15, 16f, 8f), Snake(Camino16, 16f, 8f), Snake(Camino17, 16f, 8f),
-            Snake(Camino18, 16f, 8f), Snake(Camino19, 14f, 8f), Snake(Camino20, 16f, 8f),
+            Snake(Camino15, 16f, 8f), Snake(Camino16, 16f, 8f),
+            Snake(Camino19, 14f, 8f), Snake(Camino20, 16f, 8f),
             Snake(Camino21, 16f, 8f), BarnPath
         };
 
@@ -270,7 +266,7 @@ namespace FolkloreArchives.MapGen
         public const float RockLine = 50f;   // TerrainBuilder empieza a mezclar roca gris arriba de esta altura (llega a 100% roca en SnowLine)
 
         // Paths that must feel scary: narrow + dense dry forest tunnel on top
-        public static readonly Vector2[][] ScaryPaths = { PathB, CriminalsToSecondary, GraveToCriminals };
+        public static readonly Vector2[][] ScaryPaths = { PathB, GraveToCriminals };
 
         // The paved route is a function of x (its waypoints strictly increase in x),
         // so we can ask "what z is the road at this x?" and thereby tell which side of

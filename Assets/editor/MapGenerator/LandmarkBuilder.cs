@@ -97,6 +97,12 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Empty(criminals, "JOURNAL_POINT", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp.x - 8f, MapLayout.MainCriminalCamp.y + 2f) + Vector3.up * 1f);
             // (La WarmLight vieja se sacó: sobre-iluminaba los ranchos y los "prendía" en
             //  blanco. La fogata de CriminalCampBuilder ya da la luz del campamento.)
+            // Piezas del auto (Acto 4 — antes en el Campamento Secundario, que se sacó del
+            // mapa por redundante con este mismo campamento). Mismo enemigo, misma tarea,
+            // sin agregar un lugar nuevo.
+            BuilderUtils.Empty(criminals, "CAR_PART_POINT_1", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp.x + 10f, MapLayout.MainCriminalCamp.y + 6f) + Vector3.up * 0.5f);
+            BuilderUtils.Empty(criminals, "CAR_PART_POINT_2", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp.x - 10f, MapLayout.MainCriminalCamp.y - 5f) + Vector3.up * 0.5f);
+            BuilderUtils.Empty(criminals, "CAR_PART_POINT_3", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp.x + 6f, MapLayout.MainCriminalCamp.y - 9f) + Vector3.up * 0.5f);
 
             // ---------- HOSTAGE AREA (Act 3 — failed rescue) ----------
             var hostages = BuilderUtils.Group(poi, "HostageArea", BuilderUtils.Ground(t, MapLayout.HostageArea));
@@ -107,16 +113,6 @@ namespace FolkloreArchives.MapGen
                 ForestBuilder.DryTree(hostages, pos + new Vector3(0.8f, 0f, 0.8f), trunkMat, dryMat);
                 BuilderUtils.Prim(PrimitiveType.Capsule, "TiedNPC_" + (i + 1), hostages, pos + Vector3.up * 1f, new Vector3(0.7f, 0.9f, 0.7f), npcMat);
             }
-
-            // ---------- SECONDARY CAMP (Act 4 — car parts under pressure) ----------
-            var secondary = BuilderUtils.Group(poi, "SecondaryCamp", BuilderUtils.Ground(t, MapLayout.SecondaryCamp));
-            BuilderUtils.Label(secondary, "SECONDARY CAMP", secondary.position + Vector3.up * 8f);
-            Shack(secondary, t, MapLayout.SecondaryCamp.x - 5f, MapLayout.SecondaryCamp.y + 3f, 25f, clothMat, metalMat);
-            Shack(secondary, t, MapLayout.SecondaryCamp.x + 6f, MapLayout.SecondaryCamp.y - 4f, -60f, clothMat, metalMat);
-            BuilderUtils.Empty(secondary, "CAR_PART_POINT_1", BuilderUtils.Ground(t, MapLayout.SecondaryCamp.x + 4f, MapLayout.SecondaryCamp.y + 6f) + Vector3.up * 0.5f);
-            BuilderUtils.Empty(secondary, "CAR_PART_POINT_2", BuilderUtils.Ground(t, MapLayout.SecondaryCamp.x - 8f, MapLayout.SecondaryCamp.y - 3f) + Vector3.up * 0.5f);
-            BuilderUtils.Empty(secondary, "CAR_PART_POINT_3", BuilderUtils.Ground(t, MapLayout.SecondaryCamp.x + 2f, MapLayout.SecondaryCamp.y - 9f) + Vector3.up * 0.5f);
-            WarmLight(secondary, BuilderUtils.Ground(t, MapLayout.SecondaryCamp.x, MapLayout.SecondaryCamp.y) + Vector3.up * 1.2f, 16f, 2.6f); // distant camp glow
 
             // Zonas nuevas del owner (editor de plano) - por ahora, marcadores.
             var lakeMt = BuilderUtils.Group(poi, "LakeMountain", BuilderUtils.Ground(t, MapLayout.LakeMountain));

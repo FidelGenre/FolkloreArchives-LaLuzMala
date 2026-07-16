@@ -437,7 +437,6 @@ namespace FolkloreArchives.MapGen
                     if (MapLayout.InRect(p, MapLayout.OldLadyHouseFootMin, MapLayout.OldLadyHouseFootMax, 3f)) continue;
                     if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 3f)) continue;
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 12f) continue;
-                    if (Vector2.Distance(p, MapLayout.SecondaryCamp) < 8f) continue;
                     if (Vector2.Distance(p, MapLayout.HostageArea) < 6f) continue;
                     // ÁREAS NUEVAS abiertas (MapPlan): sin árboles vivos para que se lean distintas
                     if (Vector2.Distance(p, MapLayout.EstepaCenter) < 38f) continue; // estepa = campo abierto
@@ -1293,7 +1292,6 @@ namespace FolkloreArchives.MapGen
                     if (MapLayout.InRect(p, MapLayout.OldLadyHouseFootMin, MapLayout.OldLadyHouseFootMax, 3f)) continue;
                     if (MapLayout.InRect(p, MapLayout.OldLadyBarnFootMin, MapLayout.OldLadyBarnFootMax, 3f)) continue;
                     if (Vector2.Distance(p, MapLayout.MainCriminalCamp) < 12f) continue;
-                    if (Vector2.Distance(p, MapLayout.SecondaryCamp) < 8f) continue;
                     if (Vector2.Distance(p, MapLayout.HostageArea) < 6f) continue;
 
                     if (Random.value > MapLayout.BushDensity) continue;
@@ -1674,7 +1672,6 @@ namespace FolkloreArchives.MapGen
                     dGameplay = Mathf.Min(dGameplay, dm); // MainCriminalCamp
                     dGameplay = Mathf.Min(dGameplay, Vector2.Distance(p, MapLayout.OldLadyRanch));
                     dGameplay = Mathf.Min(dGameplay, Vector2.Distance(p, MapLayout.Grave));
-                    dGameplay = Mathf.Min(dGameplay, Vector2.Distance(p, MapLayout.SecondaryCamp));
                     // zonas y caminos nuevos del owner
                     dGameplay = Mathf.Min(dGameplay, Vector2.Distance(p, MapLayout.LakeMountain));
                     dGameplay = Mathf.Min(dGameplay, BuilderUtils.DistToExtraTrails(p));

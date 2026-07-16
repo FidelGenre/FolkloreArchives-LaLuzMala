@@ -20,7 +20,9 @@ namespace FolkloreArchives.MapGen
             Trigger(group, t, "TRIGGER_ACT2_GRAVE", MapLayout.Grave, 10f);
             Trigger(group, t, "TRIGGER_ACT3_CRIMINAL_CAMP", MapLayout.MainCriminalCamp, 30f);
             Trigger(group, t, "TRIGGER_ACT3_RESCUE", MapLayout.HostageArea, 12f);
-            Trigger(group, t, "TRIGGER_ACT4_SECONDARY_CAMP", MapLayout.SecondaryCamp, 20f);
+            // Piezas del auto (antes en el Campamento Secundario, que se sacó del mapa
+            // por redundante) — mismo lugar que TRIGGER_ACT3_CRIMINAL_CAMP, distinto beat.
+            Trigger(group, t, "TRIGGER_ACT4_CAR_PARTS", MapLayout.MainCriminalCamp, 20f);
             Trigger(group, t, "TRIGGER_ACT4_CAR",
                 new Vector2(MapLayout.Campsite.x - 12f, MapLayout.Campsite.y - 16f), 10f);
         }
