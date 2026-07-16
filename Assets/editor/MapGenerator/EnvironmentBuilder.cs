@@ -141,6 +141,7 @@ namespace FolkloreArchives.MapGen
             // SEGUNDO RÍO (tributario lago → río principal): agua como CINTA (mesh) que
             // SIGUE el cauce curvo. Un plano recto no cubría la curva (se desviaba ~55m)
             // y el agua quedaba al costado → no se veía. El ribbon la sigue punto a punto.
+            if (MapLayout.River2.Length >= 2)   // River2 quitado (owner) → array vacío, no se construye
             {
                 var r2 = MapLayout.River2;
                 var verts = new System.Collections.Generic.List<Vector3>();

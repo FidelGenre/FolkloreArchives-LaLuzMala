@@ -201,7 +201,10 @@ namespace FolkloreArchives.MapGen
             new Vector2(388f, 249f),
             new Vector2(420f, 200f)    // desemboca en el río principal
         };
-        public static readonly Vector2[] River2 = BuildSmoothRoute(River2Controls, 18f);
+        // QUITADO (owner): el tributario que cruzaba y llegaba al lago. Se deja en array
+        // VACÍO → sin cauce (TerrainBuilder), sin agua (EnvironmentBuilder) y sin bloquear
+        // árboles/pasto (DistToRivers). Para volver a activarlo: BuildSmoothRoute(River2Controls, 18f).
+        public static readonly Vector2[] River2 = new Vector2[0];
 
         // Mini playa de pesca + sendero desde el campamento hasta el agua (pedido del
         // owner: caminito corto del campamento a una playita donde se pueda pescar).
