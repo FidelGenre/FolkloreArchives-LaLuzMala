@@ -250,8 +250,11 @@ namespace FolkloreArchives.MapGen
         public const float CentralLakeLevel  = 11f;   // altura del plano de agua
         public const float CentralLakeBed    = 3f;    // fondo carvado (bajo el agua)
         public const float CentralLakeShore  = 45f;   // ancho de la orilla que sube del fondo al terreno
-        // Picos de montaña que rodean el lago (deben estar FUERA del radio del lago).
-        public static readonly Vector2[] CentralPeaks = { new Vector2(60, 730), new Vector2(235, 700), new Vector2(120, 545) };
+        // Picos de montaña AGRUPADOS (owner: "las 3 pegadas") como UNA sola cordillera de
+        // fondo del lado opuesto al muelle/playa (LakeShore), no repartidos por todos
+        // lados. A ~45-63m entre sí (antes ~180-195m) + CentralPeakSigma=44 → los picos se
+        // funden en un solo macizo visual, como telón de fondo detrás del agua.
+        public static readonly Vector2[] CentralPeaks = { new Vector2(30, 720), new Vector2(75, 745), new Vector2(50, 780) };
         public const float CentralPeakHeight = 92f;   // picos ALTOS con nieve (antes 46)
         public const float CentralPeakSigma  = 44f;   // más puntiagudos (antes 56)
         public const float SnowLine          = 82f;   // altura donde empieza la nieve en los picos

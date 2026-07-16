@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 26;
+        const int SplatVersion = 27;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -434,10 +434,11 @@ namespace FolkloreArchives.MapGen
                     float dr = BuilderUtils.DistToPolyline(p, MapLayout.River);
                     if (dr < 40f) dirt = Mathf.Max(dirt, 1f - Mathf.Clamp01((dr - 16f) / 24f));
 
-                    // BARRO bordeando el lago central (owner: orilla de barro, sin árboles)
+                    // PLAYA DE ARENA bordeando el lago central (owner: "playito el borde",
+                    // lago tipo camping — antes era barro; cambiado a arena real).
                     float dCL = Vector2.Distance(p, MapLayout.CentralLakeCenter);
                     if (dCL < MapLayout.CentralLakeRadius + 30f)
-                        dirt = Mathf.Max(dirt, 1f - Mathf.Clamp01((dCL - (MapLayout.CentralLakeRadius - 8f)) / 38f));
+                        sand = Mathf.Max(sand, 1f - Mathf.Clamp01((dCL - (MapLayout.CentralLakeRadius - 8f)) / 38f));
 
                     // lakeside: the upper embankment stays grassy (shore grass/bushes/
                     // pines grow there); only the last few metres down to the waterline
