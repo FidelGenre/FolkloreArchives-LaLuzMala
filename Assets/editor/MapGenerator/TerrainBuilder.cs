@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 44;
+        const int SplatVersion = 45;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -320,6 +320,20 @@ namespace FolkloreArchives.MapGen
             // (owner: "el campamento parece flotar"). Misma bajada, repartida en más metros.
             float dr = BuilderUtils.DistToPolyline(p, MapLayout.River);
             if (dr < 44f) a = Mathf.Lerp(3.5f, a, Mathf.SmoothStep(0f, 1f, (dr - 14f) / 30f));
+
+            // NÚCLEO del campamento: pase lo que pase arriba con el río (la curva
+            // Catmull-Rom del río tiene una "curva a la playa de pesca" cerca de acá y
+            // puede pasar más cerca del campamento de lo que sugieren sus puntos de
+            // control — DistToPolyline mide contra la curva ya suavizada, no contra los
+            // puntos), el círculo real donde están fogata/carpas/mesa (el prop más lejos
+            // del centro en CampsiteBuilder está a ~7.5m) SIEMPRE queda plano. Va DESPUÉS
+            // del carvado del río a propósito, para que le gane pase lo que pase (owner,
+            // después de 2 rondas de ajustar radios/anchos: "el campamento sigue volando").
+            if (dc < 12f)
+            {
+                float campGradeCore = HeightAt(MapLayout.Campsite.x - 55f, MapLayout.Campsite.y);
+                a = Mathf.Lerp(campGradeCore, a, Mathf.SmoothStep(0f, 1f, dc / 12f));
+            }
 
             // segundo río (tributario del lago) — canal algo más angosto
             float dr2 = BuilderUtils.DistToPolyline(p, MapLayout.River2);

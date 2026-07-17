@@ -272,8 +272,8 @@ namespace FolkloreArchives.MapGen
         // lados. A ~45-63m entre sí (antes ~180-195m) + CentralPeakSigma=44 → los picos se
         // funden en un solo macizo visual, como telón de fondo detrás del agua.
         public static readonly Vector2[] CentralPeaks = { new Vector2(16f, 333f), new Vector2(40f, 347f), new Vector2(26f, 365f) };
-        public const float CentralPeakHeight = 92f;   // picos ALTOS con nieve (antes 46)
-        public const float CentralPeakSigma  = 44f;   // más puntiagudos (antes 56)
+        public const float CentralPeakHeight = 70f;   // picos ALTOS con nieve (46 -> 92 -> 70): a 92 la montaña caía directo adentro del agua en el lado del "Montaña y Lago" (el centro del cluster está a solo ~70m del centro del lago, ~22m de la orilla real) y hacía que TODO el lago se sintiera "hundido" (owner) por más que la orilla en sí quedara plana. Sigue siendo un pico alto (antes de la primera subida era 46), pero ya no aplasta la vista del lago
+        public const float CentralPeakSigma  = 30f;   // más angostos (antes 44, y 56 antes de eso) — mismo motivo: que la altura del pico no se filtre tanto hacia la orilla del lago, que está cerca
         public const float SnowLine          = 82f;   // altura donde empieza la nieve en los picos
         // MONTAÑA PROCEDURAL (owner: "que las montañas sean de assets" -> se probó con un
         // modelo 3D real y quedó gigante/deforme; se vuelve a 100% procedural pero con una
