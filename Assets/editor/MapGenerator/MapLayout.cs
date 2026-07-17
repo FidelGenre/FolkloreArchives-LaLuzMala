@@ -129,7 +129,7 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] PavedRoute = BuildSmoothRoute(PavedControls, 22f);
 
         // Where the dirt road leaves the paved route - kept exactly on the curve.
-        public static readonly Vector2 DirtTurnoff = new Vector2(174f, PavedRouteZAt(174f)); // desvío del plano (oeste)
+        public static readonly Vector2 DirtTurnoff = new Vector2(225f, PavedRouteZAt(225f)); // desvío corrido más al este/derecha sobre la ruta (owner)
 
         // ------------- ZONAS/POIs NUEVOS (ideas del MapPlan) — los construye AreaPoiBuilder -------------
         // Van DESPUÉS de DirtTurnoff/PavedRoute para que los de la ruta puedan usar PavedRouteZAt.
