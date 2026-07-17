@@ -270,11 +270,17 @@ namespace FolkloreArchives.MapGen
         public const float CentralLakeBed    = 14f;   // fondo carvado (bajo el agua) — mismo profundidad de agua que antes (8m), solo corrido junto con CentralLakeLevel
         public const float CentralLakeBeachWidth = 45f; // franja PLANA de playa junto al agua (fondo->playa a nivel del agua, sin acantilado) — agrandada (35->45) para que la parte realmente plana llegue más lejos antes de empezar a subir
         public const float CentralLakeShore  = 85f;   // ancho TOTAL de orilla (playa plana + transición hacia el terreno natural/montañas). Antes subía derecho del fondo al terreno natural y con las montañas agrupadas cerca eso quedaba alto → se veía "todo hundido" (owner). Ahora: fondo->playa plana (ver CentralLakeBeachWidth) y recién después playa->natural. OJO: del lado de las 3 montañas (~70m del centro del lago, ver CentralPeaks) la playa plana ya las alcanza — ese lado va a seguir viéndose con un cerro cerca aunque el agua/orilla inmediata quede plana; si sigue viéndose "encajonado" hay que achicar CentralPeakHeight o separar los picos, no este ancho
-        // Picos de montaña AGRUPADOS (owner: "las 3 pegadas") como UNA sola cordillera de
-        // fondo del lado opuesto al muelle/playa (LakeShore), no repartidos por todos
-        // lados. A ~45-63m entre sí (antes ~180-195m) + CentralPeakSigma=44 → los picos se
-        // funden en un solo macizo visual, como telón de fondo detrás del agua.
-        public static readonly Vector2[] CentralPeaks = { new Vector2(16f, 333f), new Vector2(40f, 347f), new Vector2(26f, 365f) };
+        // Picos de montaña repartidos en un ARCO de ~90-170° alrededor del centro del
+        // lago (antes 3 apretados en un solo punto de vista — owner: "necesito las
+        // montañas todas ahí en la parte de atrás", pidiendo una cordillera que cubra
+        // todo el fondo, no un macizo aislado que solo se ve bien desde un ángulo).
+        // Los 5 están del lado opuesto al muelle/playa (LakeShore) a ~65m del centro,
+        // separados ~20-25m entre sí (CentralPeakSigma=30 los funde en una sola
+        // cordillera continua igual, sin quedar aislados).
+        public static readonly Vector2[] CentralPeaks = {
+            new Vector2(71f, 358f), new Vector2(49f, 354f), new Vector2(29f, 343f),
+            new Vector2(15f, 326f), new Vector2(7f,  304f),
+        };
         public const float CentralPeakHeight = 70f;   // picos ALTOS con nieve (46 -> 92 -> 70): a 92 la montaña caía directo adentro del agua en el lado del "Montaña y Lago" (el centro del cluster está a solo ~70m del centro del lago, ~22m de la orilla real) y hacía que TODO el lago se sintiera "hundido" (owner) por más que la orilla en sí quedara plana. Sigue siendo un pico alto (antes de la primera subida era 46), pero ya no aplasta la vista del lago
         public const float CentralPeakSigma  = 30f;   // más angostos (antes 44, y 56 antes de eso) — mismo motivo: que la altura del pico no se filtre tanto hacia la orilla del lago, que está cerca
         public const float SnowLine          = 82f;   // altura donde empieza la nieve en los picos
