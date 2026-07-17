@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 43;
+        const int SplatVersion = 44;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -298,18 +298,20 @@ namespace FolkloreArchives.MapGen
             }
 
             // flat clearing for the campsite (tents, campfire): aplana a la altura NATURAL
-            // del terreno de alrededor. OJO: se samplea a la MISMA distancia del río que
-            // el campamento (mismo dr, ~55m al norte en vez de al oeste/tierra adentro),
-            // no "55m al oeste" — ese punto quedaba tierra adentro en terreno alto (lejos
-            // del río) mientras el campamento está pegado al río, así que el pad plano
-            // quedaba mucho más alto que la orilla y el carvado del río lo cortaba en un
-            // acantilado en el borde (owner: "el campamento quedó flotando"). Sampleando a
-            // la misma distancia del río, el pad ya nace a la altura natural de la orilla.
+            // sampleada 55m al oeste (tierra adentro) — esa altura es la que el owner
+            // confirmó que estaba bien. El sample "a la misma distancia del río" que
+            // probé antes daba una altura más baja/hundida, así que vuelvo a este.
+            // El radio del pad se ACHICÓ (40->22): con 40 el pad llegaba a metros del
+            // cauce y el carvado del río (que fuerza altura de lecho cerca del agua, ver
+            // abajo) lo cortaba de golpe adentro del propio radio del campamento —
+            // acantilado "flotando" (owner). Con 22, el pad plano termina bastante antes
+            // de esa zona y el descenso hacia el río queda en la banda ancha del río
+            // (ver riverbed carve, dr 14-44), no compitiendo con el aplanado del camp.
             float dc = Vector2.Distance(p, MapLayout.Campsite);
-            if (dc < 40f)
+            if (dc < 22f)
             {
-                float campGrade = HeightAt(MapLayout.Campsite.x, MapLayout.Campsite.y - 55f);
-                a = Mathf.Lerp(campGrade, a, Mathf.SmoothStep(0f, 1f, (dc - 15f) / 25f));
+                float campGrade = HeightAt(MapLayout.Campsite.x - 55f, MapLayout.Campsite.y);
+                a = Mathf.Lerp(campGrade, a, Mathf.SmoothStep(0f, 1f, (dc - 10f) / 12f));
             }
 
             // riverbed carve (last, so it always wins). Banda ENSANCHADA (14→44, antes

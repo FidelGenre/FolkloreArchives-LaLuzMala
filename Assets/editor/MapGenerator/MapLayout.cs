@@ -262,11 +262,11 @@ namespace FolkloreArchives.MapGen
         // Montaña y Lago en una gran cuenca de montañas con un lago enorme, sin camino
         // entre ellas — se cruza el terreno natural). Todo tuneable acá.
         public static readonly Vector2 CentralLakeCenter = new Vector2(71f, 293f); // = "Montaña y Lago" (oeste lejano)
-        public const float CentralLakeRadius = 48f;   // lago — achicado (owner: "el radio del lago deberia ser mas chico"), era 65f
+        public const float CentralLakeRadius = 40f;   // lago — achicado de nuevo (owner: "no achicaste el radio"), 65->48->40f
         public const float CentralLakeLevel  = 11f;   // altura del plano de agua
         public const float CentralLakeBed    = 3f;    // fondo carvado (bajo el agua)
-        public const float CentralLakeBeachWidth = 35f; // franja PLANA de playa junto al agua (fondo->playa a nivel del agua, sin acantilado)
-        public const float CentralLakeShore  = 75f;   // ancho TOTAL de orilla (playa plana + transición hacia el terreno natural/montañas). Antes subía derecho del fondo al terreno natural y con las montañas agrupadas cerca eso quedaba alto → se veía "todo hundido" (owner). Ahora: fondo->playa plana (ver CentralLakeBeachWidth) y recién después playa->natural
+        public const float CentralLakeBeachWidth = 45f; // franja PLANA de playa junto al agua (fondo->playa a nivel del agua, sin acantilado) — agrandada (35->45) para que la parte realmente plana llegue más lejos antes de empezar a subir
+        public const float CentralLakeShore  = 85f;   // ancho TOTAL de orilla (playa plana + transición hacia el terreno natural/montañas). Antes subía derecho del fondo al terreno natural y con las montañas agrupadas cerca eso quedaba alto → se veía "todo hundido" (owner). Ahora: fondo->playa plana (ver CentralLakeBeachWidth) y recién después playa->natural. OJO: del lado de las 3 montañas (~70m del centro del lago, ver CentralPeaks) la playa plana ya las alcanza — ese lado va a seguir viéndose con un cerro cerca aunque el agua/orilla inmediata quede plana; si sigue viéndose "encajonado" hay que achicar CentralPeakHeight o separar los picos, no este ancho
         // Picos de montaña AGRUPADOS (owner: "las 3 pegadas") como UNA sola cordillera de
         // fondo del lado opuesto al muelle/playa (LakeShore), no repartidos por todos
         // lados. A ~45-63m entre sí (antes ~180-195m) + CentralPeakSigma=44 → los picos se
