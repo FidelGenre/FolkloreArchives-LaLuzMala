@@ -89,7 +89,7 @@ namespace FolkloreArchives.MapGen
             // montañas (mantiene cielo + montañas, funciona con niebla, sin 2ª cámara).
             // SilhouetteMountainBuilder.Build(root.transform);
             // MountainRingBuilder.Build(root.transform, terrain); // anillo LEJANO (desactivado, rompía skybox con cámara de fondo)
-            // MountainRingBuilder.BuildCentralLakeMountains(root.transform, terrain); // DESACTIVADO: escala 9x quedó gigante/deforme/flotando de cerca. Rehacer con escala chica antes de volver a activar.
+            MountainRingBuilder.BuildCentralLakeMountains(root.transform, terrain); // REACTIVADO con escala chica (9->4, ver MountainRingBuilder) — owner: "de fondo, del lado contrario al que se ingresa, ponle assets de montañas"
             AreaPoiBuilder.Build(root.transform, terrain);   // zonas/POIs nuevos del MapPlan (estepa, mallín, roquedal, quemado, orilla, Difunta Correa, Gauchito Gil, ahorcado, antena, corrales, YPF, estancia)
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
             CarBuilder.Build(root.transform, terrain);       // Renault 12 procedural (auto manejable) — estacionado en el campamento

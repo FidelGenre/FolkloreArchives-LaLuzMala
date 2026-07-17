@@ -264,7 +264,7 @@ namespace FolkloreArchives.MapGen
         // Montaña y Lago en una gran cuenca de montañas con un lago enorme, sin camino
         // entre ellas — se cruza el terreno natural). Todo tuneable acá.
         public static readonly Vector2 CentralLakeCenter = new Vector2(71f, 293f); // = "Montaña y Lago" (oeste lejano)
-        public const float CentralLakeRadius = 40f;   // lago — achicado de nuevo (owner: "no achicaste el radio"), 65->48->40f
+        public const float CentralLakeRadius = 32f;   // lago — un poco más chico de nuevo, 65->48->40->32f
         public const float CentralLakeLevel  = 22f;   // altura del plano de agua — subido (11->22): el ruido base del terreno ronda ~20-25m, así que un agua fija en 11 quedaba ~10-14m MÁS BAJA que el resto del mapa aunque la orilla en sí fuera plana; toda la cuenca se leía como un pozo grande (owner: "el agua quedo abajo, levanta todo el terreno, no solo la parte mas cercana"). Ahora el agua nace cerca del nivel natural del terreno, no muy por debajo
         public const float CentralLakeBed    = 14f;   // fondo carvado (bajo el agua) — mismo profundidad de agua que antes (8m), solo corrido junto con CentralLakeLevel
         public const float CentralLakeBeachWidth = 45f; // franja PLANA de playa junto al agua (fondo->playa a nivel del agua, sin acantilado) — agrandada (35->45) para que la parte realmente plana llegue más lejos antes de empezar a subir

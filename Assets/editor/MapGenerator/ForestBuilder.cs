@@ -418,8 +418,11 @@ namespace FolkloreArchives.MapGen
                     // despejar el caminito a la playa y la playa misma
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 5f) continue;
                     if (Vector2.Distance(p, MapLayout.RiverBeach) < 15f) continue;
-                    // lago + orilla de barro: sin árboles en el agua ni en el borde
-                    if (Vector2.Distance(p, MapLayout.CentralLakeCenter) < MapLayout.CentralLakeRadius + 28f) continue;
+                    // lago + orilla: sin árboles en el agua ni en toda la playa plana
+                    // (antes solo despejaba 28m, mucho menos que la playa real de
+                    // CentralLakeBeachWidth -> quedaba una hilera de árboles metida en la
+                    // orilla/agua, owner: "quita arboles alrededor del lago")
+                    if (Vector2.Distance(p, MapLayout.CentralLakeCenter) < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 10f) continue;
                     if (Vector2.Distance(p, MapLayout.WrongTurnDeath) < 8f) continue;
                     if (Vector2.Distance(p, MapLayout.LakeLookout) < 9f) continue;
                     if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 11f) continue;
@@ -1601,8 +1604,8 @@ namespace FolkloreArchives.MapGen
                     if (southDg <= MapLayout.ShoreVegNear && BuilderUtils.DistToPolyline(p, MapLayout.PavedRoute) < 10f) continue;
                     float dRiv = BuilderUtils.DistToPolyline(p, MapLayout.River);
                     if (dRiv < 18f) continue;
-                    // lago + orilla de barro: sin pasto en el agua ni en el borde
-                    if (Vector2.Distance(p, MapLayout.CentralLakeCenter) < MapLayout.CentralLakeRadius + 28f) continue;
+                    // lago + orilla: sin pasto alto en el agua ni en toda la playa plana
+                    if (Vector2.Distance(p, MapLayout.CentralLakeCenter) < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 10f) continue;
                     // franja de arena de la ribera (TerrainBuilder pinta arena por
                     // altura hasta ~10m): sin pasto encima de la arena
                     if (dRiv < 34f &&
