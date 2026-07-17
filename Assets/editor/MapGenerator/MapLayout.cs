@@ -235,9 +235,11 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] Camino9  = { HuntingField, new Vector2(245f, 265f), Campsite };            // c10: campo de caza → campamento (rama 3)
         public static readonly Vector2[] Camino10 = { Campsite, new Vector2(200f, 185f), OldLadyRanch };            // rama DIRECTA campamento → vieja (antes iba lago→vieja, redundante con PathA)
         public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(105f, 288f), LakeLookout };         // lago → mirador oeste (antes vieja→mirador, ya no hace falta)
-        // c13: muerte camino equivocado → sale de un punto sobre la RUTA DE TIERRA (su
-        // propio punto medio, 182,132), no directo desde el desvío/ruta asfaltada (owner).
-        public static readonly Vector2[] Camino13 = { WrongTurnDeath, new Vector2(130f, 98f), new Vector2(230f, 150f) };
+        // c13: muerte camino equivocado → owner: "que sea confuso", el desvío tiene que
+        // aparecer A UNOS METROS de entrar al camino de tierra (no 100+ metros adentro,
+        // que era lo que quedaba pegado al punto medio de DirtRoad después de correr el
+        // desvío/DirtTurnoff más al este). Ahora sale ~15m después de DirtTurnoff.
+        public static readonly Vector2[] Camino13 = { WrongTurnDeath, new Vector2(130f, 98f), new Vector2(DirtTurnoff.x + 1f, DirtTurnoff.y + 15f) };
         // Cruce del río + red del ESTE (peligro):
         public static readonly Vector2[] Camino14 = { HuntingField, new Vector2(294f, 285f), LookoutEast };         // c12: campo de caza → (cruza el río) → mirador este (antes iba desde la vieja)
         public static readonly Vector2[] Camino15 = { Campsite, new Vector2(281f, 254f), LookoutEast };             // c21: campamento → mirador este

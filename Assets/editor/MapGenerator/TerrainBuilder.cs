@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 46;
+        const int SplatVersion = 47;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -357,10 +357,22 @@ namespace FolkloreArchives.MapGen
                 }
                 else
                 {
-                    // playa -> terreno natural (montañas etc.), en el resto del ancho de
-                    // orilla, para que no haya un salto en el borde exterior de la playa
+                    // playa -> terreno natural, en el resto del ancho de orilla. La orilla
+                    // en sí ya quedaba plana (fix anterior) pero el owner sigue viendo
+                    // "todo hundido" — porque el terreno NATURAL de esta zona (ruido/ridge
+                    // sin el lago) es más bajo que el resto del lado oeste del mapa, así
+                    // que aunque la playa fuera plana, quedaba como un plato hondo grande.
+                    // Sampleo la altura natural de un punto de referencia bien adentro del
+                    // lado oeste (lejos del lago Y de las montañas) y "levanto" esta zona
+                    // hacia ese nivel — pero sumado como boost que se apaga a 0 justo en el
+                    // borde exterior (t=1), así sigue empalmando sin costura con el terreno
+                    // de más afuera (que puede ser la montaña, mucho más alto, y ahí el
+                    // boost ya da 0 solo porque Max(0, oeste-base) no tiene nada que sumar).
                     float t = Mathf.SmoothStep(0f, 1f, (dCL - MapLayout.CentralLakeRadius - MapLayout.CentralLakeBeachWidth) / (MapLayout.CentralLakeShore - MapLayout.CentralLakeBeachWidth));
-                    a = Mathf.Min(a, Mathf.Lerp(beachH, a, t));
+                    float baseBlend = Mathf.Lerp(beachH, a, t);
+                    float westGrade = HeightAt(MapLayout.CentralLakeCenter.x + MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore + 30f, MapLayout.CentralLakeCenter.y);
+                    float boost = Mathf.Max(0f, westGrade - baseBlend) * (1f - t);
+                    a = baseBlend + boost;
                 }
             }
 
