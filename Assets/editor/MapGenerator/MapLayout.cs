@@ -169,9 +169,9 @@ namespace FolkloreArchives.MapGen
         // achicados del mapa) — se habían quedado con los valores absolutos ORIGINALES
         // del mapa grande, por eso los senderos zigzagueaban el doble de lo debido y se
         // cruzaban entre sí (owner: "los caminos siguen igual/enredados").
-        public static readonly Vector2[] DirtRoad   = Snake(new[] { DirtTurnoff, new Vector2(230f, 150f), Campsite }, 7f, 4f); // ruta de tierra en S
+        public static readonly Vector2[] DirtRoad   = Snake(new[] { DirtTurnoff, new Vector2(230f, 150f), Campsite }, 4f, 4f); // ruta de tierra en S
         // PathA = rama DIRECTA campamento ↔ lago (una de las 3 ramas del hub, owner).
-        public static readonly Vector2[] PathA      = Snake(new[] { LakeMountain, Campsite }, 10f, 5f);
+        public static readonly Vector2[] PathA      = Snake(new[] { LakeMountain, Campsite }, 4f, 4f);
         // PathB = sendero de MIEDO (este, peligro): Tumba → Rehenes → Delincuentes.
         public static readonly Vector2[] PathB      = Snake(new[] { Grave, HostageArea, MainCriminalCamp }, 10f, 5f);
         public static readonly Vector2[] GraveToCriminals     = Snake(new[] { Grave, new Vector2(446f, 170f), MainCriminalCamp }, 9f, 4f);
@@ -247,7 +247,7 @@ namespace FolkloreArchives.MapGen
         };
         // Todos ondulados en S (no líneas rectas).
         public static readonly Vector2[][] ExtraTrails = {
-            Snake(Camino9, 8f, 4f), Snake(Camino10, 8f, 4f), Snake(Camino11, 8f, 4f),
+            Snake(Camino9, 4f, 4f), Snake(Camino10, 4f, 4f), Snake(Camino11, 4f, 4f),
             Snake(Camino13, 8f, 4f), Snake(Camino14, 9f, 4f),
             Snake(Camino15, 8f, 4f), Snake(Camino16, 8f, 4f),
             Snake(Camino19, 7f, 4f), Snake(Camino20, 8f, 4f),
