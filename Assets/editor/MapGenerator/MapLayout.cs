@@ -54,7 +54,7 @@ namespace FolkloreArchives.MapGen
         //  sits exactly on the road wherever the road is at x=620.)
         // Coordenadas del PLANO FINAL del owner (MapPlan.html). Layout de dos lados:
         // OESTE = humano, ESTE = peligro, río al medio (~x595).
-        public static readonly Vector2 Campsite         = new Vector2(270f, 232f);  // campamento — corrido al este, pegado al río (owner: "que tenga vistas")
+        public static readonly Vector2 Campsite         = new Vector2(240f, 232f);  // campamento — corrido un poco al oeste (270 quedaba a 29m del río, DENTRO de su zona de carvado de 34m → terreno flotante/raro; a 240 son 58m, fuera del carvado pero sigue con vista al agua)
         // INTERCAMBIADOS (owner, editor de plano): VIEJA <-> CAMPO DE CAZA. Posición EXACTA
         // de VIEJA ajustada a mano por el owner en el editor de plano (235,388). Todo el
         // combo de la vieja (casa/galpón/huellas/lote/BarnPath) se recalcula desde ese
@@ -138,7 +138,7 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 Mallin        = new Vector2(252f, 323f);  // pantano (mallín), sobre Camino14
         public static readonly Vector2 Roquedal      = new Vector2(100f, 231f);  // afloramiento de piedra, sobre Camino10
         public static readonly Vector2 BurntForest   = new Vector2(176f, 257f);  // bosque quemado, cerca del nudo del camino de tierra
-        public static readonly Vector2 LakeShore     = new Vector2(94f, 270f);  // orilla del lago + muelle
+        public static readonly Vector2 LakeShore     = new Vector2(128f, 236f);  // orilla del lago + muelle — estaba a 32.5m del centro (DENTRO del agua pura, radio 65m); movida a 80m, en la franja de arena real
         public static readonly Vector2 HangedTree    = new Vector2(402f, 206f);  // árbol del ahorcado + cementerio (pegado a la Tumba)
         public static readonly Vector2 Antenna       = new Vector2(370f, 282f);  // antena/repetidora (cerro)
         public static readonly Vector2 Corrales      = new Vector2(528f, 233f); // corrales/bañadero (junto a la estancia)
