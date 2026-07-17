@@ -54,7 +54,7 @@ namespace FolkloreArchives.MapGen
         //  sits exactly on the road wherever the road is at x=620.)
         // Coordenadas del PLANO FINAL del owner (MapPlan.html). Layout de dos lados:
         // OESTE = humano, ESTE = peligro, río al medio (~x595).
-        public static readonly Vector2 Campsite         = new Vector2(240f, 232f);  // campamento — corrido un poco al oeste (270 quedaba a 29m del río, DENTRO de su zona de carvado de 34m → terreno flotante/raro; a 240 son 58m, fuera del carvado pero sigue con vista al agua)
+        public static readonly Vector2 Campsite         = new Vector2(258f, 232f);  // campamento junto al río (~40m) — el borde ya no es brusco porque ensanché la transición del río (ver TerrainBuilder)
         // INTERCAMBIADOS (owner, editor de plano): VIEJA <-> CAMPO DE CAZA. Posición EXACTA
         // de VIEJA ajustada a mano por el owner en el editor de plano (235,388). Todo el
         // combo de la vieja (casa/galpón/huellas/lote/BarnPath) se recalcula desde ese
@@ -265,7 +265,7 @@ namespace FolkloreArchives.MapGen
         public const float CentralLakeRadius = 65f;   // lago (radio pedido por el owner)
         public const float CentralLakeLevel  = 11f;   // altura del plano de agua
         public const float CentralLakeBed    = 3f;    // fondo carvado (bajo el agua)
-        public const float CentralLakeShore  = 45f;   // ancho de la orilla que sube del fondo al terreno
+        public const float CentralLakeShore  = 75f;   // ancho de la orilla que sube del fondo al terreno — ensanchado (owner: "el agua debería estar al mismo nivel que la orilla, está hundido"): al agrupar las montañas más cerca del lago, el terreno "natural" de alrededor quedó más alto, y la misma bajada en 45m se veía como acantilado; repartida en 75m queda gradual
         // Picos de montaña AGRUPADOS (owner: "las 3 pegadas") como UNA sola cordillera de
         // fondo del lado opuesto al muelle/playa (LakeShore), no repartidos por todos
         // lados. A ~45-63m entre sí (antes ~180-195m) + CentralPeakSigma=44 → los picos se

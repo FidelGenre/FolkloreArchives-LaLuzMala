@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 41;
+        const int SplatVersion = 42;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -308,9 +308,12 @@ namespace FolkloreArchives.MapGen
                 a = Mathf.Lerp(campGrade, a, Mathf.SmoothStep(0f, 1f, (dc - 15f) / 25f));
             }
 
-            // riverbed carve (last, so it always wins)
+            // riverbed carve (last, so it always wins). Banda ENSANCHADA (14→44, antes
+            // 14→34): matemáticamente ya era un Lerp suave, pero con el campamento cerca
+            // del río el desnivel se cubría en pocos metros y se veía como un borde brusco
+            // (owner: "el campamento parece flotar"). Misma bajada, repartida en más metros.
             float dr = BuilderUtils.DistToPolyline(p, MapLayout.River);
-            if (dr < 34f) a = Mathf.Lerp(3.5f, a, Mathf.SmoothStep(0f, 1f, (dr - 14f) / 20f));
+            if (dr < 44f) a = Mathf.Lerp(3.5f, a, Mathf.SmoothStep(0f, 1f, (dr - 14f) / 30f));
 
             // segundo río (tributario del lago) — canal algo más angosto
             float dr2 = BuilderUtils.DistToPolyline(p, MapLayout.River2);
