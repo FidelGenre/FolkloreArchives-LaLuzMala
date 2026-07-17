@@ -262,10 +262,11 @@ namespace FolkloreArchives.MapGen
         // Montaña y Lago en una gran cuenca de montañas con un lago enorme, sin camino
         // entre ellas — se cruza el terreno natural). Todo tuneable acá.
         public static readonly Vector2 CentralLakeCenter = new Vector2(71f, 293f); // = "Montaña y Lago" (oeste lejano)
-        public const float CentralLakeRadius = 65f;   // lago (radio pedido por el owner)
+        public const float CentralLakeRadius = 48f;   // lago — achicado (owner: "el radio del lago deberia ser mas chico"), era 65f
         public const float CentralLakeLevel  = 11f;   // altura del plano de agua
         public const float CentralLakeBed    = 3f;    // fondo carvado (bajo el agua)
-        public const float CentralLakeShore  = 75f;   // ancho de la orilla que sube del fondo al terreno — ensanchado (owner: "el agua debería estar al mismo nivel que la orilla, está hundido"): al agrupar las montañas más cerca del lago, el terreno "natural" de alrededor quedó más alto, y la misma bajada en 45m se veía como acantilado; repartida en 75m queda gradual
+        public const float CentralLakeBeachWidth = 35f; // franja PLANA de playa junto al agua (fondo->playa a nivel del agua, sin acantilado)
+        public const float CentralLakeShore  = 75f;   // ancho TOTAL de orilla (playa plana + transición hacia el terreno natural/montañas). Antes subía derecho del fondo al terreno natural y con las montañas agrupadas cerca eso quedaba alto → se veía "todo hundido" (owner). Ahora: fondo->playa plana (ver CentralLakeBeachWidth) y recién después playa->natural
         // Picos de montaña AGRUPADOS (owner: "las 3 pegadas") como UNA sola cordillera de
         // fondo del lado opuesto al muelle/playa (LakeShore), no repartidos por todos
         // lados. A ~45-63m entre sí (antes ~180-195m) + CentralPeakSigma=44 → los picos se

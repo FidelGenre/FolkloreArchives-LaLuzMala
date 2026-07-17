@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 42;
+        const int SplatVersion = 43;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -298,13 +298,17 @@ namespace FolkloreArchives.MapGen
             }
 
             // flat clearing for the campsite (tents, campfire): aplana a la altura NATURAL
-            // del terreno de alrededor (sampleada 55m al oeste, lejos del río) en vez de un
-            // número fijo — un fijo (era 12f) queda hundido/flotando según dónde esté el
-            // campamento; esto se auto-ajusta si se mueve (owner: "quedó hundido").
+            // del terreno de alrededor. OJO: se samplea a la MISMA distancia del río que
+            // el campamento (mismo dr, ~55m al norte en vez de al oeste/tierra adentro),
+            // no "55m al oeste" — ese punto quedaba tierra adentro en terreno alto (lejos
+            // del río) mientras el campamento está pegado al río, así que el pad plano
+            // quedaba mucho más alto que la orilla y el carvado del río lo cortaba en un
+            // acantilado en el borde (owner: "el campamento quedó flotando"). Sampleando a
+            // la misma distancia del río, el pad ya nace a la altura natural de la orilla.
             float dc = Vector2.Distance(p, MapLayout.Campsite);
             if (dc < 40f)
             {
-                float campGrade = HeightAt(MapLayout.Campsite.x - 55f, MapLayout.Campsite.y);
+                float campGrade = HeightAt(MapLayout.Campsite.x, MapLayout.Campsite.y - 55f);
                 a = Mathf.Lerp(campGrade, a, Mathf.SmoothStep(0f, 1f, (dc - 15f) / 25f));
             }
 
@@ -326,8 +330,22 @@ namespace FolkloreArchives.MapGen
             if (dCL < MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore)
             {
                 float wob = (Mathf.PerlinNoise(wx * 0.02f + 11f, wz * 0.02f + 7f) - 0.5f) * 10f;
-                float t = Mathf.SmoothStep(0f, 1f, (dCL - MapLayout.CentralLakeRadius) / MapLayout.CentralLakeShore);
-                a = Mathf.Min(a, Mathf.Lerp(MapLayout.CentralLakeBed + wob, a, t));
+                float beachH = MapLayout.CentralLakeLevel + 1f; // playa PLANA ~1m sobre el agua, no "hundida"
+                if (dCL < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth)
+                {
+                    // fondo -> playa plana (antes subía directo al terreno natural, que con
+                    // las montañas agrupadas cerca del lago quedaba alto y se veía como un
+                    // pozo/acantilado — owner: "está todo hundido, deberia ser una zona plana")
+                    float t = Mathf.SmoothStep(0f, 1f, (dCL - MapLayout.CentralLakeRadius) / MapLayout.CentralLakeBeachWidth);
+                    a = Mathf.Min(a, Mathf.Lerp(MapLayout.CentralLakeBed + wob, beachH, t));
+                }
+                else
+                {
+                    // playa -> terreno natural (montañas etc.), en el resto del ancho de
+                    // orilla, para que no haya un salto en el borde exterior de la playa
+                    float t = Mathf.SmoothStep(0f, 1f, (dCL - MapLayout.CentralLakeRadius - MapLayout.CentralLakeBeachWidth) / (MapLayout.CentralLakeShore - MapLayout.CentralLakeBeachWidth));
+                    a = Mathf.Min(a, Mathf.Lerp(beachH, a, t));
+                }
             }
 
             // MINI PLAYA DE PESCA junto al campamento (orilla oeste del río): una
