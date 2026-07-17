@@ -100,13 +100,15 @@ namespace FolkloreArchives.MapGen
         // Le dan la roca/silueta real que el terreno solo (verde liso) no tiene —
         // el pedido del owner: "que las montañas sean de assets" tipo foto de lago
         // de camping (pico rocoso detrás del agua).
-        const float LakeMountainScale    = 4f;   // más grandes que el anillo lejano pero MUCHO menos que antes
-                                                  // (9f quedaba gigante/deforme/flotando de cerca — por eso
-                                                  // estaba desactivado; con los picos procedurales ya bajados
-                                                  // a CentralPeakHeight=70/Sigma=30, un asset más chico combina mejor)
-        const float LakeMountainHeightMin = 1.4f;
-        const float LakeMountainHeightMax = 1.9f;
-        const float LakeMountainSinkY     = -8f; // hundida en la base del terreno (que no se vea el corte)
+        const float LakeMountainScale    = 1f;   // 9->4 seguía dando una montaña gigante (owner: "esas
+                                                  // montañas nooo, son gigantes") — el mesh nativo del pack
+                                                  // debe medir ~80m+ de ancho a escala 1, así que 4x lo hacía
+                                                  // llenar toda la pantalla. Corte grande esta vez (4->1) en
+                                                  // vez de otro ajuste chico, para no gastar otro Rebuild
+                                                  // Terrain en algo que probablemente seguía siendo enorme.
+        const float LakeMountainHeightMin = 1.1f;
+        const float LakeMountainHeightMax = 1.5f;
+        const float LakeMountainSinkY     = -2f; // hundida menos que antes (-8): con el mesh 4x más chico, -8 lo enterraba de mas
 
         [UnityEditor.MenuItem("Tools/Folklore Archives/Rebuild Central Lake Mountains")]
         public static void RebuildCentralLakeMountains()
