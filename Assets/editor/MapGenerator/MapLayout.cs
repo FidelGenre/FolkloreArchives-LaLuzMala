@@ -228,7 +228,11 @@ namespace FolkloreArchives.MapGen
         // lago (PathA), UNA a la vieja (Camino9b, acá abajo) y UNA al campo de caza
         // (Camino9). El Mirador Oeste cuelga del LAGO, no del campamento (evita el 4to
         // camino directo al hub).
-        public static readonly Vector2[] Camino9  = { HuntingField, new Vector2(152f, 226f), Campsite };            // c10: campo de caza → campamento (rama 3)
+        // punto medio VIEJO (152,226) era de antes de mover Campo de Caza/Campamento —
+        // hacía un rodeo de 103m hacia el oeste, atravesando toda la zona del lago/vieja
+        // (la causa REAL del nudo, no la amplitud del zigzag). Recalculado cerca de la
+        // línea directa entre los dos puntos actuales.
+        public static readonly Vector2[] Camino9  = { HuntingField, new Vector2(245f, 265f), Campsite };            // c10: campo de caza → campamento (rama 3)
         public static readonly Vector2[] Camino10 = { Campsite, new Vector2(200f, 185f), OldLadyRanch };            // rama DIRECTA campamento → vieja (antes iba lago→vieja, redundante con PathA)
         public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(105f, 288f), LakeLookout };         // lago → mirador oeste (antes vieja→mirador, ya no hace falta)
         // c13: muerte camino equivocado → sale de un punto sobre la RUTA DE TIERRA (su
