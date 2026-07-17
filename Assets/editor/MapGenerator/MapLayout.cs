@@ -87,7 +87,7 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 LakeMountain     = new Vector2(71f, 293f);  // "MONTAÑA Y LAGO" — lago (oeste lejano)
         public static readonly Vector2 WrongTurnDeath   = new Vector2(98f, 116f);  // "MUERTE CAMINO EQUIVOCADO" (oeste, spur)
         public static readonly Vector2 LakeLookout      = new Vector2(142f, 278f);  // "MIRADOR OESTE" (centro del cuarteto oeste)
-        public static readonly Vector2 AbandonedCabin   = new Vector2(196f, 133f);  // "CABAÑA OESTE" — antes del campamento
+        public static readonly Vector2 AbandonedCabin   = new Vector2(270f, 110f);  // "CABAÑA OESTE" — corrida al este (owner: quedaba muy cerca de la Vieja)
         // Zonas NUEVAS del plano de dos lados:
         public static readonly Vector2 EscapePoint      = new Vector2(422f, 40f);   // "ESCAPE" — sobre la ruta (z de la ruta a x803)
         public static readonly Vector2 CabinEast        = new Vector2(359f, 112f);  // "CABAÑA ESTE" — bajando de la Tumba al Escape
@@ -222,7 +222,9 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[] Camino10 = { LakeMountain, new Vector2(105f, 228f), OldLadyRanch };        // c16: lago → vieja (antes iba a campo de caza)
         public static readonly Vector2[] Camino11 = { OldLadyRanch, new Vector2(164f, 294f), LakeLookout };         // tMirW: vieja → mirador oeste
         public static readonly Vector2[] Camino12 = { LakeLookout, new Vector2(212f, 236f), Campsite };             // c20: mirador oeste → campamento
-        public static readonly Vector2[] Camino13 = { WrongTurnDeath, new Vector2(130f, 98f), DirtTurnoff };       // c13: muerte camino equivocado → desvío
+        // c13: muerte camino equivocado → sale de un punto sobre la RUTA DE TIERRA (su
+        // propio punto medio, 182,132), no directo desde el desvío/ruta asfaltada (owner).
+        public static readonly Vector2[] Camino13 = { WrongTurnDeath, new Vector2(130f, 98f), new Vector2(182f, 132f) };
         // Cruce del río + red del ESTE (peligro):
         public static readonly Vector2[] Camino14 = { HuntingField, new Vector2(294f, 285f), LookoutEast };         // c12: campo de caza → (cruza el río) → mirador este (antes iba desde la vieja)
         public static readonly Vector2[] Camino15 = { Campsite, new Vector2(281f, 254f), LookoutEast };             // c21: campamento → mirador este
