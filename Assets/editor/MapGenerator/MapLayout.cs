@@ -54,7 +54,7 @@ namespace FolkloreArchives.MapGen
         //  sits exactly on the road wherever the road is at x=620.)
         // Coordenadas del PLANO FINAL del owner (MapPlan.html). Layout de dos lados:
         // OESTE = humano, ESTE = peligro, río al medio (~x595).
-        public static readonly Vector2 Campsite         = new Vector2(258f, 232f);  // campamento junto al río (~40m) — el borde ya no es brusco porque ensanché la transición del río (ver TerrainBuilder)
+        public static readonly Vector2 Campsite         = new Vector2(246f, 232f);  // campamento junto al río — corrido un poco más al oeste (258->246, owner: "muevelo un poquito a la izquierda") para darle más lugar al descenso hacia el agua sin perder el nucleo plano (dc<12, ver TerrainBuilder)
         // INTERCAMBIADOS (owner, editor de plano): VIEJA <-> CAMPO DE CAZA. Posición EXACTA
         // de VIEJA ajustada a mano por el owner en el editor de plano (235,388). Todo el
         // combo de la vieja (casa/galpón/huellas/lote/BarnPath) se recalcula desde ese
