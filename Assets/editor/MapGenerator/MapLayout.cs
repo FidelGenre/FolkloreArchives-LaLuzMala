@@ -165,12 +165,16 @@ namespace FolkloreArchives.MapGen
         // Caminos que salen del campamento: ahora en S (curvas suaves Catmull-Rom con
         // puntos que zigzaguean) en vez de líneas rectas (pedido del owner).
         // corrida más al este (owner: quedaba muy pegada a la Vieja) — mismo desvío/campamento, curva movida.
-        public static readonly Vector2[] DirtRoad   = Snake(new[] { DirtTurnoff, new Vector2(230f, 150f), Campsite }, 14f, 8f); // ruta de tierra en S
+        // AMPLITUD/ESPACIADO de Snake() reescalados x0.525 (0.7*0.75, los mismos 2
+        // achicados del mapa) — se habían quedado con los valores absolutos ORIGINALES
+        // del mapa grande, por eso los senderos zigzagueaban el doble de lo debido y se
+        // cruzaban entre sí (owner: "los caminos siguen igual/enredados").
+        public static readonly Vector2[] DirtRoad   = Snake(new[] { DirtTurnoff, new Vector2(230f, 150f), Campsite }, 7f, 4f); // ruta de tierra en S
         // PathA = rama DIRECTA campamento ↔ lago (una de las 3 ramas del hub, owner).
-        public static readonly Vector2[] PathA      = Snake(new[] { LakeMountain, Campsite }, 20f, 10f);
+        public static readonly Vector2[] PathA      = Snake(new[] { LakeMountain, Campsite }, 10f, 5f);
         // PathB = sendero de MIEDO (este, peligro): Tumba → Rehenes → Delincuentes.
-        public static readonly Vector2[] PathB      = Snake(new[] { Grave, HostageArea, MainCriminalCamp }, 20f, 10f);
-        public static readonly Vector2[] GraveToCriminals     = Snake(new[] { Grave, new Vector2(446f, 170f), MainCriminalCamp }, 18f, 8f);
+        public static readonly Vector2[] PathB      = Snake(new[] { Grave, HostageArea, MainCriminalCamp }, 10f, 5f);
+        public static readonly Vector2[] GraveToCriminals     = Snake(new[] { Grave, new Vector2(446f, 170f), MainCriminalCamp }, 9f, 4f);
 
         // River runs along the east edge, next to the campsite. Smooth wavy
         // Catmull-Rom curve (same technique as the paved route) instead of a few
@@ -243,11 +247,11 @@ namespace FolkloreArchives.MapGen
         };
         // Todos ondulados en S (no líneas rectas).
         public static readonly Vector2[][] ExtraTrails = {
-            Snake(Camino9, 16f, 8f), Snake(Camino10, 16f, 8f), Snake(Camino11, 16f, 8f),
-            Snake(Camino13, 16f, 8f), Snake(Camino14, 18f, 8f),
-            Snake(Camino15, 16f, 8f), Snake(Camino16, 16f, 8f),
-            Snake(Camino19, 14f, 8f), Snake(Camino20, 16f, 8f),
-            Snake(Camino21, 16f, 8f), BarnPath
+            Snake(Camino9, 8f, 4f), Snake(Camino10, 8f, 4f), Snake(Camino11, 8f, 4f),
+            Snake(Camino13, 8f, 4f), Snake(Camino14, 9f, 4f),
+            Snake(Camino15, 8f, 4f), Snake(Camino16, 8f, 4f),
+            Snake(Camino19, 7f, 4f), Snake(Camino20, 8f, 4f),
+            Snake(Camino21, 8f, 4f), BarnPath
         };
 
         // ===== ZONA CENTRAL: montañas + lago gigante (owner: unir Campo de Caza +
