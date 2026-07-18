@@ -36,8 +36,15 @@ namespace FolkloreArchives.MapGen
         static Material Rust, MetalDark, Wood, ShrineRed, FlagRed, Bottle, Bone, Reed,
                         Rope, Ash, Burnt, DarkWater, Candle, RedLight, StoneGrey;
 
+        // Cantidad de objetos que se registran para persistencia manual (IDs
+        // 0..PersistCount-1). Debe coincidir con la cantidad de Reg(...) en Build,
+        // en su orden de creación. Si reordenás/agregás/sacás, re-guardá el layout.
+        public const int PersistCount = 13;
+        static Transform Reg(Transform g) => ManualLayoutPersistence.Register("AreaPois", g);
+
         public static void Build(Transform parent, Terrain t)
         {
+            ManualLayoutPersistence.Begin("AreaPois");   // carga overrides manuales guardados (si hay)
             var root = BuilderUtils.Group(parent, "AreasAndPOIs", Vector3.zero);
 
             Rust      = BuilderUtils.Mat("rust",       new Color(0.42f, 0.28f, 0.20f));
@@ -56,26 +63,32 @@ namespace FolkloreArchives.MapGen
             RedLight  = BuilderUtils.Mat("redbeacon",  new Color(1f, 0.12f, 0.10f), 4f);
             StoneGrey = BuilderUtils.Mat("stonegrey",  new Color(0.42f, 0.42f, 0.44f));
 
-            Estepa(root, t);
-            Mallin(root, t);
-            Roquedal(root, t);
-            BurntForestArea(root, t);
-            LakeShoreDock(root, t);
-            DifuntaCorrea(root, t);
-            GauchitoGil(root, t);
-            HangedTree(root, t);
-            Antenna(root, t);
-            Corrales(root, t);
-            YpfStation(root, t);
-            Estancia(root, t);
-            Capilla(root, t);
+            Reg(Estepa(root, t));
+            Reg(Mallin(root, t));
+            Reg(Roquedal(root, t));
+            Reg(BurntForestArea(root, t));
+            Reg(LakeShoreDock(root, t));
+            Reg(DifuntaCorrea(root, t));
+            Reg(GauchitoGil(root, t));
+            Reg(HangedTree(root, t));
+            Reg(Antenna(root, t));
+            Reg(Corrales(root, t));
+            Reg(YpfStation(root, t));
+            Reg(Estancia(root, t));
+            Reg(Capilla(root, t));
 
             // set-dressing fijo → static batching (menos draw calls). Excepto luces.
             BuilderUtils.MarkStaticRecursive(root);
         }
 
+        [MenuItem("Tools/Folklore Archives/Save Area POIs Layout")]
+        public static void SaveAreaPoisLayout() => ManualLayoutPersistence.Save("AreaPois", "AreasAndPOIs", PersistCount);
+
+        [MenuItem("Tools/Folklore Archives/Clear Area POIs Layout")]
+        public static void ClearAreaPoisLayout() => ManualLayoutPersistence.Clear("AreaPois");
+
         // ---------------- ESTEPA + MOLINO ----------------
-        static void Estepa(Transform parent, Terrain t)
+        static Transform Estepa(Transform parent, Terrain t)
         {
             var g = BuilderUtils.Group(parent, "Estepa", BuilderUtils.Ground(t, MapLayout.EstepaCenter));
             BuilderUtils.Label(g, "ESTEPA", g.position + Vector3.up * 7f);
@@ -123,10 +136,11 @@ namespace FolkloreArchives.MapGen
             Fence(g, t, MapLayout.EstepaCenter + new Vector2(8, 18), MapLayout.EstepaCenter + new Vector2(14, -20), 6f);
             SheepBones(g, t, MapLayout.EstepaCenter + new Vector2(6, -4));
             SheepBones(g, t, MapLayout.EstepaCenter + new Vector2(-10, 8));
+            return g;
         }
 
         // ---------------- MALLÍN (pantano) ----------------
-        static void Mallin(Transform parent, Terrain t)
+        static Transform Mallin(Transform parent, Terrain t)
         {
             var p = BuilderUtils.Ground(t, MapLayout.Mallin);
             var g = BuilderUtils.Group(parent, "Mallin", p);
@@ -160,10 +174,11 @@ namespace FolkloreArchives.MapGen
                 BuilderUtils.Prim(PrimitiveType.Cube, "Tabla" + i, g, pk, new Vector3(2.2f, 0.08f, 0.9f), Wood,
                     new Vector3(0f, Random.Range(-6f, 6f), 0f));
             }
+            return g;
         }
 
         // ---------------- ROQUEDAL (rocas reusadas HQP) ----------------
-        static void Roquedal(Transform parent, Terrain t)
+        static Transform Roquedal(Transform parent, Terrain t)
         {
             var p = BuilderUtils.Ground(t, MapLayout.Roquedal);
             var g = BuilderUtils.Group(parent, "Roquedal", p);
@@ -187,7 +202,7 @@ namespace FolkloreArchives.MapGen
                         new Vector3(s, s * 0.8f, s * Random.Range(0.7f, 1.3f)), StoneGrey,
                         new Vector3(Random.Range(-12f, 12f), Random.Range(0f, 360f), Random.Range(-12f, 12f)));
                 }
-                return;
+                return g;
             }
             for (int i = 0; i < 18; i++)
             {
@@ -200,10 +215,11 @@ namespace FolkloreArchives.MapGen
                 inst.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
                 inst.transform.localScale = Vector3.one * Random.Range(1.6f, 4.0f);
             }
+            return g;
         }
 
         // ---------------- BOSQUE QUEMADO ----------------
-        static void BurntForestArea(Transform parent, Terrain t)
+        static Transform BurntForestArea(Transform parent, Terrain t)
         {
             var p = BuilderUtils.Ground(t, MapLayout.BurntForest);
             var g = BuilderUtils.Group(parent, "BosqueQuemado", p);
@@ -232,10 +248,11 @@ namespace FolkloreArchives.MapGen
                         new Vector3(0.08f, Random.Range(0.6f, 1.2f), 0.08f), Burnt,
                         new Vector3(Random.Range(40f, 80f), Random.Range(0f, 360f), 0f));
             }
+            return g;
         }
 
         // ---------------- ORILLA DEL LAGO + MUELLE ----------------
-        static void LakeShoreDock(Transform parent, Terrain t)
+        static Transform LakeShoreDock(Transform parent, Terrain t)
         {
             var p = BuilderUtils.Ground(t, MapLayout.LakeShore);
             var g = BuilderUtils.Group(parent, "OrillaLago", p);
@@ -269,10 +286,11 @@ namespace FolkloreArchives.MapGen
                     new Vector3(0.06f, 1.2f, 0.06f), Reed, new Vector3(Random.Range(-8f, 8f), 0f, Random.Range(-8f, 8f)));
                 DestroyCol(reed);
             }
+            return g;
         }
 
         // ---------------- DIFUNTA CORREA ----------------
-        static void DifuntaCorrea(Transform parent, Terrain t)
+        static Transform DifuntaCorrea(Transform parent, Terrain t)
         {
             var p = RoadShoulder(t, MapLayout.DifuntaCorrea, 8f);
             var g = BuilderUtils.Group(parent, "DifuntaCorrea", p);
@@ -292,10 +310,11 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Prim(PrimitiveType.Cube, "CruzV", g, p + new Vector3(0f, 1.1f, 0f), new Vector3(0.12f, 2.2f, 0.12f), Wood);
             BuilderUtils.Prim(PrimitiveType.Cube, "CruzH", g, p + new Vector3(0f, 1.6f, 0f), new Vector3(0.8f, 0.12f, 0.12f), Wood);
             RedFlags(g, p, 5, 2.6f);
+            return g;
         }
 
         // ---------------- GAUCHITO GIL ----------------
-        static void GauchitoGil(Transform parent, Terrain t)
+        static Transform GauchitoGil(Transform parent, Terrain t)
         {
             var p = RoadShoulder(t, MapLayout.GauchitoGil, 9f);
             var g = BuilderUtils.Group(parent, "GauchitoGil", p);
@@ -310,10 +329,11 @@ namespace FolkloreArchives.MapGen
             DestroyCol(flame);
             WarmPoint(g, p + Vector3.up * 1.6f, 6f, 1.4f, new Color(1f, 0.5f, 0.2f));
             RedFlags(g, p, 6, 3f);
+            return g;
         }
 
         // ---------------- ÁRBOL DEL AHORCADO + CEMENTERIO ----------------
-        static void HangedTree(Transform parent, Terrain t)
+        static Transform HangedTree(Transform parent, Terrain t)
         {
             var p = BuilderUtils.Ground(t, MapLayout.HangedTree);
             var g = BuilderUtils.Group(parent, "ArbolDelAhorcado", p);
@@ -341,10 +361,11 @@ namespace FolkloreArchives.MapGen
                 BuilderUtils.Prim(PrimitiveType.Cube, "CruzV" + i, g, cp + Vector3.up * 0.55f, new Vector3(0.1f, 1.1f, 0.1f), Wood, new Vector3(0f, Random.Range(0f, 60f), tilt));
                 BuilderUtils.Prim(PrimitiveType.Cube, "CruzH" + i, g, cp + Vector3.up * 0.8f, new Vector3(0.55f, 0.1f, 0.1f), Wood, new Vector3(0f, Random.Range(0f, 60f), tilt));
             }
+            return g;
         }
 
         // ---------------- ANTENA / REPETIDORA ----------------
-        static void Antenna(Transform parent, Terrain t)
+        static Transform Antenna(Transform parent, Terrain t)
         {
             var p = BuilderUtils.Ground(t, MapLayout.Antenna);
             var g = BuilderUtils.Group(parent, "Antena", p);
@@ -371,10 +392,11 @@ namespace FolkloreArchives.MapGen
             var l = new GameObject("BalizaLuz").AddComponent<Light>();
             l.transform.SetParent(g); l.transform.position = p + Vector3.up * (h + 0.6f);
             l.type = LightType.Point; l.color = new Color(1f, 0.1f, 0.1f); l.range = 30f; l.intensity = 2.5f; l.shadows = LightShadows.None;
+            return g;
         }
 
         // ---------------- CORRALES / BAÑADERO ----------------
-        static void Corrales(Transform parent, Terrain t)
+        static Transform Corrales(Transform parent, Terrain t)
         {
             var p = BuilderUtils.Ground(t, MapLayout.Corrales);
             var g = BuilderUtils.Group(parent, "Corrales", p);
@@ -394,10 +416,11 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Prim(PrimitiveType.Cube, "Banadero", g, p + Vector3.up * 0.3f, new Vector3(4f, 0.6f, 1.0f), StoneGrey);
             BuilderUtils.Prim(PrimitiveType.Cube, "Agua", g, p + Vector3.up * 0.45f, new Vector3(3.7f, 0.3f, 0.75f), DarkWater);
             SheepBones(g, t, c + new Vector2(3, -2));
+            return g;
         }
 
         // ---------------- ESTACIÓN YPF ----------------
-        static void YpfStation(Transform parent, Terrain t)
+        static Transform YpfStation(Transform parent, Terrain t)
         {
             // Posición y tamaño del lote SIEMPRE derivados de YpfPadNearZ/FarZ (única fuente
             // de verdad, la misma que usan TerrainBuilder/ForestBuilder para despejar/limpiar
@@ -463,10 +486,11 @@ namespace FolkloreArchives.MapGen
                 car.transform.position = p + new Vector3(6f, 0.4f, -3f);
                 car.transform.rotation = Quaternion.Euler(6f, 55f, 10f); // ladeado/abandonado
             }
+            return g;
         }
 
         // ---------------- ESTANCIA + GALPÓN ----------------
-        static void Estancia(Transform parent, Terrain t)
+        static Transform Estancia(Transform parent, Terrain t)
         {
             var p = BuilderUtils.Ground(t, MapLayout.Estancia);
             var g = BuilderUtils.Group(parent, "Estancia", p);
@@ -501,10 +525,11 @@ namespace FolkloreArchives.MapGen
             // "cadenas" colgando (marcador de El Familiar) — siempre
             for (int i = 0; i < 3; i++)
                 BuilderUtils.Prim(PrimitiveType.Cylinder, "Cadena" + i, barn, bp + new Vector3(-1f + i, 2.6f, 6.3f), new Vector3(0.05f, 0.7f, 0.05f), MetalDark);
+            return g;
         }
 
         // ---------------- CAPILLA ANEGADA (modelo descargado) ----------------
-        static void Capilla(Transform parent, Terrain t)
+        static Transform Capilla(Transform parent, Terrain t)
         {
             Vector2 xz = MapLayout.Capilla;
             float groundY = t.SampleHeight(new Vector3(xz.x, 0f, xz.y));
@@ -522,6 +547,7 @@ namespace FolkloreArchives.MapGen
                 BuilderUtils.Prim(PrimitiveType.Cube, "CruzV", g, new Vector3(xz.x, groundY + 6.5f, xz.y - 4f), new Vector3(0.2f, 1.3f, 0.2f), Wood);
                 BuilderUtils.Prim(PrimitiveType.Cube, "CruzH", g, new Vector3(xz.x, groundY + 6.2f, xz.y - 4f), new Vector3(0.8f, 0.2f, 0.2f), Wood);
             }
+            return g;
         }
 
         // ================= helpers =================

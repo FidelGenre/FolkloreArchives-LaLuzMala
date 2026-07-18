@@ -6,14 +6,23 @@
 //  hostage area, secondary camp. Includes item/spawn markers.
 //  Paste into:  Assets/Editor/MapGenerator/LandmarkBuilder.cs
 // ============================================================
+using UnityEditor;
 using UnityEngine;
 
 namespace FolkloreArchives.MapGen
 {
     public static class LandmarkBuilder
     {
+        // Persistencia manual (posición/rotación/escala/borrado) de los marcadores
+        // simples de este archivo — NO incluye Campsite ni MainCriminalCamp, que ya
+        // tienen sus propios sistemas de persistencia (CampsiteBuilder BakedLayout /
+        // CriminalCampPersistence) para sus objetos internos.
+        public const int PersistCount = 11;
+        static void Reg(GameObject go) => ManualLayoutPersistence.Register("Landmarks", go);
+
         public static void Build(Transform parent, Terrain t)
         {
+            ManualLayoutPersistence.Begin("Landmarks");   // carga overrides manuales guardados (si hay)
             var poi = BuilderUtils.Group(parent, "PointsOfInterest", Vector3.zero);
 
             var woodMat   = BuilderUtils.Mat("wood",    new Color(0.35f, 0.25f, 0.15f));
@@ -71,6 +80,7 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Prim(PrimitiveType.Cube, "CrossVertical", grave, grave.position + new Vector3(0f, 0.7f, 1.1f), new Vector3(0.12f, 1.4f, 0.12f), woodMat);
             BuilderUtils.Prim(PrimitiveType.Cube, "CrossHorizontal", grave, grave.position + new Vector3(0f, 1.0f, 1.1f), new Vector3(0.7f, 0.12f, 0.12f), woodMat);
             BuilderUtils.Empty(grave, "RUFUS_DIG_POINT", grave.position + Vector3.up * 0.3f);
+            Reg(grave.gameObject);
 
             // ---------- LUZ MALA SPAWN ----------
             var wisp = BuilderUtils.Group(poi, "LuzMala", BuilderUtils.Ground(t, MapLayout.Grave.x + 18f, MapLayout.Grave.y - 15f) + Vector3.up * 2f);
@@ -84,6 +94,7 @@ namespace FolkloreArchives.MapGen
             halo.color = Color.white;
             halo.intensity = 3f;
             halo.range = 25f;
+            Reg(wisp.gameObject);
 
             // ---------- MAIN CRIMINAL CAMP (Act 3) ----------
             var criminals = BuilderUtils.Group(poi, "MainCriminalCamp", BuilderUtils.Ground(t, MapLayout.MainCriminalCamp));
@@ -113,26 +124,34 @@ namespace FolkloreArchives.MapGen
                 ForestBuilder.DryTree(hostages, pos + new Vector3(0.8f, 0f, 0.8f), trunkMat, dryMat);
                 BuilderUtils.Prim(PrimitiveType.Capsule, "TiedNPC_" + (i + 1), hostages, pos + Vector3.up * 1f, new Vector3(0.7f, 0.9f, 0.7f), npcMat);
             }
+            Reg(hostages.gameObject);
 
             // Zonas nuevas del owner (editor de plano) - por ahora, marcadores.
             var lakeMt = BuilderUtils.Group(poi, "LakeMountain", BuilderUtils.Ground(t, MapLayout.LakeMountain));
             BuilderUtils.Label(lakeMt, "MONTAÑA Y LAGO", lakeMt.position + Vector3.up * 8f);
+            Reg(lakeMt.gameObject);
             var wrongTurn = BuilderUtils.Group(poi, "WrongTurnDeath", BuilderUtils.Ground(t, MapLayout.WrongTurnDeath));
             BuilderUtils.Label(wrongTurn, "MUERTE CAMINO EQUIVOCADO", wrongTurn.position + Vector3.up * 7f);
+            Reg(wrongTurn.gameObject);
             var lookout = BuilderUtils.Group(poi, "LakeLookout", BuilderUtils.Ground(t, MapLayout.LakeLookout));
             BuilderUtils.Label(lookout, "MIRADOR DEL LAGO", lookout.position + Vector3.up * 7f);
+            Reg(lookout.gameObject);
             var cabin = BuilderUtils.Group(poi, "AbandonedCabin", BuilderUtils.Ground(t, MapLayout.AbandonedCabin));
             BuilderUtils.Label(cabin, "CABAÑA ABANDONADA", cabin.position + Vector3.up * 7f);
             Shack(cabin, t, MapLayout.AbandonedCabin.x, MapLayout.AbandonedCabin.y, 30f, clothMat, metalMat);
+            Reg(cabin.gameObject);
 
             // Zonas del plano de dos lados (lado ESTE + escape):
             var mirE = BuilderUtils.Group(poi, "LookoutEast", BuilderUtils.Ground(t, MapLayout.LookoutEast));
             BuilderUtils.Label(mirE, "MIRADOR ESTE", mirE.position + Vector3.up * 7f);
+            Reg(mirE.gameObject);
             var cabE = BuilderUtils.Group(poi, "CabinEast", BuilderUtils.Ground(t, MapLayout.CabinEast));
             BuilderUtils.Label(cabE, "CABAÑA ESTE", cabE.position + Vector3.up * 7f);
             Shack(cabE, t, MapLayout.CabinEast.x, MapLayout.CabinEast.y, 200f, clothMat, metalMat);
+            Reg(cabE.gameObject);
             var esc = BuilderUtils.Group(poi, "EscapePoint", BuilderUtils.Ground(t, MapLayout.EscapePoint));
             BuilderUtils.Label(esc, "ESCAPE", esc.position + Vector3.up * 8f);
+            Reg(esc.gameObject);
 
             // PUENTE PEATONAL sobre el cruce del río (vieja/campamento ↔ mirador este),
             // así el cruce a pie no queda bloqueado por agua. Se apoya en la altura de
@@ -151,6 +170,7 @@ namespace FolkloreArchives.MapGen
                 BuilderUtils.Prim(PrimitiveType.Cube, "RailS", fb, new Vector3(bx, deckY + 0.65f, bz - 2.1f),
                     new Vector3(halfLen * 2f, 1.1f, 0.15f), woodMat);
                 // owner: volver a derecho (el giro de 40° de antes no quedó bien).
+                Reg(fb.gameObject);
             }
 
             // a warm lantern at the player's campsite so it reads as a safe, lit haven
@@ -161,6 +181,12 @@ namespace FolkloreArchives.MapGen
             // automatic static batching merge these into fewer draw calls.
             BuilderUtils.MarkStaticRecursive(poi);
         }
+
+        [MenuItem("Tools/Folklore Archives/Save Landmarks Layout")]
+        public static void SaveLandmarksLayout() => ManualLayoutPersistence.Save("Landmarks", "PointsOfInterest", PersistCount);
+
+        [MenuItem("Tools/Folklore Archives/Clear Landmarks Layout")]
+        public static void ClearLandmarksLayout() => ManualLayoutPersistence.Clear("Landmarks");
 
         // A warm point light (campfire / lantern glow) - the FtF "warm light in the
         // dark" focal points. No shadows (cheap; there are several of these).
