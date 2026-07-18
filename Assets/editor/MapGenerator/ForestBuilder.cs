@@ -429,7 +429,7 @@ namespace FolkloreArchives.MapGen
                     {
                         bool nearPeak = false;
                         foreach (var peak in MapLayout.CentralPeaks)
-                            if (Vector2.Distance(p, peak) < 100f) { nearPeak = true; break; }
+                            if (Vector2.Distance(p, peak) < 160f) { nearPeak = true; break; }
                         if (nearPeak) continue;
                     }
                     if (Vector2.Distance(p, MapLayout.WrongTurnDeath) < 8f) continue;
@@ -1619,7 +1619,7 @@ namespace FolkloreArchives.MapGen
                     {
                         bool nearPeak = false;
                         foreach (var peak in MapLayout.CentralPeaks)
-                            if (Vector2.Distance(p, peak) < 100f) { nearPeak = true; break; }
+                            if (Vector2.Distance(p, peak) < 160f) { nearPeak = true; break; }
                         if (nearPeak) continue;
                     }
                     // franja de arena de la ribera (TerrainBuilder pinta arena por

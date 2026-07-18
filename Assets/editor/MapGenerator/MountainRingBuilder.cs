@@ -104,9 +104,10 @@ namespace FolkloreArchives.MapGen
                                                   // (owner: "hazlas mas grandes" — decidió seguir con este
                                                   // asset en vez de bajar uno nuevo). Subo con cuidado
                                                   // (1->1.6, NO otra vez 4/9) para no repetir el "gigante".
-        const float LakeMountainHeightMin = 1.3f;
-        const float LakeMountainHeightMax = 1.7f;
+        const float LakeMountainHeightMin = 2.2f; // owner: "mucho mas alta" — antes 1.3-1.7
+        const float LakeMountainHeightMax = 2.8f; // antes 1.3-1.7
         const float LakeMountainSinkY     = -4f; // un poco más hundida que a escala 1 (-2), acorde al mesh más grande
+        const float LakeMountainWaterMargin = 20f; // cuánto debe quedar el borde real de la roca MÁS ALLÁ de la orilla del agua
 
         [UnityEditor.MenuItem("Tools/Folklore Archives/Rebuild Central Lake Mountains")]
         public static void RebuildCentralLakeMountains()
@@ -136,22 +137,58 @@ namespace FolkloreArchives.MapGen
             int placed = 0;
             foreach (var peak in MapLayout.CentralPeaks)
             {
-                float gy = terrain.SampleHeight(new Vector3(peak.x, 0f, peak.y));
+                Vector2 pos2 = peak;
+                float gy = terrain.SampleHeight(new Vector3(pos2.x, 0f, pos2.y));
                 var pf = prefabs[Random.Range(0, prefabs.Count)];
                 var m = (GameObject)PrefabUtility.InstantiatePrefab(pf, group.transform);
                 m.name = "LakeMountain_" + placed;
-                m.transform.position = new Vector3(peak.x, gy + LakeMountainSinkY, peak.y);
-                float yaw = Mathf.Atan2(MapLayout.CentralLakeCenter.x - peak.x, MapLayout.CentralLakeCenter.y - peak.y) * Mathf.Rad2Deg
+                m.transform.position = new Vector3(pos2.x, gy + LakeMountainSinkY, pos2.y);
+                float yaw = Mathf.Atan2(MapLayout.CentralLakeCenter.x - pos2.x, MapLayout.CentralLakeCenter.y - pos2.y) * Mathf.Rad2Deg
                             + Random.Range(-20f, 20f); // mirando hacia el lago (+ variación)
                 m.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
                 float s = LakeMountainScale * Random.Range(0.85f, 1.15f);
                 m.transform.localScale = new Vector3(s, s * Random.Range(LakeMountainHeightMin, LakeMountainHeightMax), s);
+
+                // EMPUJE hacia afuera del lago según el tamaño REAL de la malla ya
+                // escalada (medido con bounds, no supuesto): antes se posicionaba a una
+                // distancia FIJA del centro del lago, y como la malla real es más ancha
+                // que esa distancia, terminaba metida encima del agua (owner: "quedo la
+                // montania toda encima del agua, necesito que este en la orilla
+                // solamente"). Si el borde más cercano al lago todavía cae dentro del
+                // radio del agua + margen, corro el objeto hacia afuera (mismo yaw y
+                // escala) hasta que despeje.
+                Vector2 dirOut = pos2 - MapLayout.CentralLakeCenter;
+                if (dirOut.sqrMagnitude < 0.01f) dirOut = Vector2.up;
+                dirOut.Normalize();
+                var b = ModelBounds(m);
+                float meshRadiusTowardLake = Mathf.Max(b.extents.x, b.extents.z);
+                float centerDist = Vector2.Distance(pos2, MapLayout.CentralLakeCenter);
+                float deficit = (MapLayout.CentralLakeRadius + LakeMountainWaterMargin) - (centerDist - meshRadiusTowardLake);
+                if (deficit > 0f)
+                {
+                    pos2 += dirOut * deficit;
+                    gy = terrain.SampleHeight(new Vector3(pos2.x, 0f, pos2.y));
+                    m.transform.position = new Vector3(pos2.x, gy + LakeMountainSinkY, pos2.y);
+                }
+
                 m.isStatic = true;
                 foreach (var r in m.GetComponentsInChildren<Renderer>())
                     r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 placed++;
             }
             Debug.Log($"<color=lime>CentralLakeMountains: {placed} montaña(s) reales colocadas en el lago central.</color>");
+        }
+
+        // bounds (world) combinados de todos los renderers de una instancia — se usa
+        // para medir el tamaño REAL de la malla ya escalada (no un ancho supuesto)
+        // y así poder empujarla hasta despejar el agua con certeza.
+        static Bounds ModelBounds(GameObject inst)
+        {
+            var rends = inst.GetComponentsInChildren<Renderer>();
+            if (rends.Length == 0) return new Bounds(inst.transform.position, Vector3.one);
+            var b = rends[0].bounds;
+            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+            return b;
         }
     }
 }
