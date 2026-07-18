@@ -56,11 +56,12 @@ namespace FolkloreArchives.MapGen
             // rendering), which we can now enable because there are no baked broadleaf
             // trees left in the mix to render broken as billboards. Used raw (not
             // baked) so the CTI shader keeps its wind + LODs + billboards.
-            // Árboles: PINOS PSX (StarkCrafts) con sus texturas REALES extraídas del FBX.
-            // Las texturas venían embebidas en el FBX y Unity no las extrajo (por eso
-            // salían blancos). Ya extraídas a PSX_ExtractedTex, uso los dos pinos del
-            // pack (PSX_Tree1 y PSX_Tree4) con su textura de aguja + corteza.
-            GameObject[] psxTrees = MapLayout.UsePsxTrees ? BuildPsxTreePrototypes() : null;
+            // Árboles: PSX (StarkCrafts) con sus texturas REALES extraídas del FBX. Las
+            // texturas venían embebidas en el FBX y Unity no las extrajo (por eso salían
+            // blancos). Ya extraídas a PSX_ExtractedTex. Pinos (PSX_Tree1/4) + frondosos
+            // (PSX_Tree2/3, reactivados para el lado campo — ver BuildPsxTreePrototypes).
+            int psxPineCount = 0;
+            GameObject[] psxTrees = MapLayout.UsePsxTrees ? BuildPsxTreePrototypes(out psxPineCount) : null;
             if (psxTrees != null)
             {
                 realTreeList.AddRange(psxTrees);
@@ -86,6 +87,10 @@ namespace FolkloreArchives.MapGen
 
             var realTrees = realTreeList.Count > 0 ? realTreeList.ToArray() : null;
             int realTreeCount = realTrees != null ? realTrees.Length : 0;
+            // El split OESTE(campo/frondoso)/ESTE(bosque/pino) solo aplica cuando el pool
+            // activo es justo el de PSX (pino+frondoso); para cualquier otro pool
+            // (fallback low-poly/conífera) no hay noción de "frondoso" -> sin split.
+            int pineCountForSplit = (psxTrees != null) ? psxPineCount : realTreeCount;
 
             var protos = new List<TreePrototype>();
             int greenIndex, dryIndex;
@@ -113,10 +118,11 @@ namespace FolkloreArchives.MapGen
             if (bushes != null) foreach (var b in bushes) protos.Add(new TreePrototype { prefab = b, bendFactor = 0f });
 
             td.treePrototypes = protos.ToArray();
-            Debug.Log("ForestBuilder: tree prototype mix = " + realTreeCount + " real tree(s) (BOTD conifers), "
+            Debug.Log("ForestBuilder: tree prototype mix = " + realTreeCount + " real tree(s) ("
+                + pineCountForSplit + " pino / " + (realTreeCount - pineCountForSplit) + " frondoso), "
                 + bushProtoCount + " bush(es).");
 
-            var instances = ScatterTrees(realTreeCount, greenIndex, dryIndex);
+            var instances = ScatterTrees(realTreeCount, pineCountForSplit, greenIndex, dryIndex);
             ScatterBushes(bushProtoStart, bushProtoCount, instances);
             td.SetTreeInstances(instances.ToArray(), true);
             Debug.Log("Forest: " + instances.Count + " tree/bush instances planted.");
@@ -364,8 +370,25 @@ namespace FolkloreArchives.MapGen
 
         // ---------------- TREES (terrain instances) ----------------
 
-        static List<TreeInstance> ScatterTrees(int realTreeCount, int greenIndex, int dryIndex)
+        // pineCount: cuántos de los [0..realTreeCount) prototipos "reales" son pino
+        // (índices [0,pineCount)) vs frondoso (índices [pineCount,realTreeCount)).
+        // Si pineCount==realTreeCount no hay frondosos disponibles -> sin split.
+        static List<TreeInstance> ScatterTrees(int realTreeCount, int pineCount, int greenIndex, int dryIndex)
         {
+            bool hasForestSplit = pineCount > 0 && pineCount < realTreeCount;
+            int broadleafCount = realTreeCount - pineCount;
+
+            // OESTE (campo argentino, x < ForestSplitX) = frondoso; ESTE (bosque/peligro)
+            // = pino. Owner: "pongamos mitad y mitad" — el río corre aprox por el medio
+            // del mapa (MapLayout.ForestSplitX), separando los dos lados ya documentados
+            // en MapLayout ("OESTE = humano, ESTE = peligro").
+            int PickRealTreeIndex(float x)
+            {
+                if (!hasForestSplit) return Random.Range(0, realTreeCount);
+                bool west = x < MapLayout.ForestSplitX;
+                return west ? pineCount + Random.Range(0, broadleafCount) : Random.Range(0, pineCount);
+            }
+
             var trees = new List<TreeInstance>();
             float step = MapLayout.TreeGridStep;
             float jitter = step * 0.4f;
@@ -394,7 +417,7 @@ namespace FolkloreArchives.MapGen
                             trees.Add(new TreeInstance
                             {
                                 position = new Vector3(p.x / MapLayout.MapSizeX, 0f, p.y / MapLayout.MapSize),
-                                prototypeIndex = Random.Range(0, realTreeCount),
+                                prototypeIndex = PickRealTreeIndex(p.x),
                                 heightScale = ss,
                                 widthScale = ss * Random.Range(0.8f, 1.2f),
                                 rotation = Random.Range(0f, Mathf.PI * 2f),
@@ -463,7 +486,7 @@ namespace FolkloreArchives.MapGen
                     if (Random.value > prob) continue;
 
                     bool pickedReal = realTreeCount > 0 && Random.value < MapLayout.RealTreeMixFraction;
-                    int protoIndex = pickedReal ? Random.Range(0, realTreeCount) : (dryTree ? dryIndex : greenIndex);
+                    int protoIndex = pickedReal ? PickRealTreeIndex(p.x) : (dryTree ? dryIndex : greenIndex);
 
                     // BOTD conifers are used at their native sizes (4 sizes already),
                     // so this scale just adds spread: lots of small young pines (0.4x)
@@ -877,23 +900,33 @@ namespace FolkloreArchives.MapGen
         // troncos cortados → owner: "todos con hojas". La variedad la da la escala/tinte
         // aleatorio por instancia.
         // ── PSX (StarkCrafts): árboles del FBX como prototipos de terrain-tree ──
-        // Solo los dos PINOS del pack: PSX_Tree1 (copa=TreeCrown1, aguja) y
-        // PSX_Tree4 (copa=TreeCrown4_Tex, aguja). Tree2/Tree3 son frondosos (los que
-        // el dueño NO quiere). Verificado abriendo las texturas embebidas del FBX.
-        static readonly string[] PsxTreeNames = { "PSX_Tree1", "PSX_Tree4" };
+        // PSX_Tree1/PSX_Tree4 = pinos (bosque, lado ESTE/peligro). PSX_Tree2/PSX_Tree3
+        // = frondosos (antes descartados — "el dueño NO los quiere" — reactivados
+        // para el lado OESTE/campo argentino, owner: "pongamos mitad y mitad").
+        static readonly string[] PsxPineNames       = { "PSX_Tree1", "PSX_Tree4" };
+        static readonly string[] PsxBroadleafNames  = { "PSX_Tree2", "PSX_Tree3" };
+        static readonly HashSet<string> PsxPineSet  = new HashSet<string>(PsxPineNames);
         const string PsxTexDir = "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_ExtractedTex/";
-        static GameObject[] BuildPsxTreePrototypes()
+
+        // Devuelve TODOS los prototipos con los PINOS primero y los FRONDOSOS después
+        // (índices [0, pineCount) = pino, [pineCount, largo) = frondoso), para que
+        // ScatterTrees pueda elegir el rango correcto según el lado del mapa.
+        static GameObject[] BuildPsxTreePrototypes(out int pineCount)
         {
+            pineCount = 0;
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(PsxForestHelper.FbxPath);
             if (fbx == null) { Debug.LogWarning("PSX: FBX no importado (" + PsxForestHelper.FbxPath + ") — caigo a low-poly/BOTD."); return null; }
 
-            const float target = 8f; // altura objetivo en metros (pino alto)
-            // TRONCO: corteza real del pack (PSX_Bark2). Compartida por los dos pinos.
+            const float target = 8f; // altura objetivo en metros (árbol alto)
+            // TRONCO: corteza real del pack (PSX_Bark2). Compartida por todos.
             Material trunk = PsxMat("PSX_PineTrunk", Color.white, PsxTexDir + "PSX_Bark2_128px.png");
 
-            var results = new List<GameObject>();
-            var report = new System.Text.StringBuilder("PSX pinos:\n");
-            foreach (var name in PsxTreeNames)
+            var pineResults = new List<GameObject>();
+            var broadleafResults = new List<GameObject>();
+            var report = new System.Text.StringBuilder("PSX árboles:\n");
+            var allNames = new List<string>(PsxPineNames);
+            allNames.AddRange(PsxBroadleafNames);
+            foreach (var name in allNames)
             {
                 Transform child = FindChildByName(fbx.transform, name);
                 var mf = child != null ? child.GetComponent<MeshFilter>() : null;
@@ -938,9 +971,17 @@ namespace FolkloreArchives.MapGen
                 AssetDatabase.DeleteAsset(path);
                 var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
                 Object.DestroyImmediate(root);
-                if (prefab != null) results.Add(prefab);
+                if (prefab != null)
+                {
+                    if (PsxPineSet.Contains(name)) pineResults.Add(prefab);
+                    else broadleafResults.Add(prefab);
+                }
             }
+            pineCount = pineResults.Count;
+            var results = new List<GameObject>(pineResults);
+            results.AddRange(broadleafResults);
             if (results.Count == 0) { Debug.LogWarning("PSX: no encontré PSX_Tree1..4 en el FBX."); return null; }
+            report.AppendLine($"  pinos={pineCount}, frondosos={broadleafResults.Count}");
             Debug.Log(report.ToString());
             return results.ToArray();
         }
@@ -1019,14 +1060,18 @@ namespace FolkloreArchives.MapGen
             return m;
         }
 
-        // Textura de aguja (copa) que corresponde a cada pino, según el material
-        // original del mesh. Extraídas del FBX a PSX_ExtractedTex.
+        // Textura de copa que corresponde a cada árbol del pack, según el material
+        // original del mesh. Extraídas del FBX a PSX_ExtractedTex. Tree2/Tree3 son los
+        // frondosos (antes descartados con "el dueño NO los quiere" — reactivados para
+        // el lado CAMPO del mapa, owner: "pongamos mitad y mitad, campo argentino").
         static string PineCrownTexFor(string treeName)
         {
             switch (treeName)
             {
                 case "PSX_Tree1": return PsxTexDir + "PSX_TreeCrown1_128px.png";       // pino chico
                 case "PSX_Tree4": return PsxTexDir + "PSX_TreeCrown4_Tex_128px.png";   // pino alto/esbelto
+                case "PSX_Tree2": return PsxTexDir + "PSX_TreeCrown2_128px.png";       // frondoso redondo (campo)
+                case "PSX_Tree3": return PsxTexDir + "PSX_TreeCrown3_Tex_128px.png";   // frondoso (campo)
                 default:          return PsxTexDir + "PSX_TreeCrown1_128px.png";
             }
         }

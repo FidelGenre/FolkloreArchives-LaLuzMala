@@ -195,6 +195,12 @@ namespace FolkloreArchives.MapGen
         };
         public static readonly Vector2[] River = BuildSmoothRoute(RiverControls, 18f);
 
+        // Split OESTE (campo argentino) / ESTE (bosque de pino) para las especies de
+        // árbol (ForestBuilder.ScatterTrees) — owner: "pongamos mitad y mitad, campo
+        // argentino de un lado". El río corre en x~287-318 según RiverControls arriba;
+        // 300 cae del lado oeste de esa franja, así el corte queda pegado al río real.
+        public const float ForestSplitX = 300f;
+
         // Segundo río (tributario): baja del lago "Montaña y Lago" (oeste) y desemboca
         // en el río principal. Del plano del owner (rio2).
         static readonly Vector2[] River2Controls = {
