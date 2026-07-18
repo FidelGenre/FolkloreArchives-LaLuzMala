@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 51;
+        const int SplatVersion = 52;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -610,11 +610,12 @@ namespace FolkloreArchives.MapGen
                     // asset es más ancho que la zona donde el terreno procedural llega a
                     // la altura de RockLine, así que quedaba pasto verde asomando debajo
                     // y alrededor de la roca (owner: "quitale todo lo verde de abajo,
-                    // deja solo el asset de montaña").
+                    // deja solo el asset de montaña"). Radio ensanchado (40/25 -> 65/35)
+                    // junto con el asset más grande (LakeMountainScale 1->1.6).
                     float peakDist = float.MaxValue;
                     foreach (var peak in MapLayout.CentralPeaks)
                         peakDist = Mathf.Min(peakDist, Vector2.Distance(new Vector2(wx, wz), peak));
-                    float rockNear = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01((peakDist - 40f) / 25f));
+                    float rockNear = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01((peakDist - 65f) / 35f));
                     rock = Mathf.Max(rock, rockNear);
 
                     float rockRemain = 1f - rock;
