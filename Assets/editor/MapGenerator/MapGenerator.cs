@@ -89,7 +89,13 @@ namespace FolkloreArchives.MapGen
             // montañas (mantiene cielo + montañas, funciona con niebla, sin 2ª cámara).
             // SilhouetteMountainBuilder.Build(root.transform);
             // MountainRingBuilder.Build(root.transform, terrain); // anillo LEJANO (desactivado, rompía skybox con cámara de fondo)
-            MountainRingBuilder.BuildCentralLakeMountains(root.transform, terrain); // REACTIVADO con escala chica (9->4, ver MountainRingBuilder) — owner: "de fondo, del lado contrario al que se ingresa, ponle assets de montañas"
+            // DESACTIVADO DE NUEVO (owner: "no me gustan para nada esas montañas, quitalas") — después
+            // de 4 rondas de ajuste (escala, radio de roca, empuje fuera del agua) el asset HQP en
+            // sí no convenció. Queda el bulto procedural del terreno (CentralPeakHeight en
+            // TerrainBuilder) nomás, sin el mesh, hasta que el owner baje un asset de montaña nuevo
+            // (ver charla: Free Snow Mountain / Low Poly Mountains Environment / etc.) y pida
+            // reactivar esto apuntando a los prefabs nuevos.
+            // MountainRingBuilder.BuildCentralLakeMountains(root.transform, terrain);
             AreaPoiBuilder.Build(root.transform, terrain);   // zonas/POIs nuevos del MapPlan (estepa, mallín, roquedal, quemado, orilla, Difunta Correa, Gauchito Gil, ahorcado, antena, corrales, YPF, estancia)
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
             CarBuilder.Build(root.transform, terrain);       // Renault 12 procedural (auto manejable) — estacionado en el campamento

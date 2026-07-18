@@ -423,15 +423,9 @@ namespace FolkloreArchives.MapGen
                     // CentralLakeBeachWidth -> quedaba una hilera de árboles metida en la
                     // orilla/agua, owner: "quita arboles alrededor del lago")
                     if (Vector2.Distance(p, MapLayout.CentralLakeCenter) < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 10f) continue;
-                    // montañas del lago (CentralPeaks): sin árboles en la base rocosa
-                    // (owner: "deja solo el asset de montaña" — ver también el rock por
-                    // proximidad en TerrainBuilder.PaintTextures, mismo radio)
-                    {
-                        bool nearPeak = false;
-                        foreach (var peak in MapLayout.CentralPeaks)
-                            if (Vector2.Distance(p, peak) < 160f) { nearPeak = true; break; }
-                        if (nearPeak) continue;
-                    }
+                    // montañas del lago (CentralPeaks): despeje por proximidad DESACTIVADO
+                    // junto con el asset de montaña (MapGenerator.cs — owner: "quitalas").
+                    // Reactivar junto con MountainRingBuilder.BuildCentralLakeMountains.
                     if (Vector2.Distance(p, MapLayout.WrongTurnDeath) < 8f) continue;
                     if (Vector2.Distance(p, MapLayout.LakeLookout) < 9f) continue;
                     if (Vector2.Distance(p, MapLayout.AbandonedCabin) < 11f) continue;
@@ -1615,13 +1609,8 @@ namespace FolkloreArchives.MapGen
                     if (dRiv < 18f) continue;
                     // lago + orilla: sin pasto alto en el agua ni en toda la playa plana
                     if (Vector2.Distance(p, MapLayout.CentralLakeCenter) < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 10f) continue;
-                    // montañas del lago: sin pasto alto en la base rocosa (mismo motivo/radio que en el bloque de árboles de arriba)
-                    {
-                        bool nearPeak = false;
-                        foreach (var peak in MapLayout.CentralPeaks)
-                            if (Vector2.Distance(p, peak) < 160f) { nearPeak = true; break; }
-                        if (nearPeak) continue;
-                    }
+                    // montañas del lago: despeje por proximidad DESACTIVADO junto con el
+                    // asset (ver mismo comentario en el bloque de árboles de arriba)
                     // franja de arena de la ribera (TerrainBuilder pinta arena por
                     // altura hasta ~10m): sin pasto encima de la arena
                     if (dRiv < 34f &&

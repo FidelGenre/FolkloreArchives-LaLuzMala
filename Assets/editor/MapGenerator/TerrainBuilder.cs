@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 53;
+        const int SplatVersion = 54;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -605,22 +605,14 @@ namespace FolkloreArchives.MapGen
                     float hSnow = HeightAt(wx, wz);
                     float rock = Mathf.SmoothStep(0f, 1f, (hSnow - MapLayout.RockLine) / (MapLayout.SnowLine - MapLayout.RockLine));
 
-                    // Roca también por PROXIMIDAD a la base de los assets de montaña del
-                    // lago (CentralPeaks), no solo por altura del terreno: el mesh del
-                    // asset es más ancho que la zona donde el terreno procedural llega a
-                    // la altura de RockLine, así que quedaba pasto verde asomando debajo
-                    // y alrededor de la roca (owner: "quitale todo lo verde de abajo,
-                    // deja solo el asset de montaña"). Radio ensanchado de nuevo
-                    // (40/25 -> 65/35 -> 100/60): MountainRingBuilder ahora EMPUJA el
-                    // asset hacia afuera del lago según su tamaño real medido (para no
-                    // quedar "encima del agua"), así que la roca puede terminar bastante
-                    // más lejos del punto CentralPeaks de lo que este radio asumía antes.
-                    // Con 100/60 hay margen de sobra para cubrirla igual, caiga donde caiga.
-                    float peakDist = float.MaxValue;
-                    foreach (var peak in MapLayout.CentralPeaks)
-                        peakDist = Mathf.Min(peakDist, Vector2.Distance(new Vector2(wx, wz), peak));
-                    float rockNear = Mathf.SmoothStep(1f, 0f, Mathf.Clamp01((peakDist - 100f) / 60f));
-                    rock = Mathf.Max(rock, rockNear);
+                    // Roca por PROXIMIDAD al asset de montaña del lago: DESACTIVADA junto
+                    // con el asset (MapGenerator.cs — owner: "no me gustan para nada esas
+                    // montañas, quitalas"). Sin el mesh, forzar roca desnuda en un radio de
+                    // 100-160m alrededor de un punto vacío se veía como una cicatriz gris
+                    // sin motivo. Queda solo la roca por ALTURA (RockLine/SnowLine) de
+                    // abajo, que sigue funcionando con el bulto procedural del terreno.
+                    // Reactivar junto con MountainRingBuilder.BuildCentralLakeMountains
+                    // cuando haya un asset de montaña nuevo.
 
                     float rockRemain = 1f - rock;
                     w0 *= rockRemain; w1 *= rockRemain; w3 *= rockRemain; w5 *= rockRemain; w7 *= rockRemain;
