@@ -428,17 +428,16 @@ namespace FolkloreArchives.MapGen
                         continue;
                     }
 
-                    // keep paths, river and clearings free. Habia sido achicado (6f/4.5f
-                    // -> 3.5f/3f) para que los arboles llegaran hasta el borde del camino,
-                    // pero owner: "hay demasiados y estan muy cerca de los caminos" ->
-                    // ensanchado de nuevo (dRoad/dA/dExtra 3.5->9, dScary 3->6 -- el tunel
-                    // de miedo sigue mas cerrado a proposito, pero ya no pegado al camino).
+                    // keep paths, river and clearings free. Se habia ensanchado a 9f/6f
+                    // por "estan muy cerca de los caminos", pero el owner pidio volver a
+                    // como estaba ("vuelve a poner la cantidad de arboles en los
+                    // caminos") -> de nuevo 3.5f/3f, arboles otra vez hasta el borde.
                     if (BuilderUtils.DistToPolyline(p, MapLayout.PavedRoute) < 13f) continue;
                     float dRoad = BuilderUtils.DistToPolyline(p, MapLayout.DirtRoad);
                     float dA = BuilderUtils.DistToPolyline(p, MapLayout.PathA);
                     float dScary = BuilderUtils.DistToScaryPaths(p);
                     float dExtra = BuilderUtils.DistToExtraTrails(p); // caminos nuevos del owner
-                    if (dRoad < 9f || dA < 9f || dScary < 6f || dExtra < 9f) continue;
+                    if (dRoad < 3.5f || dA < 3.5f || dScary < 3f || dExtra < 3.5f) continue;
                     if (BuilderUtils.DistToRivers(p) < 28f) continue;
                     // despejar el caminito a la playa y la playa misma
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 5f) continue;
