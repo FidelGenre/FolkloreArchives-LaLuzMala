@@ -545,7 +545,7 @@ namespace FolkloreArchives.MapGen
                     // lower so we don't get absurd 25m+ giants (native Tall x 2.4).
                     // low-poly: un poco más altos (owner: "más altos pero no tanto");
                     // BOTD queda con su tuning nativo.
-                    float s = isCampoTree ? Random.Range(1.3f, 2.1f)                     // owner: "hazlo mas grande" (arbol de campo)
+                    float s = isCampoTree ? Random.Range(1.0f, 1.6f)                     // owner: "un poco mas bajos" (era 1.3-2.1, bajado un poco)
                             : isWestPine   ? Random.Range(0.45f, 0.8f)                    // pino del campo: mas bajo, no destaca como en el bosque
                             : MapLayout.UsePsxTrees ? Random.Range(0.7f, 1.35f)          // PSX: escala más contenida (no gigantes)
                             : MapLayout.UseLowPolyTrees ? Random.Range(0.55f, 2.0f)
