@@ -487,6 +487,7 @@ namespace FolkloreArchives.MapGen
 
                     bool pickedReal = realTreeCount > 0 && Random.value < MapLayout.RealTreeMixFraction;
                     int protoIndex = pickedReal ? PickRealTreeIndex(p.x) : (dryTree ? dryIndex : greenIndex);
+                    bool isCampoTree = hasForestSplit && pickedReal && protoIndex >= pineCount;
 
                     // BOTD conifers are used at their native sizes (4 sizes already),
                     // so this scale just adds spread: lots of small young pines (0.4x)
@@ -494,7 +495,8 @@ namespace FolkloreArchives.MapGen
                     // lower so we don't get absurd 25m+ giants (native Tall x 2.4).
                     // low-poly: un poco más altos (owner: "más altos pero no tanto");
                     // BOTD queda con su tuning nativo.
-                    float s = MapLayout.UsePsxTrees ? Random.Range(0.7f, 1.35f)          // PSX: escala más contenida (no gigantes)
+                    float s = isCampoTree ? Random.Range(1.3f, 2.1f)                     // owner: "hazlo mas grande" (arbol de campo)
+                            : MapLayout.UsePsxTrees ? Random.Range(0.7f, 1.35f)          // PSX: escala más contenida (no gigantes)
                             : MapLayout.UseLowPolyTrees ? Random.Range(0.55f, 2.0f)
                             : Random.Range(0.4f, 1.6f);
                     float tint = Random.Range(0.72f, 1.08f); // breaks the "identical clones" look
@@ -900,11 +902,12 @@ namespace FolkloreArchives.MapGen
         // troncos cortados → owner: "todos con hojas". La variedad la da la escala/tinte
         // aleatorio por instancia.
         // ── PSX (StarkCrafts): árboles del FBX como prototipos de terrain-tree ──
-        // PSX_Tree1/PSX_Tree4 = pinos (bosque, lado ESTE/peligro). PSX_Tree2/PSX_Tree3
-        // = frondosos (antes descartados — "el dueño NO los quiere" — reactivados
-        // para el lado OESTE/campo argentino, owner: "pongamos mitad y mitad").
+        // PSX_Tree1/PSX_Tree4 = pinos (bosque, lado ESTE/peligro). PSX_Tree2 = frondoso
+        // (antes descartado — "el dueño NO los quiere" — reactivado para el lado
+        // OESTE/campo argentino, owner: "pongamos mitad y mitad"). PSX_Tree3 se probó
+        // también pero el owner prefirió quedarse solo con Tree2 ("usa solo ese").
         static readonly string[] PsxPineNames       = { "PSX_Tree1", "PSX_Tree4" };
-        static readonly string[] PsxBroadleafNames  = { "PSX_Tree2", "PSX_Tree3" };
+        static readonly string[] PsxBroadleafNames  = { "PSX_Tree2" };  // owner: "usa solo ese" (vio Tree2 puesto, prefiere solo ese) — Tree3 sacado
         static readonly HashSet<string> PsxPineSet  = new HashSet<string>(PsxPineNames);
         const string PsxTexDir = "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_ExtractedTex/";
 
