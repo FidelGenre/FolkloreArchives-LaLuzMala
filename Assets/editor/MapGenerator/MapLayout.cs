@@ -486,7 +486,12 @@ namespace FolkloreArchives.MapGen
         // VECINOS del grid (2.2m + jitter) caigan mas cerca entre si que el radio real
         // de sus copas agrandadas -> se ven pisados uno contra el otro. Este chequeo
         // (ScatterTrees) descarta un slot nuevo si ya hay un árbol de campo mas cerca.
-        public const float CampoTreeMinSpacing  = 12f;
+        // A 12m, este limite (no la densidad) terminaba siendo el que de verdad
+        // controlaba cuantos arboles entraban -- subir CampoTreeDensity casi no
+        // sumaba mas porque casi todo el "hueco" disponible cada 12m ya se llenaba.
+        // Owner: "sigue muy vacio" -> bajado a 7m (las copas pueden tocarse un poco,
+        // pero ya no se clavan una en la otra como antes).
+        public const float CampoTreeMinSpacing  = 7f;
         public const float FieldTreeDensity     = 0.32f;  // isolated dry trees in the hunting field
 
         // AlanTree.fbx (Assets/ExternalAssets/ALanTree) replaces the old ForestPack
