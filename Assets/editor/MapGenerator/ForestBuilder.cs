@@ -391,7 +391,12 @@ namespace FolkloreArchives.MapGen
 
             var trees = new List<TreeInstance>();
             float step = MapLayout.TreeGridStep;
-            float jitter = step * 0.4f;
+            // jitter mas chico (0.4->0.2 del step): con 0.4, dos slots vecinos podian
+            // caer a menos de la mitad del step entre si por puro azar, y con las
+            // copas grandes (sobre todo el arbol de campo agrandado) eso se veia como
+            // arboles superpuestos (owner: "que esten mas separados... si no se
+            // superponen"). Menos jitter = espaciado mas parejo/predecible.
+            float jitter = step * 0.2f;
             for (float x = 10f; x < MapLayout.MapSizeX - 10f; x += step)
             {
                 for (float z = 10f; z < MapLayout.MapSize - 10f; z += step)
