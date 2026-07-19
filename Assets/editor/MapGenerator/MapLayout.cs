@@ -480,7 +480,7 @@ namespace FolkloreArchives.MapGen
         // densidad no vuelve a apilar arboles (el espaciado gana), solo llena mejor los
         // huecos. 0.035 era la densidad SIN el chequeo de espaciado; con el chequeo
         // sumado encima quedo doblemente restringido y salio "todo despoblado" (owner).
-        public const float CampoTreeDensity     = 0.65f;  // campo OESTE — subido (0.035 -> 0.65) ahora que el espaciado minimo es quien limita
+        public const float CampoTreeDensity     = 0.9f;   // campo OESTE — subido de nuevo (0.035 -> 0.65 -> 0.9), owner: "siguen habiendo muy pocos"
         // Distancia minima entre dos arboles de campo (owner: "quedaron muchos arboles
         // apilados no deberia pasar eso"): la densidad baja no evita que dos slots
         // VECINOS del grid (2.2m + jitter) caigan mas cerca entre si que el radio real
@@ -489,9 +489,10 @@ namespace FolkloreArchives.MapGen
         // A 12m, este limite (no la densidad) terminaba siendo el que de verdad
         // controlaba cuantos arboles entraban -- subir CampoTreeDensity casi no
         // sumaba mas porque casi todo el "hueco" disponible cada 12m ya se llenaba.
-        // Owner: "sigue muy vacio" -> bajado a 7m (las copas pueden tocarse un poco,
-        // pero ya no se clavan una en la otra como antes).
-        public const float CampoTreeMinSpacing  = 7f;
+        // Owner: "sigue muy vacio"/"siguen habiendo muy pocos" -> bajado de nuevo,
+        // 12m -> 7m -> 5m (las copas se tocan mas entre si, pero siguen sin clavarse
+        // una adentro de la otra como con el bug original).
+        public const float CampoTreeMinSpacing  = 5f;
         public const float FieldTreeDensity     = 0.32f;  // isolated dry trees in the hunting field
 
         // AlanTree.fbx (Assets/ExternalAssets/ALanTree) replaces the old ForestPack
