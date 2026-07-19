@@ -462,15 +462,20 @@ namespace FolkloreArchives.MapGen
         // AHORA el bosque son pinos PSX de 24-30 triángulos (no los BOTD de 88k), así
         // que la densidad ya no cuesta casi nada → subo slots y densidades (owner:
         // "necesito que puebles más de árboles"). ~2x los árboles de antes.
-        // Owner: 2.2/0.90 -> 2.8/0.45 -> 3.8/0.28 seguian siendo "demasiados... y muy
-        // cerca de los caminos". Tercer corte de densidad (mas grande) + esta vez
-        // ademas ensancho el despeje alrededor de los caminos (ver ScatterTrees,
-        // dRoad/dA/dExtra 3.5->9, dScary 3->6 -- el tunel de miedo sigue mas cerrado
-        // a proposito pero ya no pegado). Los tuneles de miedo (density) quedan igual.
-        public const float TreeGridStep         = 5f;     // meters between candidate tree slots (tighter = more trees)
+        // Las rondas de "demasiados arboles" (2.2/0.90 -> 2.8/0.45 -> 3.8/0.28 -> 5/0.18)
+        // bajaban TreeGridStep/ForestTreeDensity GLOBAL, o sea afectaban los dos lados
+        // del mapa por igual. Owner: "del lado malo (bosque/ESTE) deberian estar igual
+        // que antes, la misma cantidad, vuelvelo para atras, no los toques" -- asi que
+        // el grid vuelve a su valor original (2.2, el que necesita el bosque denso) y
+        // ForestTreeDensity vuelve a 0.90 (ESTE, sin tocar). El campo (OESTE) ahora usa
+        // su PROPIA densidad (CampoTreeDensity), calibrada a la MISMA "cantidad final"
+        // que ya se habia ajustado antes (0.18 a grid 5) pero al grid mas fino de
+        // ahora: 0.18 * (2.2/5)^2 ≈ 0.035. Así ajustar uno no vuelve a mover el otro.
+        public const float TreeGridStep         = 2.2f;   // meters between candidate tree slots (tighter = more trees)
         public const float ScaryPathTreeDensity = 0.92f;  // closed dark tunnel (Path B & criminal territory)
         public const float PathATreeDensity     = 0.82f;  // green tunnel - also covers right up to path edges now
-        public const float ForestTreeDensity    = 0.18f;  // bosque general — bajado de nuevo (0.90 -> 0.45 -> 0.28 -> 0.18)
+        public const float ForestTreeDensity    = 0.90f;  // bosque ESTE — revertido a como estaba, no tocar sin pedido explicito
+        public const float CampoTreeDensity     = 0.035f; // campo OESTE — mismo resultado final que 0.18@grid5, recalibrado al grid 2.2
         public const float FieldTreeDensity     = 0.32f;  // isolated dry trees in the hunting field
 
         // AlanTree.fbx (Assets/ExternalAssets/ALanTree) replaces the old ForestPack

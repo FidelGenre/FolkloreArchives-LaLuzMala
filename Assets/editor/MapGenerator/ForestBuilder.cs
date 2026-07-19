@@ -376,17 +376,20 @@ namespace FolkloreArchives.MapGen
         static List<TreeInstance> ScatterTrees(int realTreeCount, int pineCount, int greenIndex, int dryIndex)
         {
             bool hasForestSplit = pineCount > 0 && pineCount < realTreeCount;
-            int broadleafCount = realTreeCount - pineCount;
 
-            // OESTE (campo argentino, x < ForestSplitX) = frondoso; ESTE (bosque/peligro)
-            // = pino. Owner: "pongamos mitad y mitad" — el río corre aprox por el medio
-            // del mapa (MapLayout.ForestSplitX), separando los dos lados ya documentados
-            // en MapLayout ("OESTE = humano, ESTE = peligro").
+            // OESTE (campo argentino, x < ForestSplitX) = mezcla pino+frondoso; ESTE
+            // (bosque/peligro) = solo pino. Owner: "pongamos mitad y mitad" y despues
+            // "utilizar esos pinos tambien del lado bueno" — el río corre aprox por el
+            // medio del mapa (MapLayout.ForestSplitX), separando los dos lados ya
+            // documentados en MapLayout ("OESTE = humano, ESTE = peligro").
             int PickRealTreeIndex(float x)
             {
                 if (!hasForestSplit) return Random.Range(0, realTreeCount);
+                // OESTE (campo): mezcla de TODO (pino + frondoso) — owner: "utilizar esos
+                // pinos tambien del lado bueno". ESTE (bosque/peligro): solo pino, sin
+                // tocar ("del lado malo... vuelvelo para atras, no los toques").
                 bool west = x < MapLayout.ForestSplitX;
-                return west ? pineCount + Random.Range(0, broadleafCount) : Random.Range(0, pineCount);
+                return west ? Random.Range(0, realTreeCount) : Random.Range(0, pineCount);
             }
 
             var trees = new List<TreeInstance>();
@@ -488,6 +491,12 @@ namespace FolkloreArchives.MapGen
                     if (dScary < 20f)      { prob = MapLayout.ScaryPathTreeDensity; dryTree = Random.value < 0.85f; }
                     else if (dA < 18f || dRoad < 18f || dExtra < 16f) { prob = MapLayout.PathATreeDensity; dryTree = Random.value < 0.35f; }
                     else if (inField)      { prob = MapLayout.FieldTreeDensity; dryTree = true; }
+                    // ESTE (bosque/peligro) = ForestTreeDensity de siempre, sin tocar
+                    // (owner: "del lado malo deberian estar igual que antes, vuelvelo
+                    // para atras no los toques"). OESTE (campo) usa su propia densidad,
+                    // mas baja (CampoTreeDensity) — separada para que ajustar el campo
+                    // no vuelva a afectar el bosque de nuevo.
+                    else if (p.x < MapLayout.ForestSplitX) { prob = MapLayout.CampoTreeDensity; dryTree = Random.value < 0.45f; }
                     else                   { prob = MapLayout.ForestTreeDensity; dryTree = Random.value < 0.45f; }
                     if (Random.value > prob) continue;
 
