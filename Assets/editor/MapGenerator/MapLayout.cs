@@ -475,7 +475,12 @@ namespace FolkloreArchives.MapGen
         public const float ScaryPathTreeDensity = 0.92f;  // closed dark tunnel (Path B & criminal territory)
         public const float PathATreeDensity     = 0.82f;  // green tunnel - also covers right up to path edges now
         public const float ForestTreeDensity    = 0.90f;  // bosque ESTE — revertido a como estaba, no tocar sin pedido explicito
-        public const float CampoTreeDensity     = 0.035f; // campo OESTE — mismo resultado final que 0.18@grid5, recalibrado al grid 2.2
+        // El chequeo de distancia minima (CampoTreeMinSpacing, ver abajo) YA evita el
+        // amontonamiento por si solo -- una vez que existe ESE limite, subir esta
+        // densidad no vuelve a apilar arboles (el espaciado gana), solo llena mejor los
+        // huecos. 0.035 era la densidad SIN el chequeo de espaciado; con el chequeo
+        // sumado encima quedo doblemente restringido y salio "todo despoblado" (owner).
+        public const float CampoTreeDensity     = 0.65f;  // campo OESTE — subido (0.035 -> 0.65) ahora que el espaciado minimo es quien limita
         // Distancia minima entre dos arboles de campo (owner: "quedaron muchos arboles
         // apilados no deberia pasar eso"): la densidad baja no evita que dos slots
         // VECINOS del grid (2.2m + jitter) caigan mas cerca entre si que el radio real
