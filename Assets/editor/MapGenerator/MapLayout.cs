@@ -476,6 +476,12 @@ namespace FolkloreArchives.MapGen
         public const float PathATreeDensity     = 0.82f;  // green tunnel - also covers right up to path edges now
         public const float ForestTreeDensity    = 0.90f;  // bosque ESTE — revertido a como estaba, no tocar sin pedido explicito
         public const float CampoTreeDensity     = 0.035f; // campo OESTE — mismo resultado final que 0.18@grid5, recalibrado al grid 2.2
+        // Distancia minima entre dos arboles de campo (owner: "quedaron muchos arboles
+        // apilados no deberia pasar eso"): la densidad baja no evita que dos slots
+        // VECINOS del grid (2.2m + jitter) caigan mas cerca entre si que el radio real
+        // de sus copas agrandadas -> se ven pisados uno contra el otro. Este chequeo
+        // (ScatterTrees) descarta un slot nuevo si ya hay un árbol de campo mas cerca.
+        public const float CampoTreeMinSpacing  = 12f;
         public const float FieldTreeDensity     = 0.32f;  // isolated dry trees in the hunting field
 
         // AlanTree.fbx (Assets/ExternalAssets/ALanTree) replaces the old ForestPack

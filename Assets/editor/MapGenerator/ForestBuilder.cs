@@ -392,6 +392,15 @@ namespace FolkloreArchives.MapGen
                 return west ? Random.Range(0, realTreeCount) : Random.Range(0, pineCount);
             }
 
+            // Posiciones ya plantadas del lado CAMPO (para el chequeo de distancia
+            // minima de abajo) — owner: "quedaron muchos arboles apilados no deberia
+            // pasar eso". El grid del bosque (2.2m, fino) mas las copas grandes del
+            // campo (agrandadas para "hazlo mas grande") hacen que dos slots VECINOS
+            // caigan mas cerca entre si que el radio de esas copas -> se ven pisados
+            // uno contra el otro. La densidad baja (CampoTreeDensity) no alcanza para
+            // evitarlo porque es un problema de VECINOS, no de cantidad total.
+            var campoTreePositions = new List<Vector2>();
+
             var trees = new List<TreeInstance>();
             float step = MapLayout.TreeGridStep;
             // jitter mas chico (0.4->0.2 del step): con 0.4, dos slots vecinos podian
@@ -488,6 +497,7 @@ namespace FolkloreArchives.MapGen
                     bool inField = Vector2.Distance(p, MapLayout.HuntingField) < 45f;
                     float prob;
                     bool dryTree;
+                    bool isWestGeneral = false;
                     if (dScary < 20f)      { prob = MapLayout.ScaryPathTreeDensity; dryTree = Random.value < 0.85f; }
                     else if (dA < 18f || dRoad < 18f || dExtra < 16f) { prob = MapLayout.PathATreeDensity; dryTree = Random.value < 0.35f; }
                     else if (inField)      { prob = MapLayout.FieldTreeDensity; dryTree = true; }
@@ -496,9 +506,23 @@ namespace FolkloreArchives.MapGen
                     // para atras no los toques"). OESTE (campo) usa su propia densidad,
                     // mas baja (CampoTreeDensity) — separada para que ajustar el campo
                     // no vuelva a afectar el bosque de nuevo.
-                    else if (p.x < MapLayout.ForestSplitX) { prob = MapLayout.CampoTreeDensity; dryTree = Random.value < 0.45f; }
+                    else if (p.x < MapLayout.ForestSplitX) { prob = MapLayout.CampoTreeDensity; dryTree = Random.value < 0.45f; isWestGeneral = true; }
                     else                   { prob = MapLayout.ForestTreeDensity; dryTree = Random.value < 0.45f; }
                     if (Random.value > prob) continue;
+
+                    // chequeo de distancia minima SOLO en el campo (owner: "quedaron
+                    // muchos arboles apilados"): con copas grandes y un grid fino, dos
+                    // slots vecinos elegidos al azar pueden quedar mas cerca entre si
+                    // que el radio de sus copas. Si ya hay un árbol de campo cerca,
+                    // salteo este slot en vez de plantar otro encima.
+                    if (isWestGeneral)
+                    {
+                        bool tooClose = false;
+                        foreach (var cp in campoTreePositions)
+                            if (Vector2.Distance(p, cp) < MapLayout.CampoTreeMinSpacing) { tooClose = true; break; }
+                        if (tooClose) continue;
+                        campoTreePositions.Add(p);
+                    }
 
                     bool pickedReal = realTreeCount > 0 && Random.value < MapLayout.RealTreeMixFraction;
                     int protoIndex = pickedReal ? PickRealTreeIndex(p.x) : (dryTree ? dryIndex : greenIndex);
