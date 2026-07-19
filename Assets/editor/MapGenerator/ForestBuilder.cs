@@ -495,9 +495,15 @@ namespace FolkloreArchives.MapGen
                     if (MapLayout.InYpfPad(p)) continue;                             // lote de la estación YPF
 
                     bool inField = Vector2.Distance(p, MapLayout.HuntingField) < 45f;
+                    // owner: "se siguen superponiendo" -- el chequeo de espaciado de
+                    // abajo solo corria en la rama "general" del campo, pero el
+                    // campamento esta rodeado de CAMINOS (PathA/DirtRoad), asi que sus
+                    // arboles salian por la rama de tunel/camino y se saltaban el
+                    // chequeo por completo. Ahora "es campo" se decide por POSICION
+                    // (x), sin importar que rama de densidad haya tocado.
+                    bool isWest = p.x < MapLayout.ForestSplitX;
                     float prob;
                     bool dryTree;
-                    bool isWestGeneral = false;
                     if (dScary < 20f)      { prob = MapLayout.ScaryPathTreeDensity; dryTree = Random.value < 0.85f; }
                     else if (dA < 18f || dRoad < 18f || dExtra < 16f) { prob = MapLayout.PathATreeDensity; dryTree = Random.value < 0.35f; }
                     else if (inField)      { prob = MapLayout.FieldTreeDensity; dryTree = true; }
@@ -506,16 +512,17 @@ namespace FolkloreArchives.MapGen
                     // para atras no los toques"). OESTE (campo) usa su propia densidad,
                     // mas baja (CampoTreeDensity) — separada para que ajustar el campo
                     // no vuelva a afectar el bosque de nuevo.
-                    else if (p.x < MapLayout.ForestSplitX) { prob = MapLayout.CampoTreeDensity; dryTree = Random.value < 0.45f; isWestGeneral = true; }
+                    else if (isWest)       { prob = MapLayout.CampoTreeDensity; dryTree = Random.value < 0.45f; }
                     else                   { prob = MapLayout.ForestTreeDensity; dryTree = Random.value < 0.45f; }
                     if (Random.value > prob) continue;
 
-                    // chequeo de distancia minima SOLO en el campo (owner: "quedaron
-                    // muchos arboles apilados"): con copas grandes y un grid fino, dos
-                    // slots vecinos elegidos al azar pueden quedar mas cerca entre si
-                    // que el radio de sus copas. Si ya hay un árbol de campo cerca,
-                    // salteo este slot en vez de plantar otro encima.
-                    if (isWestGeneral)
+                    // chequeo de distancia minima en TODO el campo, sea cual sea la
+                    // rama de densidad que lo trajo (camino/tunel/campo abierto): con
+                    // copas grandes y un grid fino, dos slots vecinos elegidos al azar
+                    // pueden quedar mas cerca entre si que el radio de sus copas. Si ya
+                    // hay un árbol de campo cerca, salteo este slot en vez de plantar
+                    // otro encima.
+                    if (isWest)
                     {
                         bool tooClose = false;
                         foreach (var cp in campoTreePositions)
