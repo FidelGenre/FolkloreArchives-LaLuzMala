@@ -454,9 +454,9 @@ namespace FolkloreArchives.MapGen
                     float dA = BuilderUtils.DistToPolyline(p, MapLayout.PathA);
                     float dScary = BuilderUtils.DistToScaryPaths(p);
                     float dExtra = BuilderUtils.DistToExtraTrails(p); // caminos nuevos del owner
-                    // owner: "faltan un poco de arboles cerca de los caminos" -> achicado
-                    // un poco mas (3.5/3 -> 2.5/2.2) para que se acerquen mas al sendero.
-                    if (dRoad < 2.5f || dA < 2.5f || dScary < 2.2f || dExtra < 2.5f) continue;
+                    // owner: "necesito que esten mas poblados los bordes de los caminos"
+                    // -> achicado de nuevo (2.5/2.2 -> 1.5/1.8), arboles casi pegados al sendero.
+                    if (dRoad < 1.5f || dA < 1.5f || dScary < 1.8f || dExtra < 1.5f) continue;
                     if (BuilderUtils.DistToRivers(p) < 28f) continue;
                     // despejar el caminito a la playa y la playa misma
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 5f) continue;
@@ -477,10 +477,12 @@ namespace FolkloreArchives.MapGen
                     // was always beyond render range, so it looked like trees "never
                     // spawn near the player" right at spawn (which sits at Campsite).
                     // Shrunk so the treeline is actually visible from these locations.
-                    // owner: "haz ambas" (caminos + campamento) -> achicado un poco mas
-                    // (12->8) para que los arboles se acerquen mas a las carpas, sin
-                    // perder del todo el claro para acampar.
-                    if (Vector2.Distance(p, MapLayout.Campsite) < 8f) continue;
+                    // 8m se paso de corto: las carpas/mesa llegan a ~7.5m del centro
+                    // (ver BakedLayout en CampsiteBuilder), asi que a 8m casi no quedaba
+                    // margen y aparecian pinitos metidos entre las props (owner: "ahora
+                    // estan sobre el campamento, limpialo"). Subido a 10 para dejar el
+                    // claro real limpio de nuevo.
+                    if (Vector2.Distance(p, MapLayout.Campsite) < 10f) continue;
                     // despejar TODO el lote de la casa de la vieja (dentro del cerco),
                     // no solo el centro, así el patio/perímetro queda libre
                     if (p.x > MapLayout.OldLadyLotMin.x - 1f && p.x < MapLayout.OldLadyLotMax.x + 1f &&
