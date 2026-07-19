@@ -454,7 +454,9 @@ namespace FolkloreArchives.MapGen
                     float dA = BuilderUtils.DistToPolyline(p, MapLayout.PathA);
                     float dScary = BuilderUtils.DistToScaryPaths(p);
                     float dExtra = BuilderUtils.DistToExtraTrails(p); // caminos nuevos del owner
-                    if (dRoad < 3.5f || dA < 3.5f || dScary < 3f || dExtra < 3.5f) continue;
+                    // owner: "faltan un poco de arboles cerca de los caminos" -> achicado
+                    // un poco mas (3.5/3 -> 2.5/2.2) para que se acerquen mas al sendero.
+                    if (dRoad < 2.5f || dA < 2.5f || dScary < 2.2f || dExtra < 2.5f) continue;
                     if (BuilderUtils.DistToRivers(p) < 28f) continue;
                     // despejar el caminito a la playa y la playa misma
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 5f) continue;
@@ -475,7 +477,10 @@ namespace FolkloreArchives.MapGen
                     // was always beyond render range, so it looked like trees "never
                     // spawn near the player" right at spawn (which sits at Campsite).
                     // Shrunk so the treeline is actually visible from these locations.
-                    if (Vector2.Distance(p, MapLayout.Campsite) < 12f) continue;
+                    // owner: "haz ambas" (caminos + campamento) -> achicado un poco mas
+                    // (12->8) para que los arboles se acerquen mas a las carpas, sin
+                    // perder del todo el claro para acampar.
+                    if (Vector2.Distance(p, MapLayout.Campsite) < 8f) continue;
                     // despejar TODO el lote de la casa de la vieja (dentro del cerco),
                     // no solo el centro, así el patio/perímetro queda libre
                     if (p.x > MapLayout.OldLadyLotMin.x - 1f && p.x < MapLayout.OldLadyLotMax.x + 1f &&
