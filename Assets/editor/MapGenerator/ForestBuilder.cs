@@ -503,6 +503,10 @@ namespace FolkloreArchives.MapGen
                     bool pickedReal = realTreeCount > 0 && Random.value < MapLayout.RealTreeMixFraction;
                     int protoIndex = pickedReal ? PickRealTreeIndex(p.x) : (dryTree ? dryIndex : greenIndex);
                     bool isCampoTree = hasForestSplit && pickedReal && protoIndex >= pineCount;
+                    // pino mezclado del lado OESTE (no el frondoso agrandado): owner
+                    // "dejaste muy altos los pinos, no deberian estar asi de altos" —
+                    // mas bajo que el pino del bosque ESTE (que queda igual, sin tocar).
+                    bool isWestPine = hasForestSplit && pickedReal && !isCampoTree && p.x < MapLayout.ForestSplitX;
 
                     // BOTD conifers are used at their native sizes (4 sizes already),
                     // so this scale just adds spread: lots of small young pines (0.4x)
@@ -511,6 +515,7 @@ namespace FolkloreArchives.MapGen
                     // low-poly: un poco más altos (owner: "más altos pero no tanto");
                     // BOTD queda con su tuning nativo.
                     float s = isCampoTree ? Random.Range(1.3f, 2.1f)                     // owner: "hazlo mas grande" (arbol de campo)
+                            : isWestPine   ? Random.Range(0.45f, 0.8f)                    // pino del campo: mas bajo, no destaca como en el bosque
                             : MapLayout.UsePsxTrees ? Random.Range(0.7f, 1.35f)          // PSX: escala más contenida (no gigantes)
                             : MapLayout.UseLowPolyTrees ? Random.Range(0.55f, 2.0f)
                             : Random.Range(0.4f, 1.6f);
