@@ -904,12 +904,13 @@ namespace FolkloreArchives.MapGen
         // troncos cortados → owner: "todos con hojas". La variedad la da la escala/tinte
         // aleatorio por instancia.
         // ── PSX (StarkCrafts): árboles del FBX como prototipos de terrain-tree ──
-        // PSX_Tree1/PSX_Tree4 = pinos (bosque, lado ESTE/peligro). PSX_Tree2 = frondoso
-        // (antes descartado — "el dueño NO los quiere" — reactivado para el lado
-        // OESTE/campo argentino, owner: "pongamos mitad y mitad"). PSX_Tree3 se probó
-        // también pero el owner prefirió quedarse solo con Tree2 ("usa solo ese").
+        // PSX_Tree1/PSX_Tree4 = pinos (bosque, lado ESTE/peligro). PSX_Tree2/PSX_Tree3
+        // = frondosos (antes descartados — "el dueño NO los quiere" — reactivados para
+        // el lado OESTE/campo argentino). El owner sacó Tree3 en una ronda ("usa solo
+        // ese") y lo volvió a pedir en la siguiente ("se repite mucho el mismo") —
+        // quedan los dos juntos de nuevo.
         static readonly string[] PsxPineNames       = { "PSX_Tree1", "PSX_Tree4" };
-        static readonly string[] PsxBroadleafNames  = { "PSX_Tree2" };  // owner: "usa solo ese" (vio Tree2 puesto, prefiere solo ese) — Tree3 sacado
+        static readonly string[] PsxBroadleafNames  = { "PSX_Tree2", "PSX_Tree3" };  // owner: "esta muchas veces el mismo, vuelve a poner el otro" — Tree3 de vuelta (se repetia mucho con uno solo)
         static readonly HashSet<string> PsxPineSet  = new HashSet<string>(PsxPineNames);
         const string PsxTexDir = "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_ExtractedTex/";
 
