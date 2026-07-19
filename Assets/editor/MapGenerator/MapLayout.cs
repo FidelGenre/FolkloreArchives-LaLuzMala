@@ -462,14 +462,14 @@ namespace FolkloreArchives.MapGen
         // AHORA el bosque son pinos PSX de 24-30 triángulos (no los BOTD de 88k), así
         // que la densidad ya no cuesta casi nada → subo slots y densidades (owner:
         // "necesito que puebles más de árboles"). ~2x los árboles de antes.
-        // Owner: "necesito que sean menos los arboles ahora son muchisimos" — bajado
-        // de nuevo tras la subida anterior. Grid mas ancho (2.2->2.8) + densidad del
-        // bosque general a la mitad (0.90->0.45); los tuneles de miedo (Scary/PathA)
-        // quedan igual, esos SI tienen que sentirse cerrados/densos a proposito.
-        public const float TreeGridStep         = 2.8f;   // meters between candidate tree slots (tighter = more trees)
+        // Owner: 2.2/0.90 -> 2.8/0.45 no alcanzo, "hay demasiados arboles pon menos"
+        // de nuevo. Corte mas grande esta vez (2.8->3.8, 0.45->0.28) en vez de otro
+        // ajuste chico. Los tuneles de miedo (Scary/PathA) quedan igual, esos SI
+        // tienen que sentirse cerrados/densos a proposito.
+        public const float TreeGridStep         = 3.8f;   // meters between candidate tree slots (tighter = more trees)
         public const float ScaryPathTreeDensity = 0.92f;  // closed dark tunnel (Path B & criminal territory)
         public const float PathATreeDensity     = 0.82f;  // green tunnel - also covers right up to path edges now
-        public const float ForestTreeDensity    = 0.45f;  // bosque general — bajado (era 0.90, "muchisimos")
+        public const float ForestTreeDensity    = 0.28f;  // bosque general — bajado de nuevo (era 0.90 -> 0.45 -> 0.28)
         public const float FieldTreeDensity     = 0.32f;  // isolated dry trees in the hunting field
 
         // AlanTree.fbx (Assets/ExternalAssets/ALanTree) replaces the old ForestPack
