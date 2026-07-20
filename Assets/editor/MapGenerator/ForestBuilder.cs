@@ -58,15 +58,17 @@ namespace FolkloreArchives.MapGen
             // baked) so the CTI shader keeps its wind + LODs + billboards.
             // Árboles: PSX (StarkCrafts) con sus texturas REALES extraídas del FBX. Las
             // texturas venían embebidas en el FBX y Unity no las extrajo (por eso salían
-            // blancos). Ya extraídas a PSX_ExtractedTex. Pinos (PSX_Tree1/4, bosque ESTE).
-            // Los frondosos del CAMPO (oeste) ya no salen de este mismo FBX (solo traía
-            // 2) — ahora vienen del pack gratis PSX Retro Style Tree Pack (owner: "dame
-            // más estilo PSX/PSX y gratis"), con mezcla de verdes + otoño.
+            // blancos). Ya extraídas a PSX_ExtractedTex. Pinos (PSX_Tree1/4, bosque ESTE,
+            // sin cambios). Frondosos del CAMPO (oeste): owner probó reemplazarlos del
+            // todo por el pack nuevo PSX Retro, pero pidió volver a surtir con los de
+            // StarkCrafts (PSX_Tree2/3) + algunos del pack nuevo (sin los de otoño).
             int psxPineCount = 0;
             GameObject[] psxTrees = MapLayout.UsePsxTrees ? BuildPsxTreePrototypes(out psxPineCount) : null;
             if (psxTrees != null)
             {
                 realTreeList.AddRange(psxTrees);
+                var starkBroadleaf = BuildPsxStarkBroadleafPrototypes();
+                if (starkBroadleaf != null) realTreeList.AddRange(starkBroadleaf);
                 var campoTrees = BuildPsxRetroCampoTreePrototypes();
                 if (campoTrees != null) realTreeList.AddRange(campoTrees);
             }
@@ -969,20 +971,21 @@ namespace FolkloreArchives.MapGen
         // troncos cortados → owner: "todos con hojas". La variedad la da la escala/tinte
         // aleatorio por instancia.
         // ── PSX (StarkCrafts): árboles del FBX como prototipos de terrain-tree ──
-        // PSX_Tree1/PSX_Tree4 = pinos (bosque, lado ESTE/peligro). Los frondosos del
-        // campo (antes PSX_Tree2/PSX_Tree3 de este mismo FBX) se REEMPLAZARON por un
-        // pack nuevo, dedicado, con más variedad (ver BuildPsxRetroCampoTreePrototypes
-        // más abajo) — owner: "dame más estilo PSX/PSX y gratis" tras ver que solo
-        // había 2 frondosos para elegir. Esta función ahora solo carga los pinos.
-        static readonly string[] PsxPineNames       = { "PSX_Tree1", "PSX_Tree4" };
+        // PSX_Tree1/PSX_Tree4 = pinos (bosque, lado ESTE/peligro). PSX_Tree2/PSX_Tree3
+        // = frondosos de este mismo FBX (owner: "surtir entre los árboles que había
+        // antes y algunos de estos" — vuelven a sumarse al pool de campo, mezclados
+        // con el pack nuevo PSX Retro en vez de reemplazarlo del todo).
+        static readonly string[] PsxPineNames            = { "PSX_Tree1", "PSX_Tree4" };
+        static readonly string[] PsxStarkBroadleafNames  = { "PSX_Tree2", "PSX_Tree3" };
         const string PsxTexDir = "Assets/StarkCrafts/PSX_Forest_Level_byStarkCrafts/PSX_ExtractedTex/";
 
-        // Devuelve los prototipos de PINO (StarkCrafts). pineCount = results.Length
-        // siempre (ya no hay frondosos acá) — el llamador les suma los frondosos del
-        // pack nuevo DESPUÉS, así el índice [0,pineCount) sigue siendo "pino puro".
-        static GameObject[] BuildPsxTreePrototypes(out int pineCount)
+        // Genérica: arma prototipos de terrain-tree para los hijos indicados del FBX
+        // de StarkCrafts. Se usa tanto para los pinos (PsxPineNames) como para los
+        // frondosos propios del pack (PsxStarkBroadleafNames) — misma lógica, distinta
+        // lista de nombres, sin duplicar código.
+        static GameObject[] BuildPsxTreePrototypesFor(string[] names, out int builtCount)
         {
-            pineCount = 0;
+            builtCount = 0;
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(PsxForestHelper.FbxPath);
             if (fbx == null) { Debug.LogWarning("PSX: FBX no importado (" + PsxForestHelper.FbxPath + ") — caigo a low-poly/BOTD."); return null; }
 
@@ -992,8 +995,7 @@ namespace FolkloreArchives.MapGen
 
             var pineResults = new List<GameObject>();
             var report = new System.Text.StringBuilder("PSX árboles:\n");
-            var allNames = new List<string>(PsxPineNames);
-            foreach (var name in allNames)
+            foreach (var name in names)
             {
                 Transform child = FindChildByName(fbx.transform, name);
                 var mf = child != null ? child.GetComponent<MeshFilter>() : null;
@@ -1040,19 +1042,23 @@ namespace FolkloreArchives.MapGen
                 Object.DestroyImmediate(root);
                 if (prefab != null) pineResults.Add(prefab);
             }
-            pineCount = pineResults.Count;
-            if (pineResults.Count == 0) { Debug.LogWarning("PSX: no encontré PSX_Tree1/PSX_Tree4 en el FBX."); return null; }
-            report.AppendLine($"  pinos={pineCount}");
+            builtCount = pineResults.Count;
+            if (pineResults.Count == 0) { Debug.LogWarning("PSX: no encontré ninguno de " + string.Join(",", names) + " en el FBX."); return null; }
+            report.AppendLine($"  cargados={builtCount}");
             Debug.Log(report.ToString());
             return pineResults.ToArray();
         }
 
-        // ── PSX Retro Style Tree Pack (Elegant Crow, itch.io, gratis) — frondosos +
-        // otoño para el lado CAMPO. Cada árbol es un FBX + textura separados (no un
+        static GameObject[] BuildPsxTreePrototypes(out int pineCount) => BuildPsxTreePrototypesFor(PsxPineNames, out pineCount);
+        static GameObject[] BuildPsxStarkBroadleafPrototypes() => BuildPsxTreePrototypesFor(PsxStarkBroadleafNames, out _);
+
+        // ── PSX Retro Style Tree Pack (Elegant Crow, itch.io, gratis) — frondosos
+        // para el lado CAMPO. Cada árbol es un FBX + textura separados (no un
         // FBX-colección como StarkCrafts), así que no hace falta FindChildByName ni
         // separar tronco/copa por material: toda la malla usa UNA textura (atlas con
-        // tronco+copa). Mezcla variada pedida por el owner: verdes + un poco de otoño.
-        static readonly string[] PsxRetroCampoTreeNames = { "tree12", "tree15", "tree18", "tree20", "tree30", "tree34" };
+        // tronco+copa). Owner: "los naranjas quítalos a ver como queda" — se sacaron
+        // tree30/tree34 (otoño), quedan solo los verdes.
+        static readonly string[] PsxRetroCampoTreeNames = { "tree12", "tree15", "tree18", "tree20" };
         const string PsxRetroTreeDir = "Assets/ExternalAssets/PSXRetroTrees/";
         static GameObject[] BuildPsxRetroCampoTreePrototypes()
         {
