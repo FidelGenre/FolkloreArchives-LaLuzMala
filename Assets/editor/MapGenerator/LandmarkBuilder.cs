@@ -128,9 +128,9 @@ namespace FolkloreArchives.MapGen
             Reg(hostages.gameObject);
 
             // Los 5 ladrones/asesinos enmascarados (owner: "4-5 mejor", eligió estos
-            // disfraces puntuales del pack Characters PSX) — 3 en el campamento, 2 de
-            // guardia en la zona de rehenes.
-            CriminalNpcBuilder.Build(criminals, hostages, t, MapLayout.MainCriminalCamp, MapLayout.HostageArea);
+            // disfraces puntuales del pack Characters PSX) — los 5 juntos en el
+            // campamento (owner: "quiero que esten los 5 ahi en ese campamento malo").
+            CriminalNpcBuilder.Build(criminals, t, MapLayout.MainCriminalCamp);
 
             // Zonas nuevas del owner (editor de plano) - por ahora, marcadores.
             var lakeMt = BuilderUtils.Group(poi, "LakeMountain", BuilderUtils.Ground(t, MapLayout.LakeMountain));

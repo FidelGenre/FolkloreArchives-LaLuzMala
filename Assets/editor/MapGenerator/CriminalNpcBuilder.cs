@@ -7,10 +7,12 @@
 //  (sin IA/animación todavía), material URP propio + textura en
 //  filtro Point.
 //
-//  3 en el campamento principal (MainCriminalCamp), reusando los
-//  puntos SPAWN_CRIMINAL_1/2/3 que ya existían como marcadores
-//  vacíos; 2 haciendo guardia en HostageArea (sin pisar las 3
-//  TiedNPC_ existentes, que están más cerca del centro).
+//  Los 5 van juntos en MainCriminalCamp (owner: "quiero que esten
+//  los 5 ahi en ese campamento malo"). El campamento tiene 4 ranchos
+//  a ~14-16m del centro (CriminalCampBuilder los escala ×1.6), así
+//  que el claro alrededor de la fogata queda libre hasta bastante
+//  más lejos que eso — los 5 se paran en ese claro (radio 3.6-6.5m),
+//  con margen de sobra para no pisar ningún rancho.
 //
 //  Créditos: "Characters PSX" pack by Elbolilloduro (itch.io, CC0)
 //   - Character_Killer      → máscara de arpillera + leñador + overol
@@ -36,28 +38,25 @@ namespace FolkloreArchives.MapGen
             { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; }
         }
 
-        // MainCriminalCamp: mismos offsets que SPAWN_CRIMINAL_1/2/3 (LandmarkBuilder.cs).
-        static readonly CriminalDef[] CampCriminals =
+        static readonly CriminalDef[] Criminals =
         {
-            new CriminalDef("Criminal_SackheadFlannel", Dir + "Killer_Sackhead_Flannel/Character_Killer.fbx",    Dir + "Killer_Sackhead_Flannel/Character_Killer.png",    2.2f, -4f,  0f,   60f),
-            new CriminalDef("Criminal_SackheadHoodie",  Dir + "Killer_Sackhead_Hoodie/Character_Killer_01.fbx",  Dir + "Killer_Sackhead_Hoodie/Character_Killer_01.png",  2.2f,  4f,  4f,  -140f),
-            new CriminalDef("Criminal_PigMask_Leader",  Dir + "Killer_PigMask/Character_Killer_05.fbx",          Dir + "Killer_PigMask/Character_Killer_05.png",           2.25f, 0f, -6f,  180f),
+            // líder (máscara de chancho), más cerca de la fogata, mirando hacia el centro
+            new CriminalDef("Criminal_PigMask_Leader",      Dir + "Killer_PigMask/Character_Killer_05.fbx",          Dir + "Killer_PigMask/Character_Killer_05.png",           2.25f, -2f,  -3f,  34f),
+            // 4 guardias, en las 4 direcciones cardinales alrededor de la fogata
+            new CriminalDef("Criminal_SackheadFlannel",     Dir + "Killer_Sackhead_Flannel/Character_Killer.fbx",    Dir + "Killer_Sackhead_Flannel/Character_Killer.png",    2.2f,  0f,   6.5f, 180f),
+            new CriminalDef("Criminal_SkullJacket",         Dir + "Killer_SkullJacket/Character_Killer_02.fbx",      Dir + "Killer_SkullJacket/Character_Killer_02.png",      2.2f,  6.5f, 0f,   -90f),
+            new CriminalDef("Criminal_SackheadHoodie",      Dir + "Killer_Sackhead_Hoodie/Character_Killer_01.fbx",  Dir + "Killer_Sackhead_Hoodie/Character_Killer_01.png",  2.2f,  0f,  -6.5f,  0f),
+            new CriminalDef("Criminal_BloodyUniform",       Dir + "Killer_BloodyUniform/Character_Killer_06.fbx",    Dir + "Killer_BloodyUniform/Character_Killer_06.png",    2.2f, -6.5f, 0f,   90f),
         };
 
-        // HostageArea: guardias, afuera del triángulo de rehenes atados (offsets ±4/0 en x, 0/3 en z).
-        static readonly CriminalDef[] HostageGuards =
+        public static void Build(Transform criminalCamp, Terrain t, Vector2 campCenter)
         {
-            new CriminalDef("Criminal_SkullJacket_Guard",   Dir + "Killer_SkullJacket/Character_Killer_02.fbx",   Dir + "Killer_SkullJacket/Character_Killer_02.png",   2.2f, -6.5f, -2.5f,  50f),
-            new CriminalDef("Criminal_BloodyUniform_Guard", Dir + "Killer_BloodyUniform/Character_Killer_06.fbx", Dir + "Killer_BloodyUniform/Character_Killer_06.png", 2.2f,  6.5f, -2.5f, -50f),
-        };
+            // el pack se descomprimió recién este mismo Generate en algunos casos —
+            // fuerza el import antes de pedir LoadAssetAtPath, si no puede devolver null.
+            AssetDatabase.Refresh();
 
-        public static void Build(Transform criminalCamp, Transform hostageArea, Terrain t, Vector2 campCenter, Vector2 hostageCenter)
-        {
-            var campGroup = BuilderUtils.Group(criminalCamp, "CriminalsNPC", BuilderUtils.Ground(t, campCenter.x, campCenter.y));
-            foreach (var c in CampCriminals) BuildOne(campGroup, t, c, campCenter);
-
-            var guardGroup = BuilderUtils.Group(hostageArea, "GuardsNPC", BuilderUtils.Ground(t, hostageCenter.x, hostageCenter.y));
-            foreach (var c in HostageGuards) BuildOne(guardGroup, t, c, hostageCenter);
+            var group = BuilderUtils.Group(criminalCamp, "CriminalsNPC", BuilderUtils.Ground(t, campCenter.x, campCenter.y));
+            foreach (var c in Criminals) BuildOne(group, t, c, campCenter);
         }
 
         static void BuildOne(Transform parent, Terrain t, CriminalDef f, Vector2 c)
@@ -80,7 +79,7 @@ namespace FolkloreArchives.MapGen
             model.transform.localScale = Vector3.one;
 
             var rends = model.GetComponentsInChildren<Renderer>();
-            if (rends.Length == 0) return;
+            if (rends.Length == 0) { Debug.LogWarning("CriminalNpc: " + f.name + " (" + f.fbx + ") no tiene ningún Renderer."); return; }
 
             Bounds b = rends[0].bounds;
             for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
