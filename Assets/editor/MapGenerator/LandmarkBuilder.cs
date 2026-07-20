@@ -156,13 +156,23 @@ namespace FolkloreArchives.MapGen
             // PUENTE PEATONAL sobre el cruce del río (campo de caza ↔ mirador este),
             // así el cruce a pie no queda bloqueado por agua. Se apoya en la altura de
             // las orillas (sampleada) para no flotar.
-            // owner: primero pidió alinearlo con Camino15 (campamento->mirador este),
-            // pero después: "quita ese camino del campamento hacia el puente, al que
-            // tiene que ir conectado es al que esta en el campo de caza" -- Camino15 se
-            // ELIMINÓ (ver MapLayout) y el puente se realinea con Camino14 (campo de
-            // caza -> mirador este), que ya tenía su cruce real fijo en (294,285).
+            // owner: "no quedo sobre los caminos" -- adivinar el cruce a mano (con los
+            // puntos de control en línea recta) fallo dos veces, porque tanto el río
+            // como Camino14 son curvas Catmull-Rom onduladas (Snake), no líneas rectas,
+            // así que el cruce real no cae donde da la interpolación lineal. Ahora lo
+            // calculo de verdad: recorro el tramo de Camino14 que cruza el río (mid ->
+            // MiradorEste) y busco el punto más cercano al río REAL (MapLayout.River,
+            // ya la curva suavizada) — ese es el cruce exacto, sin adivinar.
             {
-                float bx = 294f, bz = 285f, halfLen = 42f;   // alineado al cruce real de Camino14 (campo de caza), no Camino15 (eliminado)
+                Vector2 crossPt = MapLayout.Camino14[1];
+                float bestDist = float.MaxValue;
+                for (int i = 0; i <= 60; i++)
+                {
+                    Vector2 sample = Vector2.Lerp(MapLayout.Camino14[1], MapLayout.Camino14[2], i / 60f);
+                    float d = BuilderUtils.DistToPolyline(sample, MapLayout.River);
+                    if (d < bestDist) { bestDist = d; crossPt = sample; }
+                }
+                float bx = crossPt.x, bz = crossPt.y, halfLen = 42f;
                 float wy = t.SampleHeight(new Vector3(bx - halfLen, 0f, bz));
                 float ey = t.SampleHeight(new Vector3(bx + halfLen, 0f, bz));
                 float deckY = Mathf.Max(wy, ey) + 0.15f;
