@@ -58,6 +58,7 @@ namespace FolkloreArchives.MapGen
             // sin autos) → CampsiteBuilder, estilo PS1 texturizado. Reemplaza los
             // placeholders viejos (auto + fogata de cubos + carpas-cubo).
             CampsiteBuilder.Build(camp, t, MapLayout.Campsite);
+            FriendNpcBuilder.Build(camp, t, MapLayout.Campsite);
 
             BuilderUtils.Empty(camp, "SPAWN_PLAYER1", BuilderUtils.Ground(t, MapLayout.Campsite.x - 2f, MapLayout.Campsite.y - 4f) + Vector3.up * 0.5f);
             BuilderUtils.Empty(camp, "SPAWN_RUFUS", BuilderUtils.Ground(t, MapLayout.Campsite.x + 1f, MapLayout.Campsite.y - 5f) + Vector3.up * 0.5f);
