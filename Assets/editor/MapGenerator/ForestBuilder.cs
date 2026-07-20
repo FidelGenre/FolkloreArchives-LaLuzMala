@@ -1653,6 +1653,12 @@ namespace FolkloreArchives.MapGen
                            : lp  ? LowPolyDetail(LP_HighGrass, 0.8f, 1.1f, 1.0f, 1.6f)    : PackDetail("Grass_B", 0.8f, 1.3f, 1.4f, 2.3f);
             var fern       = lp ? LowPolyDetail(LP_ShrubGreen, 0.9f, 1.15f, 0.9f, 1.15f): PackDetail("Fern_A", 0.9f, 1.6f, 1.1f, 1.8f);
             var dryBush    = lp ? LowPolyDetail(LP_ShrubDead, 0.9f, 1.15f, 0.9f, 1.15f) : PackDetail("BushDry_A", 0.9f, 1.6f, 0.9f, 1.6f);
+            // Pastizal SILVESTRE del lado CAMPO (owner: "más silvestre, pastizal sin
+            // orden" — referencias de trigal/pastura alta sin cultivar, no surcos
+            // prolijos). Misma malla/textura que el pasto normal, pero más alta y ancha
+            // — un pasto más shaggy/crecido en vez de prolijo, para el lado oeste.
+            var wildGrass  = psx ? PsxGrassDetail("PSX_GrassBlade_128px", 1.4f, 2.4f, 3.0f, 4.4f, psxHealthy, psxDry)
+                           : lp  ? LowPolyDetail(LP_HighGrass, 1.2f, 1.8f, 4.0f, 6.0f)   : PackDetail("Grass_B", 1.1f, 2.0f, 6.5f, 10f);
 
             if (grassGreen == null || grassDry == null)
             {
@@ -1662,10 +1668,11 @@ namespace FolkloreArchives.MapGen
             }
 
             var protos = new List<DetailPrototype> { grassGreen, grassDry };
-            int shortIdx = -1, fernIdx = -1, bushIdx = -1;
+            int shortIdx = -1, fernIdx = -1, bushIdx = -1, wildIdx = -1;
             if (grassShort != null) { shortIdx = protos.Count; protos.Add(grassShort); }
             if (fern != null) { fernIdx = protos.Count; protos.Add(fern); }
             if (dryBush != null) { bushIdx = protos.Count; protos.Add(dryBush); }
+            if (wildGrass != null) { wildIdx = protos.Count; protos.Add(wildGrass); }
             td.detailPrototypes = protos.ToArray();
 
             int res = td.detailResolution;
@@ -1804,7 +1811,13 @@ namespace FolkloreArchives.MapGen
                     v = Mathf.RoundToInt(v * densityFactor * grassThin);
                     if (v <= 0) continue; // bosque profundo lejos de todo: sin pasto
 
+                    // OESTE/campo: pastizal silvestre más alto en vez del pasto normal
+                    // (owner: "más silvestre, pastizal sin orden" — referencias de
+                    // trigal/pastura alta). dryZone (cerca de Campo de Caza/Delincuentes)
+                    // mantiene su pasto seco de siempre, sin cambios.
+                    bool isWest = wx < MapLayout.ForestSplitX;
                     if (dryZone) maps[1][zi, xi] = v;
+                    else if (isWest && wildIdx >= 0) maps[wildIdx][zi, xi] = v;
                     else maps[0][zi, xi] = v;
 
                     // dry bushes close the scary tunnels at eye level
