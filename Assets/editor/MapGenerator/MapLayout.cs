@@ -276,7 +276,10 @@ namespace FolkloreArchives.MapGen
         // NO se toca: es donde el río realmente se puede cruzar (posición fija del
         // terreno), no una distancia de hub que se pueda acortar.
         public static readonly Vector2[] Camino14 = { HuntingField, new Vector2(294f, 285f), LookoutEast };         // c12: campo de caza → (cruza el río) → mirador este (antes iba desde la vieja)
-        public static readonly Vector2[] Camino15 = { Campsite, new Vector2(281f, 254f), LookoutEast };             // c21: campamento → mirador este (ambos extremos fijos, sin cambios)
+        // Camino15 (campamento → mirador este, directo) ELIMINADO (owner: "quita ese
+        // camino del campamento hacia el puente, al que tiene que ir conectado es al
+        // que esta en el campo de caza") -- el puente peatonal ahora se alinea con
+        // Camino14 en vez de este camino (ver LandmarkBuilder).
         public static readonly Vector2[] Camino16 = { LookoutEast, new Vector2(395f, 266f), Grave };                // mt: mirador este → tumba
         public static readonly Vector2[] Camino19 = { MainCriminalCamp, new Vector2(448f, 203f), HostageArea };     // cr: delincuentes → rehenes
         public static readonly Vector2[] Camino20 = { Grave, CabinEast, EscapePoint };                            // c15: tumba → cabaña este → escape
@@ -292,7 +295,7 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2[][] ExtraTrails = {
             Snake(Camino9, 4f, 4f), Snake(Camino10, 4f, 4f), Snake(Camino11, 4f, 4f),
             Snake(Camino13, 8f, 4f), Snake(Camino14, 9f, 4f),
-            Snake(Camino15, 8f, 4f), Snake(Camino16, 5.6f, 4f),
+            Snake(Camino16, 5.6f, 4f),
             Snake(Camino19, 4.9f, 4f), Snake(Camino20, 5.6f, 4f),
             Snake(Camino21, 5.6f, 4f), BarnPath
         };

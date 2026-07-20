@@ -153,17 +153,16 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.Label(esc, "ESCAPE", esc.position + Vector3.up * 8f);
             Reg(esc.gameObject);
 
-            // PUENTE PEATONAL sobre el cruce del río (vieja/campamento ↔ mirador este),
+            // PUENTE PEATONAL sobre el cruce del río (campo de caza ↔ mirador este),
             // así el cruce a pie no queda bloqueado por agua. Se apoya en la altura de
             // las orillas (sampleada) para no flotar.
-            // owner: "el puente debe ir mas abajo, que quede bien alineado con los
-            // caminos" -- (314,310) quedaba a ~54m del cruce real de Camino15 (campamento
-            // -> mirador este, el mismo camino que este puente describe en el comentario
-            // de arriba). Camino15 cruza el rio en ~(310,256): interpolando su segundo
-            // tramo (281,254)->(367,260) contra la posicion real del rio ahi (~x305-315,
-            // segun RiverControls). Corrido a ese punto.
+            // owner: primero pidió alinearlo con Camino15 (campamento->mirador este),
+            // pero después: "quita ese camino del campamento hacia el puente, al que
+            // tiene que ir conectado es al que esta en el campo de caza" -- Camino15 se
+            // ELIMINÓ (ver MapLayout) y el puente se realinea con Camino14 (campo de
+            // caza -> mirador este), que ya tenía su cruce real fijo en (294,285).
             {
-                float bx = 310f, bz = 256f, halfLen = 42f;   // alineado al cruce real de Camino15 (antes 314,310, sin relacion con ningun camino)
+                float bx = 294f, bz = 285f, halfLen = 42f;   // alineado al cruce real de Camino14 (campo de caza), no Camino15 (eliminado)
                 float wy = t.SampleHeight(new Vector3(bx - halfLen, 0f, bz));
                 float ey = t.SampleHeight(new Vector3(bx + halfLen, 0f, bz));
                 float deckY = Mathf.Max(wy, ey) + 0.15f;
