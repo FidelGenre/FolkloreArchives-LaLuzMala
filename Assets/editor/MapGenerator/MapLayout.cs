@@ -59,39 +59,58 @@ namespace FolkloreArchives.MapGen
         // de VIEJA ajustada a mano por el owner en el editor de plano (235,388). Todo el
         // combo de la vieja (casa/galpón/huellas/lote/BarnPath) se recalcula desde ese
         // ancla con los MISMOS offsets relativos originales, para no perder su forma.
-        public static readonly Vector2 OldLadyRanch     = new Vector2(155f, 155f);  // "VIEJA" (waypoint del camino) — alejada del lago (owner: quedó muy pegada)
+        // CAMINOS MAS CORTOS (owner: "necesito mas cortos los caminos, menos los que
+        // desembocan hacia la ruta y debo ir en auto, esos estan bien"). Todos los
+        // destinos que se caminan (NO Campsite/DirtRoad/PavedRoute/DirtTurnoff, esos
+        // se manejan en auto) se acercaron ~30% a su hub real:
+        //  - Lado oeste/humano -> hacia Campsite (el hub real de esos senderos).
+        //  - Mirador Oeste -> hacia LakeMountain (cuelga del lago, no del campamento).
+        //  - Lado este/peligro -> hacia LookoutEast (la "puerta" del cruce del río,
+        //    que se deja FIJA a proposito para no mover el puente/cruce).
+        //  - LakeMountain/CentralLakeCenter NO se tocan: es el mismo punto que ancla
+        //    el lago y las montañas ya afinados esta sesión — moverlo requeriria
+        //    reubicar todo ese sistema de terreno de nuevo. Por eso el tramo
+        //    Campamento<->Lago (PathA) y Lago<->Mirador Oeste (Camino11, del lado
+        //    del lago) no se acortan tanto como el resto.
+        // Todos los midpoints de Camino9/10/11/13 y del lado este se recalcularon con
+        // la MISMA transformacion (mismo pivote+factor que sus extremos), para que la
+        // forma/proporcion de cada sendero quede igual, solo mas chico — no un punto
+        // medio viejo que ya no corresponde (la razon real del bug de "caminos
+        // enredados" de hace unas rondas).
+        public static readonly Vector2 OldLadyRanch     = new Vector2(182f, 178f);  // "VIEJA" (waypoint del camino) — acercada al campamento (30%)
         // centro real de la CASA de la vieja: corrida al costado del camino (Camino10 pasa
         // por OldLadyRanch, rama directa desde el campamento). Lo usan HouseBuilder (dónde
         // colocar la casa) y ForestBuilder (dónde despejar el pasto bajo la huella).
-        public static readonly Vector2 OldLadyHouseCenter = new Vector2(158f, 155f);
+        // Se TRASLADA (no escala) junto con OldLadyRanch para no achicar la casa en sí.
+        public static readonly Vector2 OldLadyHouseCenter = new Vector2(185f, 178f);
         // galpón/granero de la vieja: a la IZQUIERDA y un poco atrás de la casa (oeste
         // + algo al norte), cerca. Lo usan HouseBuilder (colocar) y ForestBuilder
         // (despejar pasto/árboles bajo él).
-        public static readonly Vector2 OldLadyBarnCenter = new Vector2(151f, 159f);
+        public static readonly Vector2 OldLadyBarnCenter = new Vector2(178f, 182f);
 
         // HUELLAS rectangulares (min/max en x,z world) de la casa y el galpón, para que
         // ForestBuilder despeje el pasto EXACTO bajo cada edificio (el despeje por radio
         // dejaba pasto atravesando el piso en las esquinas). Ajustar si sobra/falta.
         // (mapa reducido 0.7: el CENTRO se movió con el resto, pero el TAMAÑO de la huella
         //  se mantiene porque el edificio NO se achicó.)
-        public static readonly Vector2 OldLadyHouseFootMin = new Vector2(149f, 146f);
-        public static readonly Vector2 OldLadyHouseFootMax = new Vector2(170f, 164f);
-        public static readonly Vector2 OldLadyBarnFootMin  = new Vector2(146f, 155f);
-        public static readonly Vector2 OldLadyBarnFootMax  = new Vector2(154f, 165f);
+        public static readonly Vector2 OldLadyHouseFootMin = new Vector2(176f, 169f);
+        public static readonly Vector2 OldLadyHouseFootMax = new Vector2(197f, 187f);
+        public static readonly Vector2 OldLadyBarnFootMin  = new Vector2(173f, 178f);
+        public static readonly Vector2 OldLadyBarnFootMax  = new Vector2(181f, 188f);
         public static bool InRect(Vector2 p, Vector2 mn, Vector2 mx, float m) =>
             p.x > mn.x - m && p.x < mx.x + m && p.y > mn.y - m && p.y < mx.y + m;
-        public static readonly Vector2 HuntingField     = new Vector2(209f, 329f);  // "CAMPO DE CAZA" (oeste)
-        public static readonly Vector2 Grave            = new Vector2(407f, 190f);  // "TUMBA" — este, frente al Mirador Este
-        public static readonly Vector2 MainCriminalCamp = new Vector2(476f, 148f);  // "DELINCUENTES PRINCIPAL" (este)
-        public static readonly Vector2 HostageArea      = new Vector2(482f, 200f);  // "REHENES" (este)
-        public static readonly Vector2 LakeMountain     = new Vector2(71f, 293f);  // "MONTAÑA Y LAGO" — lago (oeste lejano)
-        public static readonly Vector2 WrongTurnDeath   = new Vector2(98f, 116f);  // "MUERTE CAMINO EQUIVOCADO" (oeste, spur)
-        public static readonly Vector2 LakeLookout      = new Vector2(142f, 278f);  // "MIRADOR OESTE" (centro del cuarteto oeste)
-        public static readonly Vector2 AbandonedCabin   = new Vector2(270f, 110f);  // "CABAÑA OESTE" — corrida al este (owner: quedaba muy cerca de la Vieja)
+        public static readonly Vector2 HuntingField     = new Vector2(220f, 300f);  // "CAMPO DE CAZA" (oeste) — acercado al campamento (30%)
+        public static readonly Vector2 Grave            = new Vector2(395f, 211f);  // "TUMBA" — este, acercada al Mirador Este (30%)
+        public static readonly Vector2 MainCriminalCamp = new Vector2(443f, 182f);  // "DELINCUENTES PRINCIPAL" (este) — acercado al Mirador Este (30%)
+        public static readonly Vector2 HostageArea      = new Vector2(448f, 218f);  // "REHENES" (este) — acercada al Mirador Este (30%)
+        public static readonly Vector2 LakeMountain     = new Vector2(71f, 293f);  // "MONTAÑA Y LAGO" — lago (oeste lejano). SIN TOCAR: ancla el lago/montañas del terreno
+        public static readonly Vector2 WrongTurnDeath   = new Vector2(142f, 151f);  // "MUERTE CAMINO EQUIVOCADO" (oeste, spur) — acercada al campamento (30%)
+        public static readonly Vector2 LakeLookout      = new Vector2(121f, 283f);  // "MIRADOR OESTE" (centro del cuarteto oeste) — acercado al LAGO (30%, cuelga de ahí, no del campamento)
+        public static readonly Vector2 AbandonedCabin   = new Vector2(263f, 147f);  // "CABAÑA OESTE" — acercada al campamento (30%)
         // Zonas NUEVAS del plano de dos lados:
-        public static readonly Vector2 EscapePoint      = new Vector2(422f, 40f);   // "ESCAPE" — sobre la ruta (z de la ruta a x803)
-        public static readonly Vector2 CabinEast        = new Vector2(359f, 112f);  // "CABAÑA ESTE" — bajando de la Tumba al Escape
-        public static readonly Vector2 LookoutEast      = new Vector2(367f, 260f);  // "MIRADOR ESTE" — orilla este del río
+        public static readonly Vector2 EscapePoint      = new Vector2(406f, 106f);   // "ESCAPE" — acercado al Mirador Este (30%)
+        public static readonly Vector2 CabinEast        = new Vector2(361f, 156f);  // "CABAÑA ESTE" — acercada al Mirador Este (30%)
+        public static readonly Vector2 LookoutEast      = new Vector2(367f, 260f);  // "MIRADOR ESTE" — orilla este del río. SIN TOCAR: es la "puerta" fija del cruce, todo el lado este se acerca a ESTE punto
 
         // ------------- Lote de la casa de la vieja (HouseBuilder) -------------
         // Bounds en world XZ del cerco (deben coincidir con la valla de HouseBuilder:
@@ -99,8 +118,8 @@ namespace FolkloreArchives.MapGen
         // x[-6..30] z[-7..19] → world abajo). TerrainBuilder aplana este rectángulo a
         // OldLadyLotHeight y ForestBuilder no pone árboles adentro (+ un margen).
         // Ajustar si cambia la valla o el centrado de la casa.
-        public static readonly Vector2 OldLadyLotMin = new Vector2(139f, 141f);
-        public static readonly Vector2 OldLadyLotMax = new Vector2(175f, 167f);
+        public static readonly Vector2 OldLadyLotMin = new Vector2(166f, 164f);  // trasladado junto con OldLadyRanch (mismo delta, sin achicar el lote)
+        public static readonly Vector2 OldLadyLotMax = new Vector2(202f, 190f);  // trasladado junto con OldLadyRanch (mismo delta, sin achicar el lote)
         public const float OldLadyLotHeight = 25.5f;   // nivel plano del lote (≈ altura natural ahí)
 
         // Claro sin pasto alrededor del campamento del jugador (fogata + troncos +
@@ -133,13 +152,13 @@ namespace FolkloreArchives.MapGen
 
         // ------------- ZONAS/POIs NUEVOS (ideas del MapPlan) — los construye AreaPoiBuilder -------------
         // Van DESPUÉS de DirtTurnoff/PavedRoute para que los de la ruta puedan usar PavedRouteZAt.
-        public static readonly Vector2 EstepaCenter  = new Vector2(130f, 105f);  // estepa (campo abierto ventoso), sobre Camino13
-        public static readonly Vector2 Molino        = new Vector2(110f, 94f);  // molino de viento oxidado
+        public static readonly Vector2 EstepaCenter  = new Vector2(165f, 143f);  // estepa (campo abierto ventoso), sobre Camino13 — acercada junto con Camino13 (30%)
+        public static readonly Vector2 Molino        = new Vector2(151f, 137f);  // molino de viento oxidado — acercado junto con la estepa (30%)
         public static readonly Vector2 Mallin        = new Vector2(252f, 323f);  // pantano (mallín), sobre Camino14
-        public static readonly Vector2 Roquedal      = new Vector2(100f, 231f);  // afloramiento de piedra, sobre Camino10
+        public static readonly Vector2 Roquedal      = new Vector2(144f, 231f);  // afloramiento de piedra, sobre Camino10 — acercado junto con Camino10 (30%)
         public static readonly Vector2 BurntForest   = new Vector2(176f, 257f);  // bosque quemado, cerca del nudo del camino de tierra
         public static readonly Vector2 LakeShore     = new Vector2(128f, 236f);  // orilla del lago + muelle — estaba a 32.5m del centro (DENTRO del agua pura, radio 65m); movida a 80m, en la franja de arena real
-        public static readonly Vector2 HangedTree    = new Vector2(402f, 206f);  // árbol del ahorcado + cementerio (pegado a la Tumba)
+        public static readonly Vector2 HangedTree    = new Vector2(390f, 227f);  // árbol del ahorcado + cementerio (pegado a la Tumba) — trasladado junto con la Tumba
         public static readonly Vector2 Antenna       = new Vector2(370f, 282f);  // antena/repetidora (cerro)
         public static readonly Vector2 Corrales      = new Vector2(528f, 233f); // corrales/bañadero (junto a la estancia)
         public static readonly Vector2 Estancia      = new Vector2(512f, 211f);  // estancia + galpón (El Familiar)
@@ -173,8 +192,9 @@ namespace FolkloreArchives.MapGen
         // PathA = rama DIRECTA campamento ↔ lago (una de las 3 ramas del hub, owner).
         public static readonly Vector2[] PathA      = Snake(new[] { LakeMountain, Campsite }, 4f, 4f);
         // PathB = sendero de MIEDO (este, peligro): Tumba → Rehenes → Delincuentes.
-        public static readonly Vector2[] PathB      = Snake(new[] { Grave, HostageArea, MainCriminalCamp }, 10f, 5f);
-        public static readonly Vector2[] GraveToCriminals     = Snake(new[] { Grave, new Vector2(446f, 170f), MainCriminalCamp }, 9f, 4f);
+        // Amplitud reescalada junto con el acercamiento del lado este (30%): 10->7, 5->3.5.
+        public static readonly Vector2[] PathB      = Snake(new[] { Grave, HostageArea, MainCriminalCamp }, 7f, 3.5f);
+        public static readonly Vector2[] GraveToCriminals     = Snake(new[] { Grave, new Vector2(422f, 197f), MainCriminalCamp }, 6.3f, 2.8f);
 
         // River runs along the east edge, next to the campsite. Smooth wavy
         // Catmull-Rom curve (same technique as the paved route) instead of a few
@@ -238,33 +258,43 @@ namespace FolkloreArchives.MapGen
         // hacía un rodeo de 103m hacia el oeste, atravesando toda la zona del lago/vieja
         // (la causa REAL del nudo, no la amplitud del zigzag). Recalculado cerca de la
         // línea directa entre los dos puntos actuales.
-        public static readonly Vector2[] Camino9  = { HuntingField, new Vector2(245f, 265f), Campsite };            // c10: campo de caza → campamento (rama 3)
-        public static readonly Vector2[] Camino10 = { Campsite, new Vector2(200f, 185f), OldLadyRanch };            // rama DIRECTA campamento → vieja (antes iba lago→vieja, redundante con PathA)
-        public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(105f, 288f), LakeLookout };         // lago → mirador oeste (antes vieja→mirador, ya no hace falta)
+        // Camino9/10/11: midpoints recalculados con la MISMA transformación que sus
+        // extremos (pivote Campsite x0.7 para 9/10, pivote LakeMountain x0.7 para 11)
+        // para que la forma del sendero quede igual, solo más corto.
+        public static readonly Vector2[] Camino9  = { HuntingField, new Vector2(245f, 255f), Campsite };            // c10: campo de caza → campamento (rama 3)
+        public static readonly Vector2[] Camino10 = { Campsite, new Vector2(214f, 199f), OldLadyRanch };            // rama DIRECTA campamento → vieja (antes iba lago→vieja, redundante con PathA)
+        public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(95f, 290f), LakeLookout };          // lago → mirador oeste (antes vieja→mirador, ya no hace falta)
         // c13: muerte camino equivocado → owner: "que sea confuso", el desvío tiene que
         // aparecer a unos metros de entrar al camino de tierra (no 100+ metros adentro,
         // que era lo que quedaba pegado al punto medio de DirtRoad después de correr el
         // desvío/DirtTurnoff más al este). Salía a 15m, el owner pidió correrlo "unos
-        // cuantos metros más adelante" → ahora a 38m después de DirtTurnoff.
-        public static readonly Vector2[] Camino13 = { WrongTurnDeath, new Vector2(130f, 98f), new Vector2(DirtTurnoff.x + 3f, DirtTurnoff.y + 38f) };
-        // Cruce del río + red del ESTE (peligro):
+        // cuantos metros más adelante" → ahora a 38m después de DirtTurnoff. Midpoint
+        // acercado junto con WrongTurnDeath (pivote Campsite, 30%); el otro extremo
+        // (sobre DirtTurnoff/DirtRoad) NO se toca — es el auto, no un sendero a pie.
+        public static readonly Vector2[] Camino13 = { WrongTurnDeath, new Vector2(165f, 138f), new Vector2(DirtTurnoff.x + 3f, DirtTurnoff.y + 38f) };
+        // Cruce del río + red del ESTE (peligro). El punto medio de Camino14 (294,285)
+        // NO se toca: es donde el río realmente se puede cruzar (posición fija del
+        // terreno), no una distancia de hub que se pueda acortar.
         public static readonly Vector2[] Camino14 = { HuntingField, new Vector2(294f, 285f), LookoutEast };         // c12: campo de caza → (cruza el río) → mirador este (antes iba desde la vieja)
-        public static readonly Vector2[] Camino15 = { Campsite, new Vector2(281f, 254f), LookoutEast };             // c21: campamento → mirador este
-        public static readonly Vector2[] Camino16 = { LookoutEast, new Vector2(407f, 269f), Grave };                // mt: mirador este → tumba
-        public static readonly Vector2[] Camino19 = { MainCriminalCamp, new Vector2(482f, 178f), HostageArea };     // cr: delincuentes → rehenes
+        public static readonly Vector2[] Camino15 = { Campsite, new Vector2(281f, 254f), LookoutEast };             // c21: campamento → mirador este (ambos extremos fijos, sin cambios)
+        public static readonly Vector2[] Camino16 = { LookoutEast, new Vector2(395f, 266f), Grave };                // mt: mirador este → tumba
+        public static readonly Vector2[] Camino19 = { MainCriminalCamp, new Vector2(448f, 203f), HostageArea };     // cr: delincuentes → rehenes
         public static readonly Vector2[] Camino20 = { Grave, CabinEast, EscapePoint };                            // c15: tumba → cabaña este → escape
-        public static readonly Vector2[] Camino21 = { MainCriminalCamp, new Vector2(425f, 81f), EscapePoint };     // c16e: delincuentes → escape
-        // caminito corto de la puerta de la casa al portón del galpón
+        public static readonly Vector2[] Camino21 = { MainCriminalCamp, new Vector2(408f, 135f), EscapePoint };     // c16e: delincuentes → escape
+        // caminito corto de la puerta de la casa al portón del galpón — trasladado
+        // junto con OldLadyRanch (mismo delta, +27/+23) para no achicar la casa en sí.
         public static readonly Vector2[] BarnPath = {
-            new Vector2(158f, 151f), new Vector2(155f, 154f), new Vector2(151f, 157f)
+            new Vector2(185f, 174f), new Vector2(182f, 177f), new Vector2(178f, 180f)
         };
-        // Todos ondulados en S (no líneas rectas).
+        // Todos ondulados en S (no líneas rectas). Amplitud/espaciado reescalados junto
+        // con el acercamiento del lado este (30%, Camino16/19/20/21): 8->5.6, 7->4.9.
+        // Los del lado oeste (9/10/11/13) ya estaban chicos y no hacía falta tocarlos.
         public static readonly Vector2[][] ExtraTrails = {
             Snake(Camino9, 4f, 4f), Snake(Camino10, 4f, 4f), Snake(Camino11, 4f, 4f),
             Snake(Camino13, 8f, 4f), Snake(Camino14, 9f, 4f),
-            Snake(Camino15, 8f, 4f), Snake(Camino16, 8f, 4f),
-            Snake(Camino19, 7f, 4f), Snake(Camino20, 8f, 4f),
-            Snake(Camino21, 8f, 4f), BarnPath
+            Snake(Camino15, 8f, 4f), Snake(Camino16, 5.6f, 4f),
+            Snake(Camino19, 4.9f, 4f), Snake(Camino20, 5.6f, 4f),
+            Snake(Camino21, 5.6f, 4f), BarnPath
         };
 
         // ===== ZONA CENTRAL: montañas + lago gigante (owner: unir Campo de Caza +
