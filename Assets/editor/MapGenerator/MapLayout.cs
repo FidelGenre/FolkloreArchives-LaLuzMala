@@ -67,12 +67,15 @@ namespace FolkloreArchives.MapGen
         //  - Mirador Oeste -> hacia LakeMountain (cuelga del lago, no del campamento).
         //  - Lado este/peligro -> hacia LookoutEast (la "puerta" del cruce del río,
         //    que se deja FIJA a proposito para no mover el puente/cruce).
-        //  - LakeMountain/CentralLakeCenter: owner pidió después "un lago mucho más
-        //    chico... con árboles alrededor y más cerca del campamento" (referencia:
-        //    la laguna en el bosque de Fears to Fathom - Ironbark Lookout) — se
-        //    ACERCÓ y ACHICÓ (ver más abajo, sección LAGO). Las montañas que colgaban
-        //    del mismo punto se desacoplaron (CentralPeakHeight=0): una laguna chica
-        //    de bosque no necesita una cordillera nevada detrás.
+        //  - LakeMountain/CentralLakeCenter: owner pidió "un lago mucho más chico...
+        //    con árboles alrededor" (referencia: la laguna en el bosque de Fears to
+        //    Fathom - Ironbark Lookout) — se ACHICÓ (ver más abajo, sección LAGO) pero
+        //    la POSICIÓN queda en su lugar original (71,293): se probó acercarla al
+        //    campamento y quedó encima de un camino existente rompiendo otro (owner:
+        //    "me lo pusiste de frente en medio del camino... el lago debe estar donde
+        //    estaba el anterior"). Las montañas que colgaban del mismo punto se
+        //    desacoplaron (CentralPeakHeight=0): una laguna chica de bosque no
+        //    necesita una cordillera nevada detrás.
         // Todos los midpoints de Camino9/10/11/13 y del lado este se recalcularon con
         // la MISMA transformacion (mismo pivote+factor que sus extremos), para que la
         // forma/proporcion de cada sendero quede igual, solo mas chico — no un punto
@@ -105,14 +108,19 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 MainCriminalCamp = new Vector2(443f, 182f);  // "DELINCUENTES PRINCIPAL" (este) — acercado al Mirador Este (30%)
         public static readonly Vector2 HostageArea      = new Vector2(448f, 218f);  // "REHENES" (este) — acercada al Mirador Este (30%)
         // Laguna chica de bosque (owner: "un lago mucho mas chico... con arboles todo
-        // al rededor y mas cerca del campamento", ref. la laguna de Fears to Fathom -
-        // Ironbark Lookout) — antes (71,293), lago gigante lejano. Ver sección LAGO
-        // más abajo para el radio/playa nuevos.
-        public static readonly Vector2 LakeMountain     = new Vector2(220f, 150f);  // "LAGUNA" — laguna de bosque, cerca del campamento
+        // al rededor", ref. la laguna de Fears to Fathom - Ironbark Lookout). Se había
+        // probado acercándola al campamento (220,150) pero ahí quedaba encima de un
+        // camino existente y rompía otro (owner: "me lo pusiste de frente en medio del
+        // camino y me quitaste el camino, el lago debe estar donde estaba el
+        // anterior") — vuelve a su posición ORIGINAL (71,293, la de toda la sesión,
+        // ya integrada sin conflictos con el resto de caminos/terreno), solo que
+        // ahora chica y con bosque alrededor en vez de gigante con montañas. Ver
+        // sección LAGO más abajo para el radio/playa.
+        public static readonly Vector2 LakeMountain     = new Vector2(71f, 293f);  // "LAGUNA" — laguna de bosque (oeste lejano, posición original)
         public static readonly Vector2 WrongTurnDeath   = new Vector2(142f, 151f);  // "MUERTE CAMINO EQUIVOCADO" (oeste, spur) — acercada al campamento (30%)
-        // Se movió junto con la laguna (offset ~24m hacia el campamento desde el
-        // centro nuevo, en vez de colgar del viejo lago lejano).
-        public static readonly Vector2 LakeLookout      = new Vector2(236f, 172f);  // "MIRADOR" — cuelga de la laguna nueva
+        // Reubicado junto con la laguna (offset ~24m desde el centro, misma dirección
+        // que el viejo LakeLookout(121,283), solo más corto para la laguna chica).
+        public static readonly Vector2 LakeLookout      = new Vector2(94f, 285f);  // "MIRADOR" — cuelga de la laguna
         public static readonly Vector2 AbandonedCabin   = new Vector2(263f, 147f);  // "CABAÑA OESTE" — acercada al campamento (30%)
         // Zonas NUEVAS del plano de dos lados:
         public static readonly Vector2 EscapePoint      = new Vector2(406f, 106f);   // "ESCAPE" — acercado al Mirador Este (30%)
@@ -164,9 +172,9 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 Mallin        = new Vector2(252f, 323f);  // pantano (mallín), sobre Camino14
         public static readonly Vector2 Roquedal      = new Vector2(144f, 231f);  // afloramiento de piedra, sobre Camino10 — acercado junto con Camino10 (30%)
         public static readonly Vector2 BurntForest   = new Vector2(176f, 257f);  // bosque quemado, cerca del nudo del camino de tierra
-        // orilla de la laguna + muelle — reubicada junto con la laguna chica (a ~13.6m
-        // del nuevo centro, del lado que mira al campamento, justo en la playa plana).
-        public static readonly Vector2 LakeShore     = new Vector2(228f, 161f);
+        // orilla de la laguna + muelle — vuelta a la posición original (misma
+        // dirección que antes, a ~14m del centro en vez de los 80m del lago gigante).
+        public static readonly Vector2 LakeShore     = new Vector2(84f, 288f);
         public static readonly Vector2 HangedTree    = new Vector2(390f, 227f);  // árbol del ahorcado + cementerio (pegado a la Tumba) — trasladado junto con la Tumba
         public static readonly Vector2 Antenna       = new Vector2(370f, 282f);  // antena/repetidora (cerro)
         public static readonly Vector2 Corrales      = new Vector2(528f, 233f); // corrales/bañadero (junto a la estancia)
@@ -283,10 +291,9 @@ namespace FolkloreArchives.MapGen
         // hay que pasar por la playa de pesca). Reemplazado por BeachToHuntingField más
         // abajo (RiverBeach → HuntingField).
         public static readonly Vector2[] Camino10 = { Campsite, new Vector2(214f, 199f), OldLadyRanch };            // rama DIRECTA campamento → vieja (antes iba lago→vieja, redundante con PathA)
-        // midpoint recalculado (era (95,290), del viejo lago lejano) para la laguna
-        // nueva — corrido unos metros de la línea recta (228,161) para que la curva
-        // no quede perfectamente derecha.
-        public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(232f, 158f), LakeLookout };          // laguna → mirador (antes vieja→mirador, ya no hace falta)
+        // midpoint recalculado para las distancias chicas de la laguna nueva (antes
+        // (95,290), calibrado para el radio/orilla del lago gigante viejo).
+        public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(80f, 292f), LakeLookout };          // laguna → mirador (antes vieja→mirador, ya no hace falta)
         // c13: muerte camino equivocado → owner: "que sea confuso", el desvío tiene que
         // aparecer a unos metros de entrar al camino de tierra (no 100+ metros adentro,
         // que era lo que quedaba pegado al punto medio de DirtRoad después de correr el
@@ -324,12 +331,13 @@ namespace FolkloreArchives.MapGen
         };
 
         // ===== LAGUNA DE BOSQUE (owner: "quiero un lago mucho mas chico, como este
-        // [ref. Fears to Fathom - Ironbark Lookout] con arboles todo al rededor y mas
-        // cerca del campamento" — reemplaza el lago gigante lejano con montañas que
-        // había antes). Radio/playa achicados ~3.5x (32->9, 45->10, 85->18) y el
-        // centro se acercó de (71,293) a (220,150), a ~86m del campamento en vez de
-        // ~185m. Profundidad (Level/Bed) sin tocar, ya estaba afinada.
-        public static readonly Vector2 CentralLakeCenter = LakeMountain; // = "LAGUNA" (bosque, cerca del campamento)
+        // [ref. Fears to Fathom - Ironbark Lookout] con arboles todo al rededor" —
+        // reemplaza el lago gigante lejano con montañas que había antes). Radio/playa
+        // achicados ~3.5x (32->9, 45->10, 85->18). El CENTRO se probó acercar al
+        // campamento (220,150) pero ahí quedaba encima de un camino y rompía otro
+        // (owner: "el lago debe estar donde estaba el anterior") — vuelve a (71,293),
+        // la posición original. Profundidad (Level/Bed) sin tocar, ya estaba afinada.
+        public static readonly Vector2 CentralLakeCenter = LakeMountain; // = "LAGUNA" (bosque, posición original)
         public const float CentralLakeRadius = 9f;
         public const float CentralLakeLevel  = 22f;   // altura del plano de agua (sin tocar, ya afinada)
         public const float CentralLakeBed    = 14f;   // fondo carvado (sin tocar, misma profundidad de agua)
