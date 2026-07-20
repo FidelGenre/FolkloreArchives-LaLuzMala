@@ -240,6 +240,13 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 RiverBeach   = new Vector2(275f, 190f);
         public static readonly Vector2[] BeachPath  = { Campsite, RiverBeach };
 
+        // Desde la playa de pesca al campo de caza (owner: "desde el camino de la pesca
+        // se podra ir al campo de caza", reemplaza el viejo Camino9 directo
+        // campamento→campo de caza). Midpoint corrido ~12m al oeste de la línea recta
+        // (247,245) para que la curva no pase pegada al campamento (a 16m nomás en la
+        // recta) y quede claramente un camino aparte, no un atajo disimulado.
+        public static readonly Vector2[] BeachToHuntingField = { RiverBeach, new Vector2(235f, 248f), HuntingField };
+
         // Caminos nuevos del owner (editor de plano) — senderos a pie que conectan la
         // zona central "MONTAÑA Y LAGO" con el resto, más el desvío a "MUERTE CAMINO
         // EQUIVOCADO". Se tratan como senderos (limpian árboles + pasto corto), como PathA.
@@ -261,7 +268,11 @@ namespace FolkloreArchives.MapGen
         // Camino9/10/11: midpoints recalculados con la MISMA transformación que sus
         // extremos (pivote Campsite x0.7 para 9/10, pivote LakeMountain x0.7 para 11)
         // para que la forma del sendero quede igual, solo más corto.
-        public static readonly Vector2[] Camino9  = { HuntingField, new Vector2(245f, 255f), Campsite };            // c10: campo de caza → campamento (rama 3)
+        // Camino9 (campamento → campo de caza, directo) ELIMINADO (owner: "el flujo es
+        // campamento → lo de la vieja → a pescar, y desde el camino de la pesca se podrá
+        // ir al campo de caza" — o sea, ya no hay atajo directo campamento-campo de caza,
+        // hay que pasar por la playa de pesca). Reemplazado por BeachToHuntingField más
+        // abajo (RiverBeach → HuntingField).
         public static readonly Vector2[] Camino10 = { Campsite, new Vector2(214f, 199f), OldLadyRanch };            // rama DIRECTA campamento → vieja (antes iba lago→vieja, redundante con PathA)
         public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(95f, 290f), LakeLookout };          // lago → mirador oeste (antes vieja→mirador, ya no hace falta)
         // c13: muerte camino equivocado → owner: "que sea confuso", el desvío tiene que
@@ -293,7 +304,7 @@ namespace FolkloreArchives.MapGen
         // con el acercamiento del lado este (30%, Camino16/19/20/21): 8->5.6, 7->4.9.
         // Los del lado oeste (9/10/11/13) ya estaban chicos y no hacía falta tocarlos.
         public static readonly Vector2[][] ExtraTrails = {
-            Snake(Camino9, 4f, 4f), Snake(Camino10, 4f, 4f), Snake(Camino11, 4f, 4f),
+            Snake(BeachToHuntingField, 4f, 4f), Snake(Camino10, 4f, 4f), Snake(Camino11, 4f, 4f),
             Snake(Camino13, 8f, 4f), Snake(Camino14, 9f, 4f),
             Snake(Camino16, 5.6f, 4f),
             Snake(Camino19, 4.9f, 4f), Snake(Camino20, 5.6f, 4f),
