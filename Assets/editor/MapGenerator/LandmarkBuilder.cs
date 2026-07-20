@@ -134,7 +134,7 @@ namespace FolkloreArchives.MapGen
 
             // Zonas nuevas del owner (editor de plano) - por ahora, marcadores.
             var lakeMt = BuilderUtils.Group(poi, "LakeMountain", BuilderUtils.Ground(t, MapLayout.LakeMountain));
-            BuilderUtils.Label(lakeMt, "MONTAÑA Y LAGO", lakeMt.position + Vector3.up * 8f);
+            BuilderUtils.Label(lakeMt, "LAGUNA", lakeMt.position + Vector3.up * 8f);
             Reg(lakeMt.gameObject);
             var wrongTurn = BuilderUtils.Group(poi, "WrongTurnDeath", BuilderUtils.Ground(t, MapLayout.WrongTurnDeath));
             BuilderUtils.Label(wrongTurn, "MUERTE CAMINO EQUIVOCADO", wrongTurn.position + Vector3.up * 7f);

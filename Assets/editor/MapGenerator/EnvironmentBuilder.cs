@@ -181,13 +181,20 @@ namespace FolkloreArchives.MapGen
                 water2.isStatic = true;
             }
 
-            // LAGO GIGANTE CENTRAL (owner): plano de agua sobre la cuenca carvada.
+            // LAGUNA DE BOSQUE (owner: lago chico cerca del campamento): plano de agua
+            // sobre la cuenca carvada.
             var lake = GameObject.CreatePrimitive(PrimitiveType.Plane);
             lake.name = "Central_Lake_Water";
             lake.transform.SetParent(parent);
             lake.transform.position = new Vector3(MapLayout.CentralLakeCenter.x, MapLayout.CentralLakeLevel, MapLayout.CentralLakeCenter.y);
-            // Plane de Unity = 10x10u a escala 1 → cubrir el diámetro (radio*2) + margen
-            float lakeScale = (MapLayout.CentralLakeRadius * 2f + 60f) / 10f;
+            // Plane de Unity = 10x10u a escala 1 → cubrir el diámetro (radio*2) + margen.
+            // El margen ANTES era un fijo +60 (pensado para el lago gigante de 32m de
+            // radio); con la laguna chica (9m) ese margen fijo hacía que el agua se
+            // extendiera 20+m más allá de la playa PLANA (CentralLakeBeachWidth) hacia
+            // el terreno que ya sube (la orilla/ladera) -- agua "flotando" sobre tierra
+            // en pendiente. Ahora el margen es proporcional a la playa plana real, así
+            // el plano de agua no pasa de esa zona.
+            float lakeScale = ((MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth) * 2f - 4f) / 10f;
             lake.transform.localScale = new Vector3(lakeScale, 1f, lakeScale);
             var lmat = BuilderUtils.Mat("lakewater", new Color(0.05f, 0.11f, 0.16f), 0.2f);
             if (lmat.HasProperty("_Cull")) lmat.SetFloat("_Cull", 0f);

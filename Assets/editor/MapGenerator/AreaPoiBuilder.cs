@@ -263,11 +263,13 @@ namespace FolkloreArchives.MapGen
             float deckY = MapLayout.CentralLakeLevel + 0.6f;
             float dockYaw = Mathf.Atan2(toLake.x, toLake.y) * Mathf.Rad2Deg;
             var dockPos = new Vector3(MapLayout.LakeShore.x, deckY, MapLayout.LakeShore.y);
-            if (SpawnModel(DirDock, g, dockPos, 12f, dockYaw, false, "MuelleModelo") == null)
+            // muelle más corto (12->5) para la laguna chica -- con el tamaño viejo
+            // llegaba casi al centro de una laguna de solo 9m de radio.
+            if (SpawnModel(DirDock, g, dockPos, 5f, dockYaw, false, "MuelleModelo") == null)
             {
-                for (int i = 0; i < 8; i++)
+                for (int i = 0; i < 4; i++)
                 {
-                    Vector2 plankXZ = MapLayout.LakeShore + toLake * (i * 1.6f + 1f);
+                    Vector2 plankXZ = MapLayout.LakeShore + toLake * (i * 1.2f + 1f);
                     Vector3 pk = new Vector3(plankXZ.x, deckY, plankXZ.y);
                     BuilderUtils.Prim(PrimitiveType.Cube, "Tabla" + i, g, pk, new Vector3(2.0f, 0.12f, 1.6f), Wood,
                         new Vector3(0f, Random.Range(-4f, 4f), 0f));

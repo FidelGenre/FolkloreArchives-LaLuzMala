@@ -512,6 +512,15 @@ namespace FolkloreArchives.MapGen
                     if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;     // corrales
                     if (MapLayout.InYpfPad(p)) continue;                             // lote de la estación YPF
 
+                    // anillo de bosque denso alrededor de la laguna chica (owner: "con
+                    // arboles todo al rededor" — la laguna nueva, a diferencia del lago
+                    // gigante de antes, tiene que sentirse encajonada en el bosque, no
+                    // en campo abierto). Del borde de playa (reach=radio+beachWidth+10,
+                    // ya despejado más arriba) hasta 45m más, densidad de bosque real
+                    // (ForestTreeDensity), sea cual sea el lado oeste/campo en el que
+                    // caiga la laguna.
+                    bool nearPondRing = Vector2.Distance(p, MapLayout.CentralLakeCenter) <
+                        MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 45f;
                     bool inField = Vector2.Distance(p, MapLayout.HuntingField) < 45f;
                     // owner: "se siguen superponiendo" -- el chequeo de espaciado de
                     // abajo solo corria en la rama "general" del campo, pero el
@@ -524,6 +533,7 @@ namespace FolkloreArchives.MapGen
                     bool dryTree;
                     if (dScary < 20f)      { prob = MapLayout.ScaryPathTreeDensity; dryTree = Random.value < 0.85f; }
                     else if (dA < 18f || dRoad < 18f || dExtra < 16f) { prob = MapLayout.PathATreeDensity; dryTree = Random.value < 0.35f; }
+                    else if (nearPondRing) { prob = MapLayout.ForestTreeDensity; dryTree = Random.value < 0.3f; }
                     else if (inField)      { prob = MapLayout.FieldTreeDensity; dryTree = true; }
                     // ESTE (bosque/peligro) = ForestTreeDensity de siempre, sin tocar
                     // (owner: "del lado malo deberian estar igual que antes, vuelvelo
