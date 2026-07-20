@@ -454,9 +454,14 @@ namespace FolkloreArchives.MapGen
                     float dA = BuilderUtils.DistToPolyline(p, MapLayout.PathA);
                     float dScary = BuilderUtils.DistToScaryPaths(p);
                     float dExtra = BuilderUtils.DistToExtraTrails(p); // caminos nuevos del owner
-                    // owner: "necesito que esten mas poblados los bordes de los caminos"
-                    // -> achicado de nuevo (2.5/2.2 -> 1.5/1.8), arboles casi pegados al sendero.
-                    if (dRoad < 1.5f || dA < 1.5f || dScary < 1.8f || dExtra < 1.5f) continue;
+                    // owner: "hay arboles en medio el camino" -- 1.5/1.8 quedo por DEBAJO
+                    // del ancho real pintado del sendero: PathA/ScaryPaths/ExtraTrails
+                    // (senderos a pie) pintan barro hasta FootTrailHalfWidth=3.0m del
+                    // centro (TerrainBuilder), y DirtRoad pinta sus 2 huellas de rueda
+                    // hasta ~1.8m -- con 1.5m de despeje, los arboles caian DENTRO del
+                    // barro pintado. Ahora el despeje es un poco mayor que ese ancho
+                    // pintado (nunca menor), para que quede justo al borde y no encima.
+                    if (dRoad < 2.2f || dA < 3.5f || dScary < 3.5f || dExtra < 3.5f) continue;
                     if (BuilderUtils.DistToRivers(p) < 28f) continue;
                     // despejar el caminito a la playa y la playa misma
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 5f) continue;
