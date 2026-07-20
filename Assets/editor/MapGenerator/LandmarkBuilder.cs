@@ -155,9 +155,15 @@ namespace FolkloreArchives.MapGen
 
             // PUENTE PEATONAL sobre el cruce del río (vieja/campamento ↔ mirador este),
             // así el cruce a pie no queda bloqueado por agua. Se apoya en la altura de
-            // las orillas (sampleada) para no flotar. Cruce ~ (598, 590).
+            // las orillas (sampleada) para no flotar.
+            // owner: "el puente debe ir mas abajo, que quede bien alineado con los
+            // caminos" -- (314,310) quedaba a ~54m del cruce real de Camino15 (campamento
+            // -> mirador este, el mismo camino que este puente describe en el comentario
+            // de arriba). Camino15 cruza el rio en ~(310,256): interpolando su segundo
+            // tramo (281,254)->(367,260) contra la posicion real del rio ahi (~x305-315,
+            // segun RiverControls). Corrido a ese punto.
             {
-                float bx = 314f, bz = 310f, halfLen = 42f;   // 2ª pasada 0.75: (419,413)→(314,310); halfLen (largo del puente) se mantiene
+                float bx = 310f, bz = 256f, halfLen = 42f;   // alineado al cruce real de Camino15 (antes 314,310, sin relacion con ningun camino)
                 float wy = t.SampleHeight(new Vector3(bx - halfLen, 0f, bz));
                 float ey = t.SampleHeight(new Vector3(bx + halfLen, 0f, bz));
                 float deckY = Mathf.Max(wy, ey) + 0.15f;
