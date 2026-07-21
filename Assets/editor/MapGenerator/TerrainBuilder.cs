@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 64;
+        const int SplatVersion = 65;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -484,30 +484,31 @@ namespace FolkloreArchives.MapGen
                     float dr = BuilderUtils.DistToPolyline(p, MapLayout.River);
                     if (dr < 40f) dirt = Mathf.Max(dirt, 1f - Mathf.Clamp01((dr - 16f) / 24f));
 
-                    // PLAYA DE ARENA bordeando la laguna (owner: "playito el borde",
-                    // lago tipo camping — antes era barro; cambiado a arena real).
-                    // LakeDist() = misma forma ovalada que el resto de la laguna. El
-                    // alcance ANTES (+30/-8//38) estaba calibrado para el lago gigante
-                    // viejo (radio 32) -- con la laguna chica (radio 9) esa arena se
-                    // extendía mucho más allá de la playa real, y como w5(arena) se
-                    // calcula ANTES que w1(barro) en el blend de abajo, le comía todo el
-                    // presupuesto al barro nuevo (owner: "pusiste piedras no pusiste el
-                    // mismo barro que tienen los caminos" -- la arena/grava tapaba el
-                    // barro). Ahora el alcance de la arena es proporcional a la playa
-                    // real (CentralLakeBeachWidth), y se apaga a 0 ANTES de que el barro
-                    // llegue a su punto fuerte.
+                    // ORILLA de la laguna: franja ANGOSTA de grava mojada justo en el
+                    // agua (capa 5, en el código real es "PSX_Seamless_ForestGravel_
+                    // Ground" -- gris, NO arena tostada, por más que la variable se
+                    // llame "sand") y después BARRO en casi todo el resto de la orilla
+                    // (owner, primero: "agrega barro de los caminos alrededor del lago";
+                    // después, viendo que seguía gris: "sigue todo gris no esta con
+                    // barro alrededor es otra textura la que le pusiste como de
+                    // piedras" -- el primer intento angostó el ALCANCE de la grava pero
+                    // seguía en w5=1 (fuerza máxima) justo en la franja donde tenía que
+                    // ganar el barro, y como w5 se resta ANTES que w1 en el blend de
+                    // abajo, en cualquier punto con grava a full el barro se quedaba
+                    // sin presupuesto = 0). Ahora la grava se apaga rápido (radio+5) en
+                    // vez de compartir toda la playa con el barro.
                     float dCL = MapLayout.LakeDist(p);
                     float lakeBeachEnd = MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth;
-                    float sandOuter = lakeBeachEnd + 4f;
+                    float sandOuter = MapLayout.CentralLakeRadius + 5f;
                     if (dCL < sandOuter)
                         sand = Mathf.Max(sand, 1f - Mathf.Clamp01((dCL - MapLayout.CentralLakeRadius) / (sandOuter - MapLayout.CentralLakeRadius)));
-                    // BARRO alrededor de la laguna (owner: "agrega barro de los caminos
-                    // alrededor del lago") -- anillo de barro pisado (misma capa que
-                    // pintan los caminos, MuddyDirtLayer) justo donde termina la playa de
-                    // arena, antes de que arranque el pasto/bosque. Arranca un poco ANTES
-                    // de sandOuter para que se solapen sin dejar una franja pelada en el medio.
-                    if (dCL < lakeBeachEnd + 14f)
-                        dirt = Mathf.Max(dirt, 0.95f * (1f - Mathf.Clamp01((dCL - (lakeBeachEnd - 3f)) / 10f)));
+                    // BARRO alrededor de la laguna (misma capa que pintan los caminos,
+                    // MuddyDirtLayer): a full desde justo donde termina la franja de
+                    // grava (sandOuter) hasta bien pasada la playa, después se apaga
+                    // hacia el pasto/bosque.
+                    float dirtOuter = lakeBeachEnd + 14f;
+                    if (dCL < dirtOuter)
+                        dirt = Mathf.Max(dirt, 0.95f * (1f - Mathf.Clamp01((dCL - sandOuter) / (dirtOuter - sandOuter))));
 
                     // lakeside: the upper embankment stays grassy (shore grass/bushes/
                     // pines grow there); only the last few metres down to the waterline
