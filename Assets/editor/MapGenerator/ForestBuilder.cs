@@ -1077,8 +1077,11 @@ namespace FolkloreArchives.MapGen
         // FBX-colección como StarkCrafts), así que no hace falta FindChildByName ni
         // separar tronco/copa por material: toda la malla usa UNA textura (atlas con
         // tronco+copa). Owner: "los naranjas quítalos a ver como queda" — se sacaron
-        // tree30/tree34 (otoño), quedan solo los verdes.
-        static readonly string[] PsxRetroCampoTreeNames = { "tree12", "tree15", "tree18", "tree20" };
+        // tree30/tree34 (otoño). Después, "quita los arboles verdes claros del nuevo
+        // asset" — tree15 desentonaba con un verde mucho más claro/vivo que el resto
+        // (tree12/18 son pinos oscuros, tree20 es un verde oscuro apagado); quedan
+        // solo esos 3.
+        static readonly string[] PsxRetroCampoTreeNames = { "tree12", "tree18", "tree20" };
         const string PsxRetroTreeDir = "Assets/ExternalAssets/PSXRetroTrees/";
         static GameObject[] BuildPsxRetroCampoTreePrototypes()
         {
