@@ -9,14 +9,31 @@
 //  posición/rotación/escala LOCAL de cada Transform, sin que ningún
 //  builder tenga que registrarse.
 //
-//  Cómo identifica cada objeto: "nombre#índice de hermano" en cada
-//  nivel de la jerarquía (ej. "AreasAndPOIs/Estepa/MolinoOxidado#1").
-//  El índice desambigua nombres repetidos entre hermanos (ej. varios
-//  "Roca0".."Roca17"). ⚠ Si el CÓDIGO cambia el orden en que crea los
-//  hijos de un mismo padre (agrega/saca uno en el medio), los índices
-//  de todo lo que viene después se corren y un edit guardado puede
-//  terminar aplicándose al objeto equivocado — mismo trade-off que ya
-//  acepta ManualLayoutPersistence con sus IDs por orden de registro.
+//  Cómo identifica cada objeto: "nombre#ocurrencia" en cada nivel de la
+//  jerarquía, donde "ocurrencia" es cuántos hermanos ANTERIORES tienen
+//  el MISMO nombre (0 si el nombre es único entre sus hermanos). Ej.
+//  "OldLadyHouse_ALP#0" (nombre único → estable pase lo que pase);
+//  "Roca0#0".."Roca17#0" (cada uno ya único por el número EN el
+//  nombre); si dos hermanos se llamaran literalmente igual, el
+//  segundo sería "#1".
+//
+//  ¡OJO, esto NO es el índice de hermano crudo (GetSiblingIndex)! La
+//  primera versión usaba eso y tenía un bug real (owner: "no se
+//  guardaron las posiciones de la casa de la abuela, el granero, el
+//  puente") -- la casa/galpón/puente son hermanos DIRECTOS de la raíz
+//  del mapa junto con TERRENO, AMBIENTE, BOSQUE, etc., y cualquier
+//  objeto condicional creado ANTES en ese mismo padre (ej. "si existe
+//  tal asset, crear tal cosa") corre el índice de todo lo que viene
+//  después -- rompiendo la coincidencia entre lo guardado y lo
+//  regenerado. Indexar por OCURRENCIA DEL MISMO NOMBRE en vez de
+//  posición cruda hace que la ruta de un objeto con nombre único no
+//  dependa en absoluto de sus hermanos.
+//  ⚠ Sigue existiendo un caso límite: si el código cambia CUÁNTOS
+//  hermanos comparten el MISMO nombre antes que este objeto (ej. antes
+//  había 3 "Roca" y ahora hay 5, antes de este punto), la ocurrencia
+//  de los que vienen después de esos sí se corre. Mucho menos frecuente
+//  que antes (solo afecta a nombres repetidos, no a todo el árbol), pero
+//  no imposible.
 //
 //  Uso: Tools > Folklore Archives > Save Map Layout (después de mover
 //  cosas a mano) y Clear Map Layout (para descartar lo guardado).
@@ -55,8 +72,7 @@ namespace FolkloreArchives.MapGen
             }
 
             var layout = new Layout();
-            foreach (Transform child in root.transform)
-                Walk(child, "", layout.entries);
+            Walk(root.transform, "", layout.entries);
 
             string dir = Path.GetDirectoryName(SavePath);
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
@@ -67,9 +83,15 @@ namespace FolkloreArchives.MapGen
 
         static void Walk(Transform t, string parentPath, List<Entry> entries)
         {
-            string path = parentPath + "/" + t.name + "#" + t.GetSiblingIndex();
-            entries.Add(new Entry { path = path, pos = t.localPosition, euler = t.localEulerAngles, scale = t.localScale });
-            foreach (Transform child in t) Walk(child, path, entries);
+            var nameCounts = new Dictionary<string, int>();
+            foreach (Transform child in t)
+            {
+                int occ = nameCounts.TryGetValue(child.name, out var n) ? n : 0;
+                nameCounts[child.name] = occ + 1;
+                string path = parentPath + "/" + child.name + "#" + occ;
+                entries.Add(new Entry { path = path, pos = child.localPosition, euler = child.localEulerAngles, scale = child.localScale });
+                Walk(child, path, entries);
+            }
         }
 
         // Llamado automáticamente desde MapGenerator.Generate(), al final, después de
@@ -94,21 +116,27 @@ namespace FolkloreArchives.MapGen
             foreach (var e in layout.entries) map[e.path] = e;
 
             int applied = 0;
-            foreach (Transform child in root.transform) ApplyWalk(child, "", map, ref applied);
+            ApplyWalk(root.transform, "", map, ref applied);
             Debug.Log($"<color=lime>[MapLayoutPersistence] Aplicadas {applied}/{layout.entries.Count} posiciones guardadas.</color>");
         }
 
         static void ApplyWalk(Transform t, string parentPath, Dictionary<string, Entry> map, ref int applied)
         {
-            string path = parentPath + "/" + t.name + "#" + t.GetSiblingIndex();
-            if (map.TryGetValue(path, out var e))
+            var nameCounts = new Dictionary<string, int>();
+            foreach (Transform child in t)
             {
-                t.localPosition = e.pos;
-                t.localEulerAngles = e.euler;
-                t.localScale = e.scale;
-                applied++;
+                int occ = nameCounts.TryGetValue(child.name, out var n) ? n : 0;
+                nameCounts[child.name] = occ + 1;
+                string path = parentPath + "/" + child.name + "#" + occ;
+                if (map.TryGetValue(path, out var e))
+                {
+                    child.localPosition = e.pos;
+                    child.localEulerAngles = e.euler;
+                    child.localScale = e.scale;
+                    applied++;
+                }
+                ApplyWalk(child, path, map, ref applied);
             }
-            foreach (Transform child in t) ApplyWalk(child, path, map, ref applied);
         }
 
         [MenuItem("Tools/Folklore Archives/Clear Map Layout")]
