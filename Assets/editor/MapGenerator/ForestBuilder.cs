@@ -60,8 +60,10 @@ namespace FolkloreArchives.MapGen
             // texturas venían embebidas en el FBX y Unity no las extrajo (por eso salían
             // blancos). Ya extraídas a PSX_ExtractedTex. Pinos (PSX_Tree1/4, bosque ESTE,
             // sin cambios). Frondosos del CAMPO (oeste): owner probó reemplazarlos del
-            // todo por el pack nuevo PSX Retro, pero pidió volver a surtir con los de
-            // StarkCrafts (PSX_Tree2/3) + algunos del pack nuevo (sin los de otoño).
+            // todo por el pack nuevo PSX Retro, después pidió surtir con los de
+            // StarkCrafts (PSX_Tree2/3) + algunos del pack nuevo, y ahora "quita los
+            // arboles del nuevo asset y deja los del viejo solamente" -- vuelve a ser
+            // solo StarkCrafts (PSX_Tree2/3), sin el pack PSX Retro (tree12/18/20).
             int psxPineCount = 0;
             GameObject[] psxTrees = MapLayout.UsePsxTrees ? BuildPsxTreePrototypes(out psxPineCount) : null;
             if (psxTrees != null)
@@ -69,8 +71,6 @@ namespace FolkloreArchives.MapGen
                 realTreeList.AddRange(psxTrees);
                 var starkBroadleaf = BuildPsxStarkBroadleafPrototypes();
                 if (starkBroadleaf != null) realTreeList.AddRange(starkBroadleaf);
-                var campoTrees = BuildPsxRetroCampoTreePrototypes();
-                if (campoTrees != null) realTreeList.AddRange(campoTrees);
             }
             else if (MapLayout.UseLowPolyTrees)
             {
