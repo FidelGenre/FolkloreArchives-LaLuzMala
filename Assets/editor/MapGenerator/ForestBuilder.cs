@@ -472,11 +472,17 @@ namespace FolkloreArchives.MapGen
                     // despejar el caminito a la playa y la playa misma
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 5f) continue;
                     if (Vector2.Distance(p, MapLayout.RiverBeach) < 15f) continue;
-                    // lago + orilla: sin árboles en el agua ni en toda la playa plana
-                    // (antes solo despejaba 28m, mucho menos que la playa real de
-                    // CentralLakeBeachWidth -> quedaba una hilera de árboles metida en la
-                    // orilla/agua, owner: "quita arboles alrededor del lago")
-                    if (MapLayout.LakeDist(p) < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 10f) continue;
+                    // lago + orilla: sin árboles en el agua ni en la playa plana. Despeje
+                    // ANGOSTO (apenas pasada la arena) en casi toda la vuelta -- árboles
+                    // pegados a la orilla -- salvo en la cuña que mira hacia el
+                    // campamento/muelle, que se deja abierta (owner: "pon arboles toda la
+                    // vuelta cerca de la orilla menos en la parte que queda frente al
+                    // camino").
+                    // "cerca de la orilla" = justo donde termina la arena (beachWidth),
+                    // no más allá -- si el despeje fuera menor que eso los árboles
+                    // arrancarian a mitad de la playa.
+                    float lakeTreeClear = MapLayout.LakeFacesApproach(p) ? MapLayout.CentralLakeBeachWidth + 10f : MapLayout.CentralLakeBeachWidth;
+                    if (MapLayout.LakeDist(p) < MapLayout.CentralLakeRadius + lakeTreeClear) continue;
                     // montañas del lago (CentralPeaks): despeje por proximidad DESACTIVADO
                     // junto con el asset de montaña (MapGenerator.cs — owner: "quitalas").
                     // Reactivar junto con MountainRingBuilder.BuildCentralLakeMountains.

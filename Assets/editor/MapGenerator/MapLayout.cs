@@ -375,6 +375,17 @@ namespace FolkloreArchives.MapGen
             float v = Vector2.Dot(rel, LakeShortAxis) / LakeStretchShort;
             return Mathf.Sqrt(u * u + v * v);
         }
+        static readonly Vector2 LakeApproachDir = (Campsite - LakeMountain).normalized;
+        // true = p cae en la cuña que mira hacia el campamento (por donde llega el
+        // camino/muelle) — ahí NO se cierra con árboles pegados a la orilla (owner:
+        // "pon arboles toda la vuelta cerca de la orilla menos en la parte que queda
+        // frente al camino"). Cuña de ~120° (dot > 0.5 = 60° a cada lado del eje).
+        public static bool LakeFacesApproach(Vector2 p)
+        {
+            Vector2 rel = p - CentralLakeCenter;
+            if (rel.sqrMagnitude < 0.0001f) return false;
+            return Vector2.Dot(rel.normalized, LakeApproachDir) > 0.5f;
+        }
         // Montañas DESACOPLADAS de la laguna (owner pidió una laguna CHICA de bosque,
         // no una vista escénica de cordillera) — CentralPeakHeight=0 anula el bulto de
         // terreno; se deja el array/infra por si algún día se quiere una montaña en

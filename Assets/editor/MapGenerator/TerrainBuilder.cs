@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 61;
+        const int SplatVersion = 62;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -493,6 +493,13 @@ namespace FolkloreArchives.MapGen
                     float dCL = MapLayout.LakeDist(p);
                     if (dCL < MapLayout.CentralLakeRadius + 30f)
                         sand = Mathf.Max(sand, 1f - Mathf.Clamp01((dCL - (MapLayout.CentralLakeRadius - 8f)) / 38f));
+                    // BARRO alrededor de la laguna (owner: "agrega barro de los caminos
+                    // alrededor del lago") -- anillo de barro pisado (misma capa que
+                    // pintan los caminos, MuddyDirtLayer) justo donde termina la playa de
+                    // arena, antes de que arranque el pasto/bosque.
+                    float lakeBeachEnd = MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth;
+                    if (dCL < lakeBeachEnd + 14f)
+                        dirt = Mathf.Max(dirt, 0.85f * (1f - Mathf.Clamp01((dCL - (lakeBeachEnd - 3f)) / 10f)));
 
                     // lakeside: the upper embankment stays grassy (shore grass/bushes/
                     // pines grow there); only the last few metres down to the waterline
