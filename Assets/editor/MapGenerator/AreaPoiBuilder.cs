@@ -16,8 +16,6 @@ namespace FolkloreArchives.MapGen
 {
     public static class AreaPoiBuilder
     {
-        // rocas low-poly que YA están en el proyecto (para el roquedal)
-        const string RockDir = "Assets/HQP STUDIOS/Rocks and Terrains Pack - Low Poly/Models/Rocks/Block Rocks/Block Rocks/";
         const string SedanObj = "Assets/ExternalAssets/PSXCars/Sedan/Car5.obj";
 
         // modelos DESCARGADOS (Sketchfab) — el owner los pone en estas carpetas. El código
@@ -65,7 +63,6 @@ namespace FolkloreArchives.MapGen
 
             Reg(Estepa(root, t));
             Reg(Mallin(root, t));
-            Reg(Roquedal(root, t));
             Reg(BurntForestArea(root, t));
             Reg(LakeShoreDock(root, t));
             Reg(DifuntaCorrea(root, t));
@@ -173,47 +170,6 @@ namespace FolkloreArchives.MapGen
                 Vector3 pk = a + new Vector3(i * 2.4f, 0.12f, (i % 2) * 0.15f);
                 BuilderUtils.Prim(PrimitiveType.Cube, "Tabla" + i, g, pk, new Vector3(2.2f, 0.08f, 0.9f), Wood,
                     new Vector3(0f, Random.Range(-6f, 6f), 0f));
-            }
-            return g;
-        }
-
-        // ---------------- ROQUEDAL (rocas reusadas HQP) ----------------
-        static Transform Roquedal(Transform parent, Terrain t)
-        {
-            var p = BuilderUtils.Ground(t, MapLayout.Roquedal);
-            var g = BuilderUtils.Group(parent, "Roquedal", p);
-            BuilderUtils.Label(g, "ROQUEDAL", p + Vector3.up * 8f);
-
-            var rocks = new System.Collections.Generic.List<GameObject>();
-            for (int n = 1; n <= 20; n++)
-            {
-                var a = AssetDatabase.LoadAssetAtPath<GameObject>(RockDir + "Block_Rock_" + n + ".fbx");
-                if (a != null) rocks.Add(a);
-            }
-            if (rocks.Count == 0)
-            {
-                // fallback: bloques de piedra procedural si el pack no está
-                for (int i = 0; i < 14; i++)
-                {
-                    Vector2 o = Random.insideUnitCircle * 13f;
-                    Vector3 rp = BuilderUtils.Ground(t, MapLayout.Roquedal.x + o.x, MapLayout.Roquedal.y + o.y);
-                    float s = Random.Range(1.5f, 4.5f);
-                    BuilderUtils.Prim(PrimitiveType.Cube, "Roca" + i, g, rp + Vector3.up * s * 0.35f,
-                        new Vector3(s, s * 0.8f, s * Random.Range(0.7f, 1.3f)), StoneGrey,
-                        new Vector3(Random.Range(-12f, 12f), Random.Range(0f, 360f), Random.Range(-12f, 12f)));
-                }
-                return g;
-            }
-            for (int i = 0; i < 18; i++)
-            {
-                Vector2 o = Random.insideUnitCircle * 14f;
-                Vector3 rp = BuilderUtils.Ground(t, MapLayout.Roquedal.x + o.x, MapLayout.Roquedal.y + o.y);
-                var src = rocks[Random.Range(0, rocks.Count)];
-                var inst = (GameObject)Object.Instantiate(src, g);
-                inst.name = "Roca_" + i;
-                inst.transform.position = rp;
-                inst.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-                inst.transform.localScale = Vector3.one * Random.Range(1.6f, 4.0f);
             }
             return g;
         }

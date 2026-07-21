@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 62;
+        const int SplatVersion = 63;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -468,9 +468,6 @@ namespace FolkloreArchives.MapGen
                     // MALLÍN: barro oscuro mojado (capa dirt)
                     float dMal = Vector2.Distance(p, MapLayout.Mallin);
                     if (dMal < 24f) dirt = Mathf.Max(dirt, 0.95f * (1f - Mathf.Clamp01((dMal - 13f) / 11f)));
-                    // ROQUEDAL: grava/piedra (capa sand/gravel)
-                    float dRoq = Vector2.Distance(p, MapLayout.Roquedal);
-                    if (dRoq < 22f) sand = Mathf.Max(sand, 0.92f * (1f - Mathf.Clamp01((dRoq - 12f) / 10f)));
                     // ORILLA DEL LAGO: canto rodado (grava)
                     float dSho = Vector2.Distance(p, MapLayout.LakeShore);
                     if (dSho < 16f) sand = Mathf.Max(sand, 0.88f * (1f - Mathf.Clamp01((dSho - 8f) / 8f)));

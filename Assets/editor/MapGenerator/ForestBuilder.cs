@@ -512,7 +512,6 @@ namespace FolkloreArchives.MapGen
                     // ÁREAS NUEVAS abiertas (MapPlan): sin árboles vivos para que se lean distintas
                     if (Vector2.Distance(p, MapLayout.EstepaCenter) < 38f) continue; // estepa = campo abierto
                     if (Vector2.Distance(p, MapLayout.Mallin) < 22f) continue;       // pantano (mallín)
-                    if (Vector2.Distance(p, MapLayout.Roquedal) < 20f) continue;     // roquedal (piedra)
                     if (Vector2.Distance(p, MapLayout.BurntForest) < 24f) continue;  // quemado: solo troncos negros (props)
                     if (Vector2.Distance(p, MapLayout.Estancia) < 16f) continue;     // casco de estancia
                     if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;     // corrales
@@ -1794,9 +1793,8 @@ namespace FolkloreArchives.MapGen
                         if (Random.value < 0.35f) maps[1][zi, xi] = 1 + Random.Range(0, 2); // pasto dry ralo (índice 1 = grassDry)
                         continue;
                     }
-                    // MALLÍN / ROQUEDAL / QUEMADO / ESTANCIA / CORRALES: suelo pelado (barro/piedra/ceniza asoma)
+                    // MALLÍN / QUEMADO / ESTANCIA / CORRALES: suelo pelado (barro/ceniza asoma)
                     if (Vector2.Distance(p, MapLayout.Mallin) < 22f) continue;
-                    if (Vector2.Distance(p, MapLayout.Roquedal) < 20f) continue;
                     if (Vector2.Distance(p, MapLayout.BurntForest) < 24f) continue;
                     if (Vector2.Distance(p, MapLayout.Estancia) < 16f) continue;
                     if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;

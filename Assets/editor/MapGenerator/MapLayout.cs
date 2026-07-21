@@ -175,7 +175,9 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 EstepaCenter  = new Vector2(165f, 143f);  // estepa (campo abierto ventoso), sobre Camino13 — acercada junto con Camino13 (30%)
         public static readonly Vector2 Molino        = new Vector2(151f, 137f);  // molino de viento oxidado — acercado junto con la estepa (30%)
         public static readonly Vector2 Mallin        = new Vector2(252f, 323f);  // pantano (mallín), sobre Camino14
-        public static readonly Vector2 Roquedal      = new Vector2(144f, 231f);  // afloramiento de piedra, sobre Camino10 — acercado junto con Camino10 (30%)
+        // Roquedal (afloramiento de piedra) ELIMINADO (owner: "quita lo del roquedal
+        // y pon arboles tambien") -- el punto en sí ya no se usa en ningún lado,
+        // queda bosque normal ahí.
         // corrido ~46m al oeste (era 176,257) para dejarle el lugar a la laguna nueva
         // (owner: "el lago deberia estar ahi donde esta el bosque quemado").
         public static readonly Vector2 BurntForest   = new Vector2(130f, 285f);  // bosque quemado
