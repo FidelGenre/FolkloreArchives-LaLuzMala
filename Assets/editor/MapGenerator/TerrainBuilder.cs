@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 63;
+        const int SplatVersion = 64;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -486,17 +486,28 @@ namespace FolkloreArchives.MapGen
 
                     // PLAYA DE ARENA bordeando la laguna (owner: "playito el borde",
                     // lago tipo camping — antes era barro; cambiado a arena real).
-                    // LakeDist() = misma forma ovalada que el resto de la laguna.
+                    // LakeDist() = misma forma ovalada que el resto de la laguna. El
+                    // alcance ANTES (+30/-8//38) estaba calibrado para el lago gigante
+                    // viejo (radio 32) -- con la laguna chica (radio 9) esa arena se
+                    // extendía mucho más allá de la playa real, y como w5(arena) se
+                    // calcula ANTES que w1(barro) en el blend de abajo, le comía todo el
+                    // presupuesto al barro nuevo (owner: "pusiste piedras no pusiste el
+                    // mismo barro que tienen los caminos" -- la arena/grava tapaba el
+                    // barro). Ahora el alcance de la arena es proporcional a la playa
+                    // real (CentralLakeBeachWidth), y se apaga a 0 ANTES de que el barro
+                    // llegue a su punto fuerte.
                     float dCL = MapLayout.LakeDist(p);
-                    if (dCL < MapLayout.CentralLakeRadius + 30f)
-                        sand = Mathf.Max(sand, 1f - Mathf.Clamp01((dCL - (MapLayout.CentralLakeRadius - 8f)) / 38f));
+                    float lakeBeachEnd = MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth;
+                    float sandOuter = lakeBeachEnd + 4f;
+                    if (dCL < sandOuter)
+                        sand = Mathf.Max(sand, 1f - Mathf.Clamp01((dCL - MapLayout.CentralLakeRadius) / (sandOuter - MapLayout.CentralLakeRadius)));
                     // BARRO alrededor de la laguna (owner: "agrega barro de los caminos
                     // alrededor del lago") -- anillo de barro pisado (misma capa que
                     // pintan los caminos, MuddyDirtLayer) justo donde termina la playa de
-                    // arena, antes de que arranque el pasto/bosque.
-                    float lakeBeachEnd = MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth;
+                    // arena, antes de que arranque el pasto/bosque. Arranca un poco ANTES
+                    // de sandOuter para que se solapen sin dejar una franja pelada en el medio.
                     if (dCL < lakeBeachEnd + 14f)
-                        dirt = Mathf.Max(dirt, 0.85f * (1f - Mathf.Clamp01((dCL - (lakeBeachEnd - 3f)) / 10f)));
+                        dirt = Mathf.Max(dirt, 0.95f * (1f - Mathf.Clamp01((dCL - (lakeBeachEnd - 3f)) / 10f)));
 
                     // lakeside: the upper embankment stays grassy (shore grass/bushes/
                     // pines grow there); only the last few metres down to the waterline
