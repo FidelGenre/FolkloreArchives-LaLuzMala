@@ -349,6 +349,20 @@ namespace FolkloreArchives.MapGen
         public const float CentralLakeBed    = 14f;   // fondo carvado (sin tocar, misma profundidad de agua)
         public const float CentralLakeBeachWidth = 10f; // franja plana de playa junto al agua
         public const float CentralLakeShore  = 18f;   // ancho TOTAL de orilla (playa + transición a terreno natural) — alcance total desde el centro: radio+shore = 27m
+        // Forma OVALADA/rectangular en vez de círculo perfecto (owner, mostrando la
+        // referencia de Fears to Fathom: "que sea un poco mas rectangular/ovalado el
+        // lago no redondo"). Estirado en X (más ancho que profundo en Z). LakeDist()
+        // reemplaza a Vector2.Distance en TODO lo relacionado a la laguna (altura,
+        // textura de arena, despeje de árboles/pasto) para que la forma sea
+        // consistente en todos lados, no solo en el plano de agua.
+        public const float LakeStretchX = 1.55f;
+        public const float LakeStretchZ = 0.82f;
+        public static float LakeDist(Vector2 p)
+        {
+            float dx = (p.x - CentralLakeCenter.x) / LakeStretchX;
+            float dz = (p.y - CentralLakeCenter.y) / LakeStretchZ;
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
         // Montañas DESACOPLADAS de la laguna (owner pidió una laguna CHICA de bosque,
         // no una vista escénica de cordillera) — CentralPeakHeight=0 anula el bulto de
         // terreno; se deja el array/infra por si algún día se quiere una montaña en

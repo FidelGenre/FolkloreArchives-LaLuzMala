@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 59;
+        const int SplatVersion = 60;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -339,10 +339,10 @@ namespace FolkloreArchives.MapGen
             float dr2 = BuilderUtils.DistToPolyline(p, MapLayout.River2);
             if (dr2 < 26f) a = Mathf.Lerp(4.5f, a, Mathf.SmoothStep(0f, 1f, (dr2 - 10f) / 16f));
 
-            // LAGO GIGANTE CENTRAL: cuenca carvada bajo la línea de agua. Min() = solo
-            // baja el terreno, nunca sube (las montañas de alrededor quedan; adentro
-            // gana el lago). Orilla irregular con ruido para que no sea un círculo perfecto.
-            float dCL = Vector2.Distance(p, MapLayout.CentralLakeCenter);
+            // LAGUNA: cuenca carvada bajo la línea de agua. Min() = solo baja el
+            // terreno, nunca sube. LakeDist() (no Vector2.Distance) = forma ovalada/
+            // rectangular, no círculo perfecto (owner, ref. Fears to Fathom).
+            float dCL = MapLayout.LakeDist(p);
             if (dCL < MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore)
             {
                 float wob = (Mathf.PerlinNoise(wx * 0.02f + 11f, wz * 0.02f + 7f) - 0.5f) * 10f;
@@ -487,9 +487,10 @@ namespace FolkloreArchives.MapGen
                     float dr = BuilderUtils.DistToPolyline(p, MapLayout.River);
                     if (dr < 40f) dirt = Mathf.Max(dirt, 1f - Mathf.Clamp01((dr - 16f) / 24f));
 
-                    // PLAYA DE ARENA bordeando el lago central (owner: "playito el borde",
+                    // PLAYA DE ARENA bordeando la laguna (owner: "playito el borde",
                     // lago tipo camping — antes era barro; cambiado a arena real).
-                    float dCL = Vector2.Distance(p, MapLayout.CentralLakeCenter);
+                    // LakeDist() = misma forma ovalada que el resto de la laguna.
+                    float dCL = MapLayout.LakeDist(p);
                     if (dCL < MapLayout.CentralLakeRadius + 30f)
                         sand = Mathf.Max(sand, 1f - Mathf.Clamp01((dCL - (MapLayout.CentralLakeRadius - 8f)) / 38f));
 

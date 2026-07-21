@@ -476,7 +476,7 @@ namespace FolkloreArchives.MapGen
                     // (antes solo despejaba 28m, mucho menos que la playa real de
                     // CentralLakeBeachWidth -> quedaba una hilera de árboles metida en la
                     // orilla/agua, owner: "quita arboles alrededor del lago")
-                    if (Vector2.Distance(p, MapLayout.CentralLakeCenter) < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 10f) continue;
+                    if (MapLayout.LakeDist(p) < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 10f) continue;
                     // montañas del lago (CentralPeaks): despeje por proximidad DESACTIVADO
                     // junto con el asset de montaña (MapGenerator.cs — owner: "quitalas").
                     // Reactivar junto con MountainRingBuilder.BuildCentralLakeMountains.
@@ -519,7 +519,7 @@ namespace FolkloreArchives.MapGen
                     // ya despejado más arriba) hasta 45m más, densidad de bosque real
                     // (ForestTreeDensity), sea cual sea el lado oeste/campo en el que
                     // caiga la laguna.
-                    bool nearPondRing = Vector2.Distance(p, MapLayout.CentralLakeCenter) <
+                    bool nearPondRing = MapLayout.LakeDist(p) <
                         MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 45f;
                     bool inField = Vector2.Distance(p, MapLayout.HuntingField) < 45f;
                     // owner: "se siguen superponiendo" -- el chequeo de espaciado de
@@ -1803,8 +1803,10 @@ namespace FolkloreArchives.MapGen
                     if (southDg <= MapLayout.ShoreVegNear && BuilderUtils.DistToPolyline(p, MapLayout.PavedRoute) < 10f) continue;
                     float dRiv = BuilderUtils.DistToPolyline(p, MapLayout.River);
                     if (dRiv < 18f) continue;
-                    // lago + orilla: sin pasto alto en el agua ni en toda la playa plana
-                    if (Vector2.Distance(p, MapLayout.CentralLakeCenter) < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 10f) continue;
+                    // laguna + orilla: sin pasto alto en el agua ni en toda la playa plana
+                    // (LakeDist = misma forma ovalada que el resto de la laguna)
+                    float dLake = MapLayout.LakeDist(p);
+                    if (dLake < MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth + 10f) continue;
                     // montañas del lago: despeje por proximidad DESACTIVADO junto con el
                     // asset (ver mismo comentario en el bloque de árboles de arriba)
                     // franja de arena de la ribera (TerrainBuilder pinta arena por
