@@ -605,7 +605,11 @@ namespace FolkloreArchives.MapGen
         // alrededor del campamento y de por si" -> bajado de nuevo, 12->7->5->3.5m
         // (las copas se tocan bastante entre si, pero el tronco/base no se clava
         // adentro de otro tronco como con el bug original de pisado).
-        public const float CampoTreeMinSpacing  = 3.5f;
+        // Owner, después de sacar el pack nuevo y quedar solo 2 especies StarkCrafts:
+        // "quedo un poco vacio... rellena con los arboles que estan ahora" -- con
+        // CampoTreeDensity ya al máximo (1f), este espaciado es el único margen que
+        // queda para meter más, 3.5->2.8.
+        public const float CampoTreeMinSpacing  = 2.8f;
         public const float FieldTreeDensity     = 0.32f;  // isolated dry trees in the hunting field
 
         // AlanTree.fbx (Assets/ExternalAssets/ALanTree) replaces the old ForestPack

@@ -467,7 +467,13 @@ namespace FolkloreArchives.MapGen
                     // hasta ~1.8m -- con 1.5m de despeje, los arboles caian DENTRO del
                     // barro pintado. Ahora el despeje es un poco mayor que ese ancho
                     // pintado (nunca menor), para que quede justo al borde y no encima.
-                    if (dRoad < 2.2f || dA < 3.5f || dScary < 3.5f || dExtra < 3.5f) continue;
+                    // dRoad subido de 2.2 a 4f (owner: "el camino de la ruta hacia el
+                    // campamento hay arboles que obstruyen el paso") -- 2.2 apenas
+                    // superaba el ancho pintado de las huellas (~1.8m), pero es un
+                    // camino de AUTO, no un sendero a pie: con solo 2.2m de despeje las
+                    // copas de los árboles (más anchas que el tronco) quedaban colgando
+                    // sobre el camino igual.
+                    if (dRoad < 4f || dA < 3.5f || dScary < 3.5f || dExtra < 3.5f) continue;
                     if (BuilderUtils.DistToRivers(p) < 28f) continue;
                     // despejar el caminito a la playa y la playa misma
                     if (BuilderUtils.DistToPolyline(p, MapLayout.BeachPath) < 5f) continue;
