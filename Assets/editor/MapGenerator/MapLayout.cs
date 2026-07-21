@@ -49,14 +49,13 @@ namespace FolkloreArchives.MapGen
         // El asfalto de la ruta y la nieve de los picos NO se tocan (el pack no los trae).
         public const bool UsePsxGround = true;
 
-        // Vallas de madera (owner: "usala y ponla por todo el camino desde la ruta hasta
-        // el campamento y desde el camino del campamento hasta la casa de la vieja").
-        // Para SACAR las vallas: poné este flag en false y regenerá (Generate o, más
-        // rápido, con el mapa ya generado alcanza con borrar a mano el grupo
-        // "WoodenFences" de la escena). Para agregarlas a un camino nuevo: sumá una
-        // línea "FenceBuilder.BuildFenceLine(group, t, MapLayout.ELCAMINO, offset);"
-        // en FenceBuilder.Build() -- cualquier Vector2[] de un camino sirve.
-        public const bool BuildFences = true;
+        // Vallas de madera: 2 intentos de auto-colocarlas a lo largo del camino
+        // (escala/rotación) no dieron resultado (owner: "ahora ni siquiera estan
+        // mejor decime como ponerlas yo") -- APAGADO, el owner las va a poner a
+        // mano en el Editor. FenceBuilder.cs queda intacto por si se retoma más
+        // adelante (el material ya generado, Assets/Settings/WoodenFence.mat,
+        // sirve igual para colocarlas a mano — ver instrucciones del owner).
+        public const bool BuildFences = false;
         public const float FenceOffsetDirtRoad = 5f;   // separación del camino de auto (más ancho)
         public const float FenceOffsetCamino10 = 3.5f; // separación del sendero a pie (más angosto)
 
