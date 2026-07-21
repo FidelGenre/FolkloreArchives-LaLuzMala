@@ -450,40 +450,13 @@ namespace FolkloreArchives.MapGen
         // ---------------- ESTANCIA + GALPÓN ----------------
         static Transform Estancia(Transform parent, Terrain t)
         {
+            // ESTANCIA DESACTIVADA (decisión del owner). El galpón real ahora va en la
+            // casa de la vieja (granja), horneado en HouseBuilder.BuildBarn. Antes esto
+            // construía el "casco" (House.fbx → salía MAGENTA por shader built-in) + el
+            // GalponModelo, que además duplicaba el galpón. Dejo el grupo VACÍO y
+            // registrado para NO correr los índices de persistencia de los demás POIs.
             var p = BuilderUtils.Ground(t, MapLayout.Estancia);
-            var g = BuilderUtils.Group(parent, "Estancia", p);
-            BuilderUtils.Label(g, "ESTANCIA", p + Vector3.up * 9f);
-
-            // casco: reusa la casa rural si está; si no, un cajón
-            var house = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ALP_Assets/country house01/Models/House.fbx");
-            if (house != null)
-            {
-                var h = (GameObject)Object.Instantiate(house, g);
-                h.name = "CascoEstancia";
-                h.transform.position = p;
-                h.transform.rotation = Quaternion.Euler(0f, 120f, 0f);
-            }
-            else
-            {
-                BuilderUtils.Prim(PrimitiveType.Cube, "Casco", g, p + Vector3.up * 1.6f, new Vector3(7f, 3.2f, 6f), Wood);
-            }
-
-            // galpón de esquila (procedural: nave grande + techo a dos aguas)
-            Vector3 bp = p + new Vector3(-14f, 0f, 6f);
-            var barn = BuilderUtils.Group(g, "GalponEsquila", bp);
-            BuilderUtils.Label(barn, "GALPON (EL FAMILIAR)", bp + Vector3.up * 6f);
-            // galpón real (BarnShed/) o nave procedural
-            if (SpawnModel(DirBarn, barn, bp, 13f, 90f, false, "GalponModelo") == null)
-            {
-                BuilderUtils.Prim(PrimitiveType.Cube, "Paredes", barn, bp + Vector3.up * 2f, new Vector3(9f, 4f, 12f), Rust);
-                BuilderUtils.Prim(PrimitiveType.Cube, "TechoA", barn, bp + Vector3.up * 4.4f, new Vector3(6f, 0.2f, 12.5f), MetalDark, new Vector3(0f, 0f, 28f));
-                BuilderUtils.Prim(PrimitiveType.Cube, "TechoB", barn, bp + Vector3.up * 4.4f, new Vector3(6f, 0.2f, 12.5f), MetalDark, new Vector3(0f, 0f, -28f));
-                BuilderUtils.Prim(PrimitiveType.Cube, "Porton", barn, bp + new Vector3(0f, 1.8f, 6.1f), new Vector3(3.5f, 3.6f, 0.2f), MetalDark);
-            }
-            // "cadenas" colgando (marcador de El Familiar) — siempre
-            for (int i = 0; i < 3; i++)
-                BuilderUtils.Prim(PrimitiveType.Cylinder, "Cadena" + i, barn, bp + new Vector3(-1f + i, 2.6f, 6.3f), new Vector3(0.05f, 0.7f, 0.05f), MetalDark);
-            return g;
+            return BuilderUtils.Group(parent, "Estancia", p);
         }
 
         // ---------------- CAPILLA ANEGADA (modelo descargado) ----------------
@@ -646,7 +619,14 @@ namespace FolkloreArchives.MapGen
         static GameObject FindModelInFolder(string folder)
         {
             if (!AssetDatabase.IsValidFolder(folder)) return null;
-            var guids = AssetDatabase.FindAssets("t:GameObject", new[] { folder });
+            // ANTES filtraba "t:GameObject" -- el muelle (Dock/broken_wooden_dock_ps1.glb)
+            // se importa bien (mismo importer glTFast que otros .glb del proyecto que sí
+            // andan, sin errores en el reporte) pero igual no aparecía con ese filtro, así
+            // que el código caía siempre al fallback procedural (los 8 tablones que dan el
+            // efecto "abanico" al rotarlos). Sin filtro de tipo: traigo TODOS los assets de
+            // la carpeta y pruebo cargar cada uno como GameObject -- más lento pero no
+            // depende de cómo el índice de búsqueda de Unity clasifique cada importer.
+            var guids = AssetDatabase.FindAssets("", new[] { folder });
             foreach (var gu in guids)
             {
                 var path = AssetDatabase.GUIDToAssetPath(gu);
