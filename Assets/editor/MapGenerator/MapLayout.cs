@@ -345,12 +345,15 @@ namespace FolkloreArchives.MapGen
         // arriba (junto a LakeMountain) — terminó en las coordenadas viejas de
         // BurntForest (176,257), pedido explícito del owner mirando la escena.
         // Profundidad (Level/Bed) sin tocar, ya estaba afinada.
+        // Achicada de nuevo (owner: "haz mas chico el lago y rellena bien de arboles
+        // que quiero que se vea algo asi" + referencia). radio+playa+orilla: reach
+        // total 9+10+18=27m -> 6+6+10=22m.
         public static readonly Vector2 CentralLakeCenter = LakeMountain; // = "LAGUNA" (antes bosque quemado)
-        public const float CentralLakeRadius = 9f;
+        public const float CentralLakeRadius = 6f;
         public const float CentralLakeLevel  = 22f;   // altura del plano de agua (sin tocar, ya afinada)
         public const float CentralLakeBed    = 14f;   // fondo carvado (sin tocar, misma profundidad de agua)
-        public const float CentralLakeBeachWidth = 10f; // franja plana de playa junto al agua
-        public const float CentralLakeShore  = 18f;   // ancho TOTAL de orilla (playa + transición a terreno natural) — alcance total desde el centro: radio+shore = 27m
+        public const float CentralLakeBeachWidth = 6f; // franja plana de playa junto al agua
+        public const float CentralLakeShore  = 10f;   // ancho TOTAL de orilla (playa + transición a terreno natural) — alcance total desde el centro: radio+shore
         // Forma OVALADA/rectangular en vez de círculo perfecto (owner, mostrando la
         // referencia de Fears to Fathom: "que sea un poco mas rectangular/ovalado el
         // lago no redondo"). El primer intento estiraba en X/Z del MUNDO -- pero el
@@ -381,12 +384,13 @@ namespace FolkloreArchives.MapGen
         // true = p cae en la cuña que mira hacia el campamento (por donde llega el
         // camino/muelle) — ahí NO se cierra con árboles pegados a la orilla (owner:
         // "pon arboles toda la vuelta cerca de la orilla menos en la parte que queda
-        // frente al camino"). Cuña de ~120° (dot > 0.5 = 60° a cada lado del eje).
+        // frente al camino"). Angostada de ~120° a ~100° (dot 0.5->0.6) -- owner
+        // después: "rellena bien de arboles", menos claro abierto, más pared verde.
         public static bool LakeFacesApproach(Vector2 p)
         {
             Vector2 rel = p - CentralLakeCenter;
             if (rel.sqrMagnitude < 0.0001f) return false;
-            return Vector2.Dot(rel.normalized, LakeApproachDir) > 0.5f;
+            return Vector2.Dot(rel.normalized, LakeApproachDir) > 0.6f;
         }
         // Montañas DESACOPLADAS de la laguna (owner pidió una laguna CHICA de bosque,
         // no una vista escénica de cordillera) — CentralPeakHeight=0 anula el bulto de
