@@ -481,7 +481,10 @@ namespace FolkloreArchives.MapGen
                     // "cerca de la orilla" = justo donde termina la arena (beachWidth),
                     // no más allá -- si el despeje fuera menor que eso los árboles
                     // arrancarian a mitad de la playa.
-                    float lakeTreeClear = MapLayout.LakeFacesApproach(p) ? MapLayout.CentralLakeBeachWidth + 10f : MapLayout.CentralLakeBeachWidth;
+                    // owner: "alrededor del lado de el camino deja mas espacio que de
+                    // los otros lados" -- subido el extra de ese lado (10->18) para que
+                    // se note más la diferencia con el resto, que sigue pegado a la orilla.
+                    float lakeTreeClear = MapLayout.LakeFacesApproach(p) ? MapLayout.CentralLakeBeachWidth + 18f : MapLayout.CentralLakeBeachWidth;
                     if (MapLayout.LakeDist(p) < MapLayout.CentralLakeRadius + lakeTreeClear) continue;
                     // montañas del lago (CentralPeaks): despeje por proximidad DESACTIVADO
                     // junto con el asset de montaña (MapGenerator.cs — owner: "quitalas").
