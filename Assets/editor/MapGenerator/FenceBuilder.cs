@@ -88,24 +88,43 @@ namespace FolkloreArchives.MapGen
             return AssetDatabase.LoadAssetAtPath<Texture2D>(Tex);
         }
 
+        // Altura real objetivo (owner: "deberian ser mas grandes tambien y sobresalir"
+        // -- la primera pasada no escalaba NADA, quedaban al tamaño crudo de
+        // importación del FBX, chiquitos). Una valla baja de campo ronda ~1.1-1.3m.
+        const float FenceTargetHeight = 1.2f;
+        // Ajuste de yaw a mano, en grados (0/90/180/270), por si después de ver el
+        // resultado en el Editor la valla sigue mirando para el lado que no es --
+        // más rápido que tocar la lógica de detección de ejes.
+        const float FenceYawTweak = 0f;
+
         // Repite el segmento a lo largo de "path" (una curva ya ondulada, no 2-3 puntos
         // de control), separado "offset" metros hacia un costado.
         static void BuildFenceLine(Transform parent, Terrain t, GameObject seg, Vector2[] path, float offset)
         {
             if (path == null || path.Length < 2) return;
 
-            // longitud real del segmento: mido los bounds del template una vez y uso el
-            // eje horizontal más largo (auto-detecta si el FBX exportó el largo en X o
-            // en Z, no asumo una convención fija del pack).
+            // mido los bounds CRUDOS del template (sin escalar) para saber la
+            // proporción largo/alto real del mesh tal como vino del FBX.
             var rends = seg.GetComponentsInChildren<Renderer>();
             if (rends.Length == 0) return;
-            Bounds b = rends[0].bounds;
-            foreach (var r in rends) b.Encapsulate(r.bounds);
-            bool lengthOnX = b.size.x >= b.size.z;
-            float segLen = Mathf.Max(0.5f, lengthOnX ? b.size.x : b.size.z);
-            // yaw extra si el largo del mesh viene en X en vez de Z (adelante por defecto):
-            // sin esto la valla quedaría de canto, mirando para el costado equivocado.
-            float axisYawFix = lengthOnX ? 90f : 0f;
+            Bounds raw = rends[0].bounds;
+            foreach (var r in rends) raw.Encapsulate(r.bounds);
+
+            // escala uniforme para que la ALTURA quede en FenceTargetHeight -- así el
+            // segmento sobresale del pasto en vez de quedar diminuto (owner: "deberian
+            // ser mas grandes... y sobresalir").
+            float scale = FenceTargetHeight / Mathf.Max(0.001f, raw.size.y);
+
+            // eje horizontal más largo del mesh CRUDO (auto-detecta si el FBX exportó
+            // el largo en X o en Z, no asumo una convención fija del pack) -- ya
+            // escalado, es la distancia real que ocupa cada segmento a lo largo del camino.
+            bool lengthOnX = raw.size.x >= raw.size.z;
+            float segLen = Mathf.Max(0.3f, (lengthOnX ? raw.size.x : raw.size.z) * scale);
+            // yaw extra si el largo del mesh viene en X en vez de Z (adelante por
+            // defecto): sin esto la valla queda de canto en vez de a lo largo del
+            // camino. (Owner: "estan metidos de lado" -- la primera pasada tenía este
+            // ajuste invertido; probar este signo primero.)
+            float axisYawFix = lengthOnX ? 0f : 90f;
 
             float total = 0f;
             for (int i = 0; i < path.Length - 1; i++) total += Vector2.Distance(path[i], path[i + 1]);
@@ -132,18 +151,30 @@ namespace FolkloreArchives.MapGen
                 Vector2 perp = new Vector2(-dir.y, dir.x);
                 Vector2 finalXZ = center + perp * offset;
 
-                float yaw = Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg + axisYawFix;
+                float yaw = Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg + axisYawFix + FenceYawTweak;
 
                 var go = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(SegmentFbx));
                 go.name = "FenceSeg_" + segIdx++;
                 go.transform.SetParent(parent);
-                go.transform.position = BuilderUtils.Ground(t, finalXZ.x, finalXZ.y);
+                go.transform.localScale = Vector3.one * scale;
                 go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                float groundY = BuilderUtils.Ground(t, finalXZ.x, finalXZ.y).y;
+                go.transform.position = new Vector3(finalXZ.x, groundY, finalXZ.y);
                 foreach (var r in go.GetComponentsInChildren<Renderer>())
                 {
                     var arr = new Material[r.sharedMaterials.Length];
                     for (int k = 0; k < arr.Length; k++) arr[k] = rends[0].sharedMaterial;
                     r.sharedMaterials = arr;
+                }
+                // replantar la BASE real en el piso (los bounds cambiaron con la
+                // escala/rotación nuevas) -- si no, con un mesh chico previamente
+                // sumergido, seguía quedando medio metido en el pasto.
+                var goRends = go.GetComponentsInChildren<Renderer>();
+                if (goRends.Length > 0)
+                {
+                    Bounds gb = goRends[0].bounds;
+                    foreach (var r in goRends) gb.Encapsulate(r.bounds);
+                    go.transform.position += new Vector3(0f, groundY - gb.min.y, 0f);
                 }
             }
         }
