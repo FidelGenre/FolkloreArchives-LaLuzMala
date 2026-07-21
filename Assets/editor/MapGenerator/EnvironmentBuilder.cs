@@ -195,10 +195,14 @@ namespace FolkloreArchives.MapGen
             // en pendiente. Ahora el margen es proporcional a la playa plana real, así
             // el plano de agua no pasa de esa zona.
             // Ovalada/rectangular en vez de cuadrada (owner: "que sea un poco mas
-            // rectangular/ovalado el lago no redondo") -- misma proporción X/Z que
-            // MapLayout.LakeDist(), que ya deforma la cuenca carvada y la arena.
+            // rectangular/ovalado el lago no redondo"), y ROTADA para que el eje ancho
+            // quede perpendicular al camino al campamento en vez de mirando "de punta"
+            // hacia él (owner: "necesito que este de lado mirando al camino... rota el
+            // lago") -- mismo ángulo/proporción que MapLayout.LakeDist(), que ya
+            // deforma la cuenca carvada y la arena con este mismo criterio.
             float lakeScale = ((MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth) * 2f - 4f) / 10f;
-            lake.transform.localScale = new Vector3(lakeScale * MapLayout.LakeStretchX, 1f, lakeScale * MapLayout.LakeStretchZ);
+            lake.transform.localScale = new Vector3(lakeScale * MapLayout.LakeStretchLong, 1f, lakeScale * MapLayout.LakeStretchShort);
+            lake.transform.rotation = Quaternion.Euler(0f, MapLayout.LakeAxisYawDeg, 0f);
             var lmat = BuilderUtils.Mat("lakewater", new Color(0.05f, 0.11f, 0.16f), 0.2f);
             if (lmat.HasProperty("_Cull")) lmat.SetFloat("_Cull", 0f);
             lmat.doubleSidedGI = true;

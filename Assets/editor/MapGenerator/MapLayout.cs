@@ -351,17 +351,29 @@ namespace FolkloreArchives.MapGen
         public const float CentralLakeShore  = 18f;   // ancho TOTAL de orilla (playa + transición a terreno natural) — alcance total desde el centro: radio+shore = 27m
         // Forma OVALADA/rectangular en vez de círculo perfecto (owner, mostrando la
         // referencia de Fears to Fathom: "que sea un poco mas rectangular/ovalado el
-        // lago no redondo"). Estirado en X (más ancho que profundo en Z). LakeDist()
-        // reemplaza a Vector2.Distance en TODO lo relacionado a la laguna (altura,
-        // textura de arena, despeje de árboles/pasto) para que la forma sea
-        // consistente en todos lados, no solo en el plano de agua.
-        public const float LakeStretchX = 1.55f;
-        public const float LakeStretchZ = 0.82f;
+        // lago no redondo"). El primer intento estiraba en X/Z del MUNDO -- pero el
+        // camino (PathA) llega desde el campamento en un ángulo que casi coincide con
+        // ese eje largo, así que el jugador veía la laguna "de punta" (mirando por el
+        // eje largo hacia adentro) en vez de "de lado" (owner: "necesito que este de
+        // lado mirando al camino... ahora esta de una punta mirando hacia el camino,
+        // rota el lago"). Ahora el eje CORTO apunta hacia el campamento (la dirección
+        // por la que se llega) y el eje LARGO queda perpendicular a esa línea, así al
+        // caminar por PathA la laguna se ve de costado, ancha.
+        public const float LakeStretchLong  = 1.55f; // eje ancho (perpendicular al camino)
+        public const float LakeStretchShort = 0.82f; // eje angosto (mirando hacia el campamento)
+        public static readonly float LakeAxisAngle =
+            Mathf.Atan2(Campsite.y - LakeMountain.y, Campsite.x - LakeMountain.x) + Mathf.PI * 0.5f;
+        // uso de EnvironmentBuilder, para rotar el plano de agua con el mismo ángulo
+        // (yaw = -ángulo: Quaternion.Euler(0,yaw,0)*Vector3.right = (cos yaw, 0, -sin yaw)).
+        public static readonly float LakeAxisYawDeg = -LakeAxisAngle * Mathf.Rad2Deg;
+        static readonly Vector2 LakeLongAxis  = new Vector2(Mathf.Cos(LakeAxisAngle), Mathf.Sin(LakeAxisAngle));
+        static readonly Vector2 LakeShortAxis = new Vector2(-LakeLongAxis.y, LakeLongAxis.x);
         public static float LakeDist(Vector2 p)
         {
-            float dx = (p.x - CentralLakeCenter.x) / LakeStretchX;
-            float dz = (p.y - CentralLakeCenter.y) / LakeStretchZ;
-            return Mathf.Sqrt(dx * dx + dz * dz);
+            Vector2 rel = p - CentralLakeCenter;
+            float u = Vector2.Dot(rel, LakeLongAxis)  / LakeStretchLong;
+            float v = Vector2.Dot(rel, LakeShortAxis) / LakeStretchShort;
+            return Mathf.Sqrt(u * u + v * v);
         }
         // Montañas DESACOPLADAS de la laguna (owner pidió una laguna CHICA de bosque,
         // no una vista escénica de cordillera) — CentralPeakHeight=0 anula el bulto de
