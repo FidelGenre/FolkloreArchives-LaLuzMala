@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 66;
+        const int SplatVersion = 67;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -468,9 +468,15 @@ namespace FolkloreArchives.MapGen
                     // MALLÍN: barro oscuro mojado (capa dirt)
                     float dMal = Vector2.Distance(p, MapLayout.Mallin);
                     if (dMal < 24f) dirt = Mathf.Max(dirt, 0.95f * (1f - Mathf.Clamp01((dMal - 13f) / 11f)));
-                    // ORILLA DEL LAGO: canto rodado (grava)
+                    // ZONA DEL MUELLE (LakeShore, del lado del camino): ANTES pintaba
+                    // grava/canto rodado (capa sand) acá -- ese parche quedaba
+                    // literalmente en la cuña abierta que mira al camino, así que aunque
+                    // el resto de la orilla ya se pintaba de barro, del lado del muelle
+                    // seguían las piedras (owner: "del lado del camino siguen esas
+                    // piedras pone barro como pusiste alrededor"). Ahora pinta BARRO acá
+                    // también, misma capa que el resto de la orilla.
                     float dSho = Vector2.Distance(p, MapLayout.LakeShore);
-                    if (dSho < 16f) sand = Mathf.Max(sand, 0.88f * (1f - Mathf.Clamp01((dSho - 8f) / 8f)));
+                    if (dSho < 16f) dirt = Mathf.Max(dirt, 0.9f * (1f - Mathf.Clamp01((dSho - 8f) / 8f)));
                     // ESTANCIA + CORRALES: tierra pisada (dirt)
                     float dEsta = Vector2.Distance(p, MapLayout.Estancia);
                     if (dEsta < 22f) dirt = Mathf.Max(dirt, 0.8f * (1f - Mathf.Clamp01((dEsta - 13f) / 9f)));

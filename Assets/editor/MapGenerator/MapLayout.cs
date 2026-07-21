@@ -345,11 +345,10 @@ namespace FolkloreArchives.MapGen
         // arriba (junto a LakeMountain) — terminó en las coordenadas viejas de
         // BurntForest (176,257), pedido explícito del owner mirando la escena.
         // Profundidad (Level/Bed) sin tocar, ya estaba afinada.
-        // Achicada de nuevo (owner: "haz mas chico el lago y rellena bien de arboles
-        // que quiero que se vea algo asi" + referencia). radio+playa+orilla: reach
-        // total 9+10+18=27m -> 6+6+10=22m.
+        // Radio final (owner: "deja el radio del lago en 25", después de probar 9 y
+        // luego 6) -- beachWidth/shore NO se tocaron, solo el radio del agua en sí.
         public static readonly Vector2 CentralLakeCenter = LakeMountain; // = "LAGUNA" (antes bosque quemado)
-        public const float CentralLakeRadius = 6f;
+        public const float CentralLakeRadius = 25f;
         public const float CentralLakeLevel  = 22f;   // altura del plano de agua (sin tocar, ya afinada)
         public const float CentralLakeBed    = 14f;   // fondo carvado (sin tocar, misma profundidad de agua)
         public const float CentralLakeBeachWidth = 6f; // franja plana de playa junto al agua
