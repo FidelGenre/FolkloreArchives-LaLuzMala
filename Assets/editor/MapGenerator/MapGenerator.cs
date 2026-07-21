@@ -99,6 +99,7 @@ namespace FolkloreArchives.MapGen
             AreaPoiBuilder.Build(root.transform, terrain);   // zonas/POIs nuevos del MapPlan (estepa, mallín, roquedal, quemado, orilla, Difunta Correa, Gauchito Gil, ahorcado, antena, corrales, YPF, estancia)
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
             OldLadyNpcBuilder.Build(root.transform, terrain); // la vieja cuentacuentos, parada afuera de su casa
+            FenceBuilder.Build(root.transform, terrain);      // valla de madera junto al camino de tierra y al sendero a la casa de la vieja
             CarBuilder.Build(root.transform, terrain);       // Renault 12 procedural (auto manejable) — estacionado en el campamento
             LuzMalaBuilder.Build(root.transform, terrain);   // La Luz Mala (aparece de noche)
             StoryTriggerBuilder.Build(root.transform, terrain);

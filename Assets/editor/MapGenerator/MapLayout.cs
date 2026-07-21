@@ -49,6 +49,17 @@ namespace FolkloreArchives.MapGen
         // El asfalto de la ruta y la nieve de los picos NO se tocan (el pack no los trae).
         public const bool UsePsxGround = true;
 
+        // Vallas de madera (owner: "usala y ponla por todo el camino desde la ruta hasta
+        // el campamento y desde el camino del campamento hasta la casa de la vieja").
+        // Para SACAR las vallas: poné este flag en false y regenerá (Generate o, más
+        // rápido, con el mapa ya generado alcanza con borrar a mano el grupo
+        // "WoodenFences" de la escena). Para agregarlas a un camino nuevo: sumá una
+        // línea "FenceBuilder.BuildFenceLine(group, t, MapLayout.ELCAMINO, offset);"
+        // en FenceBuilder.Build() -- cualquier Vector2[] de un camino sirve.
+        public const bool BuildFences = true;
+        public const float FenceOffsetDirtRoad = 5f;   // separación del camino de auto (más ancho)
+        public const float FenceOffsetCamino10 = 3.5f; // separación del sendero a pie (más angosto)
+
         // ------------- Key locations (x, z) — matches the hand-drawn plan -------------
         // (DirtTurnoff is derived from the smooth paved route further down, so it always
         //  sits exactly on the road wherever the road is at x=620.)
@@ -300,6 +311,9 @@ namespace FolkloreArchives.MapGen
         // hay que pasar por la playa de pesca). Reemplazado por BeachToHuntingField más
         // abajo (RiverBeach → HuntingField).
         public static readonly Vector2[] Camino10 = { Campsite, new Vector2(214f, 199f), OldLadyRanch };            // rama DIRECTA campamento → vieja (antes iba lago→vieja, redundante con PathA)
+        // curva real (ya ondulada) de Camino10 -- la usa FenceBuilder para correr la
+        // valla PEGADA al camino real, no a la línea recta entre los 3 puntos de control.
+        public static readonly Vector2[] Camino10Path = Snake(Camino10, 4f, 4f);
         // midpoint recalculado otra vez para la posición nueva de la laguna.
         public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(183f, 255f), LakeLookout };          // laguna → mirador (antes vieja→mirador, ya no hace falta)
         // c13: muerte camino equivocado → owner: "que sea confuso", el desvío tiene que
@@ -331,7 +345,7 @@ namespace FolkloreArchives.MapGen
         // con el acercamiento del lado este (30%, Camino16/19/20/21): 8->5.6, 7->4.9.
         // Los del lado oeste (9/10/11/13) ya estaban chicos y no hacía falta tocarlos.
         public static readonly Vector2[][] ExtraTrails = {
-            Snake(BeachToHuntingField, 4f, 4f), Snake(Camino10, 4f, 4f), Snake(Camino11, 4f, 4f),
+            Snake(BeachToHuntingField, 4f, 4f), Camino10Path, Snake(Camino11, 4f, 4f),
             Snake(Camino13, 8f, 4f), Snake(Camino14, 9f, 4f),
             Snake(Camino16, 5.6f, 4f),
             Snake(Camino19, 4.9f, 4f), Snake(Camino20, 5.6f, 4f),
