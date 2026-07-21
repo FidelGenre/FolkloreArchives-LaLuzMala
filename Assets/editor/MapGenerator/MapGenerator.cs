@@ -110,6 +110,12 @@ namespace FolkloreArchives.MapGen
             NetworkBuilder.EnsureNet();
             Lap("Red (prefabs persona/perro)");
 
+            // Aplica cualquier posición/rotación/escala guardada con
+            // Tools > Save Map Layout, DESPUÉS de que todos los builders de arriba
+            // ya armaron el mapa desde MapLayout.cs (si no, esto se pisaría).
+            MapLayoutPersistence.ApplySavedLayout();
+            Lap("Aplicar layout manual guardado");
+
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene()); // salva el .unity para que el Build incluya el mapa
             Lap("Guardar assets+escena");
