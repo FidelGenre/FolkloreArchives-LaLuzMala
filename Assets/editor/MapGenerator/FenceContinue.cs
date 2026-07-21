@@ -28,6 +28,26 @@ namespace FolkloreArchives.MapGen
 {
     public static class FenceContinue
     {
+        // Arregla una pieza que quedó inclinada por accidente (arrastrando el gizmo
+        // de rotación en diagonal en vez de girar solo en Y) -- deja X y Z en 0 y
+        // conserva el yaw (Y) tal como estaba. Útil ANTES de Continuar Valla si esa
+        // herramienta avisa que la pieza elegida está inclinada.
+        [MenuItem("Tools/Folklore Archives/Enderezar rotación (solo Y)")]
+        public static void StraightenSelection()
+        {
+            if (Selection.gameObjects.Length == 0)
+            {
+                Debug.LogWarning("[FenceContinue] Seleccioná una o más piezas inclinadas primero.");
+                return;
+            }
+            foreach (var go in Selection.gameObjects)
+            {
+                float y = go.transform.eulerAngles.y;
+                go.transform.rotation = Quaternion.Euler(0f, y, 0f);
+            }
+            Debug.Log($"<color=lime>[FenceContinue] Enderezadas {Selection.gameObjects.Length} pieza(s) (X=0, Z=0, Y sin tocar).</color>");
+        }
+
         [MenuItem("Tools/Folklore Archives/Continuar Valla (desde selección)")]
         public static void ContinueFence()
         {
@@ -39,6 +59,19 @@ namespace FolkloreArchives.MapGen
             }
             var terrain = Terrain.activeTerrain;
             if (terrain == null) { Debug.LogWarning("[FenceContinue] No hay Terrain activo."); return; }
+
+            // la pieza seleccionada es la "maestra" -- todo lo que tenga de raro (un
+            // giro sin querer en X/Z, no solo el yaw en Y) se copia tal cual a las
+            // piezas nuevas. Si está inclinada (no solo rotada de costado), mejor
+            // avisar y frenar en vez de repetir el error 46 veces.
+            float tiltX = Mathf.DeltaAngle(0f, sel.transform.eulerAngles.x);
+            float tiltZ = Mathf.DeltaAngle(0f, sel.transform.eulerAngles.z);
+            if (Mathf.Abs(tiltX) > 3f || Mathf.Abs(tiltZ) > 3f)
+            {
+                Debug.LogWarning($"[FenceContinue] La pieza seleccionada ('{sel.name}') está INCLINADA (rotación X={tiltX:F1}°, Z={tiltZ:F1}°, debería ser 0 en las dos) -- no sigo desde acá. " +
+                                  "Con la pieza seleccionada, corré Tools > Folklore Archives > Enderezar rotación (solo Y) para arreglarla, y después volvé a correr este comando.");
+                return;
+            }
 
             Vector2 selXZ = new Vector2(sel.transform.position.x, sel.transform.position.z);
 
