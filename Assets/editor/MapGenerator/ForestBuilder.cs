@@ -133,6 +133,7 @@ namespace FolkloreArchives.MapGen
             td.SetTreeInstances(instances.ToArray(), true);
             Debug.Log("Forest: " + instances.Count + " tree/bush instances planted.");
             SetupGrass(td);
+            TerrainPaintPersistence.ApplyDetailPaint(td); // pasto pintado a mano (Save Terrain Paint)
             }
             else Debug.Log("Bosque cacheado (árboles/pasto ya en el terreno) — Rebuild Forest para rehacer.");
 
@@ -1710,7 +1711,9 @@ namespace FolkloreArchives.MapGen
         // ---------------- GRASS (terrain details) ----------------
 
         static int _mudGrassCleared = 0;
-        static void SetupGrass(TerrainData td)
+        // public: TerrainPaintPersistence la llama sobre un TerrainData temporal para
+        // calcular el baseline puramente procedural (sin pasto pintado a mano).
+        public static void SetupGrass(TerrainData td)
         {
             _mudGrassCleared = 0;
             // 1024 (up from 512) = ~1m per detail cell instead of ~2m, so the ~1.6m

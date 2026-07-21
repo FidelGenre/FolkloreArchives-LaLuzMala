@@ -38,6 +38,7 @@ namespace FolkloreArchives.MapGen
                 TerrainEditPersistence.ApplyTerrainEdits(h, res);
                 td.SetHeights(0, 0, h);
                 PaintTextures(td);
+                TerrainPaintPersistence.ApplyAlphaPaint(td); // texturas pintadas a mano (Save Terrain Paint)
                 AssetDatabase.CreateAsset(td, TerrainAssetPath);
                 EditorPrefs.SetInt(SplatVersionKey, SplatVersion);
             }
@@ -48,6 +49,7 @@ namespace FolkloreArchives.MapGen
                 // Así el owner solo hace Generate y el barro aparece sin acordarse del botón.
                 Debug.Log("<color=yellow>[SPLAT] version nueva → re-pintando el barro + despejando pasto sobre el barro (una vez)…</color>");
                 PaintTextures(td);
+                TerrainPaintPersistence.ApplyAlphaPaint(td); // texturas pintadas a mano (Save Terrain Paint)
                 ClearGrassOnMud(td); // el pasto cacheado también tapa el barro: despejarlo acá
                 ClearTreesOnPad(td); // despejar árboles del playón de la YPF
                 EditorUtility.SetDirty(td);
@@ -414,7 +416,9 @@ namespace FolkloreArchives.MapGen
             return a;
         }
 
-        static void PaintTextures(TerrainData td)
+        // public: TerrainPaintPersistence la llama sobre un TerrainData temporal para
+        // calcular el baseline puramente procedural (sin pintado a mano) y compararlo.
+        public static void PaintTextures(TerrainData td)
         {
             // Real textures from the Terrain Sample Asset Pack, with procedural fallback.
             // Con UsePsxGround, las capas naturales (pasto/tierra/sendero/arena) usan las
