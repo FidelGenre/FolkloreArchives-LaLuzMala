@@ -533,7 +533,12 @@ namespace FolkloreArchives.MapGen
                     bool dryTree;
                     if (dScary < 20f)      { prob = MapLayout.ScaryPathTreeDensity; dryTree = Random.value < 0.85f; }
                     else if (dA < 18f || dRoad < 18f || dExtra < 16f) { prob = MapLayout.PathATreeDensity; dryTree = Random.value < 0.35f; }
-                    else if (nearPondRing) { prob = MapLayout.ForestTreeDensity; dryTree = Random.value < 0.3f; }
+                    // dryTree=false (antes 0.3): la laguna quedó en las coordenadas viejas
+                    // de BurntForest, así que sin esto los troncos secos/quemados del
+                    // bosque quemado quedaban mezclados justo alrededor del agua nueva
+                    // (owner: "tiene los arboles quemado encima quitalos") -- acá van
+                    // árboles verdes sanos nomás.
+                    else if (nearPondRing) { prob = MapLayout.ForestTreeDensity; dryTree = false; }
                     else if (inField)      { prob = MapLayout.FieldTreeDensity; dryTree = true; }
                     // ESTE (bosque/peligro) = ForestTreeDensity de siempre, sin tocar
                     // (owner: "del lado malo deberian estar igual que antes, vuelvelo
