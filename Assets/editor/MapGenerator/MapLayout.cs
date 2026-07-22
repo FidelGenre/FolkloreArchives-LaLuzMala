@@ -131,18 +131,19 @@ namespace FolkloreArchives.MapGen
         // denso alrededor (por eso se veía bien en la captura) y no tiene ningún
         // camino/ruta cerca. BurntForest se reubicó unos metros al oeste (ver más
         // abajo) para no superponerse.
-        // Corrida un poquito más lejos del campamento/camino (owner: "mové el lago un
-        // poquititito mas adelante asi entra la casa del lado del camino" -- va a
-        // poner una casa a mano cerca del camino, necesita ese margen). Empuje chico
-        // (~8m) en la dirección OPUESTA a la que viene el camino (Campsite->Lago),
-        // así se abre lugar de ese lado sin mover el lago demasiado.
-        public static readonly Vector2 LakeMountain     = new Vector2(168.5f, 259.7f);  // "LAGUNA" — antes bosque quemado; ver BurntForest para su reubicación
+        // Corrida más lejos del campamento/camino (owner: "mové el lago un poquititito
+        // mas adelante asi entra la casa del lado del camino", después: "correlo un
+        // poco mas 10 metros mas" -- va a poner una casa a mano cerca del camino,
+        // necesita ese margen). Empuje total ~18m (8m + 10m más) en la dirección
+        // OPUESTA a la que viene el camino (Campsite->Lago), misma dirección las dos
+        // veces, así se abre lugar de ese lado sin mover el lago demasiado.
+        public static readonly Vector2 LakeMountain     = new Vector2(159.1f, 263.1f);  // "LAGUNA" — antes bosque quemado; ver BurntForest para su reubicación
         public static readonly Vector2 WrongTurnDeath   = new Vector2(142f, 151f);  // "MUERTE CAMINO EQUIVOCADO" (oeste, spur) — acercada al campamento (30%)
         // Reubicado junto con la laguna (offset ~24m desde el centro, hacia el
         // campamento, mismo criterio que las veces anteriores). Trasladado el mismo
-        // delta que LakeMountain (-7.5,+2.7) cuando el lago se corrió "un poquititito
-        // mas adelante" -- si no, quedaba mal calibrado respecto al lago nuevo.
-        public static readonly Vector2 LakeLookout      = new Vector2(191.5f, 251.7f);  // "MIRADOR" — cuelga de la laguna
+        // delta total que LakeMountain (~18m) cada vez que el lago se corrió más --
+        // si no, quedaba mal calibrado respecto al lago nuevo.
+        public static readonly Vector2 LakeLookout      = new Vector2(182.1f, 255.1f);  // "MIRADOR" — cuelga de la laguna
         public static readonly Vector2 AbandonedCabin   = new Vector2(263f, 147f);  // "CABAÑA OESTE" — acercada al campamento (30%)
         // Zonas NUEVAS del plano de dos lados:
         public static readonly Vector2 EscapePoint      = new Vector2(406f, 106f);   // "ESCAPE" — acercado al Mirador Este (30%)
@@ -200,10 +201,10 @@ namespace FolkloreArchives.MapGen
         public static readonly Vector2 BurntForest   = new Vector2(130f, 285f);  // bosque quemado
         // orilla de la laguna + muelle — a ~14m del centro, del lado que mira al
         // campamento (misma lógica que las ubicaciones anteriores de la laguna).
-        // Trasladada el mismo delta que LakeMountain (-7.5,+2.7) cuando el lago se
-        // corrió "un poquititito mas adelante" -- si no, el muelle/rancho quedaban
-        // calibrados contra la orilla VIEJA, no la nueva.
-        public static readonly Vector2 LakeShore     = new Vector2(181.5f, 254.7f);
+        // Trasladada el mismo delta total que LakeMountain (~18m) cada vez que el
+        // lago se corrió más -- si no, el muelle/rancho quedaban calibrados contra
+        // la orilla VIEJA, no la nueva.
+        public static readonly Vector2 LakeShore     = new Vector2(172.1f, 258.1f);
         public static readonly Vector2 HangedTree    = new Vector2(390f, 227f);  // árbol del ahorcado + cementerio (pegado a la Tumba) — trasladado junto con la Tumba
         public static readonly Vector2 Antenna       = new Vector2(370f, 282f);  // antena/repetidora (cerro)
         public static readonly Vector2 Corrales      = new Vector2(528f, 233f); // corrales/bañadero (junto a la estancia)
@@ -324,7 +325,7 @@ namespace FolkloreArchives.MapGen
         // valla PEGADA al camino real, no a la línea recta entre los 3 puntos de control.
         public static readonly Vector2[] Camino10Path = Snake(Camino10, 4f, 4f);
         // midpoint recalculado otra vez para la posición nueva de la laguna.
-        public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(175.5f, 257.7f), LakeLookout };          // laguna → mirador (antes vieja→mirador, ya no hace falta)
+        public static readonly Vector2[] Camino11 = { LakeMountain, new Vector2(166.1f, 261.1f), LakeLookout };          // laguna → mirador (antes vieja→mirador, ya no hace falta)
         // c13: muerte camino equivocado → owner: "que sea confuso", el desvío tiene que
         // aparecer a unos metros de entrar al camino de tierra (no 100+ metros adentro,
         // que era lo que quedaba pegado al punto medio de DirtRoad después de correr el
