@@ -105,19 +105,28 @@ namespace FolkloreArchives.MapGen
                         return;
                     }
 
-                    int applied = 0;
+                    // Radio alrededor del lago ACTUAL a ignorar: el lago se movió/cambió de
+                    // forma varias veces desde que se guardó este archivo (owner: "ahora
+                    // yendo al lago esta asi todo levantado destruido" -- el diff viejo
+                    // quedaba desalineado contra la base nueva ahí). Fuera de este radio
+                    // (corral, galpón, etc.) el diff sigue aplicando normal.
+                    float lakeExcludeR = MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore + 20f;
+                    int applied = 0, skippedNearLake = 0;
                     for (int z = 0; z < res; z++)
                     {
+                        float wz = z / (float)(res - 1) * MapLayout.MapSize;
                         for (int x = 0; x < res; x++)
                         {
                             float d = br.ReadSingle();
                             if (d == 0f) continue;
+                            float wx = x / (float)(res - 1) * MapLayout.MapSizeX;
+                            if (MapLayout.LakeDist(new Vector2(wx, wz)) < lakeExcludeR) { skippedNearLake++; continue; }
                             h[z, x] = Mathf.Clamp01(h[z, x] + d);
                             applied++;
                         }
                     }
-                    if (applied > 0)
-                        Debug.Log($"[TerrainEdits] Re-applied {applied} saved terrain edits.");
+                    if (applied > 0 || skippedNearLake > 0)
+                        Debug.Log($"[TerrainEdits] Re-applied {applied} saved terrain edits ({skippedNearLake} cerca del lago actual ignoradas -- base cambió).");
                 }
             }
             catch (System.Exception e)

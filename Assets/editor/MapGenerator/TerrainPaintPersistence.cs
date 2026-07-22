@@ -70,8 +70,17 @@ namespace FolkloreArchives.MapGen
             SaveDetailDiff(live, baseline);
 
             Object.DestroyImmediate(baseline);
+
+            // Árboles borrados a mano (pincel Paint Trees + Shift). Se guarda como diff
+            // contra el baseline procedural que ForestBuilder cachea en cada Generate.
+            int treeRem = TreePersistence.SaveTreeRemovals(live);
+            string treeMsg = treeRem < 0
+                ? " (árboles: falta el baseline — regenerá el mapa una vez y volvé a guardar)"
+                : $" + {treeRem} árboles borrados";
+
             AssetDatabase.Refresh();
-            Debug.Log("<color=lime>[TerrainPaint] Pintado a mano (texturas + pasto) guardado. Sobrevive a Rebuild Terrain/Rebuild Forest de ahora en más.</color>");
+            Debug.Log("<color=lime>[TerrainPaint] Pintado a mano (texturas + pasto" + treeMsg +
+                      ") guardado. Sobrevive a Rebuild Terrain/Rebuild Forest de ahora en más.</color>");
         }
 
         static void SaveAlphaDiff(TerrainData live, TerrainData baseline)
@@ -169,13 +178,25 @@ namespace FolkloreArchives.MapGen
                         return;
                     }
                     var map = td.GetAlphamaps(0, 0, res, res);
+                    // ídem TerrainEditPersistence: ignorar celdas cerca del lago ACTUAL --
+                    // el guardado quedó grabado contra una posición/forma vieja del lago
+                    // (owner: "ahora yendo al lago esta asi todo levantado destruido").
+                    float lakeExcludeR = MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore + 20f;
+                    int applied = 0, skippedNearLake = 0;
                     for (int i = 0; i < count; i++)
                     {
                         int z = br.ReadInt32(), x = br.ReadInt32();
-                        for (int l = 0; l < layers; l++) map[z, x, l] = br.ReadSingle();
+                        var vals = new float[layers];
+                        for (int l = 0; l < layers; l++) vals[l] = br.ReadSingle();
+                        float wx = x / (float)res * MapLayout.MapSizeX;
+                        float wz = z / (float)res * MapLayout.MapSize;
+                        if (MapLayout.LakeDist(new Vector2(wx, wz)) < lakeExcludeR) { skippedNearLake++; continue; }
+                        for (int l = 0; l < layers; l++) map[z, x, l] = vals[l];
+                        applied++;
                     }
                     td.SetAlphamaps(0, 0, map);
-                    if (count > 0) Debug.Log($"[TerrainPaint] Reaplicadas {count} celdas de textura pintadas a mano.");
+                    if (applied > 0 || skippedNearLake > 0)
+                        Debug.Log($"[TerrainPaint] Reaplicadas {applied} celdas de textura pintadas a mano ({skippedNearLake} cerca del lago actual ignoradas -- base cambió).");
                 }
             }
             catch (System.Exception e) { Debug.LogWarning("[TerrainPaint] No pude leer " + AlphaPath + ": " + e.Message); }
@@ -196,21 +217,30 @@ namespace FolkloreArchives.MapGen
                         Debug.LogWarning("[TerrainPaint] El guardado de pasto no coincide en resolución/capas con el terreno actual — lo salteo. Volvé a correr Save Terrain Paint.");
                         return;
                     }
-                    int totalApplied = 0;
+                    // ídem ApplyAlphaPaint: ignorar celdas cerca del lago ACTUAL, el
+                    // guardado quedó grabado contra una posición/forma vieja del lago.
+                    float lakeExcludeR = MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore + 20f;
+                    int totalApplied = 0, totalSkipped = 0;
                     for (int l = 0; l < layers; l++)
                     {
                         int count = br.ReadInt32();
                         if (count == 0) continue;
                         var layer = td.GetDetailLayer(0, 0, res, res, l);
+                        int appliedHere = 0;
                         for (int i = 0; i < count; i++)
                         {
                             int z = br.ReadInt32(), x = br.ReadInt32(), v = br.ReadInt32();
+                            float wx = x / (float)res * MapLayout.MapSizeX;
+                            float wz = z / (float)res * MapLayout.MapSize;
+                            if (MapLayout.LakeDist(new Vector2(wx, wz)) < lakeExcludeR) { totalSkipped++; continue; }
                             layer[z, x] = v;
+                            appliedHere++;
                         }
-                        td.SetDetailLayer(0, 0, l, layer);
-                        totalApplied += count;
+                        if (appliedHere > 0) td.SetDetailLayer(0, 0, l, layer);
+                        totalApplied += appliedHere;
                     }
-                    if (totalApplied > 0) Debug.Log($"[TerrainPaint] Reaplicadas {totalApplied} celdas de pasto pintado a mano.");
+                    if (totalApplied > 0 || totalSkipped > 0)
+                        Debug.Log($"[TerrainPaint] Reaplicadas {totalApplied} celdas de pasto pintado a mano ({totalSkipped} cerca del lago actual ignoradas -- base cambió).");
                 }
             }
             catch (System.Exception e) { Debug.LogWarning("[TerrainPaint] No pude leer " + DetailPath + ": " + e.Message); }
@@ -222,8 +252,9 @@ namespace FolkloreArchives.MapGen
             bool any = false;
             if (File.Exists(AlphaPath))  { File.Delete(AlphaPath);  any = true; }
             if (File.Exists(DetailPath)) { File.Delete(DetailPath); any = true; }
-            if (any) { AssetDatabase.Refresh(); Debug.Log("[TerrainPaint] Guardado de texturas/pasto borrado."); }
-            else Debug.Log("[TerrainPaint] No había nada guardado.");
+            TreePersistence.ClearRemovals(); // también el borrado de árboles
+            if (any) { AssetDatabase.Refresh(); Debug.Log("[TerrainPaint] Guardado de texturas/pasto/árboles borrado."); }
+            else { AssetDatabase.Refresh(); Debug.Log("[TerrainPaint] Guardado limpiado (texturas/pasto/árboles)."); }
         }
     }
 }
