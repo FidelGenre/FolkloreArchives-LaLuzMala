@@ -181,35 +181,62 @@ namespace FolkloreArchives.MapGen
                 water2.isStatic = true;
             }
 
-            // LAGUNA DE BOSQUE (owner: lago chico cerca del campamento): plano de agua
-            // sobre la cuenca carvada.
-            var lake = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            lake.name = "Central_Lake_Water";
+            // LAGUNA DE BOSQUE (owner: lago chico cerca del campamento, forma orgánica
+            // "de poroto" en vez de óvalo prolijo).
+            BuildOrganicLakeWater(parent);
+        }
+
+        // Plano de agua en forma de ABANICO (no un Plane/óvalo fijo) que sigue la
+        // MISMA silueta orgánica (elipse + ruido) que MapLayout.LakeDist ya usa para
+        // tallar el fondo del lago -- si el agua fuera un óvalo prolijo aparte,
+        // quedaría flotando sobre tierra seca en las zonas donde el ruido achica la
+        // orilla, y se vería "cortada" en las zonas donde la agranda. Por cada ángulo
+        // alrededor del centro, busca por bisección la distancia real donde
+        // LakeDist(punto) cruza LakeWaterlineDist() (el borde real del agua, no el
+        // radio nominal) -- así el contorno del agua coincide con el terreno tallado.
+        static void BuildOrganicLakeWater(Transform parent)
+        {
+            const int N = 72;
+            float waterDCL = MapLayout.LakeWaterlineDist() - 2f; // margen chico: adentro de la playa, no justo en el borde
+            var verts = new System.Collections.Generic.List<Vector3>(N + 1);
+            var tris  = new System.Collections.Generic.List<int>(N * 3);
+            verts.Add(Vector3.zero); // centro (posición real la da el transform del GO)
+            for (int i = 0; i < N; i++)
+            {
+                float ang = i * Mathf.PI * 2f / N;
+                Vector2 dir = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang));
+                float lo = 1f, hi = MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore + 10f;
+                for (int it = 0; it < 24; it++) // LakeDist crece con la distancia a lo largo del rayo -- bisección simple
+                {
+                    float mid = (lo + hi) * 0.5f;
+                    float d = MapLayout.LakeDist(MapLayout.CentralLakeCenter + dir * mid);
+                    if (d < waterDCL) lo = mid; else hi = mid;
+                }
+                float r = (lo + hi) * 0.5f;
+                verts.Add(new Vector3(dir.x * r, 0f, dir.y * r));
+            }
+            for (int i = 0; i < N; i++)
+            {
+                int a = 1 + i, b = 1 + (i + 1) % N;
+                tris.Add(0); tris.Add(b); tris.Add(a); // orden que deja la normal mirando hacia +Y
+            }
+            var mesh = new Mesh { name = "CentralLakeWaterMesh" };
+            mesh.SetVertices(verts);
+            mesh.SetTriangles(tris, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var lake = new GameObject("Central_Lake_Water");
             lake.transform.SetParent(parent);
             lake.transform.position = new Vector3(MapLayout.CentralLakeCenter.x, MapLayout.CentralLakeLevel, MapLayout.CentralLakeCenter.y);
-            // Plane de Unity = 10x10u a escala 1 → cubrir el diámetro (radio*2) + margen.
-            // El margen ANTES era un fijo +60 (pensado para el lago gigante de 32m de
-            // radio); con la laguna chica (9m) ese margen fijo hacía que el agua se
-            // extendiera 20+m más allá de la playa PLANA (CentralLakeBeachWidth) hacia
-            // el terreno que ya sube (la orilla/ladera) -- agua "flotando" sobre tierra
-            // en pendiente. Ahora el margen es proporcional a la playa plana real, así
-            // el plano de agua no pasa de esa zona.
-            // Ovalada/rectangular en vez de cuadrada (owner: "que sea un poco mas
-            // rectangular/ovalado el lago no redondo"), y ROTADA para que el eje ancho
-            // quede perpendicular al camino al campamento en vez de mirando "de punta"
-            // hacia él (owner: "necesito que este de lado mirando al camino... rota el
-            // lago") -- mismo ángulo/proporción que MapLayout.LakeDist(), que ya
-            // deforma la cuenca carvada y la arena con este mismo criterio.
-            float lakeScale = ((MapLayout.CentralLakeRadius + MapLayout.CentralLakeBeachWidth) * 2f - 4f) / 10f;
-            lake.transform.localScale = new Vector3(lakeScale * MapLayout.LakeStretchLong, 1f, lakeScale * MapLayout.LakeStretchShort);
-            lake.transform.rotation = Quaternion.Euler(0f, MapLayout.LakeAxisYawDeg, 0f);
+            lake.AddComponent<MeshFilter>().sharedMesh = mesh;
             var lmat = BuilderUtils.Mat("lakewater", new Color(0.05f, 0.11f, 0.16f), 0.2f);
             if (lmat.HasProperty("_Cull")) lmat.SetFloat("_Cull", 0f);
             lmat.doubleSidedGI = true;
-            lake.GetComponent<Renderer>().sharedMaterial = lmat;
-            lake.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+            var mr = lake.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = lmat;
+            mr.shadowCastingMode = ShadowCastingMode.Off;
             lake.isStatic = true;
-            Object.DestroyImmediate(lake.GetComponent<Collider>());
         }
 
         static void SetupNight(Transform parent)

@@ -390,15 +390,39 @@ namespace FolkloreArchives.MapGen
             Vector2 rel = p - CentralLakeCenter;
             float u = Vector2.Dot(rel, LakeLongAxis)  / LakeStretchLong;
             float v = Vector2.Dot(rel, LakeShortAxis) / LakeStretchShort;
-            // REVERTIDO (owner: "no veo el lago ni el muelle ni la casa y encima hay
-            // montañas... tierras levantadas" después de Rebuild Terrain) — el ruido
-            // "poroto" cambiaba la altura/textura base cerca del lago, y eso rompía la
-            // gran cantidad de terreno pintado A MANO ya guardado (terrain_edits.bytes +
-            // terrain_paint_alpha/detail.bytes), que quedó grabado contra la elipse
-            // LIMPIA de acá abajo: al reaplicar esos diffs sobre una base distinta
-            // quedaban desalineados (picos, agua flotando, muelle/rancho enterrados).
-            // Vuelve a la elipse prolija para no arriesgar ese trabajo ya guardado.
-            return Mathf.Sqrt(u * u + v * v);
+            float dist = Mathf.Sqrt(u * u + v * v);
+            // Orilla ORGÁNICA (forma de "poroto", owner: referencia con una laguna
+            // irregular, no un óvalo prolijo). Reintentado después de descartar los
+            // guardados de terreno a mano que habían quedado desalineados la vez
+            // pasada (terrain_edits.bytes / terrain_paint_detail.bytes) — ya no hay
+            // diffs viejos con los que este cambio de base pueda chocar. Ruido de baja
+            // frecuencia centrado en el centro de la laguna (no en coordenadas de mundo
+            // crudas, para que el bulto quede pegado a la laguna sin importar dónde
+            // esté el centro), agranda o achica el radio EFECTIVO según el ángulo. Se
+            // usa en TODO lo que llama a LakeDist (altura, arena, barro, árboles) Y en
+            // EnvironmentBuilder.BuildOrganicLakeWater (el plano de agua sigue esta
+            // MISMA silueta, no un óvalo aparte), así queda consistente en todos lados.
+            float bulgeNoise = Mathf.PerlinNoise(rel.x * 0.05f + 41f, rel.y * 0.05f + 17f);
+            float bulge = Mathf.Lerp(0.78f, 1.28f, bulgeNoise);
+            return dist / bulge;
+        }
+        // dCL (LakeDist) donde la altura cruza CentralLakeLevel -- el borde REAL del
+        // agua (no el radio nominal, que es solo el fondo carvado). Se invierte el
+        // mismo SmoothStep que usa TerrainBuilder para la rampa fondo->playa, así
+        // EnvironmentBuilder pueda construir el plano de agua para que coincida
+        // exactamente con la silueta orgánica que ya talla el terreno.
+        public static float LakeWaterlineDist()
+        {
+            float k = (CentralLakeLevel - CentralLakeBed) / (CentralLakeLevel + 1f - CentralLakeBed);
+            float t = 0.5f;
+            for (int i = 0; i < 8; i++)
+            {
+                float f = 3f * t * t - 2f * t * t * t - k;
+                float df = 6f * t - 6f * t * t;
+                if (Mathf.Abs(df) > 1e-5f) t -= f / df;
+                t = Mathf.Clamp01(t);
+            }
+            return CentralLakeRadius + CentralLakeBeachWidth * t;
         }
         static readonly Vector2 LakeApproachDir = (Campsite - LakeMountain).normalized;
         // true = p cae en la cuña que mira hacia el campamento (por donde llega el
