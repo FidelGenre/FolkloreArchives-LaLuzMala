@@ -390,7 +390,18 @@ namespace FolkloreArchives.MapGen
             Vector2 rel = p - CentralLakeCenter;
             float u = Vector2.Dot(rel, LakeLongAxis)  / LakeStretchLong;
             float v = Vector2.Dot(rel, LakeShortAxis) / LakeStretchShort;
-            return Mathf.Sqrt(u * u + v * v);
+            float dist = Mathf.Sqrt(u * u + v * v);
+            // Orilla ORGÁNICA/irregular en vez de óvalo perfecto (owner: referencia con
+            // una laguna en forma de "poroto", que se abulta de un lado y se achica del
+            // otro, no una elipse prolija). Ruido de baja frecuencia (centrado en el
+            // centro de la laguna, no en coordenadas de mundo crudas, para que el bulto
+            // quede pegado a la laguna sin importar dónde esté el centro) que agranda o
+            // achica el radio EFECTIVO según el ángulo -- se usa en TODO lo que ya
+            // llama a LakeDist (altura, arena, barro, árboles), así la forma orgánica
+            // queda consistente en todos lados a la vez.
+            float bulgeNoise = Mathf.PerlinNoise(rel.x * 0.05f + 41f, rel.y * 0.05f + 17f);
+            float bulge = Mathf.Lerp(0.78f, 1.28f, bulgeNoise);
+            return dist / bulge;
         }
         static readonly Vector2 LakeApproachDir = (Campsite - LakeMountain).normalized;
         // true = p cae en la cuña que mira hacia el campamento (por donde llega el

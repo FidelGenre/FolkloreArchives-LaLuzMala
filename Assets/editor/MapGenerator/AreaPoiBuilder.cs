@@ -244,6 +244,79 @@ namespace FolkloreArchives.MapGen
                     new Vector3(0.06f, 1.2f, 0.06f), Reed, new Vector3(Random.Range(-8f, 8f), 0f, Random.Range(-8f, 8f)));
                 DestroyCol(reed);
             }
+
+            // ---- rancho de pescador abandonado + bote + redes (owner: referencia con
+            // laguna+muelle+casita chica, "que decis? que le agregarias?" -> bote a
+            // remo + redes de pesca) -- todo alrededor del muelle, del lado de tierra.
+            // OJO: BuilderUtils.Prim fija pos/euler en espacio MUNDO (no local al padre),
+            // igual que las "Tabla"/"Pilote" del muelle de más arriba -- por eso acá
+            // TODO se arma sumando toLake/perpToLake directo (no rotando el Transform
+            // del grupo después, que no tendría ningún efecto visual sobre los hijos).
+            Vector2 perpToLake = new Vector2(-toLake.y, toLake.x);
+
+            // rancho: una sola pieza, chico, a un costado del muelle y un poco tierra
+            // adentro (no tapa el agua ni el muelle).
+            Vector2 shackXZ = MapLayout.LakeShore + perpToLake * 5f - toLake * 2f;
+            Vector3 shackP = BuilderUtils.Ground(t, shackXZ.x, shackXZ.y);
+            var shack = BuilderUtils.Group(g, "RanchoPescador", shackP);
+            BuilderUtils.Label(shack, "RANCHO DEL PESCADOR", shackP + Vector3.up * 4.5f);
+            Vector3 shackFwd = new Vector3(toLake.x, 0f, toLake.y);
+            Vector3 shackRight = new Vector3(perpToLake.x, 0f, perpToLake.y);
+            BuilderUtils.Prim(PrimitiveType.Cube, "Paredes", shack, shackP + Vector3.up * 1.1f,
+                new Vector3(2.4f, 2.2f, 2.1f), Wood, new Vector3(0f, dockYaw, 0f));
+            BuilderUtils.Prim(PrimitiveType.Cube, "TechoA", shack, shackP + Vector3.up * 2.35f,
+                new Vector3(1.5f, 0.15f, 2.4f), MetalDark, new Vector3(0f, dockYaw, 22f));
+            BuilderUtils.Prim(PrimitiveType.Cube, "TechoB", shack, shackP + Vector3.up * 2.35f,
+                new Vector3(1.5f, 0.15f, 2.4f), MetalDark, new Vector3(0f, dockYaw, -22f));
+            // chimenea torcida (abandonado, no sale humo) -- esquina del techo, en la
+            // base (fwd,right) del rancho para que quede pegada al techo sea cual sea dockYaw.
+            Vector3 chimP = shackP + shackRight * 0.7f + shackFwd * 0.6f + Vector3.up * 2.7f;
+            BuilderUtils.Prim(PrimitiveType.Cube, "Chimenea", shack, chimP,
+                new Vector3(0.28f, 0.9f, 0.28f), StoneGrey, new Vector3(6f, dockYaw + 4f, 0f));
+            // puerta entornada (más oscura, sin marco -- nivel de detalle del resto del archivo)
+            Vector3 doorP = shackP + shackRight * 0.5f + shackFwd * 1.06f + Vector3.up * 0.75f;
+            BuilderUtils.Prim(PrimitiveType.Cube, "Puerta", shack, doorP,
+                new Vector3(0.7f, 1.5f, 0.06f), MetalDark, new Vector3(0f, dockYaw + 18f, 0f));
+
+            // bote a remo volcado/varado en la orilla, cerca del muelle
+            Vector2 boatXZ = MapLayout.LakeShore + perpToLake * 2.5f + toLake * 1f;
+            Vector3 boatP = BuilderUtils.Ground(t, boatXZ.x, boatXZ.y);
+            var boat = BuilderUtils.Group(g, "BoteVarado", boatP);
+            float boatYaw = dockYaw + 25f; // no mirando derecho al muelle, un poco de costado
+            float boatYawRad = boatYaw * Mathf.Deg2Rad;
+            Vector3 boatFwd = new Vector3(Mathf.Sin(boatYawRad), 0f, Mathf.Cos(boatYawRad));
+            Vector3 boatRight = new Vector3(boatFwd.z, 0f, -boatFwd.x);
+            BuilderUtils.Prim(PrimitiveType.Cube, "Casco", boat, boatP + Vector3.up * 0.28f,
+                new Vector3(0.8f, 0.35f, 2.3f), Wood, new Vector3(8f, boatYaw, 0f)); // apenas volcado de costado
+            BuilderUtils.Prim(PrimitiveType.Cube, "Proa", boat, boatP + boatFwd * 1.15f + Vector3.up * 0.3f,
+                new Vector3(0.55f, 0.32f, 0.5f), Wood, new Vector3(0f, boatYaw + 45f, 0f)); // punta angosta
+            for (int i = 0; i < 2; i++)
+            {
+                Vector3 oarP = boatP + boatRight * (-0.3f + i * 0.6f) + boatFwd * (-0.4f + i * 0.3f) + Vector3.up * 0.42f;
+                BuilderUtils.Prim(PrimitiveType.Cylinder, "Remo" + i, boat, oarP,
+                    new Vector3(0.05f, 1.1f, 0.05f), Wood, new Vector3(78f, boatYaw + 20f + i * 30f, 0f));
+            }
+
+            // redes de pesca: pila enredada en el piso al lado del rancho
+            Vector2 netXZ = MapLayout.LakeShore + perpToLake * 6.5f - toLake * 3.5f;
+            Vector3 netP = BuilderUtils.Ground(t, netXZ.x, netXZ.y);
+            var nets = BuilderUtils.Group(g, "RedesDePesca", netP);
+            for (int i = 0; i < 10; i++)
+            {
+                Vector2 o = Random.insideUnitCircle * 0.9f;
+                var strand = BuilderUtils.Prim(PrimitiveType.Cylinder, "Hebra" + i, nets,
+                    netP + new Vector3(o.x, 0.05f + i * 0.01f, o.y), new Vector3(0.025f, 0.9f, 0.025f), Rope,
+                    new Vector3(85f + Random.Range(-6f, 6f), Random.Range(0f, 360f), 0f));
+                DestroyCol(strand);
+            }
+            // un par de flotadores (boyas) arriba de la pila
+            for (int i = 0; i < 3; i++)
+            {
+                var buoy = BuilderUtils.Prim(PrimitiveType.Sphere, "Boya" + i, nets,
+                    netP + new Vector3(Random.Range(-0.6f, 0.6f), 0.22f, Random.Range(-0.6f, 0.6f)),
+                    Vector3.one * 0.22f, FlagRed);
+                DestroyCol(buoy);
+            }
             return g;
         }
 
