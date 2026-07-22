@@ -132,6 +132,8 @@ namespace FolkloreArchives.MapGen
             ScatterBushes(bushProtoStart, bushProtoCount, instances);
             td.SetTreeInstances(instances.ToArray(), true);
             Debug.Log("Forest: " + instances.Count + " tree/bush instances planted.");
+            TreePersistence.CaptureBaseline(td);   // set procedural completo (para diffear borrados)
+            TreePersistence.ApplyTreeRemovals(td); // re-aplica los árboles borrados a mano (Save Terrain Paint)
             SetupGrass(td);
             TerrainPaintPersistence.ApplyDetailPaint(td); // pasto pintado a mano (Save Terrain Paint)
             }
@@ -491,7 +493,10 @@ namespace FolkloreArchives.MapGen
                     // owner: "alrededor del lado de el camino deja mas espacio que de
                     // los otros lados" -- subido el extra de ese lado (10->18) para que
                     // se note más la diferencia con el resto, que sigue pegado a la orilla.
-                    float lakeTreeClear = MapLayout.LakeFacesApproach(p) ? MapLayout.CentralLakeBeachWidth + 18f : MapLayout.CentralLakeBeachWidth;
+                    // Subido otra vez (18->26, owner: "del lado del camino despeja un
+                    // poquito de arboles asi ponemos la casa ahi a la derecha del
+                    // camino") para dejar lugar real a una casa que va a poner a mano.
+                    float lakeTreeClear = MapLayout.LakeFacesApproach(p) ? MapLayout.CentralLakeBeachWidth + 26f : MapLayout.CentralLakeBeachWidth;
                     if (MapLayout.LakeDist(p) < MapLayout.CentralLakeRadius + lakeTreeClear) continue;
                     // montañas del lago (CentralPeaks): despeje por proximidad DESACTIVADO
                     // junto con el asset de montaña (MapGenerator.cs — owner: "quitalas").
