@@ -532,6 +532,7 @@ namespace FolkloreArchives.MapGen
                     // árboles normales (incluido el anillo de pinos altos de la laguna).
                     if (Vector2.Distance(p, MapLayout.Estancia) < 16f) continue;     // casco de estancia
                     if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;     // corrales
+                    if (Vector2.Distance(p, MapLayout.HuntingField) < 6f) continue;  // base de la torre de caza
                     if (MapLayout.InYpfPad(p)) continue;                             // lote de la estación YPF
 
                     // anillo de bosque denso alrededor de la laguna chica (owner: "con
@@ -611,7 +612,9 @@ namespace FolkloreArchives.MapGen
                     // agua). Pisa el valor de arriba (incluso el isWestPine bajo, que es
                     // a propósito más chico en el resto del campo) SOLO en el anillo de la
                     // laguna -- no toca la altura de pinos en ningún otro lado del campo.
-                    if (nearPondRing && !isCampoTree) s = Random.Range(1.4f, 2.0f);
+                    // owner: "mas altos los pinos del fondo" (subido otra vez, 1.4-2.0 no
+                    // alcanzaba)
+                    if (nearPondRing && !isCampoTree) s = Random.Range(1.9f, 2.6f);
                     float tint = Random.Range(0.72f, 1.08f); // breaks the "identical clones" look
                     trees.Add(new TreeInstance
                     {

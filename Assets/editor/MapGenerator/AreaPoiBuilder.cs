@@ -35,6 +35,9 @@ namespace FolkloreArchives.MapGen
         // rancho del pescador real (owner: "me gusta esta", Sketchfab "PSX Abandoned
         // House", CC-BY) -- reemplaza las primitivas procedurales de antes.
         const string DirHouseAbandoned = "Assets/ExternalAssets/AbandonedHouse";
+        // torre/mirador de caza (owner: "Campo de Caza", referencia Sketchfab "Watch
+        // tower (remastered, wide)").
+        const string DirHuntingTower = "Assets/ExternalAssets/HuntingTower";
         const string DirDeadTree = "Assets/ExternalAssets/DeadTree";
         const string DirBarn     = "Assets/ExternalAssets/BarnShed";
         const string DirFence    = "Assets/ExternalAssets/ChainFence";
@@ -84,6 +87,7 @@ namespace FolkloreArchives.MapGen
             Reg(YpfStation(root, t));
             Reg(Estancia(root, t));
             Reg(Capilla(root, t));
+            Reg(HuntingFieldArea(root, t));
 
             // set-dressing fijo → static batching (menos draw calls). Excepto luces.
             BuilderUtils.MarkStaticRecursive(root);
@@ -556,6 +560,42 @@ namespace FolkloreArchives.MapGen
             return g;
         }
 
+        // ---------------- CAMPO DE CAZA (torre/mirador) ----------------
+        // owner: "que deberia haber... torre como hito visual + 1-2 detalles
+        // inquietantes cerca" -- por ahora solo la torre (el owner todavía no eligió
+        // los detalles). Campo ABIERTO: no llenar de objetos, solo el hito central.
+        static Transform HuntingFieldArea(Transform parent, Terrain t)
+        {
+            var p = BuilderUtils.Ground(t, MapLayout.HuntingField);
+            var g = BuilderUtils.Group(parent, "CampoDeCaza", p);
+            BuilderUtils.Label(g, "CAMPO DE CAZA", p + Vector3.up * 9f);
+
+            // torre real (HuntingTower/, Sketchfab "Watch tower remastered wide") o,
+            // si todavía no está descargada, una torre procedural simple (mismo
+            // criterio que el molino de la Estepa: 4 patas + cruces + plataforma).
+            var towerInst = SpawnModel(DirHuntingTower, g, p, 7f, Random.Range(0f, 360f), true, "TorreDeCaza");
+            if (towerInst != null) FixTowerMaterial(towerInst);
+            else
+            {
+                float towerH = 6f;
+                for (int i = 0; i < 4; i++)
+                {
+                    float ang = i * 90f * Mathf.Deg2Rad + 45f * Mathf.Deg2Rad;
+                    Vector3 baseP = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 1.8f;
+                    Vector3 topP  = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 1.4f + Vector3.up * towerH;
+                    Beam(g, baseP, topP, 0.10f, Wood);
+                }
+                RingRungs(g, p, 1.6f, 2.2f, Wood);
+                BuilderUtils.Prim(PrimitiveType.Cube, "Plataforma", g, p + Vector3.up * (towerH + 0.15f),
+                    new Vector3(2.4f, 0.15f, 2.4f), Wood);
+                BuilderUtils.Prim(PrimitiveType.Cube, "Baranda1", g, p + Vector3.up * (towerH + 0.9f) + new Vector3(1.2f, 0f, 0f),
+                    new Vector3(0.08f, 0.8f, 2.4f), Wood);
+                BuilderUtils.Prim(PrimitiveType.Cube, "Baranda2", g, p + Vector3.up * (towerH + 0.9f) + new Vector3(-1.2f, 0f, 0f),
+                    new Vector3(0.08f, 0.8f, 2.4f), Wood);
+            }
+            return g;
+        }
+
         // ================= helpers =================
 
         // punto sobre el hombro NORTE de la ruta (para POIs al borde del asfalto)
@@ -728,6 +768,29 @@ namespace FolkloreArchives.MapGen
                     outM[i] = match != null ? match : src[i];
                 }
                 r.sharedMaterials = outM;
+            }
+        }
+
+        // La torre de caza (Sketchfab, malla única) -- mismo criterio simple que el
+        // wharf: solo BaseColor, sin mapear normal/AO.
+        static Material _towerMat;
+        static void FixTowerMaterial(GameObject inst)
+        {
+            if (_towerMat == null)
+            {
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DirHuntingTower + "/textures/Watch_tower_Base_color.png");
+                _towerMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (tex != null && _towerMat.HasProperty("_BaseMap")) _towerMat.SetTexture("_BaseMap", tex);
+                if (_towerMat.HasProperty("_Smoothness")) _towerMat.SetFloat("_Smoothness", 0.1f);
+                string matPath = "Assets/Settings/HuntingTower.mat";
+                AssetDatabase.DeleteAsset(matPath);
+                AssetDatabase.CreateAsset(_towerMat, matPath);
+            }
+            foreach (var r in inst.GetComponentsInChildren<Renderer>())
+            {
+                var arr = new Material[r.sharedMaterials.Length];
+                for (int k = 0; k < arr.Length; k++) arr[k] = _towerMat;
+                r.sharedMaterials = arr;
             }
         }
 
