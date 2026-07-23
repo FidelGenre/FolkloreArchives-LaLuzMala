@@ -9,6 +9,7 @@
 //  El Familiar, etc.) se agrega después.
 //  Cada lugar deja su NOMBRE flotando encima (BuilderUtils.Label).
 // ============================================================
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -31,6 +32,9 @@ namespace FolkloreArchives.MapGen
         // FBX, sin piezas sueltas con transform propio), mucho más simple/confiable.
         const string DirDock     = "Assets/ExternalAssets/DockWharf";
         const string DirDockTex  = "Assets/ExternalAssets/DockWharf/textures/01_DefaultMaterial_BaseColor.png";
+        // rancho del pescador real (owner: "me gusta esta", Sketchfab "PSX Abandoned
+        // House", CC-BY) -- reemplaza las primitivas procedurales de antes.
+        const string DirHouseAbandoned = "Assets/ExternalAssets/AbandonedHouse";
         const string DirDeadTree = "Assets/ExternalAssets/DeadTree";
         const string DirBarn     = "Assets/ExternalAssets/BarnShed";
         const string DirFence    = "Assets/ExternalAssets/ChainFence";
@@ -243,28 +247,38 @@ namespace FolkloreArchives.MapGen
             Vector2 perpToLake = new Vector2(-toLake.y, toLake.x);
 
             // rancho: una sola pieza, chico, a un costado del muelle y un poco tierra
-            // adentro (no tapa el agua ni el muelle).
+            // adentro (no tapa el agua ni el muelle). Modelo real (AbandonedHouse/,
+            // PSX, Sketchfab) si está descargado, si no la versión procedural de antes.
             Vector2 shackXZ = MapLayout.LakeShore + perpToLake * 5f - toLake * 2f;
             Vector3 shackP = BuilderUtils.Ground(t, shackXZ.x, shackXZ.y);
-            var shack = BuilderUtils.Group(g, "RanchoPescador", shackP);
-            BuilderUtils.Label(shack, "RANCHO DEL PESCADOR", shackP + Vector3.up * 4.5f);
-            Vector3 shackFwd = new Vector3(toLake.x, 0f, toLake.y);
-            Vector3 shackRight = new Vector3(perpToLake.x, 0f, perpToLake.y);
-            BuilderUtils.Prim(PrimitiveType.Cube, "Paredes", shack, shackP + Vector3.up * 1.1f,
-                new Vector3(2.4f, 2.2f, 2.1f), Wood, new Vector3(0f, dockYaw, 0f));
-            BuilderUtils.Prim(PrimitiveType.Cube, "TechoA", shack, shackP + Vector3.up * 2.35f,
-                new Vector3(1.5f, 0.15f, 2.4f), MetalDark, new Vector3(0f, dockYaw, 22f));
-            BuilderUtils.Prim(PrimitiveType.Cube, "TechoB", shack, shackP + Vector3.up * 2.35f,
-                new Vector3(1.5f, 0.15f, 2.4f), MetalDark, new Vector3(0f, dockYaw, -22f));
-            // chimenea torcida (abandonado, no sale humo) -- esquina del techo, en la
-            // base (fwd,right) del rancho para que quede pegada al techo sea cual sea dockYaw.
-            Vector3 chimP = shackP + shackRight * 0.7f + shackFwd * 0.6f + Vector3.up * 2.7f;
-            BuilderUtils.Prim(PrimitiveType.Cube, "Chimenea", shack, chimP,
-                new Vector3(0.28f, 0.9f, 0.28f), StoneGrey, new Vector3(6f, dockYaw + 4f, 0f));
-            // puerta entornada (más oscura, sin marco -- nivel de detalle del resto del archivo)
-            Vector3 doorP = shackP + shackRight * 0.5f + shackFwd * 1.06f + Vector3.up * 0.75f;
-            BuilderUtils.Prim(PrimitiveType.Cube, "Puerta", shack, doorP,
-                new Vector3(0.7f, 1.5f, 0.06f), MetalDark, new Vector3(0f, dockYaw + 18f, 0f));
+            var shackInst = SpawnModel(DirHouseAbandoned, g, shackP, 4.5f, dockYaw, false, "RanchoPescador");
+            if (shackInst != null)
+            {
+                FixHouseMaterial(shackInst);
+                BuilderUtils.Label(shackInst.transform, "RANCHO DEL PESCADOR", shackP + Vector3.up * 4.5f);
+            }
+            else
+            {
+                var shack = BuilderUtils.Group(g, "RanchoPescador", shackP);
+                BuilderUtils.Label(shack, "RANCHO DEL PESCADOR", shackP + Vector3.up * 4.5f);
+                Vector3 shackFwd = new Vector3(toLake.x, 0f, toLake.y);
+                Vector3 shackRight = new Vector3(perpToLake.x, 0f, perpToLake.y);
+                BuilderUtils.Prim(PrimitiveType.Cube, "Paredes", shack, shackP + Vector3.up * 1.1f,
+                    new Vector3(2.4f, 2.2f, 2.1f), Wood, new Vector3(0f, dockYaw, 0f));
+                BuilderUtils.Prim(PrimitiveType.Cube, "TechoA", shack, shackP + Vector3.up * 2.35f,
+                    new Vector3(1.5f, 0.15f, 2.4f), MetalDark, new Vector3(0f, dockYaw, 22f));
+                BuilderUtils.Prim(PrimitiveType.Cube, "TechoB", shack, shackP + Vector3.up * 2.35f,
+                    new Vector3(1.5f, 0.15f, 2.4f), MetalDark, new Vector3(0f, dockYaw, -22f));
+                // chimenea torcida (abandonado, no sale humo) -- esquina del techo, en la
+                // base (fwd,right) del rancho para que quede pegada al techo sea cual sea dockYaw.
+                Vector3 chimP = shackP + shackRight * 0.7f + shackFwd * 0.6f + Vector3.up * 2.7f;
+                BuilderUtils.Prim(PrimitiveType.Cube, "Chimenea", shack, chimP,
+                    new Vector3(0.28f, 0.9f, 0.28f), StoneGrey, new Vector3(6f, dockYaw + 4f, 0f));
+                // puerta entornada (más oscura, sin marco -- nivel de detalle del resto del archivo)
+                Vector3 doorP = shackP + shackRight * 0.5f + shackFwd * 1.06f + Vector3.up * 0.75f;
+                BuilderUtils.Prim(PrimitiveType.Cube, "Puerta", shack, doorP,
+                    new Vector3(0.7f, 1.5f, 0.06f), MetalDark, new Vector3(0f, dockYaw + 18f, 0f));
+            }
 
             // bote a remo volcado/varado en la orilla, cerca del muelle
             Vector2 boatXZ = MapLayout.LakeShore + perpToLake * 2.5f + toLake * 1f;
@@ -673,6 +687,48 @@ namespace FolkloreArchives.MapGen
                 if (YpfClutter.Contains(tr.name)) { tr.gameObject.SetActive(false); hid++; }
             }
             Debug.Log($"<color=cyan>[YPF] {hid} objetos sueltos/piso propio ocultados del modelo.</color>");
+        }
+
+        // El rancho de Sketchfab (Blender, malla única "House" con 6 slots de
+        // material: Wood/Stone/Brick/Roof/Wood2/DarkWood) -- Standard/PBR, no URP.
+        // Empareja por NOMBRE de material (no por índice de slot -- más robusto,
+        // no depende del orden en que Unity importó los slots). IMPORTANTE: los
+        // nombres más largos van ANTES en la lista ("DarkWood"/"Wood2" antes que
+        // "Wood") porque el match es por substring -- si no, "DarkWood" matchearía
+        // "Wood" primero y quedaría con la textura equivocada.
+        static readonly string[] HouseMatNames = { "DarkWood", "Wood2", "Wood", "Stone", "Brick", "Roof" };
+        static Dictionary<string, Material> _houseMats;
+        static void FixHouseMaterial(GameObject inst)
+        {
+            if (_houseMats == null)
+            {
+                _houseMats = new Dictionary<string, Material>();
+                foreach (var n in HouseMatNames)
+                {
+                    var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DirHouseAbandoned + "/textures/" + n + ".jpg");
+                    var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+                    if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+                    string matPath = "Assets/Settings/House_" + n + ".mat";
+                    AssetDatabase.DeleteAsset(matPath);
+                    AssetDatabase.CreateAsset(mat, matPath);
+                    _houseMats[n] = mat;
+                }
+            }
+            foreach (var r in inst.GetComponentsInChildren<Renderer>())
+            {
+                var src = r.sharedMaterials;
+                var outM = new Material[src.Length];
+                for (int i = 0; i < src.Length; i++)
+                {
+                    string baseName = src[i] != null ? src[i].name : "";
+                    Material match = null;
+                    foreach (var n in HouseMatNames)
+                        if (baseName.IndexOf(n, System.StringComparison.OrdinalIgnoreCase) >= 0) { match = _houseMats[n]; break; }
+                    outM[i] = match != null ? match : src[i];
+                }
+                r.sharedMaterials = outM;
+            }
         }
 
         // El wharf de Sketchfab (Cinema 4D, malla única) trae un material
