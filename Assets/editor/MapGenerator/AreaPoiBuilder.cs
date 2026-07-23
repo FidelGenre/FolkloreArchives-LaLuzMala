@@ -740,7 +740,13 @@ namespace FolkloreArchives.MapGen
         static Dictionary<string, Material> _houseMats;
         static void FixHouseMaterial(GameObject inst)
         {
-            if (_houseMats == null)
+            // Reintentar si el primer Generate corrió ANTES de que Unity terminara de
+            // importar las texturas recién copiadas (owner: "no la colocaste con
+            // texturas" -- quedaba cacheado en blanco para el resto de la sesión de
+            // Editor). Si falta alguna textura todavía, se reconstruye.
+            bool missing = _houseMats == null;
+            if (!missing) foreach (var m in _houseMats.Values) if (m == null || m.mainTexture == null) { missing = true; break; }
+            if (missing)
             {
                 _houseMats = new Dictionary<string, Material>();
                 foreach (var n in HouseMatNames)
@@ -776,7 +782,9 @@ namespace FolkloreArchives.MapGen
         static Material _towerMat;
         static void FixTowerMaterial(GameObject inst)
         {
-            if (_towerMat == null)
+            // Reintentar si el primer Generate corrió antes de que Unity terminara de
+            // importar la textura (mismo motivo que FixHouseMaterial).
+            if (_towerMat == null || _towerMat.mainTexture == null)
             {
                 var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DirHuntingTower + "/textures/Watch_tower_Base_color.png");
                 _towerMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -800,7 +808,9 @@ namespace FolkloreArchives.MapGen
         static Material _dockMat;
         static void FixDockMaterial(GameObject inst)
         {
-            if (_dockMat == null)
+            // Reintentar si el primer Generate corrió antes de que Unity terminara de
+            // importar la textura (mismo motivo que FixHouseMaterial).
+            if (_dockMat == null || _dockMat.mainTexture == null)
             {
                 var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DirDockTex);
                 _dockMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
