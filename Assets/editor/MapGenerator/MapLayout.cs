@@ -373,7 +373,10 @@ namespace FolkloreArchives.MapGen
         // Radio final (owner: "era demasiado grande dejalo en 23 o 23.5", después de
         // probar 9, 6 y 25) -- beachWidth/shore NO se tocaron, solo el radio del agua.
         public static readonly Vector2 CentralLakeCenter = LakeMountain; // = "LAGUNA" (antes bosque quemado)
-        public const float CentralLakeRadius = 23.5f;
+        // Achicado un poco más (23.5->20, owner: "deberia achicar un poco el rio no?"
+        // comparando con la referencia de Fears to Fathom -- ahí el agua ocupa menos
+        // cuadro que los pinos de fondo). BeachWidth/Shore sin tocar.
+        public const float CentralLakeRadius = 20f;
         public const float CentralLakeLevel  = 22f;   // altura del plano de agua (sin tocar, ya afinada)
         public const float CentralLakeBed    = 14f;   // fondo carvado (sin tocar, misma profundidad de agua)
         public const float CentralLakeBeachWidth = 6f; // franja plana de playa junto al agua

@@ -603,6 +603,13 @@ namespace FolkloreArchives.MapGen
                             : MapLayout.UsePsxTrees ? Random.Range(0.7f, 1.35f)          // PSX: escala más contenida (no gigantes)
                             : MapLayout.UseLowPolyTrees ? Random.Range(0.55f, 2.0f)
                             : Random.Range(0.4f, 1.6f);
+                    // anillo de pinos ALTOS alrededor de la laguna (owner: ref. Fears to
+                    // Fathom, "los pinos de fondo del mismo sean mas altos... asi se genera
+                    // ese ambiente" -- silueta de pinos altos entre la niebla detrás del
+                    // agua). Pisa el valor de arriba (incluso el isWestPine bajo, que es
+                    // a propósito más chico en el resto del campo) SOLO en el anillo de la
+                    // laguna -- no toca la altura de pinos en ningún otro lado del campo.
+                    if (nearPondRing && !isCampoTree) s = Random.Range(1.4f, 2.0f);
                     float tint = Random.Range(0.72f, 1.08f); // breaks the "identical clones" look
                     trees.Add(new TreeInstance
                     {
