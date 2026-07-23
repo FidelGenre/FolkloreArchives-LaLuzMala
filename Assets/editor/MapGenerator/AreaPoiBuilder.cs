@@ -177,34 +177,13 @@ namespace FolkloreArchives.MapGen
         // ---------------- BOSQUE QUEMADO ----------------
         static Transform BurntForestArea(Transform parent, Terrain t)
         {
-            var p = BuilderUtils.Ground(t, MapLayout.BurntForest);
-            var g = BuilderUtils.Group(parent, "BosqueQuemado", p);
-            BuilderUtils.Label(g, "BOSQUE QUEMADO", p + Vector3.up * 8f);
-
-            // árbol muerto real (DeadTree/) esparcido, o troncos negros procedurales
-            var deadSrc = FindModelInFolder(DirDeadTree);
-            for (int i = 0; i < 22; i++)
-            {
-                Vector2 o = Random.insideUnitCircle * 16f;
-                Vector3 rp = BuilderUtils.Ground(t, MapLayout.BurntForest.x + o.x, MapLayout.BurntForest.y + o.y);
-                float h = Random.Range(3.5f, 6.5f);
-                if (deadSrc != null)
-                {
-                    SpawnModelFrom(deadSrc, g, rp, h, Random.Range(0f, 360f), true, "ArbolMuerto" + i);
-                    continue;
-                }
-                float lean = Random.Range(0f, 14f);
-                // tronco negro cónico (sin follaje) — cilindro fino y alto
-                var trunk = BuilderUtils.Prim(PrimitiveType.Cylinder, "TroncoQuemado" + i, g,
-                    rp + Vector3.up * h * 0.5f, new Vector3(Random.Range(0.2f, 0.4f), h * 0.5f, Random.Range(0.2f, 0.4f)),
-                    Burnt, new Vector3(lean, Random.Range(0f, 360f), lean * 0.5f));
-                // un par de ramas peladas
-                if (Random.value > 0.5f)
-                    BuilderUtils.Prim(PrimitiveType.Cylinder, "Rama", g, rp + Vector3.up * (h * 0.8f),
-                        new Vector3(0.08f, Random.Range(0.6f, 1.2f), 0.08f), Burnt,
-                        new Vector3(Random.Range(40f, 80f), Random.Range(0f, 360f), 0f));
-            }
-            return g;
+            // DESACTIVADO (owner: "saca ese bosque quemado", viendo la laguna con los
+            // pinos de fondo nuevos -- los troncos negros quedaban justo detrás del
+            // agua, tapando el bosque). Grupo vacío (mismo patrón que Estancia) para
+            // no tocar el conteo de Reg()/PersistCount. El área queda libre para que
+            // ForestBuilder la llene de árboles normales (ver el "quemado: solo
+            // troncos negros" en ForestBuilder, también sacado).
+            return BuilderUtils.Group(parent, "BosqueQuemado", Vector3.zero);
         }
 
         // ---------------- ORILLA DEL LAGO + MUELLE ----------------

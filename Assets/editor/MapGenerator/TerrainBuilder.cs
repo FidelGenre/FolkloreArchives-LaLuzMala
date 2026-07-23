@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 74;
+        const int SplatVersion = 75;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -486,9 +486,8 @@ namespace FolkloreArchives.MapGen
                     if (dEsta < 22f) dirt = Mathf.Max(dirt, 0.8f * (1f - Mathf.Clamp01((dEsta - 13f) / 9f)));
                     float dCor = Vector2.Distance(p, MapLayout.Corrales);
                     if (dCor < 15f) dirt = Mathf.Max(dirt, 0.85f * (1f - Mathf.Clamp01((dCor - 8f) / 7f)));
-                    // BOSQUE QUEMADO: CENIZA (capa ash nueva, gris muy oscuro)
-                    float dBur = Vector2.Distance(p, MapLayout.BurntForest);
-                    if (dBur < 24f) ash = Mathf.Max(ash, 0.9f * (1f - Mathf.Clamp01((dBur - 14f) / 10f)));
+                    // BOSQUE QUEMADO: sacado (owner: "saca ese bosque quemado") -- ya no
+                    // pinta ceniza ahí, piso de bosque normal como el resto.
 
                     // river banks
                     float dr = BuilderUtils.DistToPolyline(p, MapLayout.River);
