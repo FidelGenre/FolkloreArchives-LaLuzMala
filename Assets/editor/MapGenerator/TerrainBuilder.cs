@@ -16,7 +16,7 @@ namespace FolkloreArchives.MapGen
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
-        const int SplatVersion = 75;
+        const int SplatVersion = 76;
         const string SplatVersionKey = "Folklore_SplatVersion";
 
         public static Terrain Build(Transform parent)
@@ -469,9 +469,7 @@ namespace FolkloreArchives.MapGen
                     // ESTEPA: pasto seco pajizo (capa dry) — grande y abierta
                     float dEst = Vector2.Distance(p, MapLayout.EstepaCenter);
                     if (dEst < 46f) dry = Mathf.Max(dry, 0.92f * (1f - Mathf.Clamp01((dEst - 28f) / 18f)));
-                    // MALLÍN: barro oscuro mojado (capa dirt)
-                    float dMal = Vector2.Distance(p, MapLayout.Mallin);
-                    if (dMal < 24f) dirt = Mathf.Max(dirt, 0.95f * (1f - Mathf.Clamp01((dMal - 13f) / 11f)));
+                    // MALLÍN: sacado (owner: "quita el mallin") -- ya no pinta barro ahí.
                     // ZONA DEL MUELLE (LakeShore, del lado del camino): ANTES pintaba
                     // grava/canto rodado (capa sand) acá -- ese parche quedaba
                     // literalmente en la cuña abierta que mira al camino, así que aunque

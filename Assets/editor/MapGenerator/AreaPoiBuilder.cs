@@ -154,39 +154,12 @@ namespace FolkloreArchives.MapGen
         // ---------------- MALLÍN (pantano) ----------------
         static Transform Mallin(Transform parent, Terrain t)
         {
-            var p = BuilderUtils.Ground(t, MapLayout.Mallin);
-            var g = BuilderUtils.Group(parent, "Mallin", p);
-            BuilderUtils.Label(g, "MALLIN", p + Vector3.up * 7f);
-
-            // charco de agua estancada oscura (quad plano casi a ras del piso)
-            BuilderUtils.Prim(PrimitiveType.Cube, "AguaEstancada", g, p + Vector3.up * 0.03f,
-                new Vector3(22f, 0.06f, 16f), DarkWater);
-            // juncos / totora (matas de tiras verdes)
-            for (int i = 0; i < 60; i++)
-            {
-                Vector2 o = Random.insideUnitCircle * 11f;
-                Vector3 rp = BuilderUtils.Ground(t, MapLayout.Mallin.x + o.x, MapLayout.Mallin.y + o.y);
-                float h = Random.Range(0.9f, 1.7f);
-                var reed = BuilderUtils.Prim(PrimitiveType.Cube, "Junco", g, rp + Vector3.up * h * 0.5f,
-                    new Vector3(0.06f, h, 0.06f), Reed, new Vector3(Random.Range(-8f, 8f), Random.Range(0f, 360f), Random.Range(-8f, 8f)));
-                DestroyCol(reed);
-            }
-            // troncos podridos + pasarela de tablones podridos
-            for (int i = 0; i < 3; i++)
-            {
-                Vector2 o = Random.insideUnitCircle * 8f;
-                Vector3 rp = BuilderUtils.Ground(t, MapLayout.Mallin.x + o.x, MapLayout.Mallin.y + o.y);
-                BuilderUtils.Prim(PrimitiveType.Cylinder, "TroncoPodrido", g, rp + Vector3.up * 0.25f,
-                    new Vector3(0.35f, 1.6f, 0.35f), Burnt, new Vector3(90f, Random.Range(0f, 360f), 0f));
-            }
-            Vector3 a = BuilderUtils.Ground(t, MapLayout.Mallin.x - 10f, MapLayout.Mallin.y);
-            for (int i = 0; i < 8; i++)
-            {
-                Vector3 pk = a + new Vector3(i * 2.4f, 0.12f, (i % 2) * 0.15f);
-                BuilderUtils.Prim(PrimitiveType.Cube, "Tabla" + i, g, pk, new Vector3(2.2f, 0.08f, 0.9f), Wood,
-                    new Vector3(0f, Random.Range(-6f, 6f), 0f));
-            }
-            return g;
+            // DESACTIVADO (owner: "quita el mallin"). Grupo vacío (mismo patrón que
+            // Estancia/BurntForestArea) para no tocar el conteo de Reg()/PersistCount.
+            // El área queda libre para que ForestBuilder/TerrainBuilder la llenen de
+            // bosque y pasto normal (ver los "pantano (mallín)" en esos archivos,
+            // también sacados).
+            return BuilderUtils.Group(parent, "Mallin", Vector3.zero);
         }
 
         // ---------------- BOSQUE QUEMADO ----------------

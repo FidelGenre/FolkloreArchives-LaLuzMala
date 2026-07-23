@@ -526,7 +526,8 @@ namespace FolkloreArchives.MapGen
                     if (Vector2.Distance(p, MapLayout.HostageArea) < 6f) continue;
                     // ÁREAS NUEVAS abiertas (MapPlan): sin árboles vivos para que se lean distintas
                     if (Vector2.Distance(p, MapLayout.EstepaCenter) < 38f) continue; // estepa = campo abierto
-                    if (Vector2.Distance(p, MapLayout.Mallin) < 22f) continue;       // pantano (mallín)
+                    // mallín DESACTIVADO (owner: "quita el mallin") -- ya no hay pantano
+                    // ahí, esta zona vuelve a llenarse de árboles normales.
                     // bosque quemado DESACTIVADO (owner: "saca ese bosque quemado") -- ya
                     // no hay troncos negros ahí, así que esta zona vuelve a llenarse de
                     // árboles normales (incluido el anillo de pinos altos de la laguna).
@@ -1825,10 +1826,9 @@ namespace FolkloreArchives.MapGen
                         if (Random.value < 0.35f) maps[1][zi, xi] = 1 + Random.Range(0, 2); // pasto dry ralo (índice 1 = grassDry)
                         continue;
                     }
-                    // MALLÍN / ESTANCIA / CORRALES: suelo pelado (barro/ceniza asoma)
-                    // (QUEMADO sacado -- owner: "saca ese bosque quemado", ya no hay
-                    // ceniza que mostrar ahí, pasto normal como el resto del bosque)
-                    if (Vector2.Distance(p, MapLayout.Mallin) < 22f) continue;
+                    // ESTANCIA / CORRALES: suelo pelado (barro/ceniza asoma)
+                    // (QUEMADO y MALLÍN sacados -- owner: "saca ese bosque quemado" /
+                    // "quita el mallin", pasto normal como el resto del bosque)
                     if (Vector2.Distance(p, MapLayout.Estancia) < 16f) continue;
                     if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;
                     if (MapLayout.InYpfPad(p)) continue;   // lote de la estación YPF: sin pasto
