@@ -23,7 +23,14 @@ namespace FolkloreArchives.MapGen
         // .fbx/.glb/.gltf/.obj dentro de la carpeta, sin importar el nombre interno).
         const string DirWindmill = "Assets/ExternalAssets/Windmill";
         const string DirTower    = "Assets/ExternalAssets/RadioTower";
-        const string DirDock     = "Assets/ExternalAssets/Dock";
+        // "broken_wooden_dock_ps1.glb" DESCARTADO (owner, después de 3 rondas de bugs
+        // esta sesión -- la última: una tabla suelta adentro del propio modelo
+        // apuntando derecho al cielo, "Cube_Material.002" a -38° en X, glitch del
+        // asset en sí no de nuestro código). Reemplazado por "The Wharf" de Sketchfab
+        // (CC Attribution, Mehdi Shahsavan, 572 tris) -- malla ÚNICA ("Cloner_2" en el
+        // FBX, sin piezas sueltas con transform propio), mucho más simple/confiable.
+        const string DirDock     = "Assets/ExternalAssets/DockWharf";
+        const string DirDockTex  = "Assets/ExternalAssets/DockWharf/textures/01_DefaultMaterial_BaseColor.png";
         const string DirDeadTree = "Assets/ExternalAssets/DeadTree";
         const string DirBarn     = "Assets/ExternalAssets/BarnShed";
         const string DirFence    = "Assets/ExternalAssets/ChainFence";
@@ -200,7 +207,9 @@ namespace FolkloreArchives.MapGen
             var dockPos = new Vector3(MapLayout.LakeShore.x, deckY, MapLayout.LakeShore.y);
             // muelle más corto (12->5) para la laguna chica -- con el tamaño viejo
             // llegaba casi al centro de una laguna de solo 9m de radio.
-            if (SpawnModel(DirDock, g, dockPos, 5f, dockYaw, false, "MuelleModelo") == null)
+            var dockInst = SpawnModel(DirDock, g, dockPos, 5f, dockYaw, false, "MuelleModelo");
+            if (dockInst != null) FixDockMaterial(dockInst);
+            else
             {
                 for (int i = 0; i < 4; i++)
                 {
@@ -664,6 +673,30 @@ namespace FolkloreArchives.MapGen
                 if (YpfClutter.Contains(tr.name)) { tr.gameObject.SetActive(false); hid++; }
             }
             Debug.Log($"<color=cyan>[YPF] {hid} objetos sueltos/piso propio ocultados del modelo.</color>");
+        }
+
+        // El wharf de Sketchfab (Cinema 4D, malla única) trae un material
+        // Standard/PBR -- sin pasarlo a URP se ve magenta. Solo el BaseColor (mismo
+        // criterio simple que la valla de madera: sin mapear roughness/normal).
+        static Material _dockMat;
+        static void FixDockMaterial(GameObject inst)
+        {
+            if (_dockMat == null)
+            {
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DirDockTex);
+                _dockMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (tex != null && _dockMat.HasProperty("_BaseMap")) _dockMat.SetTexture("_BaseMap", tex);
+                if (_dockMat.HasProperty("_Smoothness")) _dockMat.SetFloat("_Smoothness", 0.15f);
+                string matPath = "Assets/Settings/DockWharf.mat";
+                AssetDatabase.DeleteAsset(matPath);
+                AssetDatabase.CreateAsset(_dockMat, matPath);
+            }
+            foreach (var r in inst.GetComponentsInChildren<Renderer>())
+            {
+                var arr = new Material[r.sharedMaterials.Length];
+                for (int k = 0; k < arr.Length; k++) arr[k] = _dockMat;
+                r.sharedMaterials = arr;
+            }
         }
 
         // ---- carga de MODELOS DESCARGADOS ----
