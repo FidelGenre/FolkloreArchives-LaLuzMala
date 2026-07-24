@@ -35,9 +35,14 @@ namespace FolkloreArchives.MapGen
         // rancho del pescador real (owner: "me gusta esta", Sketchfab "PSX Abandoned
         // House", CC-BY) -- reemplaza las primitivas procedurales de antes.
         const string DirHouseAbandoned = "Assets/ExternalAssets/AbandonedHouse";
-        // torre/mirador de caza (owner: "Campo de Caza", referencia Sketchfab "Watch
-        // tower (remastered, wide)").
-        const string DirHuntingTower = "Assets/ExternalAssets/HuntingTower";
+        // CEMENTERIO (owner: "quiero un solo cementerio" -- reemplaza lo que iba a ser
+        // el Campo de Caza, mismo punto/trigger de Acto2 sin renombrar por abajo).
+        // Referencia: "Stylized Graveyard Model Guide" (Sketchfab) -- reja + capillita +
+        // sendero + lápidas dispersas + árboles pelados. Replicado a nivel de
+        // COMPOSICIÓN (no una copia 1:1, no tenemos esos assets puntuales), con lo que
+        // el owner ya bajó + lo que ya había en el proyecto (DeadTree, ChainFence).
+        const string DirTombstone1    = "Assets/ExternalAssets/Cemetery/Tombstone1"; // owner: CC0-Tombstone (Sketchfab)
+        const string DirCemeteryFence = "Assets/ExternalAssets/Cemetery/Fence";      // reja de hierro -- todavía no bajada
         const string DirDeadTree = "Assets/ExternalAssets/DeadTree";
         const string DirBarn     = "Assets/ExternalAssets/BarnShed";
         const string DirFence    = "Assets/ExternalAssets/ChainFence";
@@ -87,7 +92,7 @@ namespace FolkloreArchives.MapGen
             Reg(YpfStation(root, t));
             Reg(Estancia(root, t));
             Reg(Capilla(root, t));
-            Reg(HuntingFieldArea(root, t));
+            Reg(CemeteryArea(root, t));
 
             // set-dressing fijo → static batching (menos draw calls). Excepto luces.
             BuilderUtils.MarkStaticRecursive(root);
@@ -533,38 +538,106 @@ namespace FolkloreArchives.MapGen
             return g;
         }
 
-        // ---------------- CAMPO DE CAZA (torre/mirador) ----------------
-        // owner: "que deberia haber... torre como hito visual + 1-2 detalles
-        // inquietantes cerca" -- por ahora solo la torre (el owner todavía no eligió
-        // los detalles). Campo ABIERTO: no llenar de objetos, solo el hito central.
-        static Transform HuntingFieldArea(Transform parent, Terrain t)
+        // ---------------- CEMENTERIO ----------------
+        // owner: "quiero un solo cementerio" (consolida lo que iba a ser el Campo de
+        // Caza en el mismo lugar -- sigue usando MapLayout.HuntingField/su trigger de
+        // Acto2 por abajo, sin renombrar, mismo criterio que LakeMountain). Referencia:
+        // "Stylized Graveyard Model Guide" (Sketchfab) -- reja + capillita + lápidas
+        // dispersas + árboles pelados. Réplica a nivel de COMPOSICIÓN (no una copia
+        // 1:1, esos assets puntuales no los tenemos) con lo ya descargado
+        // (Tombstone1) + lo que ya había en el proyecto (DeadTree, ChainFence).
+        static Transform CemeteryArea(Transform parent, Terrain t)
         {
-            var p = BuilderUtils.Ground(t, MapLayout.HuntingField);
-            var g = BuilderUtils.Group(parent, "CampoDeCaza", p);
-            BuilderUtils.Label(g, "CAMPO DE CAZA", p + Vector3.up * 9f);
+            Vector2 c = MapLayout.HuntingField;
+            var p = BuilderUtils.Ground(t, c);
+            var g = BuilderUtils.Group(parent, "Cementerio", p);
+            BuilderUtils.Label(g, "CEMENTERIO", p + Vector3.up * 9f);
 
-            // torre real (HuntingTower/, Sketchfab "Watch tower remastered wide") o,
-            // si todavía no está descargada, una torre procedural simple (mismo
-            // criterio que el molino de la Estepa: 4 patas + cruces + plataforma).
-            var towerInst = SpawnModel(DirHuntingTower, g, p, 7f, Random.Range(0f, 360f), true, "TorreDeCaza");
-            if (towerInst != null) FixTowerMaterial(towerInst);
+            // reja perimetral rectangular -- real (Cemetery/Fence/, todavía sin bajar)
+            // si está, si no la del corral (ChainFence/) o postes+alambre procedural
+            // (mismo criterio que Corrales). Deja un hueco de portón del lado SUR
+            // (frente, por donde se llega).
+            const float half = 13f;
+            var corners = new[] {
+                c + new Vector2(-half, -half), c + new Vector2(half, -half),
+                c + new Vector2(half, half),   c + new Vector2(-half, half)
+            };
+            var cemFenceSrc = FindModelInFolder(DirCemeteryFence) ?? FindModelInFolder(DirFence);
+            for (int i = 1; i < 4; i++) // lados 1,2,3 -- el 0 (sur) queda para el portón
+            {
+                Vector2 a = corners[i], b = corners[(i + 1) % 4];
+                if (cemFenceSrc != null) FenceLineModel(cemFenceSrc, g, t, a, b);
+                else Fence(g, t, a, b, 3f);
+            }
+            Vector2 gateMidL = Vector2.Lerp(corners[0], corners[1], 0.35f);
+            Vector2 gateMidR = Vector2.Lerp(corners[0], corners[1], 0.65f);
+            if (cemFenceSrc != null)
+            {
+                FenceLineModel(cemFenceSrc, g, t, corners[0], gateMidL);
+                FenceLineModel(cemFenceSrc, g, t, gateMidR, corners[1]);
+            }
             else
             {
-                float towerH = 6f;
-                for (int i = 0; i < 4; i++)
+                Fence(g, t, corners[0], gateMidL, 3f);
+                Fence(g, t, gateMidR, corners[1], 3f);
+            }
+            // portalada simple sobre el hueco
+            Vector3 postL = BuilderUtils.Ground(t, gateMidL.x, gateMidL.y);
+            Vector3 postR = BuilderUtils.Ground(t, gateMidR.x, gateMidR.y);
+            BuilderUtils.Prim(PrimitiveType.Cube, "PortonPosteL", g, postL + Vector3.up * 1.1f, new Vector3(0.25f, 2.2f, 0.25f), Wood);
+            BuilderUtils.Prim(PrimitiveType.Cube, "PortonPosteR", g, postR + Vector3.up * 1.1f, new Vector3(0.25f, 2.2f, 0.25f), Wood);
+            Beam(g, postL + Vector3.up * 2.1f, postR + Vector3.up * 2.1f, 0.12f, Wood);
+
+            // capillita chica al fondo (placeholder reducido, mismo criterio que la
+            // Capilla Anegada: nave + campanario + cruz)
+            Vector3 chapelP = BuilderUtils.Ground(t, c.x - half + 3.5f, c.y - half + 3.5f);
+            BuilderUtils.Prim(PrimitiveType.Cube, "Capilla_Nave", g, chapelP + Vector3.up * 1.2f, new Vector3(3.6f, 2.4f, 4.5f), StoneGrey);
+            BuilderUtils.Prim(PrimitiveType.Cube, "Capilla_Campanario", g, chapelP + new Vector3(0f, 3.1f, -2.2f), new Vector3(1.3f, 3.2f, 1.3f), StoneGrey);
+            BuilderUtils.Prim(PrimitiveType.Cube, "Capilla_CruzV", g, chapelP + new Vector3(0f, 4.9f, -2.2f), new Vector3(0.12f, 0.7f, 0.12f), Wood);
+            BuilderUtils.Prim(PrimitiveType.Cube, "Capilla_CruzH", g, chapelP + new Vector3(0f, 4.7f, -2.2f), new Vector3(0.45f, 0.12f, 0.12f), Wood);
+
+            // lápidas dispersas: modelo real (Tombstone1/) mezclado con cruces simples
+            // procedurales -- owner: "necesito mas asi no son todas iguales", así que
+            // no repite el mismo modelo para todas.
+            var tombSrc = FindModelInFolder(DirTombstone1);
+            for (int i = 0; i < 16; i++)
+            {
+                Vector2 o = Random.insideUnitCircle * (half - 2.5f);
+                Vector2 xz = c + o;
+                if (Vector2.Distance(xz, new Vector2(chapelP.x, chapelP.z)) < 4f) continue; // no encima de la capilla
+                Vector3 tp = BuilderUtils.Ground(t, xz.x, xz.y);
+                float yaw = Random.Range(0f, 360f);
+                if (tombSrc != null && Random.value < 0.55f)
                 {
-                    float ang = i * 90f * Mathf.Deg2Rad + 45f * Mathf.Deg2Rad;
-                    Vector3 baseP = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 1.8f;
-                    Vector3 topP  = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 1.4f + Vector3.up * towerH;
-                    Beam(g, baseP, topP, 0.10f, Wood);
+                    var inst = SpawnModelFrom(tombSrc, g, tp, Random.Range(0.9f, 1.3f), yaw, true, "Lapida" + i);
+                    FixTombstoneMaterial(inst);
                 }
-                RingRungs(g, p, 1.6f, 2.2f, Wood);
-                BuilderUtils.Prim(PrimitiveType.Cube, "Plataforma", g, p + Vector3.up * (towerH + 0.15f),
-                    new Vector3(2.4f, 0.15f, 2.4f), Wood);
-                BuilderUtils.Prim(PrimitiveType.Cube, "Baranda1", g, p + Vector3.up * (towerH + 0.9f) + new Vector3(1.2f, 0f, 0f),
-                    new Vector3(0.08f, 0.8f, 2.4f), Wood);
-                BuilderUtils.Prim(PrimitiveType.Cube, "Baranda2", g, p + Vector3.up * (towerH + 0.9f) + new Vector3(-1.2f, 0f, 0f),
-                    new Vector3(0.08f, 0.8f, 2.4f), Wood);
+                else
+                {
+                    // cruz simple de madera, apenas ladeada (como hundida) -- variante
+                    // procedural para que no todas las tumbas sean la misma lápida.
+                    float leanX = Random.Range(-8f, 8f), leanZ = Random.Range(-8f, 8f);
+                    BuilderUtils.Prim(PrimitiveType.Cube, "CruzV" + i, g, tp + Vector3.up * 0.45f,
+                        new Vector3(0.09f, 0.9f, 0.09f), Wood, new Vector3(leanX, yaw, leanZ));
+                    BuilderUtils.Prim(PrimitiveType.Cube, "CruzH" + i, g, tp + Vector3.up * 0.7f,
+                        new Vector3(0.5f, 0.09f, 0.09f), Wood, new Vector3(leanX, yaw, leanZ));
+                }
+            }
+
+            // árboles pelados pegados al perímetro (reusa el modelo de DeadTree ya
+            // usado en el árbol del ahorcado -- mismo clima que la referencia)
+            var deadSrc = FindModelInFolder(DirDeadTree);
+            for (int i = 0; i < 6; i++)
+            {
+                Vector2 o = Random.insideUnitCircle;
+                Vector2 xz = c + o.normalized * (half - Random.Range(0.5f, 2.5f));
+                Vector3 tp = BuilderUtils.Ground(t, xz.x, xz.y);
+                float h = Random.Range(4f, 6.5f);
+                if (deadSrc != null) SpawnModelFrom(deadSrc, g, tp, h, Random.Range(0f, 360f), true, "ArbolPelado" + i);
+                else
+                    BuilderUtils.Prim(PrimitiveType.Cylinder, "TroncoPelado" + i, g,
+                        tp + Vector3.up * h * 0.5f, new Vector3(Random.Range(0.2f, 0.35f), h * 0.5f, Random.Range(0.2f, 0.35f)),
+                        Burnt, new Vector3(Random.Range(0f, 10f), Random.Range(0f, 360f), Random.Range(0f, 10f)));
             }
             return g;
         }
@@ -750,27 +823,28 @@ namespace FolkloreArchives.MapGen
             }
         }
 
-        // La torre de caza (Sketchfab, malla única) -- mismo criterio simple que el
-        // wharf: solo BaseColor, sin mapear normal/AO.
-        static Material _towerMat;
-        static void FixTowerMaterial(GameObject inst)
+        // La lápida de Sketchfab (CC0, malla única) -- mismo criterio simple que el
+        // wharf: solo Albedo, sin mapear normal/rough/metal/AO.
+        static Material _tombstoneMat;
+        static void FixTombstoneMaterial(GameObject inst)
         {
+            if (inst == null) return;
             // Reintentar si el primer Generate corrió antes de que Unity terminara de
             // importar la textura (mismo motivo que FixHouseMaterial).
-            if (_towerMat == null || _towerMat.mainTexture == null)
+            if (_tombstoneMat == null || _tombstoneMat.mainTexture == null)
             {
-                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DirHuntingTower + "/textures/Watch_tower_Base_color.png");
-                _towerMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                if (tex != null && _towerMat.HasProperty("_BaseMap")) _towerMat.SetTexture("_BaseMap", tex);
-                if (_towerMat.HasProperty("_Smoothness")) _towerMat.SetFloat("_Smoothness", 0.1f);
-                string matPath = "Assets/Settings/HuntingTower.mat";
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DirTombstone1 + "/textures/TomstoneAlbedo.png");
+                _tombstoneMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (tex != null && _tombstoneMat.HasProperty("_BaseMap")) _tombstoneMat.SetTexture("_BaseMap", tex);
+                if (_tombstoneMat.HasProperty("_Smoothness")) _tombstoneMat.SetFloat("_Smoothness", 0.1f);
+                string matPath = "Assets/Settings/CemeteryTombstone1.mat";
                 AssetDatabase.DeleteAsset(matPath);
-                AssetDatabase.CreateAsset(_towerMat, matPath);
+                AssetDatabase.CreateAsset(_tombstoneMat, matPath);
             }
             foreach (var r in inst.GetComponentsInChildren<Renderer>())
             {
                 var arr = new Material[r.sharedMaterials.Length];
-                for (int k = 0; k < arr.Length; k++) arr[k] = _towerMat;
+                for (int k = 0; k < arr.Length; k++) arr[k] = _tombstoneMat;
                 r.sharedMaterials = arr;
             }
         }

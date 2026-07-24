@@ -533,7 +533,7 @@ namespace FolkloreArchives.MapGen
                     // árboles normales (incluido el anillo de pinos altos de la laguna).
                     if (Vector2.Distance(p, MapLayout.Estancia) < 16f) continue;     // casco de estancia
                     if (Vector2.Distance(p, MapLayout.Corrales) < 14f) continue;     // corrales
-                    if (Vector2.Distance(p, MapLayout.HuntingField) < 6f) continue;  // base de la torre de caza
+                    if (Vector2.Distance(p, MapLayout.HuntingField) < 16f) continue; // adentro del cementerio (reja, lápidas, capilla)
                     if (MapLayout.InYpfPad(p)) continue;                             // lote de la estación YPF
 
                     // anillo de bosque denso alrededor de la laguna chica (owner: "con
