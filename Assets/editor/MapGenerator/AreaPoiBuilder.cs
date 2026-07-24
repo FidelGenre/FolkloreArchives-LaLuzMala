@@ -695,12 +695,31 @@ namespace FolkloreArchives.MapGen
         // tilea el modelo de cerco entre a y b (repite el segmento a lo largo de la línea).
         static void FenceLineModel(GameObject src, Transform parent, Terrain t, Vector2 a, Vector2 b)
         {
-            // largo nativo del segmento (lado mayor XZ)
+            // largo nativo del segmento + chequeo de "¿vino ACOSTADO?" (owner: "las
+            // rejas estan acostadas no paradas"). SpawnModelFrom ya tiene esa
+            // corrección pero SOLO corre con byHeight=true -- acá se pide por
+            // FOOTPRINT (byHeight=false, para no deformar el ancho del panel), así que
+            // el chequeo se hace ACÁ a mano y se manda como tilt explícito.
             var probe = (GameObject)Object.Instantiate(src);
             probe.transform.localScale = Vector3.one;
+            probe.transform.rotation = Quaternion.identity;
             var pb = ModelBounds(probe);
-            float segLen = Mathf.Max(pb.size.x, pb.size.z);
             Object.DestroyImmediate(probe);
+
+            Vector3? tilt = null;
+            float segLen;
+            if (pb.size.z > pb.size.y * 1.3f && pb.size.z >= pb.size.x)
+            {
+                tilt = new Vector3(90f, 0f, 0f); // el largo "acostado" estaba en Z -> pasa a ser la altura
+                segLen = Mathf.Max(pb.size.x, pb.size.y);
+            }
+            else if (pb.size.x > pb.size.y * 1.3f && pb.size.x >= pb.size.z)
+            {
+                tilt = new Vector3(0f, 0f, 90f); // el largo "acostado" estaba en X -> pasa a ser la altura
+                segLen = Mathf.Max(pb.size.y, pb.size.z);
+            }
+            else segLen = Mathf.Max(pb.size.x, pb.size.z); // ya vino parado, sin corrección
+
             if (segLen < 0.3f) segLen = 2f;
 
             float total = Vector2.Distance(a, b);
@@ -710,7 +729,7 @@ namespace FolkloreArchives.MapGen
             {
                 Vector2 xz = Vector2.Lerp(a, b, (i + 0.5f) / n);
                 Vector3 gp = BuilderUtils.Ground(t, xz.x, xz.y);
-                SpawnModelFrom(src, parent, gp, segLen, yaw, false, "Cerco" + i); // escala ~nativa
+                SpawnModelFrom(src, parent, gp, segLen, yaw, false, "Cerco" + i, tilt);
             }
         }
 
