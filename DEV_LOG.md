@@ -7,6 +7,124 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-24 — NOTA DE DISEÑO: secuencia del cementerio → puente → bote → mirador
+
+Anotado tal cual lo contó el owner (todavía sin implementar, sin código nuevo).
+Encadena varias piezas que ya están armadas en el mapa: Cementerio (`AreaPoiBuilder.
+CemeteryArea`), el puente (`BridgeBuilder`, cruce en x≈315-375), el muelle/bote
+(`AreaPoiBuilder.LakeShoreDock`, "BoteVarado") y el Mirador (`AreaPoiBuilder.
+BridgeLookout`, torre pasando el puente lado sur).
+
+**Secuencia (borrador):**
+1. Después de ir al río a pescar, Rufus (perro) y el humano van al Cementerio y
+   desentierran "lo de la luz mala" (el objeto/relato que despierta a La Luz Mala).
+2. Escuchan gritos, miran hacia el puente.
+3. Ven a los asesinos llevándose secuestrados a los amigos y el auto, cruzando el
+   puente.
+4. Rufus + humano empiezan a correr HACIA EL CAMPAMENTO mientras los persigue La
+   Luz Mala.
+5. Se suben al bote porque el puente se cae por el peso del auto.
+6. La Luz Mala se frena (no puede cruzar el agua/el punto donde se cae el puente).
+7. Siguen en el bote hasta llegar al otro lado.
+8. Suben a la Torre (el Mirador) y ven que se están llevando a los amigos al
+   campamento de los asesinos.
+
+**PENDIENTE (lo que el owner quiere resolver ahora):** qué pasa DESPUÉS de llegar a
+la Torre y ver el secuestro -- no está decidido todavía, es la próxima parte a
+diseñar.
+
+**Notas técnicas para cuando se implemente:** el puente que "se cae" es un evento
+nuevo (`BridgeBuilder` hoy es estático, sin física de colapso); la persecución de
+La Luz Mala necesita lógica de detección de límite (se frena en el agua, no sigue
+al bote); el bote (`BoteVarado`, hoy decorativo/estático en `LakeShoreDock`) pasaría
+a necesitar ser un objeto usable/animado. Nada de esto está armado todavía.
+
+---
+
+## 2026-07-21 — Borrado de árboles persistente (integrado a Save Terrain Paint)
+
+`TreePersistence.cs`: hace que el borrado manual de árboles (pincel Paint Trees +
+Shift) sobreviva al Generate. Los árboles son `TreeInstances` con posición
+normalizada y el bosque es determinístico → se guarda un **diff de posiciones
+removidas** (no se congela el bosque; procedural sigue mandando en el resto).
+- `ForestBuilder.Build` (tras `SetTreeInstances`): `CaptureBaseline(td)` (set
+  procedural completo → `Generated/tree_baseline.bytes`) + `ApplyTreeRemovals(td)`
+  (dropea lo borrado).
+- `TerrainPaintPersistence.SaveTerrainPaint`: ahora también llama
+  `TreePersistence.SaveTreeRemovals(live)` → `tree_removals.bytes` = baseline ∖ vivo.
+  `ClearTerrainPaint` también borra las remociones.
+- ⚠ Flujo: **Generar una vez** (captura baseline) → borrar árboles con el pincel →
+  **Save Terrain Paint** → regenerar. Si guardás sin baseline, avisa "regenerá primero".
+
+---
+
+## 2026-07-21 — Granja abandonada (asset PSX de mcpato) reemplaza el galpón
+
+- Asset: `Aband1.1.fbx` (mcpato, itch.io, "Abandoned Farm PSX") → importado como
+  `Assets/ExternalAssets/AbandonedFarm/AbandonedFarm.fbx`. Es UNA escena horneada
+  (478 objetos, texturas EMBEBIDAS). Nombres genéricos (Cube.NNN) → no modular.
+- `AbandonedFarmBuilder.cs`: instancia el FBX entero en la granja (grupo
+  `AbandonedFarm > FarmModel`), **desactiva el terreno propio del diorama** por
+  prefijo de nombre (rios/globaltrees/cespe/tree/ground/piso/agua…), convierte
+  materiales built-in→URP (anti-magenta), y aplica un **transform PERSISTENTE**.
+- **Persistencia + tool**: `Tools ▸ Folklore Archives ▸ Guardar Transform de la Granja`
+  → guarda pos/rot/escala del grupo `AbandonedFarm` en
+  `Assets/_FolkloreArchives/farm_transform.txt`; el builder lo relee en cada Generate.
+  (1ª versión = transform del GRUPO entero; per-objeto se puede extender si hace falta.)
+- Wire: `HouseBuilder.BuildBarn` → `if (UseAbandonedFarm) AbandonedFarmBuilder.Build(...)`.
+  **`UseAbandonedFarm=false` vuelve al galpón BarnShed viejo** (código intacto). Backup
+  del estado previo en Plastic cs:75.
+- ⚠ Colocación inicial a OJO (escala/rot desconocidas del FBX) → default en
+  OldLadyHouseCenter escala 1; el owner mueve+guarda. Si queda un piso del asset sin
+  desactivar, sumar su nombre a `TerrainPrefixes`. La casa ALP sigue puesta (ver si pisa).
+
+---
+
+## 2026-07-20 — Casa de la vieja → GRANJA + fix spawn enterrado
+
+- **Spawn enterrado:** el jugador usaba altura FIJA (`RoadSurfaceHeight`) mientras perro/auto
+  muestrean el terreno. Fix en `TestPlayerBuilder` (muestrea `SampleHeight`) + botón
+  *Reubicar Spawn sobre el terreno* + **snap al suelo por raycast en `MapExplorer.Start()`**
+  (robusto: se apoya solo en cada Play, sin importar la posición guardada).
+- **Granja (PERMANENTE, horneado — cs:66/67/68):** `HouseBuilder.BuildBarn` ahora
+  instancia el **galpón REAL** (`Assets/ExternalAssets/BarnShed/source/ruined_house_4.glb`,
+  el mismo modelo que usaba la Estancia) al lado de la casa (`OldLadyBarnCenter`),
+  escalado a ~13 m y apoyado en el piso; si falta el modelo, cae al galpón procedural
+  de madera de antes. Se construye en cada Generate → **regenerate-safe** (ya no se
+  pierde al regenerar). Constantes: `BarnModelDir`, `BarnTargetSize=13`, `BarnYaw=90`.
+- **Estancia DESACTIVADA** (`AreaPoiBuilder.Estancia` → grupo vacío): sacaba el "casco"
+  (`country house01/Models/House.fbx`, salía MAGENTA por shader built-in) + un
+  `GalponModelo` que DUPLICABA el galpón. Se deja el grupo vacío y registrado para NO
+  correr los índices de persistencia de los demás POIs.
+- Borrado `OldLadyFarmTools.cs` (el menú *Mudar Galpón…* manual) — quedó obsoleto y era
+  peligroso post-regenerado (borraba el grupo `OldLadyBarn` que ahora tiene el galpón).
+- ⚠ La escena venía con POSICIONES DEL CÓDIGO (casa ~185,178) — hubo un regenerado; ya
+  NO está en 404,625. Ajustar `BarnYaw`/`OldLadyBarnCenter` si el galpón queda mal.
+
+---
+
+## 2026-07-20 — Recuperación del galpón + guardado + amueblado (pack All.fbx)
+
+Joaquín hizo **Undo en Plastic** y volvió a aparecer `OldLadyBarn` (el galpón que se
+había perdido) junto a `OldLadyHouse_ALP` (instancia de `House_Prefab`, con `Room0X`).
+- **Guardado (a pedido "guardá todo"):** check-in de todo lo pendiente →
+  `cs:53` escena (galpón+casa) + settings, `cs:54` packs de muebles
+  (`Assets/ExternalAssets/FurniturePacks/All` + `PSX`) + `HouseFurnisher.cs` +
+  paquetes URP/HDRP, `cs:55` metas, `cs:56` mejora del amueblado. Único item dejado
+  FUERA de VC a propósito: `Assets/Settings/PSX_Character.mat` (filtro VHS descartado).
+- **Amueblado** (`HouseFurnisher.cs`, menú *Tools ▸ Folklore Archives ▸ Amueblar Casa
+  de la Vieja*): reescrito con **28 piezas verificadas** contra los 686 nodos de
+  `All.fbx`, y colocación **relativa a los bounds del ambiente** (fx/fz ∈ [-1,1] ×
+  medio-ancho × 0.82) para no clavar contra paredes. 5 sets → 5 `Room0X`
+  (dormitorio / living / cocina-comedor / dormitorio 2 / baño). NO corre en Generate:
+  es un botón → se corre a mano, así **no regenera** y el galpón manual queda intacto.
+- ⚠ El galpón `OldLadyBarn` está puesto A MANO bajo `FOLKLORE_MAP` → **Generate lo
+  borra** (DeleteMap). Por ahora: NO regenerar. Pendiente: hornearlo regenerate-safe
+  en `HouseBuilder` (ahora sí el asset del galpón existe en el proyecto, recuperado).
+- ⚠ 1er pase de muebles: orientaciones/posiciones a ojo → ajustar con captura en modo Día.
+
+---
+
 ## 2026-07-13 — Campamento ladrones ×1.6: fix altura de ranchos + árboles en el medio
 
 (Continuación del CriminalCampBuilder.) Al escalar el camp ×1.6:
