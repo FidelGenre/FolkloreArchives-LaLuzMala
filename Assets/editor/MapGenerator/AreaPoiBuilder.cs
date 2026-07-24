@@ -35,6 +35,11 @@ namespace FolkloreArchives.MapGen
         // rancho del pescador real (owner: "me gusta esta", Sketchfab "PSX Abandoned
         // House", CC-BY) -- reemplaza las primitivas procedurales de antes.
         const string DirHouseAbandoned = "Assets/ExternalAssets/AbandonedHouse";
+        // torre/mirador de caza (Sketchfab "Watch tower remastered wide") -- ya no es
+        // parte del Campo de Caza (reemplazado por el Cementerio), reubicada como
+        // hito aparte pasando el puente (owner: "quitaste el mirador que puse
+        // volvelo a poner pasando el puente").
+        const string DirHuntingTower = "Assets/ExternalAssets/HuntingTower";
         // CEMENTERIO (owner: "quiero un solo cementerio" -- reemplaza lo que iba a ser
         // el Campo de Caza, mismo punto/trigger de Acto2 sin renombrar por abajo).
         // Referencia: "Stylized Graveyard Model Guide" (Sketchfab) -- reja + capillita +
@@ -56,7 +61,7 @@ namespace FolkloreArchives.MapGen
         // Cantidad de objetos que se registran para persistencia manual (IDs
         // 0..PersistCount-1). Debe coincidir con la cantidad de Reg(...) en Build,
         // en su orden de creación. Si reordenás/agregás/sacás, re-guardá el layout.
-        public const int PersistCount = 13;
+        public const int PersistCount = 14;
         static Transform Reg(Transform g) => ManualLayoutPersistence.Register("AreaPois", g);
 
         public static void Build(Transform parent, Terrain t)
@@ -93,6 +98,7 @@ namespace FolkloreArchives.MapGen
             Reg(Estancia(root, t));
             Reg(Capilla(root, t));
             Reg(CemeteryArea(root, t));
+            Reg(BridgeLookout(root, t));
 
             // set-dressing fijo → static batching (menos draw calls). Excepto luces.
             BuilderUtils.MarkStaticRecursive(root);
@@ -640,6 +646,69 @@ namespace FolkloreArchives.MapGen
                         Burnt, new Vector3(Random.Range(0f, 10f), Random.Range(0f, 360f), Random.Range(0f, 10f)));
             }
             return g;
+        }
+
+        // ---------------- MIRADOR (torre, pasando el puente) ----------------
+        // owner: "quitaste el mirador que puse volvelo a poner pasando el puente" --
+        // la torre de Sketchfab (antes del Campo de Caza, ahora Cementerio) se
+        // reubica del lado este del puente (BridgeBuilder: CenterX 315, Span 120 ->
+        // extremo este en x=375), como hito aparte junto a la ruta.
+        static Transform BridgeLookout(Transform parent, Terrain t)
+        {
+            float x = 400f; // ~25m pasado el extremo este del puente
+            var p = RoadShoulder(t, new Vector2(x, MapLayout.PavedRouteZAt(x)), 20f);
+            var g = BuilderUtils.Group(parent, "Mirador", p);
+            BuilderUtils.Label(g, "MIRADOR", p + Vector3.up * 9f);
+
+            // torre real (HuntingTower/, Sketchfab "Watch tower remastered wide") o,
+            // si todavía no está descargada, una torre procedural simple (mismo
+            // criterio que el molino de la Estepa: 4 patas + cruces + plataforma).
+            var towerInst = SpawnModel(DirHuntingTower, g, p, 7f, Random.Range(0f, 360f), true, "TorreMirador");
+            if (towerInst != null) FixTowerMaterial(towerInst);
+            else
+            {
+                float towerH = 6f;
+                for (int i = 0; i < 4; i++)
+                {
+                    float ang = i * 90f * Mathf.Deg2Rad + 45f * Mathf.Deg2Rad;
+                    Vector3 baseP = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 1.8f;
+                    Vector3 topP  = p + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 1.4f + Vector3.up * towerH;
+                    Beam(g, baseP, topP, 0.10f, Wood);
+                }
+                RingRungs(g, p, 1.6f, 2.2f, Wood);
+                BuilderUtils.Prim(PrimitiveType.Cube, "Plataforma", g, p + Vector3.up * (towerH + 0.15f),
+                    new Vector3(2.4f, 0.15f, 2.4f), Wood);
+                BuilderUtils.Prim(PrimitiveType.Cube, "Baranda1", g, p + Vector3.up * (towerH + 0.9f) + new Vector3(1.2f, 0f, 0f),
+                    new Vector3(0.08f, 0.8f, 2.4f), Wood);
+                BuilderUtils.Prim(PrimitiveType.Cube, "Baranda2", g, p + Vector3.up * (towerH + 0.9f) + new Vector3(-1.2f, 0f, 0f),
+                    new Vector3(0.08f, 0.8f, 2.4f), Wood);
+            }
+            return g;
+        }
+
+        // El mirador de Sketchfab (malla única) -- mismo criterio simple que el
+        // wharf: solo BaseColor, sin mapear normal/AO.
+        static Material _towerMat;
+        static void FixTowerMaterial(GameObject inst)
+        {
+            // Reintentar si el primer Generate corrió antes de que Unity terminara de
+            // importar la textura (mismo motivo que FixHouseMaterial).
+            if (_towerMat == null || _towerMat.mainTexture == null)
+            {
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DirHuntingTower + "/textures/Watch_tower_Base_color.png");
+                _towerMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (tex != null && _towerMat.HasProperty("_BaseMap")) _towerMat.SetTexture("_BaseMap", tex);
+                if (_towerMat.HasProperty("_Smoothness")) _towerMat.SetFloat("_Smoothness", 0.1f);
+                string matPath = "Assets/Settings/HuntingTower.mat";
+                AssetDatabase.DeleteAsset(matPath);
+                AssetDatabase.CreateAsset(_towerMat, matPath);
+            }
+            foreach (var r in inst.GetComponentsInChildren<Renderer>())
+            {
+                var arr = new Material[r.sharedMaterials.Length];
+                for (int k = 0; k < arr.Length; k++) arr[k] = _towerMat;
+                r.sharedMaterials = arr;
+            }
         }
 
         // ================= helpers =================
