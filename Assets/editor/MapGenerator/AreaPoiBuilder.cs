@@ -97,8 +97,16 @@ namespace FolkloreArchives.MapGen
             Reg(YpfStation(root, t));
             Reg(Estancia(root, t));
             Reg(Capilla(root, t));
-            Reg(CemeteryArea(root, t));
-            Reg(BridgeLookout(root, t));
+            // Cementerio/Mirador envueltos en try-catch (owner: "Mirador no existe para
+            // nada" sin ningún error visible en Console -- si una excepción silenciosa
+            // en Cementerio cortaba acá, el Mirador ni siquiera llegaba a intentarse.
+            // Así, si alguno tira una excepción real, queda un error CLARO en la
+            // Console con su nombre en vez de un "no aparece" mudo, y el otro POI
+            // igual se construye).
+            try { Reg(CemeteryArea(root, t)); }
+            catch (System.Exception ex) { Debug.LogError("[AreaPoiBuilder] CemeteryArea explotó: " + ex); }
+            try { Reg(BridgeLookout(root, t)); }
+            catch (System.Exception ex) { Debug.LogError("[AreaPoiBuilder] BridgeLookout explotó: " + ex); }
 
             // set-dressing fijo → static batching (menos draw calls). Excepto luces.
             BuilderUtils.MarkStaticRecursive(root);
@@ -656,7 +664,7 @@ namespace FolkloreArchives.MapGen
         static Transform BridgeLookout(Transform parent, Terrain t)
         {
             float x = 400f; // ~25m pasado el extremo este del puente
-            var p = RoadShoulder(t, new Vector2(x, MapLayout.PavedRouteZAt(x)), 20f);
+            var p = RoadShoulder(t, new Vector2(x, MapLayout.PavedRouteZAt(x)), -20f); // lado B (sur, hacia el lago)
             var g = BuilderUtils.Group(parent, "Mirador", p);
             BuilderUtils.Label(g, "MIRADOR", p + Vector3.up * 9f);
 
