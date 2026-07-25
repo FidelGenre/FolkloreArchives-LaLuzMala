@@ -217,11 +217,19 @@ namespace FolkloreArchives
 
             if (door != null && !openDoors.Contains(door)) { yield return AnimateDoor(c, door, true, 0.30f); openDoors.Add(door); }
 
-            // bajar JUSTO al lado de la puerta (no lejos), sobre el piso, mirando para el mismo lado
+            // bajar JUSTO al lado de la puerta (no lejos), sobre el piso, mirando para el mismo lado.
+            // owner: "al bajar no baja bien sale la camara para otro lado" -- el 1.5f fijo
+            // se calibró para un auto mucho más chico; con el Retro Car (6.6m) el jugador
+            // terminaba re-posicionado ADENTRO/pisando el collider del auto, y Unity lo
+            // empujaba para cualquier lado al resolver el solapamiento. Ahora la distancia
+            // se calcula a partir del ancho REAL del BoxCollider del auto, así siempre
+            // baja afuera sin importar el tamaño del auto.
             Vector3 sideDir = (seat.position - c.transform.position); sideDir.y = 0f;
             if (sideDir.sqrMagnitude < 0.01f) sideDir = -c.transform.right;
             sideDir.Normalize();
-            Vector3 side = c.transform.position + sideDir * 1.5f;
+            var carCol = c.GetComponent<BoxCollider>();
+            float clearance = (carCol != null ? carCol.size.x * 0.5f : 1.0f) + 0.8f;
+            Vector3 side = c.transform.position + sideDir * clearance;
             side.y = GroundYIgnoring(c, side) + 0.05f;
             transform.position = side;
             transform.rotation = keepYaw;   // dejarlo mirando para donde miraba
@@ -307,9 +315,13 @@ namespace FolkloreArchives
             string msg = null;
             if (car != null)
             {
-                if (target != null && !target.isSeat && target.part == myDoor)
-                    msg = openDoors.Contains(myDoor) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
-                else msg = "[ E ] Bajar";
+                // owner: "cuando toco abrir puerta estando adentro del auto se baja" --
+                // este texto dependía de la MIRA (igual que el bug de E que ya se había
+                // arreglado), así que podía decir "Abrir puerta" apuntando a la puerta
+                // aunque la acción real (en Update) sea SIEMPRE bajarte con la puerta
+                // cerrada. Ahora el texto sigue el mismo criterio que la acción: solo el
+                // ESTADO de la puerta, sin importar hacia dónde mires.
+                msg = openDoors.Contains(myDoor) ? "[ E ] Cerrar puerta" : "[ E ] Bajar";
             }
             else if (target != null)
             {
