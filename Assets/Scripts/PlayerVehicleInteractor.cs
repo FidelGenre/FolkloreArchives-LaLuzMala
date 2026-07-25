@@ -3,8 +3,8 @@
 //  PlayerVehicleInteractor.cs — subir/bajar del auto, MANUAL, con E.
 //    Afuera, cerca de una PUERTA:  E abre / cierra esa puerta.
 //    Afuera, PEGADO a un asiento (puerta abierta):  E te sienta.
-//    Sentado con la puerta ABIERTA:  E cierra la puerta.
-//    Sentado con la puerta cerrada:  E te baja (abre y desliza afuera).
+//    Sentado con la puerta CERRADA:  E abre la puerta nomás (seguís sentado).
+//    Sentado con la puerta ABIERTA:  E te baja (desliza afuera).
 //  Solo manejás desde el asiento del conductor. Mouse = free-look.
 // ============================================================
 using System.Collections;
@@ -58,16 +58,15 @@ namespace FolkloreArchives
                 var target = currentTarget;
                 if (car != null)   // sentado
                 {
-                    // owner: "al querer tocar la e para cerrar la puerta me bajo" -- esto
-                    // dependía de que la MIRA (raycast) pegara justo en la puerta, algo
-                    // frágil sentado adentro con la puerta ya abierta (el ángulo de cámara
-                    // no siempre la agarra). Ahora depende solo del ESTADO de la puerta,
-                    // sin importar hacia dónde mires -- coincide con lo que ya decía el
-                    // comentario de arriba ("Sentado con la puerta abierta: E cierra").
+                    // owner: "cerre la puerta y luego al querer abrirla ya no me sale
+                    // opcion de abrirla solo de bajar" -- quiere poder abrir la puerta
+                    // sin bajarse. Depende solo del ESTADO de la puerta, sin importar
+                    // hacia dónde mires (mismo criterio que el fix anterior de "me bajo
+                    // al querer cerrar").
                     if (openDoors.Contains(myDoor))
-                        StartCoroutine(SetDoor(car, myDoor, false));   // puerta abierta → cerrarla
+                        StartCoroutine(ExitRoutine());                     // puerta abierta → bajar
                     else
-                        StartCoroutine(ExitRoutine());                 // puerta cerrada → bajar
+                        StartCoroutine(SetDoor(car, myDoor, true));        // puerta cerrada → abrirla nomás (seguís sentado)
                 }
                 else if (target != null)   // a pie, apuntando algo del auto
                 {
@@ -315,13 +314,8 @@ namespace FolkloreArchives
             string msg = null;
             if (car != null)
             {
-                // owner: "cuando toco abrir puerta estando adentro del auto se baja" --
-                // este texto dependía de la MIRA (igual que el bug de E que ya se había
-                // arreglado), así que podía decir "Abrir puerta" apuntando a la puerta
-                // aunque la acción real (en Update) sea SIEMPRE bajarte con la puerta
-                // cerrada. Ahora el texto sigue el mismo criterio que la acción: solo el
-                // ESTADO de la puerta, sin importar hacia dónde mires.
-                msg = openDoors.Contains(myDoor) ? "[ E ] Cerrar puerta" : "[ E ] Bajar";
+                // mismo criterio que la acción real de E: solo el ESTADO de la puerta.
+                msg = openDoors.Contains(myDoor) ? "[ E ] Bajar" : "[ E ] Abrir puerta";
             }
             else if (target != null)
             {
