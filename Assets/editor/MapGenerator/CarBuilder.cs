@@ -1,12 +1,14 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
-//  CarBuilder.cs — Auto manejable. Usa el modelo COMPLETO de
-//  scailman (CC-BY): carrocería + interior real + ventanas de
-//  verdad (sin transparencia) + puertas/ruedas/luces separadas.
+//  CarBuilder.cs — Auto manejable. Usa "Retro Car with Interior" de
+//  bricchi-games (CC-BY, itch.io) -- owner: "este auto esta mejor no?"
+//  (estilo PSX real, interior modelado con volante, 4 puertas +
+//  capot + baúl con pivots ya puestos para animar). Reemplaza al
+//  sedán de scailman usado antes.
 //  Auto-escalado por bounding box (no adivina el tamaño), apoyado
 //  en el piso, sobre la ruta pasando el túnel. Cámara del conductor
-//  auto-alineada al volante (Steerwheel). Tinte oscuro/PSX de terror.
-//  CRÉDITO: "Low-Poly Sedan car" by scailman (CC Attribution).
+//  auto-alineada al volante (Steering_wheel).
+//  CRÉDITO: "Retro Car With Interior" by bricchi-games (CC Attribution).
 // ============================================================
 using UnityEngine;
 using UnityEditor;
@@ -15,8 +17,9 @@ namespace FolkloreArchives.MapGen
 {
     public static class CarBuilder
     {
-        const string CarFbx = "Assets/ExternalAssets/SedanDonor/Model/Mesh/Car_Sedan.FBX";
-        const float  TargetLength = 6.0f;    // largo objetivo del auto (m) — subí/bajá para el tamaño
+        const string CarFbx = "Assets/ExternalAssets/RetroCar/models/car.fbx";
+        const string CarTexDir = "Assets/ExternalAssets/RetroCar/textures";
+        const float  TargetLength = 4.4f;    // auto chico/retro (era 6.0 para el sedán viejo, más grande)
         const float  ModelYawOffset = 0f;    // giro extra si el modelo mira al lado equivocado
 
         public static GameObject Build(Transform parent, Terrain terrain)
@@ -71,7 +74,7 @@ namespace FolkloreArchives.MapGen
                 }
                 carDoors = doorList.ToArray();
 
-                Debug.Log($"<color=cyan>[CarBuilder] scailman completo. escala {scale:0.000}, largo {TargetLength}m. Volante {(steer!=null?"OK":"NO")}, puertas {carDoors.Length}.</color>");
+                Debug.Log($"<color=cyan>[CarBuilder] Retro Car completo. escala {scale:0.000}, largo {TargetLength}m. Volante {(steer!=null?"OK":"NO")}, puertas {carDoors.Length}.</color>");
             }
             else
             {
@@ -88,13 +91,16 @@ namespace FolkloreArchives.MapGen
             ctrl.doors = carDoors;
 
             // Asiento del conductor: detrás y arriba del volante (auto-alineado).
-            Vector3 dSeat = new Vector3(-0.42f, 1.0f, 0.2f);
+            // Separaciones entre asientos escaladas al tamaño de ESTE auto (más chico
+            // que el sedán viejo: 4.4m vs 6.0m, mismo ratio ~0.73 aplicado al ancho).
+            const float seatSpread = 0.62f, seatDepth = -1.14f;
+            Vector3 dSeat = new Vector3(-0.31f, 1.0f, 0.15f);
             if (steer != null)
                 dSeat = car.transform.InverseTransformPoint(steer.position) + new Vector3(0f, 0.42f, -0.30f);
             ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   dSeat);
-            ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", dSeat + new Vector3(0.84f, 0f, 0f));
-            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, -1.55f));
-            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    dSeat + new Vector3(0.84f, 0f, -1.55f));
+            ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", dSeat + new Vector3(seatSpread, 0f, 0f));
+            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, seatDepth));
+            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    dSeat + new Vector3(seatSpread, 0f, seatDepth));
 
             // Colliders + marcadores para la MIRA (raycast): puertas y asientos.
             AddInteractColliders(ctrl);
@@ -119,59 +125,42 @@ namespace FolkloreArchives.MapGen
             return b;
         }
 
-        // Estiliza el auto: MANTIENE el color original de cada parte, lo pone MATE (sin
-        // plástico) y le suma un óxido/mugre SUTIL (manchitas chicas) encima. Las ventanas
-        // quedan apenas sucias (no negras).
+        // Estiliza el auto: un único material URP con la textura NEGRA del pack (el
+        // FBX de itch.io a veces trae la ruta de textura rota -- la asignamos a mano
+        // en vez de confiar en lo que haya importado Unity, mismo criterio que el
+        // resto de los assets de Sketchfab/itch.io de esta sesión) + el mapa emisivo
+        // del pack (faros/luces traseras) para que brillen un poco incluso con los
+        // faros de juego apagados.
+        static Material _carMat;
         static void StyleCar(GameObject inst)
         {
-            var grunge = CarRustTex();
+            if (_carMat == null || _carMat.mainTexture == null)
+            {
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(CarTexDir + "/BlackCarTexture.png");
+                var emissive = AssetDatabase.LoadAssetAtPath<Texture2D>(CarTexDir + "/EmissiveTexture.png");
+                _carMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (tex != null && _carMat.HasProperty("_BaseMap")) _carMat.SetTexture("_BaseMap", tex);
+                if (_carMat.HasProperty("_Smoothness")) _carMat.SetFloat("_Smoothness", 0.15f);
+                if (_carMat.HasProperty("_Metallic")) _carMat.SetFloat("_Metallic", 0f);
+                if (emissive != null && _carMat.HasProperty("_EmissionMap"))
+                {
+                    _carMat.SetTexture("_EmissionMap", emissive);
+                    _carMat.SetColor("_EmissionColor", Color.white);
+                    _carMat.EnableKeyword("_EMISSION");
+                    _carMat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+                }
+                string matPath = "Assets/Settings/RetroCarBlack.mat";
+                AssetDatabase.DeleteAsset(matPath);
+                AssetDatabase.CreateAsset(_carMat, matPath);
+            }
             foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
             {
-                var ms = r.sharedMaterials;
-                for (int i = 0; i < ms.Length; i++)
-                {
-                    if (ms[i] == null) continue;
-                    var m = new Material(ms[i]);   // copia → mantiene el color original de la parte
-                    if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
-                    if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0f);
-                    if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
-                    if (m.HasProperty("_SpecularHighlights")) m.SetFloat("_SpecularHighlights", 0f);
-                    // óxido/mugre SUTIL encima (solo si la parte no trae ya su propia textura)
-                    if (m.HasProperty("_BaseMap") && m.GetTexture("_BaseMap") == null)
-                    { m.SetTexture("_BaseMap", grunge); m.SetTextureScale("_BaseMap", new Vector2(2f, 2f)); }
-                    else if (m.mainTexture == null) { m.mainTexture = grunge; m.mainTextureScale = new Vector2(2f, 2f); }
-                    ms[i] = m;
-                }
-                r.sharedMaterials = ms;
+                var arr = new Material[r.sharedMaterials.Length];
+                for (int k = 0; k < arr.Length; k++) arr[k] = _carMat;
+                r.sharedMaterials = arr;
             }
         }
 
-        // Textura SUTIL de óxido/mugre: casi toda BLANCA (no cambia el color de la parte),
-        // con manchitas chicas de óxido y de mugre oscura. Point filter (PSX).
-        static Texture2D CarRustTex()
-        {
-            string path = MapLayout.GeneratedFolder + "/tex_car_grunge.asset";
-            AssetDatabase.DeleteAsset(path);   // regenerar (por si cambió la fórmula)
-            int size = 256;
-            var tex = new Texture2D(size, size, TextureFormat.RGB24, false)
-            { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
-            var rnd = new System.Random(777);
-            Color rustC = new Color(0.5f, 0.28f, 0.14f); // color del óxido
-            for (int y = 0; y < size; y++)
-                for (int x = 0; x < size; x++)
-                {
-                    Color c = Color.white;   // base: NO cambia el color de la parte
-                    float rustP = Mathf.PerlinNoise(x * 0.05f + 3f, y * 0.05f + 7f);
-                    if (rustP > 0.66f) c = Color.Lerp(c, rustC, Mathf.SmoothStep(0.66f, 0.86f, rustP) * 0.7f); // parches de óxido chicos
-                    float grime = Mathf.PerlinNoise(x * 0.16f + 20f, y * 0.16f + 20f);
-                    if (grime > 0.70f) c *= Mathf.Lerp(1f, 0.55f, Mathf.SmoothStep(0.70f, 0.92f, grime));      // manchas oscuras chicas
-                    c *= Mathf.Lerp(0.94f, 1.0f, (float)rnd.NextDouble());   // grano muy leve
-                    tex.SetPixel(x, y, c);
-                }
-            tex.Apply();
-            AssetDatabase.CreateAsset(tex, path);
-            return tex;
-        }
 
         static Material CarMat(string name, Color c, Texture2D tex)
         {
@@ -263,7 +252,7 @@ namespace FolkloreArchives.MapGen
             var lights = new Light[2];
             for (int i = 0; i < 2; i++)
             {
-                float side = i == 0 ? -0.55f : 0.55f;
+                float side = i == 0 ? -0.40f : 0.40f; // escalado al ancho de este auto (más chico que el sedán viejo)
                 var go = new GameObject("Headlight" + (i == 0 ? "L" : "R"));
                 go.transform.SetParent(car);
                 go.transform.localPosition = new Vector3(side, 0.55f, front);
