@@ -4,7 +4,8 @@
 //    Afuera, cerca de una PUERTA:  E abre / cierra esa puerta.
 //    Afuera, PEGADO a un asiento (puerta abierta):  E te sienta.
 //    Sentado con la puerta CERRADA:  E abre la puerta nomás (seguís sentado).
-//    Sentado con la puerta ABIERTA:  E te baja (desliza afuera).
+//    Sentado con la puerta ABIERTA, mirándola:  E la cierra (seguís sentado).
+//    Sentado con la puerta ABIERTA, mirando para otro lado:  E te baja.
 //  Solo manejás desde el asiento del conductor. Mouse = free-look.
 // ============================================================
 using System.Collections;
@@ -58,15 +59,23 @@ namespace FolkloreArchives
                 var target = currentTarget;
                 if (car != null)   // sentado
                 {
-                    // owner: "cerre la puerta y luego al querer abrirla ya no me sale
-                    // opcion de abrirla solo de bajar" -- quiere poder abrir la puerta
-                    // sin bajarse. Depende solo del ESTADO de la puerta, sin importar
-                    // hacia dónde mires (mismo criterio que el fix anterior de "me bajo
-                    // al querer cerrar").
-                    if (openDoors.Contains(myDoor))
-                        StartCoroutine(ExitRoutine());                     // puerta abierta → bajar
+                    if (!openDoors.Contains(myDoor))
+                    {
+                        // puerta cerrada → abrirla nomás, seguís sentado (owner: "cerre la
+                        // puerta y luego al querer abrirla ya no me sale opcion")
+                        StartCoroutine(SetDoor(car, myDoor, true));
+                    }
+                    else if (target != null && !target.isSeat && target.part == myDoor)
+                    {
+                        // puerta abierta y mirándola → cerrarla, seguís sentado (owner:
+                        // "apunto a la puerta y no me deja cerrarla")
+                        StartCoroutine(SetDoor(car, myDoor, false));
+                    }
                     else
-                        StartCoroutine(SetDoor(car, myDoor, true));        // puerta cerrada → abrirla nomás (seguís sentado)
+                    {
+                        // puerta abierta y NO mirándola → bajar
+                        StartCoroutine(ExitRoutine());
+                    }
                 }
                 else if (target != null)   // a pie, apuntando algo del auto
                 {
@@ -91,10 +100,13 @@ namespace FolkloreArchives
         }
 
         // MIRA invisible: qué parte del auto apunta el centro de la pantalla.
+        // SphereCast (no un rayo de radio 0) porque sentado adentro, muy cerca de la
+        // puerta, un rayo finito fallaba fácil por unos grados de diferencia -- eso
+        // fue justo lo que causaba "quiero cerrar la puerta y me bajo" antes.
         CarInteractable RaycastTarget()
         {
             if (cam == null) return null;
-            var hits = Physics.RaycastAll(cam.position, cam.forward, 4.5f, ~0, QueryTriggerInteraction.Collide);
+            var hits = Physics.SphereCastAll(cam.position, 0.15f, cam.forward, 4.5f, ~0, QueryTriggerInteraction.Collide);
             CarInteractable best = null; float bd = float.MaxValue;
             foreach (var h in hits)
             {
@@ -314,8 +326,10 @@ namespace FolkloreArchives
             string msg = null;
             if (car != null)
             {
-                // mismo criterio que la acción real de E: solo el ESTADO de la puerta.
-                msg = openDoors.Contains(myDoor) ? "[ E ] Bajar" : "[ E ] Abrir puerta";
+                // mismo criterio que la acción real de E: estado de la puerta + mira.
+                if (!openDoors.Contains(myDoor)) msg = "[ E ] Abrir puerta";
+                else if (target != null && !target.isSeat && target.part == myDoor) msg = "[ E ] Cerrar puerta";
+                else msg = "[ E ] Bajar";
             }
             else if (target != null)
             {
