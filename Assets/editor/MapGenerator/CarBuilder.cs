@@ -19,7 +19,7 @@ namespace FolkloreArchives.MapGen
     {
         const string CarFbx = "Assets/ExternalAssets/RetroCar/models/car.fbx";
         const string CarTexDir = "Assets/ExternalAssets/RetroCar/textures";
-        const float  TargetLength = 5.8f;    // owner: "necesito qeu sea bastante mas grande" (era 4.4, muy chico)
+        const float  TargetLength = 6.6f;    // owner: "que sea mas alto o mas grande lo que vos veas" (era 5.8, subo otro poco)
         const float  ModelYawOffset = 0f;    // giro extra si el modelo mira al lado equivocado
 
         public static GameObject Build(Transform parent, Terrain terrain)
