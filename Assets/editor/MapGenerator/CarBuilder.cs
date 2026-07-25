@@ -21,7 +21,11 @@ namespace FolkloreArchives.MapGen
 
         public static GameObject Build(Transform parent, Terrain terrain)
         {
-            float carX = MapLayout.TunnelEntranceX + 25f;
+            // owner: "quiero que arranque por el otro lado el auto" -- antes cerca de
+            // la entrada del túnel (oeste, inicio del mapa), ahora cerca del borde
+            // este (mismo criterio de offset, del otro extremo), para no tener que
+            // manejar todo el mapa para probar el cementerio/campamento/cabañas nuevos.
+            float carX = MapLayout.MapSizeX - 30f;
             float carZ = MapLayout.PavedRouteZAt(carX);
             var pos = new Vector3(carX, MapLayout.RoadSurfaceHeight, carZ);
             float dz = MapLayout.PavedRouteZAt(carX + 6f) - MapLayout.PavedRouteZAt(carX - 6f);
