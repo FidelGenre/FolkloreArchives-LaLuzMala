@@ -52,6 +52,13 @@ namespace FolkloreArchives
         float pitch;
         float verticalVelocity;
 
+        // owner: bajar del auto "me cambia la camara para adelante" -- este script
+        // guarda su propio pitch (privado) y lo reaplica ni bien se reactiva; si venía
+        // de subirse/bajarse del auto y quedó desactualizado (con la última mirada de
+        // ANTES de subir al auto), pisaba de golpe la cámara apenas volvía el control.
+        // PlayerVehicleInteractor llama esto justo antes de reactivar el script.
+        public void SetLookPitch(float p) { pitch = Mathf.Clamp(p, -85f, 85f); }
+
         bool crouching;
         float camStandY;   // camera local Y when standing (captured at Start)
         float camCrouchY;  // camera local Y when crouched

@@ -274,7 +274,16 @@ namespace FolkloreArchives
 
             SetBodyVisible(true);
             if (cc != null) cc.enabled = true;
-            if (explorer != null) explorer.enabled = true;
+            // owner: "cuando se coloca el personaje me cambia la camara para adelante" --
+            // MapExplorer guarda su propio "pitch" (privado) desde antes de subirte al
+            // auto, y lo reaplicaba de golpe apenas se reactivaba, pisando la vista recién
+            // puesta. Lo sincronizo con camLocalRot (la misma rotación neutra que le
+            // acabamos de poner a la cámara) ANTES de reactivarlo.
+            if (explorer != null)
+            {
+                explorer.SetLookPitch(camLocalRot.eulerAngles.x);
+                explorer.enabled = true;
+            }
             busy = false;
         }
 
