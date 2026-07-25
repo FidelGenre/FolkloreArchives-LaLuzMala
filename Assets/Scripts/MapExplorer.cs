@@ -59,6 +59,9 @@ namespace FolkloreArchives
         // PlayerVehicleInteractor llama esto justo antes de reactivar el script.
         public void SetLookPitch(float p) { pitch = Mathf.Clamp(p, -85f, 85f); }
 
+        bool suppressMoveUntilKeysReleased;
+        void OnEnable() { suppressMoveUntilKeysReleased = true; }
+
         bool crouching;
         float camStandY;   // camera local Y when standing (captured at Start)
         float camCrouchY;  // camera local Y when crouched
@@ -157,6 +160,18 @@ namespace FolkloreArchives
             // Move
             float h = (kb.dKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed ? 1f : 0f);
             float v = (kb.wKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed ? 1f : 0f);
+
+            // owner: "se me sigue corriendo la vista luego de bajarme hacia adelante" --
+            // W también acelera el auto; si te bajás sin soltarlo, este script se
+            // reactiva con W todavía apretado y arrancabas a caminar solo, de golpe.
+            // Bloqueo el movimiento hasta que sueltes TODO WASD al menos una vez.
+            if (suppressMoveUntilKeysReleased)
+            {
+                if (!kb.wKey.isPressed && !kb.aKey.isPressed && !kb.sKey.isPressed && !kb.dKey.isPressed)
+                    suppressMoveUntilKeysReleased = false;
+                else
+                    h = v = 0f;
+            }
 
             // Stamina: solo corrés si apretás Shift, te estás moviendo, no estás
             // agachado, te queda estamina y no estás exhausto.

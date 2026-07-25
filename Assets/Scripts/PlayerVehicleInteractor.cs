@@ -274,6 +274,13 @@ namespace FolkloreArchives
 
             SetBodyVisible(true);
             if (cc != null) cc.enabled = true;
+            // owner: "se me sigue corriendo la vista luego de bajarme hacia adelante" --
+            // mientras este script y MapExplorer estuvieron con el mouse-look apagado
+            // (todo el Glide, ~0.6s+), el Input System sigue ACUMULANDO el delta del
+            // mouse sin consumirlo -- al reactivar, ese delta acumulado se aplica de
+            // golpe como si el mouse se hubiese movido mucho de una, y la vista sigue
+            // "corriendo" unos frames. Se descarta ese acumulado antes de reactivar.
+            if (Mouse.current != null) _ = Mouse.current.delta.ReadValue();
             // owner: "cuando se coloca el personaje me cambia la camara para adelante" --
             // MapExplorer guarda su propio "pitch" (privado) desde antes de subirte al
             // auto, y lo reaplicaba de golpe apenas se reactivaba, pisando la vista recién
