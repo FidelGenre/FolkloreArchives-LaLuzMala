@@ -265,7 +265,11 @@ namespace FolkloreArchives
             if (!doorClosed.ContainsKey(door)) doorClosed[door] = door.localRotation;
             Quaternion closed = doorClosed[door];
             float sign = c.transform.InverseTransformPoint(door.position).x < 0f ? 1f : -1f;
-            Quaternion openRot = closed * Quaternion.Euler(0f, sign * doorOpenDeg, 0f);
+            // Bisagra en el eje vertical del MUNDO, no el eje Y "local" del nodo tal
+            // como vino del FBX (el pack nuevo trae los pivots de puerta con una
+            // rotación propia -- rotar en su Y local abría la puerta en diagonal).
+            Vector3 hingeAxis = door.parent.InverseTransformDirection(Vector3.up);
+            Quaternion openRot = Quaternion.AngleAxis(sign * doorOpenDeg, hingeAxis) * closed;
             Quaternion from = door.localRotation, to = open ? openRot : closed;
             float t = 0f;
             while (t < 1f)

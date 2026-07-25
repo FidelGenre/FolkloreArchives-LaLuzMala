@@ -19,7 +19,7 @@ namespace FolkloreArchives.MapGen
     {
         const string CarFbx = "Assets/ExternalAssets/RetroCar/models/car.fbx";
         const string CarTexDir = "Assets/ExternalAssets/RetroCar/textures";
-        const float  TargetLength = 4.4f;    // auto chico/retro (era 6.0 para el sedán viejo, más grande)
+        const float  TargetLength = 5.8f;    // owner: "necesito qeu sea bastante mas grande" (era 4.4, muy chico)
         const float  ModelYawOffset = 0f;    // giro extra si el modelo mira al lado equivocado
 
         public static GameObject Build(Transform parent, Terrain terrain)
@@ -91,9 +91,9 @@ namespace FolkloreArchives.MapGen
             ctrl.doors = carDoors;
 
             // Asiento del conductor: detrás y arriba del volante (auto-alineado).
-            // Separaciones entre asientos escaladas al tamaño de ESTE auto (más chico
-            // que el sedán viejo: 4.4m vs 6.0m, mismo ratio ~0.73 aplicado al ancho).
-            const float seatSpread = 0.62f, seatDepth = -1.14f;
+            // Separaciones entre asientos como proporción de TargetLength (no un
+            // número fijo) para que escalen solas si el auto vuelve a cambiar de tamaño.
+            float seatSpread = TargetLength * 0.1409f, seatDepth = TargetLength * -0.2591f;
             Vector3 dSeat = new Vector3(-0.31f, 1.0f, 0.15f);
             if (steer != null)
                 dSeat = car.transform.InverseTransformPoint(steer.position) + new Vector3(0f, 0.42f, -0.30f);
@@ -252,7 +252,7 @@ namespace FolkloreArchives.MapGen
             var lights = new Light[2];
             for (int i = 0; i < 2; i++)
             {
-                float side = i == 0 ? -0.40f : 0.40f; // escalado al ancho de este auto (más chico que el sedán viejo)
+                float side = TargetLength * (i == 0 ? -0.0909f : 0.0909f); // proporcional al ancho de este auto
                 var go = new GameObject("Headlight" + (i == 0 ? "L" : "R"));
                 go.transform.SetParent(car);
                 go.transform.localPosition = new Vector3(side, 0.55f, front);
