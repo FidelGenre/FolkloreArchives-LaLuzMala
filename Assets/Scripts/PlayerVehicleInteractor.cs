@@ -26,7 +26,7 @@ namespace FolkloreArchives
         CharacterController cc;
         MapExplorer explorer;
         Transform cam, camParent;
-        Vector3 camLocalPos; Quaternion camLocalRot;
+        Vector3 camLocalPos;
         Renderer[] bodyRenderers;
 
         CarController car;      // null = a pie
@@ -43,7 +43,7 @@ namespace FolkloreArchives
             cc = GetComponent<CharacterController>();
             explorer = GetComponent<MapExplorer>();
             var c = GetComponentInChildren<Camera>();
-            if (c != null) { cam = c.transform; camParent = cam.parent; camLocalPos = cam.localPosition; camLocalRot = cam.localRotation; }
+            if (c != null) { cam = c.transform; camParent = cam.parent; camLocalPos = cam.localPosition; }
             bodyRenderers = GetComponentsInChildren<Renderer>(true);
         }
 
@@ -255,40 +255,38 @@ namespace FolkloreArchives
             Vector3 side = c.transform.TransformPoint(exitLocal);
             side.y = GroundYIgnoring(c, side) + 0.05f;
             transform.position = side;
-            // owner: "mete un 180 la camara... no se queda apuntando como si estuviera
-            // saliendo por la puerta para adelante" -- quedar mirando "hacia afuera"
-            // (perpendicular al auto) obligaba a GIRAR la cámara durante la transición
-            // desde cómo mirabas sentado. Ahora encara la misma dirección que el auto
-            // (su frente/dirección de viaje), sin girar nada en el proceso.
-            transform.rotation = c.transform.rotation;
+            // owner: "me sigue rotando la camara luego de haber bajado" (un salto de un
+            // solo frame) -- el bug real: acá se forzaba SIEMPRE una pose neutra fija
+            // (mirando derecho, nivel), descartando hacia dónde mirabas REALMENTE sentado
+            // (lookYaw/lookPitch, el free-look del asiento). Si no mirabas justo al frente
+            // del auto, el salto entre "cómo mirabas" y "la pose neutra forzada" se veía
+            // como un giro de golpe. Ahora el cuerpo queda exactamente con el yaw que ya
+            // tenía la cámara (auto.yaw + lookYaw) y la cámara vuelve a su pitch actual
+            // (lookPitch) -- ni un grado de diferencia entre el último frame sentado y el
+            // primero parado, cero salto.
+            float exitYaw = c.transform.eulerAngles.y + lookYaw;
+            float exitPitch = lookPitch;
+            transform.rotation = Quaternion.Euler(0f, exitYaw, 0f);
             lookYaw = 0f; lookPitch = 0f;
 
             // deslizar la cámara del asiento hasta el ojo del jugador (SUAVE, camino corto).
             // Solo la POSICIÓN se anima -- la rotación se mantiene fija en la que ya tenía
-            // sentado (sin girar durante la transición) y se ajusta de un salto (sin
-            // animar) recién al reparentarla, así no hay ningún giro visible de por medio.
+            // sentado (sin girar durante la transición) y al reparentarla se restaura ESE
+            // MISMO pitch (no uno neutro), así no hay ningún giro visible de por medio.
             Vector3 targetPos = camParent.TransformPoint(camLocalPos);
             yield return Glide(cam, targetPos, cam.rotation);
             cam.SetParent(camParent, false);
-            cam.localPosition = camLocalPos; cam.localRotation = camLocalRot;
+            cam.localPosition = camLocalPos;
+            cam.localRotation = Quaternion.Euler(exitPitch, 0f, 0f);
 
             SetBodyVisible(true);
             if (cc != null) cc.enabled = true;
-            // owner: "se me sigue corriendo la vista luego de bajarme hacia adelante" --
-            // mientras este script y MapExplorer estuvieron con el mouse-look apagado
-            // (todo el Glide, ~0.6s+), el Input System sigue ACUMULANDO el delta del
-            // mouse sin consumirlo -- al reactivar, ese delta acumulado se aplica de
-            // golpe como si el mouse se hubiese movido mucho de una, y la vista sigue
-            // "corriendo" unos frames. Se descarta ese acumulado antes de reactivar.
-            if (Mouse.current != null) _ = Mouse.current.delta.ReadValue();
-            // owner: "cuando se coloca el personaje me cambia la camara para adelante" --
-            // MapExplorer guarda su propio "pitch" (privado) desde antes de subirte al
-            // auto, y lo reaplicaba de golpe apenas se reactivaba, pisando la vista recién
-            // puesta. Lo sincronizo con camLocalRot (la misma rotación neutra que le
-            // acabamos de poner a la cámara) ANTES de reactivarlo.
+            // MapExplorer guarda su propio "pitch" (privado) y lo reaplica ni bien se
+            // reactiva -- sincronizado con el mismo exitPitch de arriba, para que no haya
+            // ningún valor desactualizado que la pise al toque.
             if (explorer != null)
             {
-                explorer.SetLookPitch(camLocalRot.eulerAngles.x);
+                explorer.SetLookPitch(exitPitch);
                 explorer.enabled = true;
             }
             busy = false;
