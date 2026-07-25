@@ -113,6 +113,7 @@ namespace FolkloreArchives.MapGen
             camData.antialiasingQuality = AntialiasingQuality.High;
 
             camGO.AddComponent<FolkloreArchives.VhsPostFx>();  // FtF-style filmic grade: grain + bloom + subtle CA + vignette
+            camGO.AddComponent<FolkloreArchives.Crosshair>();  // owner: "un circulito en medio de la camara ... como en el fears"
             // no scanlines - Fears to Fathom is a clean sharp image, not a scanline CRT look
             // (La cámara de fondo para montañas-sobre-el-cielo se quitó: en URP rompía el
             //  skybox/día-noche. El fondo de montañas correcto es un SKYBOX con montañas.)
