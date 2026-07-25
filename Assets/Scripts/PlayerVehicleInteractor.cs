@@ -65,10 +65,12 @@ namespace FolkloreArchives
                         // puerta y luego al querer abrirla ya no me sale opcion")
                         StartCoroutine(SetDoor(car, myDoor, true));
                     }
-                    else if (target != null && !target.isSeat && target.part == myDoor)
+                    else if (LookingAtDoor(myDoor))
                     {
                         // puerta abierta y mirándola → cerrarla, seguís sentado (owner:
-                        // "apunto a la puerta y no me deja cerrarla")
+                        // "apunto a la puerta y no me deja cerrarla" -- el raycast fallaba
+                        // sentado tan cerca, seguramente pegándole antes al propio collider
+                        // del asiento; ahora es un chequeo de ángulo puro, sin física)
                         StartCoroutine(SetDoor(car, myDoor, false));
                     }
                     else
@@ -97,6 +99,17 @@ namespace FolkloreArchives
                     cam.localEulerAngles = new Vector3(lookPitch, lookYaw, 0f);
                 }
             }
+        }
+
+        // Sentado, "¿estoy mirando la puerta?" -- ángulo puro, sin física. La MIRA
+        // (RaycastTarget/SphereCast) sentado tan cerca fallaba: probablemente el propio
+        // collider del asiento (donde está parada la cámara) se interponía primero.
+        bool LookingAtDoor(Transform door)
+        {
+            if (door == null || cam == null) return false;
+            Vector3 toDoor = door.position - cam.position;
+            if (toDoor.sqrMagnitude < 0.0001f) return true;
+            return Vector3.Angle(cam.forward, toDoor) < 45f;
         }
 
         // MIRA invisible: qué parte del auto apunta el centro de la pantalla.
@@ -326,9 +339,9 @@ namespace FolkloreArchives
             string msg = null;
             if (car != null)
             {
-                // mismo criterio que la acción real de E: estado de la puerta + mira.
+                // mismo criterio que la acción real de E: estado de la puerta + ángulo de mira.
                 if (!openDoors.Contains(myDoor)) msg = "[ E ] Abrir puerta";
-                else if (target != null && !target.isSeat && target.part == myDoor) msg = "[ E ] Cerrar puerta";
+                else if (LookingAtDoor(myDoor)) msg = "[ E ] Cerrar puerta";
                 else msg = "[ E ] Bajar";
             }
             else if (target != null)
