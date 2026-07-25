@@ -13,6 +13,58 @@ namespace FolkloreArchives.MapGen
 {
     public static class TestPlayerBuilder
     {
+        // XZ del punto de spawn (al lado del auto, sobre la ruta pasando el túnel).
+        // Menos offset lateral que antes (2.0 en vez de 3.5) para no salirse del asfalto.
+        public static Vector2 SpawnXZ()
+        {
+            float carX = MapLayout.TunnelEntranceX + 22f;
+            return new Vector2(carX, MapLayout.PavedRouteZAt(carX) + 2.0f);
+        }
+
+        // Posición de spawn apoyada SOBRE el terreno real (muestreado con SampleHeight)
+        // o sobre la ruta si ésta está por encima, con un pequeño margen para que la
+        // gravedad lo asiente parado. Así nunca aparece enterrado aunque el terreno
+        // haya cambiado de altura desde el último Generate.
+        public static Vector3 SpawnPos(Terrain t)
+        {
+            Vector2 xz = SpawnXZ();
+            float terrainY = t != null
+                ? t.SampleHeight(new Vector3(xz.x, 0f, xz.y)) + t.transform.position.y
+                : MapLayout.RoadSurfaceHeight;
+            float groundY = Mathf.Max(MapLayout.RoadSurfaceHeight, terrainY);
+            return new Vector3(xz.x, groundY + 0.5f, xz.y);
+        }
+
+        // Botón para REUBICAR el spawn sobre el terreno actual SIN regenerar el mapa
+        // (así no se borra el galpón ni nada puesto a mano). Corrige TEST_PLAYER (y el
+        // perro) muestreando la altura real del terreno. Después: guardar la escena.
+        [MenuItem("Tools/Folklore Archives/Reubicar Spawn sobre el terreno")]
+        public static void RelocateSpawn()
+        {
+            var player = GameObject.Find("TEST_PLAYER");
+            if (player == null) { Debug.LogError("[Spawn] No encontré TEST_PLAYER en la escena."); return; }
+            var t = Terrain.activeTerrain;
+            if (t == null) { Debug.LogError("[Spawn] No hay Terrain activo en la escena."); return; }
+
+            Vector3 pos = SpawnPos(t);
+            player.transform.position = pos;
+            player.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+
+            // re-apoyar el perro al lado, si está
+            var dog = GameObject.Find("DOG");
+            if (dog != null)
+            {
+                Vector2 dxz = SpawnXZ() + new Vector2(1.6f, -1.2f);
+                float dy = t.SampleHeight(new Vector3(dxz.x, 0f, dxz.y)) + t.transform.position.y;
+                dog.transform.position = new Vector3(dxz.x, dy + 0.2f, dxz.y);
+            }
+
+            EditorUtility.SetDirty(player);
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(player.scene);
+            Debug.Log($"<color=lime>[Spawn] Reubicado en {pos} (terreno muestreado). Guardá la escena (Ctrl+S).</color>");
+            Selection.activeGameObject = player;
+        }
+
         public static void Build(Transform parent, Terrain t)
         {
             // disable any existing cameras
@@ -25,9 +77,10 @@ namespace FolkloreArchives.MapGen
             // spawn AL LADO DEL AUTO (en la ruta, pasando el túnel) para poder probar
             // el manejo sin caminar desde el campamento. Encaja con el arranque del juego.
             // (Para volver a spawnear en el campamento: usar MapLayout.Campsite como antes.)
-            float carX = MapLayout.TunnelEntranceX + 22f;
-            Vector2 spawnXZ = new Vector2(carX, MapLayout.PavedRouteZAt(carX) + 3.5f);
-            player.transform.position = new Vector3(spawnXZ.x, MapLayout.RoadSurfaceHeight + 0.2f, spawnXZ.y);
+            // La Y se MUESTREA del terreno (como el perro) — antes usaba una altura fija
+            // (RoadSurfaceHeight) y si el terreno estaba más alto ahí, spawneabas enterrado.
+            Vector2 spawnXZ = SpawnXZ();
+            player.transform.position = SpawnPos(t);
             player.transform.rotation = Quaternion.Euler(0f, 180f, 0f); // mirando hacia el auto
 
             var cc = player.AddComponent<CharacterController>();
