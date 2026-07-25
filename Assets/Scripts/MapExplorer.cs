@@ -82,6 +82,42 @@ namespace FolkloreArchives
             }
             Cursor.lockState = CursorLockMode.Locked;
             stamina = maxStamina;
+
+            SnapToGround(); // apoyar sobre el suelo real al arrancar (evita spawn enterrado)
+        }
+
+        // Control externo de la linterna (PlayerVehicleInteractor la apaga al subirte
+        // al auto -- owner: "al entrar deberia apagarse mi linterna" -- y la restaura
+        // tal cual estaba al bajarte). Funciona aunque este componente esté
+        // "enabled=false" (mientras estás sentado), porque solo toca el Light, no
+        // depende de que Update() esté corriendo.
+        public bool FlashlightOn => flashlight != null && flashlight.enabled;
+        public void SetFlashlight(bool on) { if (flashlight != null) flashlight.enabled = on; }
+
+        // Apoya al jugador sobre la superficie real (terreno/ruta/puente) tirando un
+        // raycast hacia abajo desde bien arriba de su XZ. Así, aunque la posición
+        // guardada no coincida con el terreno actual, siempre aparecés parado sobre el
+        // piso — nunca enterrado ni flotando. Se desactiva el CharacterController un
+        // instante para que el rayo no choque contra la propia cápsula.
+        void SnapToGround()
+        {
+            if (controller == null) return;
+            bool ccWasOn = controller.enabled;
+            controller.enabled = false;
+
+            Vector3 from = transform.position + Vector3.up * 60f;
+            var hits = Physics.RaycastAll(from, Vector3.down, 200f, ~0, QueryTriggerInteraction.Ignore);
+            float bestY = float.NegativeInfinity; bool found = false;
+            foreach (var h in hits)
+            {
+                if (h.collider.transform.IsChildOf(transform)) continue; // ignorar colliders propios
+                if (h.point.y > bestY) { bestY = h.point.y; found = true; } // superficie más alta = piso
+            }
+            if (found)
+                transform.position = new Vector3(transform.position.x, bestY + 0.1f, transform.position.z);
+
+            verticalVelocity = 0f;
+            if (ccWasOn) controller.enabled = true;
         }
 
         void Update()
@@ -173,6 +209,10 @@ namespace FolkloreArchives
             // Flashlight
             if (kb.fKey.wasPressedThisFrame && flashlight != null)
                 flashlight.enabled = !flashlight.enabled;
+
+            // (arriba del auto, esta clase queda "enabled = false" -- ver
+            // PlayerVehicleInteractor, que llama a SetFlashlight/FlashlightOn
+            // directo en vez de depender de este Update)
 
             // (el cursor y Esc ahora los maneja SettingsMenu — el menú de opciones)
 

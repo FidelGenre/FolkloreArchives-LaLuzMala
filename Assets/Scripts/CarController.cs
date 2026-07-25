@@ -4,8 +4,9 @@
 //  terreno/camino). WASD/flechas: acelerar, frenar, retroceder,
 //  doblar. Se activa cuando el jugador se sube (driving=true), lo
 //  maneja PlayerVehicleInteractor. Asientos como anclas para la
-//  cámara (adelante x2, atrás x2). Faros/radio se enganchan en la
-//  fase siguiente.
+//  cámara (adelante x2, atrás x2). Faros: F los prende/apaga mientras
+//  manejás (PlayerVehicleInteractor apaga la linterna del jugador al
+//  subirte de conductor). Radio: pendiente.
 // ============================================================
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -35,6 +36,10 @@ namespace FolkloreArchives
 
         [Header("Puertas del modelo (para abrir/cerrar)")]
         public Transform[] doors;          // todas las puertas separadas del FBX
+
+        [Header("Faros (owner: misma tecla F que la linterna del jugador)")]
+        public Light[] headlights;
+        [HideInInspector] public bool headlightsOn = false;
 
         [HideInInspector] public bool driving = false;
 
@@ -66,6 +71,12 @@ namespace FolkloreArchives
                          - (kb.sKey.isPressed || kb.downArrowKey.isPressed ? 1f : 0f);
                 steer    = (kb.dKey.isPressed || kb.rightArrowKey.isPressed ? 1f : 0f)
                          - (kb.aKey.isPressed || kb.leftArrowKey.isPressed ? 1f : 0f);
+
+                // owner: "al entrar deberia apagarse mi linterna y usarse las del auto
+                // con la misma tecla que la normal" -- F prende/apaga los faros
+                // mientras manejás (PlayerVehicleInteractor ya apagó la linterna al
+                // subirte al asiento del conductor).
+                if (kb.fKey.wasPressedThisFrame) SetHeadlights(!headlightsOn);
             }
 
             // acelerar / frenar / retroceder / desacelerar
@@ -100,5 +111,12 @@ namespace FolkloreArchives
         }
 
         public float SpeedKmh => Mathf.Abs(speed) * 3.6f;
+
+        public void SetHeadlights(bool on)
+        {
+            headlightsOn = on;
+            if (headlights == null) return;
+            foreach (var l in headlights) if (l != null) l.enabled = on;
+        }
     }
 }

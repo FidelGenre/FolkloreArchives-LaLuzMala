@@ -29,7 +29,11 @@ namespace FolkloreArchives.MapGen
             float carZ = MapLayout.PavedRouteZAt(carX);
             var pos = new Vector3(carX, MapLayout.RoadSurfaceHeight, carZ);
             float dz = MapLayout.PavedRouteZAt(carX + 6f) - MapLayout.PavedRouteZAt(carX - 6f);
-            float yaw = Mathf.Atan2(12f, dz) * Mathf.Rad2Deg;
+            // owner: "el auto esta mirando en direccion contraria" -- la fórmula
+            // original apuntaba siempre hacia +X (tenía sentido cerca del túnel,
+            // "hacia adentro" del mapa); ahora que arranca del lado ESTE, +X es
+            // "hacia afuera" del mapa. +180° para que mire hacia el mapa otra vez.
+            float yaw = Mathf.Atan2(12f, dz) * Mathf.Rad2Deg + 180f;
 
             var car = new GameObject("Renault12");
             car.transform.SetParent(parent);
@@ -94,6 +98,11 @@ namespace FolkloreArchives.MapGen
 
             // Colliders + marcadores para la MIRA (raycast): puertas y asientos.
             AddInteractColliders(ctrl);
+
+            // Faros (owner: "usarse las del auto con la misma tecla que la normal" --
+            // la linterna del jugador se apaga al subirse de conductor, y F pasa a
+            // prender/apagar estos). Apagados por defecto (SetHeadlights los prende).
+            ctrl.headlights = BuildHeadlights(car.transform);
 
             car.transform.position = pos + Vector3.up * 0.05f;
             car.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
@@ -241,6 +250,35 @@ namespace FolkloreArchives.MapGen
             bc.isTrigger = true;
             var ci = seat.gameObject.AddComponent<FolkloreArchives.CarInteractable>();
             ci.car = ctrl; ci.part = seat; ci.isSeat = true;
+        }
+
+        // Faros: 2 spotlights (izq/der) sobre el paragolpes delantero, apagados por
+        // defecto. El auto queda recentrado/escalado a TargetLength con el frente en
+        // +Z local (mismo eje que CarController.transform.forward, ya probado con el
+        // manejo) -- mismo look que la linterna del jugador (Spot, sin sombras, cálido),
+        // un poco más de alcance/apertura por ser 2 luces reales de auto.
+        static Light[] BuildHeadlights(Transform car)
+        {
+            float front = TargetLength * 0.46f; // cerca de la punta, no exacto (el modelo no es un cubo perfecto)
+            var lights = new Light[2];
+            for (int i = 0; i < 2; i++)
+            {
+                float side = i == 0 ? -0.55f : 0.55f;
+                var go = new GameObject("Headlight" + (i == 0 ? "L" : "R"));
+                go.transform.SetParent(car);
+                go.transform.localPosition = new Vector3(side, 0.55f, front);
+                go.transform.localRotation = Quaternion.identity;
+                var l = go.AddComponent<Light>();
+                l.type = LightType.Spot;
+                l.range = MapLayout.FlashlightRange * 1.4f;
+                l.spotAngle = MapLayout.FlashlightSpotAngle;
+                l.intensity = 20f;
+                l.color = new Color(0.95f, 0.93f, 0.82f); // blanco cálido, más frío que la linterna
+                l.shadows = LightShadows.None;
+                l.enabled = false; // CarController.SetHeadlights los prende
+                lights[i] = l;
+            }
+            return lights;
         }
 
         static Transform Seat(Transform car, string name, Vector3 lpos)

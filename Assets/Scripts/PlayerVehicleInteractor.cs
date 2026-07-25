@@ -32,6 +32,7 @@ namespace FolkloreArchives
         Transform mySeat, myDoor;
         CarInteractable currentTarget;   // lo que apunta la mira este frame
         bool busy;
+        bool flashlightWasOn;   // estado de la linterna al subir (para restaurarlo al bajar)
         float lookYaw, lookPitch;
         readonly Dictionary<Transform, Quaternion> doorClosed = new Dictionary<Transform, Quaternion>();
         readonly HashSet<Transform> openDoors = new HashSet<Transform>();
@@ -164,6 +165,15 @@ namespace FolkloreArchives
 
             car = c; mySeat = seat; myDoor = door;
             c.driving = (seat == c.driverSeat);
+
+            // owner: "al entrar deberia apagarse mi linterna y usarse las del auto con
+            // la misma tecla que la normal" -- solo al MANEJAR (los faros son del
+            // auto, no tiene sentido para un pasajero).
+            if (c.driving && explorer != null)
+            {
+                flashlightWasOn = explorer.FlashlightOn;
+                explorer.SetFlashlight(false);
+            }
             busy = false;
         }
 
@@ -171,7 +181,16 @@ namespace FolkloreArchives
         {
             busy = true;
             var c = car; var seat = mySeat; var door = myDoor;
+            bool wasDriving = c.driving;
             car = null; mySeat = null; myDoor = null; c.driving = false;
+
+            // apagar los faros del auto y devolverle al jugador su linterna como
+            // estaba antes de subir (prendida o apagada).
+            if (wasDriving)
+            {
+                c.SetHeadlights(false);
+                if (explorer != null) explorer.SetFlashlight(flashlightWasOn);
+            }
 
             // dirección que estaba mirando al tocar E (horizontal) → salgo mirando igual
             Vector3 lookFwd = cam.forward; lookFwd.y = 0f;
