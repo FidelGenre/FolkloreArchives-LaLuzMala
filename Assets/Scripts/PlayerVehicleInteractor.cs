@@ -237,21 +237,22 @@ namespace FolkloreArchives
 
             if (door != null && !openDoors.Contains(door)) { yield return AnimateDoor(c, door, true, 0.30f); openDoors.Add(door); }
 
-            // bajar JUSTO al lado de la PUERTA (no del asiento) que usaste, sobre el piso.
-            // owner: "al bajar no baja bien sale la camara para otro lado" -- el 1.5f fijo
-            // se calibró para un auto mucho más chico; con el Retro Car (6.6m) el jugador
-            // terminaba re-posicionado ADENTRO/pisando el collider del auto, y Unity lo
-            // empujaba para cualquier lado al resolver el solapamiento. Fix: la distancia
-            // se calcula del ancho REAL del BoxCollider del auto, usando la posición de la
-            // PUERTA (no del asiento, que tiene offsets de cámara/ojo no puramente
-            // laterales) para decidir el lado.
-            Vector3 doorRef = door != null ? door.position : seat.position;
-            Vector3 sideDir = (doorRef - c.transform.position); sideDir.y = 0f;
-            if (sideDir.sqrMagnitude < 0.01f) sideDir = -c.transform.right;
-            sideDir.Normalize();
+            // bajar JUSTO AL LADO DEL ASIENTO (no en el centro del auto), sobre el piso.
+            // owner: "al bajar no baja bien" -- el 1.5f fijo se calibró para un auto
+            // mucho más chico; con el Retro Car (6.6m) el jugador quedaba pisando el
+            // collider del auto. Luego "sigo quedando delante de la puerta... deberia
+            // bajarme delante del asiento" -- el intento anterior calculaba un punto
+            // lateral desde el CENTRO del auto (mismo Z para cualquier asiento), así que
+            // caía a la altura del centro del auto en vez de al lado de TU asiento. Ahora
+            // trabajo en el espacio LOCAL del auto: conservo la posición a lo largo del
+            // auto (Z local) del asiento, y solo empujo hacia afuera en el eje lateral (X
+            // local) lo justo para despejar el ancho real del collider.
             var carCol = c.GetComponent<BoxCollider>();
-            float clearance = (carCol != null ? carCol.size.x * 0.5f : 1.0f) + 0.8f;
-            Vector3 side = c.transform.position + sideDir * clearance;
+            float halfWidth = carCol != null ? carCol.size.x * 0.5f : 1.0f;
+            Vector3 seatLocal = c.transform.InverseTransformPoint(seat.position);
+            float sign = seatLocal.x >= 0f ? 1f : -1f;
+            Vector3 exitLocal = new Vector3(sign * (halfWidth + 0.8f), seatLocal.y, seatLocal.z);
+            Vector3 side = c.transform.TransformPoint(exitLocal);
             side.y = GroundYIgnoring(c, side) + 0.05f;
             transform.position = side;
             // owner: "mete un 180 la camara... no se queda apuntando como si estuviera
