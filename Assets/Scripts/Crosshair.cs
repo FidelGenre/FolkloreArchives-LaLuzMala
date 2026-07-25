@@ -13,9 +13,9 @@ namespace FolkloreArchives
 {
     public class Crosshair : MonoBehaviour
     {
-        public float diameter = 8f;
+        public float diameter = 11f;
         public float thickness = 1.5f;
-        public Color color = new Color(1f, 1f, 1f, 0.65f);
+        public Color color = new Color(0.72f, 0.72f, 0.72f, 0.55f); // owner: "no tan blanco, mas grisesito como el de fears"
 
         Texture2D ringTex;
 
