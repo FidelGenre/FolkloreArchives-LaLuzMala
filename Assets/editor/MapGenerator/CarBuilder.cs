@@ -30,7 +30,16 @@ namespace FolkloreArchives.MapGen
             // manejar todo el mapa para probar el cementerio/campamento/cabañas nuevos.
             float carX = MapLayout.MapSizeX - 30f;
             float carZ = MapLayout.PavedRouteZAt(carX);
-            var pos = new Vector3(carX, MapLayout.RoadSurfaceHeight, carZ);
+            // owner: "esta spwaneado debajo de la tierra" -- RoadSurfaceHeight es la
+            // altura NOMINAL de la ruta pavimentada, pero cerca del borde este del
+            // mapa el terreno real puede quedar más alto que ese valor fijo (mismo
+            // bug que ya se había arreglado en TestPlayerBuilder). Muestreo el
+            // terreno real y uso el mayor de los dos.
+            float terrainY = terrain != null
+                ? terrain.SampleHeight(new Vector3(carX, 0f, carZ)) + terrain.transform.position.y
+                : MapLayout.RoadSurfaceHeight;
+            float groundY = Mathf.Max(MapLayout.RoadSurfaceHeight, terrainY);
+            var pos = new Vector3(carX, groundY, carZ);
             float dz = MapLayout.PavedRouteZAt(carX + 6f) - MapLayout.PavedRouteZAt(carX - 6f);
             // owner: "el auto esta mirando en direccion contraria" -- la fórmula
             // original apuntaba siempre hacia +X (tenía sentido cerca del túnel,
