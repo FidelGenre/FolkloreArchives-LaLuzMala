@@ -20,6 +20,7 @@ namespace FolkloreArchives.MapGen
         const string CarFbx = "Assets/ExternalAssets/RetroCar/models/car.fbx";
         const string CarTexDir = "Assets/ExternalAssets/RetroCar/textures";
         const float  TargetLength = 6.6f;    // owner: "que sea mas alto o mas grande lo que vos veas" (era 5.8, subo otro poco)
+        const float  HeightBoost  = 1.15f;   // owner: "un poquito mas alto" -- estira solo el alto, no el largo
         const float  ModelYawOffset = 0f;    // giro extra si el modelo mira al lado equivocado
 
         public static GameObject Build(Transform parent, Terrain terrain)
@@ -63,10 +64,11 @@ namespace FolkloreArchives.MapGen
                 inst.transform.localScale = Vector3.one;
 
                 // AUTO-ESCALADO: medir el modelo y llevarlo a TargetLength (el lado más largo).
+                // HeightBoost estira solo el eje Y encima de eso (owner: "un poquito mas alto").
                 Bounds b = WorldBounds(inst);
                 float longest = Mathf.Max(b.size.x, b.size.z);
                 float scale = longest > 0.001f ? TargetLength / longest : 1f;
-                inst.transform.localScale = Vector3.one * scale;
+                inst.transform.localScale = new Vector3(scale, scale * HeightBoost, scale);
 
                 // recentrar en X/Z y apoyar el fondo en y=0
                 b = WorldBounds(inst);
@@ -162,12 +164,40 @@ namespace FolkloreArchives.MapGen
                 AssetDatabase.DeleteAsset(matPath);
                 AssetDatabase.CreateAsset(_carMat, matPath);
             }
+            var glass = GlassMat();
             foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
             {
+                // owner: "no estoy viendo atra vez de los vidrios deberian ser
+                // transparente" -- el "carwindows" del pack venía pisado por el
+                // mismo material opaco de la carrocería. Vidrio aparte, transparente.
+                bool isGlass = r.gameObject.name.ToLower().Contains("window");
+                var mat = isGlass ? glass : _carMat;
                 var arr = new Material[r.sharedMaterials.Length];
-                for (int k = 0; k < arr.Length; k++) arr[k] = _carMat;
+                for (int k = 0; k < arr.Length; k++) arr[k] = mat;
                 r.sharedMaterials = arr;
             }
+        }
+
+        static Material _glassMat;
+        static Material GlassMat()
+        {
+            if (_glassMat != null) return _glassMat;
+            _glassMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            _glassMat.SetFloat("_Surface", 1f);          // 0=Opaque, 1=Transparent
+            _glassMat.SetFloat("_Blend", 0f);            // Alpha blend
+            _glassMat.SetFloat("_AlphaClip", 0f);
+            _glassMat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            _glassMat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            _glassMat.SetFloat("_ZWrite", 0f);
+            _glassMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            _glassMat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            if (_glassMat.HasProperty("_BaseColor")) _glassMat.SetColor("_BaseColor", new Color(0.55f, 0.65f, 0.62f, 0.25f));
+            if (_glassMat.HasProperty("_Smoothness")) _glassMat.SetFloat("_Smoothness", 0.8f);
+            if (_glassMat.HasProperty("_Metallic")) _glassMat.SetFloat("_Metallic", 0f);
+            string matPath = "Assets/Settings/RetroCarGlass.mat";
+            AssetDatabase.DeleteAsset(matPath);
+            AssetDatabase.CreateAsset(_glassMat, matPath);
+            return _glassMat;
         }
 
 
