@@ -105,9 +105,17 @@ namespace FolkloreArchives.MapGen
             // Separaciones entre asientos como proporción de TargetLength (no un
             // número fijo) para que escalen solas si el auto vuelve a cambiar de tamaño.
             float seatSpread = TargetLength * 0.1409f, seatDepth = TargetLength * -0.2591f;
-            Vector3 dSeat = new Vector3(-0.31f, 1.0f, 0.15f);
+            Vector3 dSeat = new Vector3(-0.31f, 1.0f, 0.15f) * (TargetLength / 4.4f);
             if (steer != null)
-                dSeat = car.transform.InverseTransformPoint(steer.position) + new Vector3(0f, 0.42f, -0.30f);
+            {
+                // owner: "sigo sin ver a travez de los vidrios" -- en realidad la
+                // cámara quedaba METIDA dentro del tablero: este offset (0.42,-0.30)
+                // se calibró para TargetLength=4.4 y quedó fijo mientras el auto creció
+                // a 6.6 + HeightBoost, así que ya no alcanzaba para despegar el ojo del
+                // volante/tablero. Escalado a lo mismo que creció el auto.
+                Vector3 eyeOffset = new Vector3(0f, 0.42f * HeightBoost, -0.30f) * (TargetLength / 4.4f);
+                dSeat = car.transform.InverseTransformPoint(steer.position) + eyeOffset;
+            }
             ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   dSeat);
             ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", dSeat + new Vector3(seatSpread, 0f, 0f));
             ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, seatDepth));
