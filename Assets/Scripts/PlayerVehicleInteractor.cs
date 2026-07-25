@@ -235,20 +235,23 @@ namespace FolkloreArchives
                 if (explorer != null) explorer.SetFlashlight(flashlightWasOn);
             }
 
-            // dirección que estaba mirando al tocar E (horizontal) → salgo mirando igual
-            Vector3 lookFwd = cam.forward; lookFwd.y = 0f;
-            Quaternion keepYaw = lookFwd.sqrMagnitude > 0.001f ? Quaternion.LookRotation(lookFwd) : transform.rotation;
-
             if (door != null && !openDoors.Contains(door)) { yield return AnimateDoor(c, door, true, 0.30f); openDoors.Add(door); }
 
-            // bajar JUSTO al lado de la puerta (no lejos), sobre el piso, mirando para el mismo lado.
+            // bajar JUSTO al lado de la PUERTA (no del asiento) que usaste, sobre el piso,
+            // mirando hacia afuera del auto.
             // owner: "al bajar no baja bien sale la camara para otro lado" -- el 1.5f fijo
             // se calibró para un auto mucho más chico; con el Retro Car (6.6m) el jugador
             // terminaba re-posicionado ADENTRO/pisando el collider del auto, y Unity lo
-            // empujaba para cualquier lado al resolver el solapamiento. Ahora la distancia
-            // se calcula a partir del ancho REAL del BoxCollider del auto, así siempre
-            // baja afuera sin importar el tamaño del auto.
-            Vector3 sideDir = (seat.position - c.transform.position); sideDir.y = 0f;
+            // empujaba para cualquier lado al resolver el solapamiento. Fix (1): la
+            // distancia se calcula del ancho REAL del BoxCollider del auto.
+            // owner (2): "mete un giro 180 la camara y me deja delante de la puerta no
+            // donde me baje" -- usaba la posición del ASIENTO (con offsets de cámara/ojo
+            // que ya no son puramente laterales) para decidir el lado, no la de la
+            // PUERTA -- podía apuntar para adelante/atrás del auto en vez de al costado.
+            // Y en vez de "quedar mirando para donde miraba adentro" (que suele ser hacia
+            // el frente del auto, no hacia afuera), ahora directamente mira hacia afuera.
+            Vector3 doorRef = door != null ? door.position : seat.position;
+            Vector3 sideDir = (doorRef - c.transform.position); sideDir.y = 0f;
             if (sideDir.sqrMagnitude < 0.01f) sideDir = -c.transform.right;
             sideDir.Normalize();
             var carCol = c.GetComponent<BoxCollider>();
@@ -256,7 +259,7 @@ namespace FolkloreArchives
             Vector3 side = c.transform.position + sideDir * clearance;
             side.y = GroundYIgnoring(c, side) + 0.05f;
             transform.position = side;
-            transform.rotation = keepYaw;   // dejarlo mirando para donde miraba
+            transform.rotation = Quaternion.LookRotation(sideDir);   // mirando hacia afuera del auto
             lookYaw = 0f; lookPitch = 0f;
 
             // deslizar la cámara del asiento hasta el ojo del jugador (SUAVE, camino corto)
