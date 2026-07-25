@@ -58,10 +58,16 @@ namespace FolkloreArchives
                 var target = currentTarget;
                 if (car != null)   // sentado
                 {
-                    if (target != null && !target.isSeat && target.part == myDoor)
-                        StartCoroutine(SetDoor(car, myDoor, !openDoors.Contains(myDoor))); // apunto mi puerta → abrir/cerrar
+                    // owner: "al querer tocar la e para cerrar la puerta me bajo" -- esto
+                    // dependía de que la MIRA (raycast) pegara justo en la puerta, algo
+                    // frágil sentado adentro con la puerta ya abierta (el ángulo de cámara
+                    // no siempre la agarra). Ahora depende solo del ESTADO de la puerta,
+                    // sin importar hacia dónde mires -- coincide con lo que ya decía el
+                    // comentario de arriba ("Sentado con la puerta abierta: E cierra").
+                    if (openDoors.Contains(myDoor))
+                        StartCoroutine(SetDoor(car, myDoor, false));   // puerta abierta → cerrarla
                     else
-                        StartCoroutine(ExitRoutine());                                     // apunto afuera → bajar
+                        StartCoroutine(ExitRoutine());                 // puerta cerrada → bajar
                 }
                 else if (target != null)   // a pie, apuntando algo del auto
                 {
