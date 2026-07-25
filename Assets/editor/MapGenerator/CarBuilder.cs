@@ -176,12 +176,19 @@ namespace FolkloreArchives.MapGen
             foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
             {
                 // owner: "no estoy viendo atra vez de los vidrios deberian ser
-                // transparente" -- el "carwindows" del pack venía pisado por el
-                // mismo material opaco de la carrocería. Vidrio aparte, transparente.
-                bool isGlass = r.gameObject.name.ToLower().Contains("window");
-                var mat = isGlass ? glass : _carMat;
-                var arr = new Material[r.sharedMaterials.Length];
-                for (int k = 0; k < arr.Length; k++) arr[k] = mat;
+                // transparente" -- el vidrio NO es un GameObject separado (todo el
+                // auto es una sola malla "Car_Base"), es un SLOT de material dentro
+                // del mismo renderer, con el material original del FBX llamado
+                // "carwind..." (confirmado mirando los sub-assets del .fbx). Hay que
+                // detectarlo por el nombre del material ORIGINAL de cada slot, no por
+                // el nombre del GameObject.
+                var original = r.sharedMaterials;
+                var arr = new Material[original.Length];
+                for (int k = 0; k < arr.Length; k++)
+                {
+                    bool isGlass = original[k] != null && original[k].name.ToLower().Contains("carwind");
+                    arr[k] = isGlass ? glass : _carMat;
+                }
                 r.sharedMaterials = arr;
             }
         }
