@@ -105,7 +105,15 @@ namespace FolkloreArchives.MapGen
             // Separaciones entre asientos como proporción de TargetLength (no un
             // número fijo) para que escalen solas si el auto vuelve a cambiar de tamaño.
             float seatSpread = TargetLength * 0.1409f, seatDepth = TargetLength * -0.2591f;
-            Vector3 dSeat = new Vector3(-0.31f, 1.0f, 0.15f) * (TargetLength / 4.4f);
+            // owner: "al subirme atras la camara queda detras del asiento" -- los otros
+            // 3 asientos se calculaban a partir de dSeat, que YA incluye el empuje hacia
+            // atrás (-0.30) para despegar al conductor del volante/tablero. Ese empuje
+            // solo tiene sentido para EL CONDUCTOR (por el volante) -- sumado encima al
+            // seatDepth de los asientos traseros, los mandaba mucho más atrás de la
+            // butaca real. seatBase (sin ese empuje, solo la altura del ojo) es la base
+            // común para acompañante/traseros; el conductor solo usa dSeat.
+            Vector3 seatBase = new Vector3(-0.31f, 1.0f, 0.15f) * (TargetLength / 4.4f);
+            Vector3 dSeat = seatBase;
             if (steer != null)
             {
                 // owner: "sigo sin ver a travez de los vidrios" -- en realidad la
@@ -113,13 +121,14 @@ namespace FolkloreArchives.MapGen
                 // se calibró para TargetLength=4.4 y quedó fijo mientras el auto creció
                 // a 6.6 + HeightBoost, así que ya no alcanzaba para despegar el ojo del
                 // volante/tablero. Escalado a lo mismo que creció el auto.
-                Vector3 eyeOffset = new Vector3(0f, 0.42f * HeightBoost, -0.30f) * (TargetLength / 4.4f);
-                dSeat = car.transform.InverseTransformPoint(steer.position) + eyeOffset;
+                Vector3 wheelLocal = car.transform.InverseTransformPoint(steer.position);
+                seatBase = wheelLocal + new Vector3(0f, 0.42f * HeightBoost, 0f) * (TargetLength / 4.4f);
+                dSeat = seatBase + new Vector3(0f, 0f, -0.30f) * (TargetLength / 4.4f);
             }
             ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   dSeat);
-            ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", dSeat + new Vector3(seatSpread, 0f, 0f));
-            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    dSeat + new Vector3(0f, 0f, seatDepth));
-            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    dSeat + new Vector3(seatSpread, 0f, seatDepth));
+            ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", seatBase + new Vector3(seatSpread, 0f, 0f));
+            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    seatBase + new Vector3(0f, 0f, seatDepth));
+            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    seatBase + new Vector3(seatSpread, 0f, seatDepth));
 
             // Colliders + marcadores para la MIRA (raycast): puertas y asientos.
             AddInteractColliders(ctrl);
