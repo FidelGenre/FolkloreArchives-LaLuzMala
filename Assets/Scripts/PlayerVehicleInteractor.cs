@@ -126,9 +126,22 @@ namespace FolkloreArchives
         Transform NearestDoor(CarController c, Vector3 to)
         {
             if (c.doors == null) return null;
+            // owner: "apuntando a la puerta... no me dice cerrar me dice bajar" -- si
+            // la puerta que el jugador realmente ABRIÓ para subir no es la geométricamente
+            // más cercana al asiento (pasa fácil con auto/asientos reescalados), myDoor
+            // terminaba apuntando a OTRA puerta (cerrada), y por eso E te bajaba en vez
+            // de cerrar la que sí estaba abierta. Preferí una puerta ABIERTA cercana
+            // antes que la más cercana a secas.
             Transform best = null; float bd = float.MaxValue;
-            foreach (var d in c.doors) { if (d == null) continue; float dd = Vector3.Distance(d.position, to); if (dd < bd) { bd = dd; best = d; } }
-            return best;
+            Transform bestOpen = null; float bdOpen = float.MaxValue;
+            foreach (var d in c.doors)
+            {
+                if (d == null) continue;
+                float dd = Vector3.Distance(d.position, to);
+                if (dd < bd) { bd = dd; best = d; }
+                if (openDoors.Contains(d) && dd < bdOpen) { bdOpen = dd; bestOpen = d; }
+            }
+            return bestOpen != null ? bestOpen : best;
         }
 
         // asiento PEGADO (dentro de sitRange) cuya puerta esté ABIERTA
