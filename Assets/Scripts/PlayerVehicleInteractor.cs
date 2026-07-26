@@ -112,9 +112,14 @@ namespace FolkloreArchives
                     else if (canOpenDoors)
                     {
                         var doors = Doors(target.car);
+                        Debug.Log($"[DOOR-DIAG] E en puerta '{target.part.name}' -- target.car={(target.car!=null?target.car.name:"null")} doors={(doors!=null?"OK":"NULL")} isOpen={(doors!=null && doors.IsOpen(target.part))}");
                         doors?.SetDoor(target.part, doors != null && !doors.IsOpen(target.part)); // puerta → abrir/cerrar
                     }
                     // el perro apuntando a una puerta (no un asiento): no hace nada
+                }
+                else
+                {
+                    Debug.Log("[DOOR-DIAG] E sin target (la mira no encontró nada)");
                 }
             }
 
