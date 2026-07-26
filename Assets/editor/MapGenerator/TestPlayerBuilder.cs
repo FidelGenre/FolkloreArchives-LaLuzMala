@@ -158,19 +158,11 @@ namespace FolkloreArchives.MapGen
         // Cuelga el PartyController en la persona para poder alternar el control con G.
         static void BuildDogAndParty(GameObject player, GameObject personCamGO, Vector2 playerXZ, Terrain t)
         {
-            // owner: "usare el anterior perro al final, usa ese, ya esta en multiplayer
-            // falta agregarlo en singleplayer al asset" -- vuelve al perro PS1 (mismo
-            // modelo/escala/criterio que NetworkBuilder.BuildDogVisual usa en red), en vez
-            // del perro riggeado/animado (WildPoly3D) que se había probado acá.
-            const string glbPath = "Assets/ExternalAssets/Dog/PS1_Dog.glb";
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(glbPath);
-            if (prefab == null)
-            {
-                Debug.LogWarning("Perro: no encontré/importé " + glbPath + ". Sigo sin perro.");
-                return;
-            }
-
-            // raíz del perro con su collider/controller
+            // owner: "usa el mismo que esta en multiplayer" -- en vez de tener acá una
+            // SEGUNDA copia del modelo/escala/rotación (que ya se había desalineado del
+            // de red y salió "gigante"), llama directo a NetworkBuilder.BuildDogVisual:
+            // literalmente el mismo código que arma el perro en NetDog.prefab, así los
+            // dos modos quedan atados y no pueden volver a divergir.
             var dog = new GameObject("DOG");
             dog.transform.SetParent(player.transform.parent); // hermano del jugador, bajo FOLKLORE_MAP
             Vector2 dogXZ = playerXZ + new Vector2(1.6f, -1.2f);            // al lado y un poco atrás
@@ -180,35 +172,13 @@ namespace FolkloreArchives.MapGen
             var dcc = dog.AddComponent<CharacterController>();
             dcc.height = 1.1f; dcc.radius = 0.35f; dcc.center = new Vector3(0f, 0.55f, 0f);
 
-            // modelo visual. El PS1 Dog viene ENORME a escala 1 (glb en otra unidad), así
-            // que NO uso un número fijo: mido su altura real y lo escalo a DogTargetHeight.
-            // Gira 180° en Y porque su "adelante" apunta al revés que el controlador (mismo
-            // criterio que NetworkBuilder.BuildDogVisual, ya probado en multiplayer).
-            const float DogTargetHeight = 1.4f;   // alto al lomo, en metros (owner: el doble)
-            var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-            model.name = "Model";
-            model.transform.SetParent(dog.transform);
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            model.transform.localScale = Vector3.one;
-
-            var rends = model.GetComponentsInChildren<Renderer>();
-            if (rends.Length > 0)
+            NetworkBuilder.BuildDogVisual(dog.transform);
+            var model = dog.transform.Find("Model")?.gameObject;
+            if (model == null)
             {
-                Bounds b = rends[0].bounds;
-                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
-                float h = Mathf.Max(0.0001f, b.size.y);
-                float s = DogTargetHeight / h;                       // factor para llegar al alto objetivo
-                model.transform.localScale = Vector3.one * s;
-                // reapoyar las patas en y=0 (según dónde quedó la base tras escalar)
-                Bounds b2 = model.GetComponentInChildren<Renderer>().bounds;
-                var all = model.GetComponentsInChildren<Renderer>();
-                for (int i = 0; i < all.Length; i++) b2.Encapsulate(all[i].bounds);
-                float bottomLocal = b2.min.y - dog.transform.position.y;
-                model.transform.localPosition = new Vector3(0f, -bottomLocal - 0.06f, 0f); // -0.06: apoya patas sin hundir
-                Debug.Log($"Rufus: alto nativo {h:0.00} → escala {s:0.000} (objetivo {DogTargetHeight} m).");
+                Debug.LogWarning("Perro: BuildDogVisual no encontró el modelo. Sigo sin perro.");
+                return;
             }
-            else Debug.LogWarning("Rufus: el modelo no tiene Renderers para medir — queda a escala 1.");
 
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;

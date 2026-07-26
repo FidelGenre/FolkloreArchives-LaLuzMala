@@ -249,7 +249,10 @@ namespace FolkloreArchives.MapGen
         }
 
         // Carga el glb, lo escala a ~1.4 m y lo gira 180° (mismo criterio que el single-player).
-        static void BuildDogVisual(Transform parent)
+        // owner: "usa el mismo que esta en multiplayer" -- TestPlayerBuilder (modo Solo)
+        // llama a ESTE mismo método en vez de tener su propia copia, para que no puedan
+        // volver a divergir entre los dos modos.
+        public static void BuildDogVisual(Transform parent)
         {
             var glb = AssetDatabase.LoadAssetAtPath<GameObject>(DogGlb);
             if (glb == null) { Debug.LogWarning("NetDog: no encontré " + DogGlb + " — perro sin modelo."); return; }
