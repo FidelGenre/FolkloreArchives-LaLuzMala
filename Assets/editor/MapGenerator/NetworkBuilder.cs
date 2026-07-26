@@ -264,25 +264,29 @@ namespace FolkloreArchives.MapGen
             model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             model.transform.localScale = Vector3.one;
 
-            // owner: "el perro esta gigante" -- confirmado en el Inspector: el
-            // SkinnedMeshRenderer del glb trae Bounds > Extent en (0,0,0) CACHEADO.
-            // Renderer.bounds (lo que medía antes) devuelve ESE caché, no la malla real:
-            // con size.y=0 el clamp de abajo lo pisaba a un mínimo de 0.0001, y dividir
-            // 1.4/0.0001 ≈ 14000x es el porqué del tamaño gigante. Setear smr.localBounds
-            // no alcanzó (Renderer.bounds seguía devolviendo su propio cálculo interno) --
-            // ahora se mide DIRECTO de Mesh.bounds (space local del mesh, siempre
-            // calculado de los vértices reales, nunca cacheado en cero) para cada malla,
-            // sin tocar Renderer.bounds en absoluto durante la medición.
+            // owner: "el perro esta gigante" -- ya se probó Renderer.bounds (caché roto
+            // en 0,0,0 confirmado en el Inspector) y Mesh.bounds (¡TAMBIÉN venía en cero
+            // para este glb -- típico de mallas importadas por glTF/glTFast sin que nadie
+            // llame RecalculateBounds()!). Nada de esto se puede confiar acá: se leen los
+            // VÉRTICES CRUDOS de cada malla y se calcula el min/max a mano. Esto no puede
+            // estar cacheado en cero bajo ningún escenario porque no usa NINGÚN campo de
+            // bounds, solo la posición real de cada vértice.
             Bounds? measured = null;
-            void Encapsulate(Bounds mb)
+            void EncapsulatePoint(Vector3 p)
             {
-                if (measured == null) measured = mb;
-                else { var m = measured.Value; m.Encapsulate(mb); measured = m; }
+                if (measured == null) measured = new Bounds(p, Vector3.zero);
+                else { var m = measured.Value; m.Encapsulate(p); measured = m; }
             }
             foreach (var smr in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                if (smr.sharedMesh != null) Encapsulate(smr.sharedMesh.bounds);
+            {
+                if (smr.sharedMesh == null) continue;
+                foreach (var v in smr.sharedMesh.vertices) EncapsulatePoint(v);
+            }
             foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true))
-                if (mf.sharedMesh != null) Encapsulate(mf.sharedMesh.bounds);
+            {
+                if (mf.sharedMesh == null) continue;
+                foreach (var v in mf.sharedMesh.vertices) EncapsulatePoint(v);
+            }
 
             if (measured.HasValue)
             {
