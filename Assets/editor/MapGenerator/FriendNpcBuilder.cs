@@ -16,7 +16,9 @@
 //
 //  Créditos (assets gratuitos bajados por el owner):
 //   - Friend_MaleCasual:   "PSX Casual Male Character" by Vinrax (itch.io, free — credit required)
-//   - Friend_FemaleSec:    "PSX Female Secretary Character" by Vinrax (itch.io, free — credit required)
+//   - Friend_FemaleSec:    modelo "a_lowpoly" (retro-style girl), bajado por el owner
+//     como girl-game-character-retro-style.zip — SIN readme/licencia en el zip;
+//     anotar la fuente/crédito cuando el owner la tenga a mano.
 //   - Friend_MaleGreenJkt: "Character_Male_GreenJacket (Rigged)" by Wardster (Sketchfab, CC Attribution)
 // ============================================================
 using UnityEditor;
@@ -28,22 +30,31 @@ namespace FolkloreArchives.MapGen
     {
         const string Dir = "Assets/ExternalAssets/FriendNPCs/";
 
+        // par (nombre de submaterial del FBX, textura a usarle) -- para modelos que
+        // vienen con VARIOS materiales (p.ej. body/hair/shoes) en vez de una textura
+        // única para todo el modelo.
+        struct TexPart
+        {
+            public string match, tex;
+            public TexPart(string m, string t) { match = m; tex = t; }
+        }
+
         struct FriendDef
         {
             public string name, fbx, tex;
+            public TexPart[] texParts; // no-null = multi-material (match por nombre de submaterial); null = usar `tex` para todo el modelo
             public float targetHeight, offX, offZ, yaw;
             public FolkloreArchives.HumanWalkAnim.Limb[] limbs; // null = usar los default de HumanWalkAnim (rig estilo Blender: thigh.L/upper_arm.L)
-            public FriendDef(string n, string f, string tx, float h, float ox, float oz, float y, FolkloreArchives.HumanWalkAnim.Limb[] customLimbs = null)
-            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; }
+            public FriendDef(string n, string f, string tx, float h, float ox, float oz, float y, FolkloreArchives.HumanWalkAnim.Limb[] customLimbs = null, TexPart[] parts = null)
+            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; texParts = parts; }
         }
 
         // owner: "que no esten todos duros en pose de t" -- HumanWalkAnim corrige la pose
         // de brazos (T-pose -> brazos abajo) calculando su dirección real hombro->mano,
         // pero para eso necesita encontrar los huesos por NOMBRE EXACTO -- cada uno de
         // estos 3 personajes viene de un pack distinto con su PROPIO rig/nomenclatura
-        // (confirmado leyendo los nombres de hueso crudos de cada .fbx). Los defaults de
-        // HumanWalkAnim (thigh.L / upper_arm.L, notación Blender) solo coinciden con
-        // FemaleSecretary -- los otros dos necesitan su propia lista.
+        // (confirmado leyendo los nombres de hueso crudos de cada .fbx), así que los 3
+        // necesitan su propia lista de Limb[] (ninguno usa los defaults de HumanWalkAnim).
         static readonly FolkloreArchives.HumanWalkAnim.Limb[] MaleCasualLimbs =
         {
             // Vinrax "PSX Casual Male": snake_case con sufijo _left/_right
@@ -60,6 +71,24 @@ namespace FolkloreArchives.MapGen
             new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:LeftArm",    phase = -1f },
             new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:RightArm",   phase =  1f },
         };
+        static readonly FolkloreArchives.HumanWalkAnim.Limb[] GirlRetroLimbs =
+        {
+            // "a_lowpoly" (girl-game-character-retro-style.zip): rig tipo UE Mannequin
+            // (confirmado leyendo los nombres de hueso crudos del fbx: root/spine_01/
+            // spine_02/arm_l/forearm_l/hand_l/thigh_l...), sufijo _l/_r sin "upper_".
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "thigh_l", phase =  1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "thigh_r", phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "arm_l",   phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "arm_r",   phase =  1f },
+        };
+        // el modelo trae 3 materiales separados (body/hair/shoes) en vez de un atlas
+        // único -- se matchea por nombre de submaterial (case-insensitive, "Contains").
+        static readonly TexPart[] GirlRetroTex =
+        {
+            new TexPart("body",  Dir + "GirlRetro/Textures/body_tex.png"),
+            new TexPart("hair",  Dir + "GirlRetro/Textures/hair_tex.png"),
+            new TexPart("shoes", Dir + "GirlRetro/Textures/shoes_tex.png"),
+        };
 
         static readonly FriendDef[] Friends =
         {
@@ -67,9 +96,11 @@ namespace FolkloreArchives.MapGen
             new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f, MaleCasualLimbs),
             // al costado norte de la ruta, mirando hacia el auto (+X)
             new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs),
-            // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) -- rig ya
-            // usa notación thigh.L/upper_arm.L, coincide con los defaults de HumanWalkAnim
-            new FriendDef("Friend_FemaleSec",    Dir + "FemaleSecretary/female_secretary.fbx",  Dir + "FemaleSecretary/secretary_tex.png", 2.3f, -8.0f,  0.2f,  90f),
+            // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) --
+            // owner: "descargue esa chica descomprimila y reemplazala por la que ya
+            // esta" -- reemplaza a la vieja "PSX Female Secretary" de Vinrax (no
+            // pegaba con la ambientación rural). Misma posición/altura que antes.
+            new FriendDef("Friend_FemaleSec",    Dir + "GirlRetro/girl_retro.fbx",              null,                                      2.3f, -8.0f,  0.2f,  90f, GirlRetroLimbs, GirlRetroTex),
         };
 
         // roadCenter: mismo punto (X,Z) donde arranca el auto manejable (CarBuilder.cs,
@@ -119,19 +150,55 @@ namespace FolkloreArchives.MapGen
             foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
             model.transform.localPosition = new Vector3(0f, -(b2.min.y - go.transform.position.y), 0f);
 
-            // material URP propio (si no, el FBX trae Standard = magenta en URP)
-            var tex = LoadPointTex(f.tex);
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
-            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.05f);
-            string matPath = "Assets/Settings/PSX_" + f.name + ".mat";
-            AssetDatabase.DeleteAsset(matPath);
-            AssetDatabase.CreateAsset(mat, matPath);
-            foreach (var r in rends)
+            // material(es) URP propio(s) (si no, el FBX trae Standard = magenta en URP)
+            if (f.texParts != null)
             {
-                var arr = new Material[r.sharedMaterials.Length];
-                for (int k = 0; k < arr.Length; k++) arr[k] = mat;
-                r.sharedMaterials = arr;
+                // modelo multi-material (p.ej. body/hair/shoes): un material URP por
+                // TEXTURA (cacheado acá para no duplicar si varias submallas comparten
+                // la misma parte), asignado por nombre de submaterial original del fbx.
+                var matCache = new System.Collections.Generic.Dictionary<string, Material>();
+                foreach (var r in rends)
+                {
+                    var src = r.sharedMaterials;
+                    var arr = new Material[src.Length];
+                    for (int k = 0; k < src.Length; k++)
+                    {
+                        string srcName = src[k] != null ? src[k].name.ToLowerInvariant() : "";
+                        string texPath = f.texParts[0].tex; // fallback: primera parte
+                        foreach (var p in f.texParts)
+                            if (srcName.Contains(p.match)) { texPath = p.tex; break; }
+
+                        if (!matCache.TryGetValue(texPath, out var m))
+                        {
+                            var tex = LoadPointTex(texPath);
+                            m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                            if (tex != null && m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", tex);
+                            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.05f);
+                            string matPath = "Assets/Settings/PSX_" + f.name + "_" + System.IO.Path.GetFileNameWithoutExtension(texPath) + ".mat";
+                            AssetDatabase.DeleteAsset(matPath);
+                            AssetDatabase.CreateAsset(m, matPath);
+                            matCache[texPath] = m;
+                        }
+                        arr[k] = m;
+                    }
+                    r.sharedMaterials = arr;
+                }
+            }
+            else
+            {
+                var tex = LoadPointTex(f.tex);
+                var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+                if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.05f);
+                string matPath = "Assets/Settings/PSX_" + f.name + ".mat";
+                AssetDatabase.DeleteAsset(matPath);
+                AssetDatabase.CreateAsset(mat, matPath);
+                foreach (var r in rends)
+                {
+                    var arr = new Material[r.sharedMaterials.Length];
+                    for (int k = 0; k < arr.Length; k++) arr[k] = mat;
+                    r.sharedMaterials = arr;
+                }
             }
 
             // owner: "que no esten todos duros en pose de t" -- misma animación

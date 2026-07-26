@@ -7,6 +7,99 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Friend_FemaleSec: reemplazo del asset (secretaria → chica retro)
+
+Owner: "descargue esa chica descomprimila y reemplazala por la que ya esta" —
+bajó `girl-game-character-retro-style.zip` a Downloads (modelo "a_lowpoly",
+sin readme/licencia adentro del zip). Descomprimido (tenía un zip anidado,
+`source/a_lowpoly.zip`, con el fbx real) y copiado a
+`Assets/ExternalAssets/FriendNPCs/GirlRetro/` (`girl_retro.fbx` +
+`Textures/body_tex.png`, `hair_tex.png`, `shoes_tex.png`).
+
+- **Rig distinto:** este modelo usa nomenclatura tipo **UE Mannequin**
+  (`thigh_l`/`thigh_r`, `arm_l`/`arm_r`/`forearm_l`/`hand_l`, `spine_01`...),
+  confirmado leyendo los strings crudos del fbx binario (no había Unity
+  corriendo para inspeccionarlo directo). Nuevo `GirlRetroLimbs` en
+  `FriendNpcBuilder.cs`.
+- **Multi-material (novedad):** a diferencia de los otros 2 amigos (una sola
+  textura para todo el modelo), este trae **3 materiales separados**
+  (`body`/`hair`/`shoes`) en vez de un atlas único. `FriendNpcBuilder` ahora
+  soporta ese caso (`TexPart[]`/`FriendDef.texParts`): matchea cada submaterial
+  del fbx por nombre contra `body`/`hair`/`shoes` y le arma su propio material
+  URP (cacheado por textura, no por submalla). El camino viejo (una textura
+  para todo) se mantiene intacto para `Friend_MaleCasual`/`Friend_MaleGreenJkt`.
+- Misma posición/altura/yaw que la secretaria vieja (2.3f, offset -8/0.2, yaw
+  90°) — solo cambia el modelo. Se borró el asset viejo
+  (`FemaleSecretary/`, de Vinrax) y su material huérfano.
+- ⚠ **Sin crédito/licencia todavía** — el zip no traía readme; anotar la
+  fuente cuando el owner la tenga (probablemente Sketchfab, por el nombre
+  interno `a_lowpoly_sketchfab.fbx`).
+- **Necesita regenerar** + revisar en el Editor: no se pudo verificar visualmente
+  (sin Unity corriendo en esta sesión) — confirmar que la textura de body/hair/
+  shoes cae en la parte correcta y que la pose/caminata salen derechas como con
+  los otros 2 amigos.
+
+---
+
+## 2026-07-26 — Amigos: salen de T-pose, caminan, y dejan de hundirse
+
+Owner: "vamos con la movilidad de los otros personajes que se muevan igual que el
+principal, que no esten todos duros en pose de t" → varios pasos encadenados sobre
+los 3 NPCs "amigos" (`Friend_MaleCasual`, `Friend_MaleGreenJkt`, `Friend_FemaleSec`):
+
+1. **T-pose → pose de reposo**: se les agrega `HumanWalkAnim` (mismo componente
+   procedural del protagonista). Los defaults solo calzaban con el rig de
+   `FemaleSec` (notación Blender `thigh.L`); los otros dos rigs (`thigh_left` /
+   `mixamorig:LeftUpLeg`) necesitan un `Limb[]` a medida por personaje.
+2. **Brazos en "V"**: el fix de hombro (rotar `upper_arm` hacia abajo) no tocaba
+   el doblez local de codo/mano. Se agrega `StraightenArmChain`: mismo truco
+   (`FromToRotation`) hueso por hueso bajando el brazo.
+3. **`FriendWander.cs`** (nuevo, runtime): cada amigo camina 2.5m ida y vuelta
+   cerca de donde arranca, apoyado en `Terrain.SampleHeight` (sin
+   CharacterController — son ambientación de fondo).
+4. **Brazos "torcidos" al caminar**: el `_rest[]` de un brazo queda con una
+   rotación arbitraria por la corrección de T-pose (paso 1), así que balancear
+   en el eje LOCAL del hueso ya no caía en un plano adelante-atrás predecible.
+   Ahora el vaivén gira en el eje "derecha" del PERSONAJE (mundo), no del hueso.
+5. **Pies hundidos cerca del auto/ruta**: `FriendWander` sampleaba terreno crudo
+   sin piso mínimo — mismo bug ya visto en `CarBuilder`/`TestPlayerBuilder`/el
+   perro. `FriendNpcBuilder` ahora le pasa `MapLayout.RoadSurfaceHeight` como
+   piso mínimo.
+
+De paso, altura del perro: se sacó el margen manual `-0.06` (calibrado para un
+`Renderer.bounds` viejo) y se horneó `ManualLiftCalibrated = 0.567` como
+constante para que la posición ajustada a mano por el owner sobreviva a un
+Generate.
+
+⚠ **Pendiente / en curso**: el owner pidió reemplazar el asset de
+`Friend_FemaleSec` — la "secretaria" (ropa de oficina) no encaja con la
+ambientación rural ("el campo"). Buscando alternativa low-poly femenina en
+itch.io, todavía sin elegir.
+
+---
+
+## 2026-07-25 — Fix pasto borrado que reaparecía (GrassPersistence)
+
+El pasto borrado a mano volvía al regenerar. Causa: `TerrainPaintPersistence.SaveDetailDiff`
+comparaba el pasto vivo contra un baseline RECALCULADO con `SetupGrass`, pero SetupGrass
+reparte el pasto con **Random no-determinístico** → el baseline salía con el pasto en otras
+celdas → el "diff" capturaba RUIDO (celdas con pasto, no el borrado) y al re-aplicarlo
+**reintroducía** pasto. (Se vio en el archivo: valores guardados casi todos v>0.)
+- `GrassPersistence.cs` (mismo patrón que `TreePersistence`): el baseline es el pasto REAL
+  capturado en `ForestBuilder` justo tras `SetupGrass` (`grass_baseline.bytes`, en Generated).
+  `SaveRemovals` guarda solo las celdas donde `live < baseline` (lo borrado) →
+  `grass_removals.bytes`. `ApplyRemovals` baja esas celdas a su valor guardado — **solo
+  reduce, nunca agrega** → no puede reintroducir lo borrado.
+- Hooks: `ForestBuilder` (tras SetupGrass: CaptureBaseline + ApplyRemovals; y always-apply
+  fuera del cache). `SaveTerrainPaint` usa `GrassPersistence.SaveRemovals` (ya no
+  `SaveDetailDiff`, ni `SetupGrass(baseline)`). `ClearTerrainPaint` limpia también el pasto.
+- Alpha (texturas) sigue con diff contra baseline recalculado (PaintTextures SÍ es
+  determinístico) — eso andaba bien.
+- ⚠ Flujo: **Rebuild Forest (forzar) + Generate UNA vez** (captura el baseline) → borrar
+  pasto → Save Terrain Paint → Generate. Si guardás sin baseline avisa "Rebuild Forest".
+
+---
+
 ## 2026-07-24 — NOTA DE DISEÑO: secuencia del cementerio → puente → bote → mirador
 
 Anotado tal cual lo contó el owner (todavía sin implementar, sin código nuevo).
