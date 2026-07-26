@@ -263,6 +263,15 @@ namespace FolkloreArchives.MapGen
             model.transform.localPosition = Vector3.zero;
             model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             model.transform.localScale = Vector3.one;
+
+            // owner: "el perro esta gigante" -- el SkinnedMeshRenderer del glb trae los
+            // bounds CACHEADOS en cero (Inspector: Extent 0,0,0). Renderer.bounds de un
+            // skinned mesh devuelve ese caché, no la malla real -- con size.y=0 el cálculo
+            // de escala de abajo clampeaba a un mínimo de 0.0001 y dividía 1.4/0.0001 ≈
+            // 14000x. Se fuerza a recalcular localBounds desde la malla real antes de medir.
+            foreach (var smr in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (smr.sharedMesh != null) smr.localBounds = smr.sharedMesh.bounds;
+
             var rends = model.GetComponentsInChildren<Renderer>();
             if (rends.Length > 0)
             {
