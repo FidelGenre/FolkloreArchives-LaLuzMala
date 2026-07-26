@@ -67,6 +67,13 @@ namespace FolkloreArchives
         bool flashlightWasOn;   // estado de la linterna al subir (para restaurarlo al bajar)
         float lookYaw, lookPitch;
 
+        // owner: "myDoor cambia entre L_Door_Back y L_Door_Front" -- la puerta
+        // específica que YO abrí para entrar, recordada aparte de cualquier búsqueda
+        // geométrica (que podía confundirse con OTRA puerta que hubiese quedado
+        // abierta de una prueba anterior en el mismo auto).
+        Transform _lastDoorOpened;
+        CarController _lastDoorOpenedCar;
+
         static CarDoors Doors(CarController c) => c != null ? c.GetComponent<CarDoors>() : null;
 
         static void SetLayerRecursive(Transform t, int layer)
@@ -114,11 +121,6 @@ namespace FolkloreArchives
                 if (car != null)   // sentado
                 {
                     var doors = Doors(car);
-                    if (myDoor != null && cam != null)
-                    {
-                        float ang = Vector3.Angle(cam.forward, myDoor.position - cam.position);
-                        Debug.Log($"[DOOR-ANGLE-DIAG] myDoor={myDoor.name} angulo={ang:0.0}");
-                    }
                     if (!canOpenDoors)
                     {
                         // el perro: no toca puertas, E siempre te baja (owner: "necesito
@@ -145,11 +147,17 @@ namespace FolkloreArchives
                 else if (target != null)   // a pie, apuntando algo del auto
                 {
                     if (target.isSeat)
-                        StartCoroutine(SitRoutine(target.car, target.part, NearestDoor(target.car, target.part.position))); // apunto el asiento → subir
+                        StartCoroutine(SitRoutine(target.car, target.part, PreferredDoor(target.car, target.part.position))); // apunto el asiento → subir
                     else if (canOpenDoors)
                     {
                         var doors = Doors(target.car);
-                        doors?.SetDoor(target.part, doors != null && !doors.IsOpen(target.part)); // puerta → abrir/cerrar
+                        bool willOpen = doors != null && !doors.IsOpen(target.part);
+                        doors?.SetDoor(target.part, willOpen); // puerta → abrir/cerrar
+                        // owner: "myDoor cambia entre L_Door_Back y L_Door_Front" -- me
+                        // acuerdo de LA puerta específica que YO abrí, para no confundirla
+                        // después con otra puerta cualquiera que haya quedado abierta de
+                        // una prueba anterior en el mismo auto.
+                        if (willOpen) { _lastDoorOpened = target.part; _lastDoorOpenedCar = target.car; }
                     }
                     // el perro apuntando a una puerta (no un asiento): no hace nada
                 }
@@ -176,7 +184,7 @@ namespace FolkloreArchives
             if (door == null || cam == null) return false;
             Vector3 toDoor = door.position - cam.position;
             if (toDoor.sqrMagnitude < 0.0001f) return true;
-            return Vector3.Angle(cam.forward, toDoor) < 70f;
+            return Vector3.Angle(cam.forward, toDoor) < 45f;
         }
 
         // MIRA invisible: qué parte del auto apunta el centro de la pantalla.
@@ -212,6 +220,17 @@ namespace FolkloreArchives
                 }
             }
             return (bc, bd);
+        }
+
+        // owner: "myDoor cambia entre L_Door_Back y L_Door_Front" -- prioriza la puerta
+        // que YO abrí específicamente (si sigue siendo del MISMO auto) por sobre
+        // cualquier búsqueda geométrica de "la más cercana/abierta", que se confundía
+        // con otras puertas abiertas por casualidad (de una prueba anterior, otro
+        // jugador, etc.).
+        Transform PreferredDoor(CarController c, Vector3 seatPos)
+        {
+            if (_lastDoorOpened != null && _lastDoorOpenedCar == c) return _lastDoorOpened;
+            return NearestDoor(c, seatPos);
         }
 
         Transform NearestDoor(CarController c, Vector3 to)
