@@ -129,10 +129,11 @@ namespace FolkloreArchives.MapGen
         // muy por debajo del asiento real (el cuerpo entero quedaba atravesando el
         // piso del auto). Restando solo la altura de CADERA aprox. (mitad del alto del
         // personaje) la cadera queda a la altura del asiento y listo.
-        // owner (2da vuelta, con captura): "los de atras tienen que estar mas arriba,
-        // siguen atravesando el asiento" -- 1.15 (mitad de la altura parado) no
-        // alcanzaba. Subido bastante más (menos resta = quedan más arriba).
-        const float SeatHipHeight = 0.65f;
+        // owner (3ra vuelta, con captura): 0.65 se pasó MUCHÍSIMO -- quedaron sentados
+        // arriba del TECHO del auto, no adentro. El margen real entre "hundido en el
+        // asiento" (1.15) y "flotando sobre el techo" (0.65) parece angosto (auto
+        // compacto por dentro) -- paso chico esta vez, no otro salto grande.
+        const float SeatHipHeight = 1.0f;
 
         public static void SeatInCar(Transform root, FolkloreArchives.CarController car)
         {

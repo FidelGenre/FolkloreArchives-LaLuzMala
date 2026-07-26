@@ -7,6 +7,27 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — 3ra vuelta: 0.65 se pasó de largo (sentados arriba del techo)
+
+Captura del owner: con `SeatHipHeight=0.65` los 3 amigos quedaron sentados
+ARRIBA del techo del auto (no adentro). El salto anterior (1.15→0.65, solo
+0.5m) causó un cambio visual enorme -- de "hundido en el asiento" a "flotando
+sobre el techo entero" -- lo que sugiere que el margen vertical real dentro
+de la cabina (asiento↔techo) es angosto, y el ajuste se pasó de frenada.
+Vuelta a un paso chico esta vez: `SeatHipHeight` 0.65 → **1.0** (entre el
+valor que hundía de menos y el que voló por arriba).
+
+⚠ Este método (ajuste a ciegas por captura, sin Unity corriendo en esta
+sesión) está resultando lento e impreciso — los saltos grandes sobrecorrigen.
+Alternativa más rápida para el owner: los 3 amigos son GameObjects normales
+(`Friend_MaleCasual`/`Friend_MaleGreenJkt`/`Friend_FemaleSec`, hijos de
+`Renault12` después de Generate) — se pueden arrastrar a mano con el gizmo de
+mover en la Scene view hasta que se vean bien, y avisar CUÁNTO se movieron
+(ej. "subí 0.3 en Y") para hornear ese número directo en `SeatHipHeight`, en
+vez de seguir iterando por capturas.
+
+---
+
 ## 2026-07-26 — 2da vuelta: siguen hundidos / muy adelante (ajuste más fuerte)
 
 Nueva captura del owner tras la vuelta anterior: el brazo del de barba ya se
