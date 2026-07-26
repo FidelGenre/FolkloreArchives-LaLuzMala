@@ -44,7 +44,6 @@ namespace FolkloreArchives
         Transform camT;
         float standHeight, camBaseY;
         float pitch;   // mirar arriba/abajo (grados); parte del ángulo base de la cámara
-        Terrain _terrain; // owner: "las patas metidas bajo tierra" -- ver GroundSnap()
 
         // owner: bajar del auto "me cambia la camara" -- este script guarda su propio
         // pitch (privado) y lo reaplica ni bien se reactiva (al subir/bajar del auto,
@@ -65,7 +64,11 @@ namespace FolkloreArchives
             cc = GetComponent<CharacterController>();
             animator = GetComponentInChildren<Animator>();
             standHeight = cc.height;
-            _terrain = Terrain.activeTerrain;
+            // owner: "sigue spawneando bajo tierra" -- por si Terrain.activeTerrain
+            // todavía no estaba resuelto en este momento del orden de Start()
+            // (silenciosamente desactivaba TODO el anclaje sin ningún error), ya no se
+            // cachea acá: GroundY() lo busca en vivo cada vez que hace falta.
+            Debug.Log($"[DOG-GROUND] Start: pos={transform.position} terrain={(Terrain.activeTerrain != null ? Terrain.activeTerrain.name : "NULL")}");
             var camGo = GetComponentInChildren<Camera>(true);
             if (camGo != null)
             {
@@ -104,19 +107,22 @@ namespace FolkloreArchives
             // terreno real en esta XZ), se sube ahí directo, nazca embebido o se haya
             // hundido de a poco caminando. Nunca interfiere con saltar hacia ARRIBA
             // (ahí ya está por ENCIMA del target, la condición no entra).
-            if (_terrain != null)
+            var terrain = Terrain.activeTerrain;
+            if (terrain != null)
             {
-                float groundY = _terrain.SampleHeight(transform.position) + _terrain.transform.position.y;
+                float groundY = terrain.SampleHeight(transform.position) + terrain.transform.position.y;
                 float bottomOffset = cc.center.y - cc.height * 0.5f; // pies relativos al pivote
                 float targetY = groundY - bottomOffset;
                 if (transform.position.y < targetY - 0.001f)
                 {
+                    if (Time.time < 3f) Debug.Log($"[DOG-GROUND] corrigiendo: y={transform.position.y:0.000} target={targetY:0.000} (groundY={groundY:0.000}, bottomOffset={bottomOffset:0.000})");
                     cc.enabled = false;
                     transform.position = new Vector3(transform.position.x, targetY, transform.position.z);
                     cc.enabled = true;
                     if (verticalVel < 0f) verticalVel = -1f; // ya tocó piso, no seguir acumulando caída
                 }
             }
+            else if (Time.time < 1f) Debug.LogWarning("[DOG-GROUND] Terrain.activeTerrain es NULL -- no se puede anclar.");
 
             // AUTO-SALTO: SOLO en modo Follow (IA). Controlado, el salto lo hace el
             // jugador (Espacio). Detecta que está BLOQUEADO: quería avanzar pero apenas
