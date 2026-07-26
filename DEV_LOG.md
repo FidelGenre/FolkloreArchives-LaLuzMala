@@ -7,6 +7,24 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — 2da vuelta: siguen hundidos / muy adelante (ajuste más fuerte)
+
+Nueva captura del owner tras la vuelta anterior: el brazo del de barba ya se
+ve bien (fix de `Contains` funcionó), pero los de ATRÁS seguían atravesando
+el asiento de abajo, y el de ADELANTE seguía muy pegado al tablero — los
+primeros números elegidos (`SeatHipHeight=1.15`, empuje `-0.15`) se quedaron
+cortos. Segunda pasada, más agresiva, en la misma dirección que pidió el
+owner:
+- `FriendNpcBuilder.SeatHipHeight`: 1.15 → **0.65** (menos resta = quedan
+  más arriba).
+- `CarBuilder.paxBase`: empuje -0.15 → **-0.45** (más atrás incluso que el
+  conductor -0.30 — el acompañante no necesita llegar al volante/pedales).
+- ⚠ Sigue siendo ajuste a ciegas por captura (sin Unity corriendo en esta
+  sesión) — puede necesitar una 3ra vuelta si se pasó para el otro lado
+  (demasiado arriba/atrás).
+
+---
+
 ## 2026-07-26 — Fix: amigos sentados (brazo extendido + hundidos en el asiento)
 
 Owner mandó capturas de los amigos ya sentados en el auto (feature anterior):
