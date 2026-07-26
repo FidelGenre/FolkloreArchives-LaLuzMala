@@ -62,6 +62,12 @@ namespace FolkloreArchives.MapGen
 
             float wx = c.x + f.offX, wz = c.y + f.offZ;
             Vector3 pos = BuilderUtils.Ground(t, wx, wz);
+            // owner: "no estan" -- mismo bug que ya se había arreglado en CarBuilder/
+            // TestPlayerBuilder ("esta spwaneado debajo de la tierra"): cerca del borde
+            // este del mapa el terreno CRUDO queda más bajo que la ruta pavimentada
+            // real (que es otra malla encima), así que samplear el terreno solo
+            // enterraba a los amigos bajo la ruta. Ídem acá: piso el mayor entre los dos.
+            pos.y = Mathf.Max(MapLayout.RoadSurfaceHeight, pos.y);
             var go = new GameObject(f.name);
             go.transform.SetParent(parent);
             go.transform.position = pos;
