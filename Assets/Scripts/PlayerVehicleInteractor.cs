@@ -46,8 +46,9 @@ namespace FolkloreArchives
         // auto evita que atraviese techo/puertas.
         Transform dogModel;
         Vector3 dogModelScale = Vector3.one;
-        const float DogSeatedScale = 0.55f;
+        const float DogSeatedScale = 0.45f; // owner: "las patas traseras atraviesan el asiento" -- un poco mas chico
         const float DogSeatedExtraDrop = 0.35f; // owner: "se ve volando mas alto de los asientos" -- hundirlo un poco mas
+        const float DogSeatedForwardOffset = 0.3f; // owner: "hacelo un poquito mas adelante"
         // owner: "el perro no deberia verse a si mismo" -- layer creado en Generate
         // (LayerSetup.cs) que la cámara EXCLUYE de su propio cullingMask mientras está
         // sentado. Es una propiedad LOCAL (layer + cullingMask), no sincronizada por
@@ -291,8 +292,9 @@ namespace FolkloreArchives
             // perro necesita hundirse un poco más en el asiento que lo que da la altura
             // de ojo sola (DogSeatedExtraDrop, solo para el perro).
             float extraDrop = dog != null ? DogSeatedExtraDrop : 0f;
+            float forwardOffset = dog != null ? DogSeatedForwardOffset : 0f;
             transform.rotation = seat.rotation;
-            transform.position = seat.position - transform.rotation * new Vector3(0f, camLocalPos.y + extraDrop, 0f);
+            transform.position = seat.position - transform.rotation * new Vector3(0f, camLocalPos.y + extraDrop, -forwardOffset);
 
             // owner: "quedo atras del asiento" -- ya no hace falta correr la cámara del
             // hocico hacia atrás: ahora el modelo del perro se OCULTA de su propia

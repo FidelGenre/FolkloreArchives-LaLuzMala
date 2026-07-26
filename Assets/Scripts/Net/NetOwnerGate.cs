@@ -21,7 +21,7 @@ namespace FolkloreArchives.Net
         readonly NetworkVariable<bool> _dogSeated = new NetworkVariable<bool>(
             false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         Vector3 _dogModelBaseScale = Vector3.one;
-        const float DogSeatedScale = 0.55f;
+        const float DogSeatedScale = 0.45f; // owner: "las patas traseras atraviesan el asiento" -- un poco mas chico
 
         public override void OnNetworkSpawn()
         {
