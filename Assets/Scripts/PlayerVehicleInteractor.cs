@@ -47,6 +47,16 @@ namespace FolkloreArchives
             bodyRenderers = GetComponentsInChildren<Renderer>(true);
         }
 
+        // owner: "cuando se une otro jugador ya no me aparecen las opciones de
+        // interactuar" -- si el componente se llega a deshabilitar a mitad de una
+        // corrutina (SitRoutine/SetDoor/ExitRoutine), Unity la corta de golpe SIN
+        // llegar a la línea "busy = false" del final, dejando el flag trabado en true
+        // para siempre -- eso bloquea Update() entero (ni el raycast de la mira se
+        // vuelve a actualizar) y el "[E] ..." en pantalla. Este componente se
+        // habilita/deshabilita seguido en red (NetOwnerGate lo prende/apaga según el
+        // dueño), así que reseteo el flag cada vez que se reactiva, por las dudas.
+        void OnEnable() { busy = false; }
+
         void Update()
         {
             var kb = Keyboard.current;
