@@ -264,27 +264,39 @@ namespace FolkloreArchives.MapGen
             model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             model.transform.localScale = Vector3.one;
 
-            // owner: "el perro esta gigante" -- el SkinnedMeshRenderer del glb trae los
-            // bounds CACHEADOS en cero (Inspector: Extent 0,0,0). Renderer.bounds de un
-            // skinned mesh devuelve ese caché, no la malla real -- con size.y=0 el cálculo
-            // de escala de abajo clampeaba a un mínimo de 0.0001 y dividía 1.4/0.0001 ≈
-            // 14000x. Se fuerza a recalcular localBounds desde la malla real antes de medir.
-            foreach (var smr in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                if (smr.sharedMesh != null) smr.localBounds = smr.sharedMesh.bounds;
-
-            var rends = model.GetComponentsInChildren<Renderer>();
-            if (rends.Length > 0)
+            // owner: "el perro esta gigante" -- confirmado en el Inspector: el
+            // SkinnedMeshRenderer del glb trae Bounds > Extent en (0,0,0) CACHEADO.
+            // Renderer.bounds (lo que medía antes) devuelve ESE caché, no la malla real:
+            // con size.y=0 el clamp de abajo lo pisaba a un mínimo de 0.0001, y dividir
+            // 1.4/0.0001 ≈ 14000x es el porqué del tamaño gigante. Setear smr.localBounds
+            // no alcanzó (Renderer.bounds seguía devolviendo su propio cálculo interno) --
+            // ahora se mide DIRECTO de Mesh.bounds (space local del mesh, siempre
+            // calculado de los vértices reales, nunca cacheado en cero) para cada malla,
+            // sin tocar Renderer.bounds en absoluto durante la medición.
+            Bounds? measured = null;
+            void Encapsulate(Bounds mb)
             {
-                Bounds b = rends[0].bounds;
-                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
-                float h = Mathf.Max(0.0001f, b.size.y);
-                model.transform.localScale = Vector3.one * (target / h);
-                Bounds b2 = model.GetComponentInChildren<Renderer>().bounds;
-                foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
-                // pequeño ajuste hacia abajo (los bounds del skinned vienen algo inflados);
-                // -0.06 apoya las patas sin hundirlas.
-                model.transform.localPosition = new Vector3(0f, -(b2.min.y - parent.position.y) - 0.06f, 0f);
+                if (measured == null) measured = mb;
+                else { var m = measured.Value; m.Encapsulate(mb); measured = m; }
             }
+            foreach (var smr in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                if (smr.sharedMesh != null) Encapsulate(smr.sharedMesh.bounds);
+            foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true))
+                if (mf.sharedMesh != null) Encapsulate(mf.sharedMesh.bounds);
+
+            if (measured.HasValue)
+            {
+                float h = Mathf.Max(0.0001f, measured.Value.size.y);
+                float s = target / h;
+                model.transform.localScale = Vector3.one * s;
+                // el modelo todavía está en localPosition=0 acá, así que su Y mundial ==
+                // la del padre; una rotación en Y no cambia el valor Y de los bounds, así
+                // que "measured" (medido a escala 1, sin rotar) sigue siendo válido.
+                float bottomLocal = measured.Value.min.y * s;
+                model.transform.localPosition = new Vector3(0f, -bottomLocal - 0.06f, 0f); // -0.06: apoya patas sin hundir
+                Debug.Log($"[NetDog] alto nativo {h:0.000} → escala {s:0.0000} (objetivo {target}m).");
+            }
+            else Debug.LogWarning("NetDog: el modelo no tiene mallas para medir — queda a escala 1.");
         }
     }
 }
