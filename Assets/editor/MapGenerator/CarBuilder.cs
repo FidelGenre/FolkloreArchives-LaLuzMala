@@ -56,6 +56,7 @@ namespace FolkloreArchives.MapGen
             var donor = AssetDatabase.LoadAssetAtPath<GameObject>(CarFbx);
             Transform steer = null;
             Transform[] carDoors = new Transform[0];
+            float carHeight = TargetLength * 0.45f * HeightBoost; // fallback si falta el fbx
             if (donor != null)
             {
                 var inst = (GameObject)Object.Instantiate(donor, car.transform);
@@ -73,6 +74,7 @@ namespace FolkloreArchives.MapGen
                 // recentrar en X/Z y apoyar el fondo en y=0
                 b = WorldBounds(inst);
                 inst.transform.localPosition -= new Vector3(b.center.x, b.min.y, b.center.z);
+                carHeight = b.size.y; // medido REAL (ya con TargetLength+HeightBoost aplicados) -- para los faros
 
                 StyleCar(inst);
 
@@ -139,6 +141,9 @@ namespace FolkloreArchives.MapGen
             ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", seatBase + new Vector3(seatSpread, 0f, 0f));
             ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    seatBase + new Vector3(0f, 0f, seatDepth));
             ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    seatBase + new Vector3(seatSpread, 0f, seatDepth));
+            // owner: "asiento extra en el auto, en la parte de atras en medio" -- banco
+            // trasero apretado a 3, a mitad de camino entre rearLeft y rearRight.
+            ctrl.rearMid        = Seat(car.transform, "Seat_RearMid",  seatBase + new Vector3(seatSpread * 0.5f, 0f, seatDepth));
 
             // Colliders + marcadores para la MIRA (raycast): puertas y asientos.
             AddInteractColliders(ctrl);
@@ -146,7 +151,7 @@ namespace FolkloreArchives.MapGen
             // Faros (owner: "usarse las del auto con la misma tecla que la normal" --
             // la linterna del jugador se apaga al subirse de conductor, y F pasa a
             // prender/apagar estos). Apagados por defecto (SetHeadlights los prende).
-            ctrl.headlights = BuildHeadlights(car.transform);
+            ctrl.headlights = BuildHeadlights(car.transform, carHeight);
 
             car.transform.position = pos + Vector3.up * 0.05f;
             car.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
@@ -301,6 +306,7 @@ namespace FolkloreArchives.MapGen
             SeatCollider(ctrl.frontPassenger, ctrl);
             SeatCollider(ctrl.rearLeft, ctrl);
             SeatCollider(ctrl.rearRight, ctrl);
+            SeatCollider(ctrl.rearMid, ctrl);
         }
 
         static void SeatCollider(Transform seat, FolkloreArchives.CarController ctrl)
@@ -319,22 +325,33 @@ namespace FolkloreArchives.MapGen
         // +Z local (mismo eje que CarController.transform.forward, ya probado con el
         // manejo) -- mismo look que la linterna del jugador (Spot, sin sombras, cálido),
         // un poco más de alcance/apertura por ser 2 luces reales de auto.
-        static Light[] BuildHeadlights(Transform car)
+        // owner: "deberian iluminar mucho las luces del auto, casi no se ven, enfocan
+        // debajo del auto no mas" -- la altura (Y) estaba HARDCODEADA en 0.55m, un valor
+        // fijo que no se movió cuando el auto creció (TargetLength 4.4→6.6 + HeightBoost
+        // 1.15, mismo patrón de bug ya visto en dSeat/seatBase): quedaba metida cerca del
+        // piso del paragolpes de un auto mucho más grande, muy baja para tirar luz lejos.
+        // Ahora se mide la altura REAL del auto ya escalado (carHeight, medido en Build())
+        // y se ubica a una FRACCIÓN de esa altura -- se autoescala solo si el auto vuelve
+        // a cambiar de tamaño. Intensidad subida bastante (20→55) porque de noche con
+        // niebla/vignette (VhsPostFx) una luz débil se pierde por completo.
+        const float HeadlightHeightFrac = 0.35f; // fracción de carHeight, altura típica de paragolpes -- ajustar acá si queda alta/baja
+        static Light[] BuildHeadlights(Transform car, float carHeight)
         {
             float front = TargetLength * 0.46f; // cerca de la punta, no exacto (el modelo no es un cubo perfecto)
+            float y = carHeight * HeadlightHeightFrac;
             var lights = new Light[2];
             for (int i = 0; i < 2; i++)
             {
                 float side = TargetLength * (i == 0 ? -0.0909f : 0.0909f); // proporcional al ancho de este auto
                 var go = new GameObject("Headlight" + (i == 0 ? "L" : "R"));
                 go.transform.SetParent(car);
-                go.transform.localPosition = new Vector3(side, 0.55f, front);
-                go.transform.localRotation = Quaternion.identity;
+                go.transform.localPosition = new Vector3(side, y, front);
+                go.transform.localRotation = Quaternion.Euler(6f, 0f, 0f); // leve inclinación hacia el piso, como un auto real
                 var l = go.AddComponent<Light>();
                 l.type = LightType.Spot;
-                l.range = MapLayout.FlashlightRange * 1.4f;
+                l.range = MapLayout.FlashlightRange * 1.6f;
                 l.spotAngle = MapLayout.FlashlightSpotAngle;
-                l.intensity = 20f;
+                l.intensity = 55f;
                 l.color = new Color(0.95f, 0.93f, 0.82f); // blanco cálido, más frío que la linterna
                 l.shadows = LightShadows.None;
                 l.enabled = false; // CarController.SetHeadlights los prende

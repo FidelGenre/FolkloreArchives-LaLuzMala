@@ -29,6 +29,11 @@ namespace FolkloreArchives
         public Transform frontPassenger;
         public Transform rearLeft;
         public Transform rearRight;
+        // owner: "quiero que haya un asiento extra en el auto, en la parte de atras en
+        // medio" -- 5to asiento (banco trasero apretado a 3), pensado para que el perro
+        // (o un 2º jugador en co-op) tenga dónde sentarse ahora que los 3 amigos ocupan
+        // los otros asientos de forma decorativa.
+        public Transform rearMid;
 
         [Header("Puerta del conductor (pivote que gira al subir)")]
         public Transform driverDoor;      // pivote de la puerta

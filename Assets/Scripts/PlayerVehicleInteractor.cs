@@ -224,7 +224,7 @@ namespace FolkloreArchives
             return best;
         }
 
-        static Transform[] Seats(CarController c) => new[] { c.driverSeat, c.frontPassenger, c.rearLeft, c.rearRight };
+        static Transform[] Seats(CarController c) => new[] { c.driverSeat, c.frontPassenger, c.rearLeft, c.rearRight, c.rearMid };
 
         (CarController, Transform) FindNearestDoor(Vector3 from, float range)
         {

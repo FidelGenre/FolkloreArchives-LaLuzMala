@@ -7,6 +7,41 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — 5to asiento (Seat_RearMid) + fix faros del auto (casi no se veían)
+
+Dos pedidos en la misma tanda:
+
+**Asiento extra atrás, al medio.** Owner: primero preguntó por sentar al perro
+en un asiento del medio, después lo simplificó a "que haya un asiento más al
+medio". Con los 3 amigos ahora ocupando `frontPassenger`/`rearLeft`/`rearRight`
+de forma decorativa, no quedaba ningún asiento libre para un 2º jugador (o el
+perro) en co-op. Nuevo `CarController.rearMid` (banco trasero apretado a 3, a
+mitad de camino entre `rearLeft` y `rearRight`), armado en `CarBuilder.Build`
+igual que los demás (con su collider-trigger) y sumado a la lista `Seats()` de
+`PlayerVehicleInteractor` (asiento libre normal, con interacción E como
+cualquier otro — no es decorativo).
+
+**Faros que casi no se veían.** Owner: "deberian iluminar mucho las luces del
+auto, casi no se ven, enfocan debajo del auto no mas". Causa encontrada: la
+altura (Y) de los faros estaba HARDCODEADA en 0.55m desde que se armaron —
+nunca se actualizó cuando el auto creció (`TargetLength` 4.4→6.6 +
+`HeightBoost` 1.15, el mismo patrón de bug ya visto antes en `dSeat`/
+`seatBase`), así que terminaban muy abajo para un auto mucho más grande.
+Fix en `CarBuilder`:
+- `carHeight` ahora se MIDE del auto ya escalado (mismo bounds que se usa
+  para recentrar el modelo) y se pasa a `BuildHeadlights`; la altura del faro
+  es una FRACCIÓN de esa medida (`HeadlightHeightFrac = 0.35`) en vez de un
+  número fijo — se autoescala si el auto vuelve a cambiar de tamaño.
+- Intensidad 20→55, rango ×1.4→×1.6, + una leve inclinación hacia abajo (6°)
+  para que el cono pegue en el piso adelante (antes apuntaba perfectamente
+  horizontal).
+- ⚠ **No se pudo confirmar visualmente** (sin Unity corriendo en esta
+  sesión) — el valor de `HeadlightHeightFrac` es una estimación geométrica
+  razonable, no una medición exacta del modelo. Regenerar y ajustar esa
+  constante si los faros quedan muy altos/bajos.
+
+---
+
 ## 2026-07-26 — Los 3 amigos arrancan sentados en el auto (decorativo)
 
 Owner: "hace que se puedan sentar no mas en el auto decorativos" (después de
