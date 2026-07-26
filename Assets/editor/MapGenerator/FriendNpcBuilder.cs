@@ -32,17 +32,43 @@ namespace FolkloreArchives.MapGen
         {
             public string name, fbx, tex;
             public float targetHeight, offX, offZ, yaw;
-            public FriendDef(string n, string f, string tx, float h, float ox, float oz, float y)
-            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; }
+            public FolkloreArchives.HumanWalkAnim.Limb[] limbs; // null = usar los default de HumanWalkAnim (rig estilo Blender: thigh.L/upper_arm.L)
+            public FriendDef(string n, string f, string tx, float h, float ox, float oz, float y, FolkloreArchives.HumanWalkAnim.Limb[] customLimbs = null)
+            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; }
         }
+
+        // owner: "que no esten todos duros en pose de t" -- HumanWalkAnim corrige la pose
+        // de brazos (T-pose -> brazos abajo) calculando su dirección real hombro->mano,
+        // pero para eso necesita encontrar los huesos por NOMBRE EXACTO -- cada uno de
+        // estos 3 personajes viene de un pack distinto con su PROPIO rig/nomenclatura
+        // (confirmado leyendo los nombres de hueso crudos de cada .fbx). Los defaults de
+        // HumanWalkAnim (thigh.L / upper_arm.L, notación Blender) solo coinciden con
+        // FemaleSecretary -- los otros dos necesitan su propia lista.
+        static readonly FolkloreArchives.HumanWalkAnim.Limb[] MaleCasualLimbs =
+        {
+            // Vinrax "PSX Casual Male": snake_case con sufijo _left/_right
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "thigh_left",      phase =  1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "thigh_right",     phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "upper_arm_left",  phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "upper_arm_right", phase =  1f },
+        };
+        static readonly FolkloreArchives.HumanWalkAnim.Limb[] MixamoLimbs =
+        {
+            // Wardster "Character_Male_GreenJacket": rig Mixamo (prefijo "mixamorig:")
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:LeftUpLeg",  phase =  1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:RightUpLeg", phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:LeftArm",    phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:RightArm",   phase =  1f },
+        };
 
         static readonly FriendDef[] Friends =
         {
             // al costado sur de la ruta, cerca del auto (que queda en offset 0,0), mirando hacia el auto (+X)
-            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f),
+            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f, MaleCasualLimbs),
             // al costado norte de la ruta, mirando hacia el auto (+X)
-            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f),
-            // un poco más atrás, entre los otros dos, mirando hacia el auto (+X)
+            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs),
+            // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) -- rig ya
+            // usa notación thigh.L/upper_arm.L, coincide con los defaults de HumanWalkAnim
             new FriendDef("Friend_FemaleSec",    Dir + "FemaleSecretary/female_secretary.fbx",  Dir + "FemaleSecretary/secretary_tex.png", 2.3f, -8.0f,  0.2f,  90f),
         };
 
@@ -107,6 +133,13 @@ namespace FolkloreArchives.MapGen
                 for (int k = 0; k < arr.Length; k++) arr[k] = mat;
                 r.sharedMaterials = arr;
             }
+
+            // owner: "que no esten todos duros en pose de t" -- misma animación
+            // procedural que usa el protagonista. Parados (sin moverse), el ciclo de
+            // caminata no hace nada (amp llega a 0 solo) pero SÍ corrige la pose de
+            // reposo: brazos bajados en vez de en cruz (T-pose).
+            var anim = go.AddComponent<FolkloreArchives.HumanWalkAnim>();
+            if (f.limbs != null) anim.limbs = f.limbs;
         }
 
         static Texture2D LoadPointTex(string path)
