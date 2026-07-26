@@ -236,8 +236,15 @@ namespace FolkloreArchives
             // auto" -- antes solo se movía la CÁMARA al asiento; el cuerpo (lo que ven
             // los DEMÁS clientes por el NetworkTransform de la raíz) se quedaba parado
             // afuera. Ahora el cuerpo también se teletransporta al asiento.
-            transform.position = seat.position;
+            // owner: "aparece asi arriba del auto y no sentado en el asiento" -- seat
+            // es una posición de OJO (calculada desde el volante), no de PIES: poner la
+            // raíz ahí directo dejaba al personaje parado a la altura del ojo, muy por
+            // encima del asiento real. Corrijo restando el mismo offset de altura que
+            // ya usa la cámara al pararse (camLocalPos, "altura del ojo" normal parado),
+            // así los PIES quedan a la altura del asiento y el ojo (donde ya está seat)
+            // coincide igual que antes.
             transform.rotation = seat.rotation;
+            transform.position = seat.position - transform.rotation * camLocalPos;
 
             yield return Glide(cam, seat.position, seat.rotation);
             cam.SetParent(seat, false);
