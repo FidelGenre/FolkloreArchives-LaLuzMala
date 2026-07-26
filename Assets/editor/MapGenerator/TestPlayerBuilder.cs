@@ -187,6 +187,12 @@ namespace FolkloreArchives.MapGen
             // a ser una función independiente (sin depender de NetworkBuilder), igual que
             // el perro riggeado de antes, solo que apuntando al glb del PS1 Dog.
             const string glbPath = "Assets/ExternalAssets/Dog/PS1_Dog.glb";
+            // owner: "en multiplayer esta bien pero en singleplayer no" -- con el mismo
+            // código, la única diferencia real es CUÁNDO se toca el asset por primera vez
+            // en este Generate (TestPlayerBuilder corre ANTES que NetworkBuilder.EnsureNet
+            // en MapGenerator.Generate()). Fuerza un reimport ANTES de cargarlo, por si el
+            // primer acceso al glb en la sesión trae datos de malla todavía no resueltos.
+            AssetDatabase.ImportAsset(glbPath, ImportAssetOptions.ForceUpdate);
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(glbPath);
             if (prefab == null)
             {
@@ -212,9 +218,9 @@ namespace FolkloreArchives.MapGen
             model.transform.localScale = Vector3.one;
 
             var measured = MeasureRawVertexBounds(model);
-            if (measured.HasValue)
+            if (measured.HasValue && measured.Value.size.y > 0.01f)
             {
-                float h = Mathf.Max(0.0001f, measured.Value.size.y);
+                float h = measured.Value.size.y;
                 float s = DogTargetHeight / h;
                 model.transform.localScale = Vector3.one * s;
                 // el modelo sigue en localPosition=0 acá, así que su Y mundial == la del
@@ -223,7 +229,15 @@ namespace FolkloreArchives.MapGen
                 model.transform.localPosition = new Vector3(0f, -bottomLocal - 0.06f, 0f); // -0.06: apoya patas sin hundir
                 Debug.Log($"Rufus: alto nativo {h:0.000} → escala {s:0.0000} (objetivo {DogTargetHeight} m).");
             }
-            else Debug.LogWarning("Rufus: el modelo no tiene mallas para medir — queda a escala 1.");
+            else
+            {
+                // techo de seguridad: si la medición falló (mesh vacía, bounds ridículos),
+                // NUNCA dejar que el perro quede gigante -- mejor una escala fija razonable
+                // (calibrada para este glb: a escala 1 mide ~140x lo que debería, owner:
+                // "el PS1 Dog viene ENORME a escala 1") que un cálculo roto sin límite.
+                model.transform.localScale = Vector3.one * 0.01f;
+                Debug.LogError($"Rufus: medición de malla falló (measured={(measured.HasValue ? measured.Value.size.y.ToString("0.000") : "null")}) — uso escala fija 0.01 de emergencia.");
+            }
 
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;
