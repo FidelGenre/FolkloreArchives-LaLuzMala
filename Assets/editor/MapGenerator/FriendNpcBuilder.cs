@@ -112,6 +112,44 @@ namespace FolkloreArchives.MapGen
                 BuildOne(group, t, f, roadCenter);
         }
 
+        // owner: "hace que se puedan sentar no mas en el auto decorativos" -- llamado
+        // por CarBuilder DESPUÉS de armar el auto (Build de acá arriba corre antes,
+        // desde LandmarkBuilder, cuando el auto todavía no existe). Sienta a los 3
+        // amigos ya construidos en los 3 asientos libres (conductor = jugador):
+        // acompañante, trasero izq., trasero der. — mismo orden que `Friends`.
+        // Puramente decorativo: sin interacción/E, no caminan más (se les saca
+        // FriendWander) y quedan fijos con la MISMA pose "sentado" que ya usa el
+        // jugador/perro (HumanWalkAnim.seated).
+        const float SeatEyeHeight = 2.3f; // mismo offset ojo-a-pies que NetworkBuilder/TestPlayerBuilder (personaje 2.3m)
+
+        public static void SeatInCar(Transform root, FolkloreArchives.CarController car)
+        {
+            if (car == null) return;
+            var group = root.Find("PointsOfInterest/FriendsNPC");
+            if (group == null) { Debug.LogWarning("FriendNpc: no encontré FriendsNPC para sentar en el auto."); return; }
+
+            Transform[] seats = { car.frontPassenger, car.rearLeft, car.rearRight };
+            for (int i = 0; i < Friends.Length && i < seats.Length; i++)
+            {
+                var seat = seats[i];
+                var friend = group.Find(Friends[i].name);
+                if (seat == null || friend == null) continue;
+
+                var wander = friend.GetComponent<FolkloreArchives.FriendWander>();
+                if (wander != null) Object.DestroyImmediate(wander);
+
+                // seat.localRotation siempre es identity (ver Seat() en CarBuilder), así
+                // que se puede trabajar directo en el espacio LOCAL del auto: mismo criterio
+                // que PlayerVehicleInteractor.SitRoutine (seat = altura de OJO, no de pies).
+                friend.SetParent(car.transform, false);
+                friend.localRotation = Quaternion.identity;
+                friend.localPosition = seat.localPosition - new Vector3(0f, SeatEyeHeight, 0f);
+
+                var anim = friend.GetComponent<FolkloreArchives.HumanWalkAnim>();
+                if (anim != null) anim.seated = true;
+            }
+        }
+
         static void BuildOne(Transform parent, Terrain t, FriendDef f, Vector2 c)
         {
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(f.fbx);

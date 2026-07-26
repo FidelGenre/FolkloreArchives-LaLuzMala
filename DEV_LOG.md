@@ -7,6 +7,40 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Los 3 amigos arrancan sentados en el auto (decorativo)
+
+Owner: "hace que se puedan sentar no mas en el auto decorativos" (después de
+pensar en voz alta si sumar un asiento más al medio para el perro — se dejó
+para más adelante, esto es solo los 3 amigos). El auto tiene 4 asientos
+(`driverSeat`/`frontPassenger`/`rearLeft`/`rearRight`); el conductor es
+siempre el jugador, así que quedan justo 3 libres para los 3 amigos.
+
+Problema de orden de construcción: `FriendNpcBuilder.Build` (parados junto a
+la ruta) corre desde `LandmarkBuilder`, ANTES de que `CarBuilder` arme el
+auto — no había auto todavía para sentarlos ahí directamente.
+
+- Nuevo `FriendNpcBuilder.SeatInCar(root, car)`, llamado desde
+  `MapGenerator.cs` **después** de `CarBuilder.Build` (captura el
+  `GameObject` que antes se descartaba). Busca `PointsOfInterest/FriendsNPC`
+  (ya construido), y para cada amigo: le saca `FriendWander` (ya no camina),
+  lo reparenta bajo el auto (`frontPassenger`/`rearLeft`/`rearRight`, mismo
+  orden que la tabla `Friends`) y prende `HumanWalkAnim.seated = true` —
+  MISMA pose sentada que ya usa el jugador/perro.
+- Posición: como `Seat()` (CarBuilder) pone `localRotation = identity`,
+  alcanza con trabajar en espacio LOCAL del auto: `friend.localPosition =
+  seat.localPosition - (0, 2.3, 0)` — 2.3 es el mismo offset ojo-a-pies que
+  usa la cámara del jugador (`NetworkBuilder`/`TestPlayerBuilder`), ya que
+  los amigos miden lo mismo (2.3m).
+- **Puramente decorativo**: sin interacción, sin tecla E — quedan fijos
+  desde que arranca el mapa. Los colliders-trigger de esos 3 asientos siguen
+  activos (por si en co-op otro jugador quiere sentarse ahí igual — quedaría
+  superpuesto con el amigo decorativo; no se resolvió, es un caso de borde).
+- **Necesita regenerar** + revisar en el Editor (sin Unity corriendo en esta
+  sesión, no se pudo confirmar visualmente que los 3 queden bien sentados,
+  sin atravesar el asiento/tablero).
+
+---
+
 ## 2026-07-26 — Cartel + E para prender/apagar los faros mirando al frente
 
 Owner: "al mirar hacia delante estando en el auto deberia darme la opcion de

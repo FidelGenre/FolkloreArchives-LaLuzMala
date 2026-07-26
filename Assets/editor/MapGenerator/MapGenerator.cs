@@ -100,7 +100,11 @@ namespace FolkloreArchives.MapGen
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
             OldLadyNpcBuilder.Build(root.transform, terrain); // la vieja cuentacuentos, parada afuera de su casa
             FenceBuilder.Build(root.transform, terrain);      // valla de madera junto al camino de tierra y al sendero a la casa de la vieja
-            CarBuilder.Build(root.transform, terrain);       // Renault 12 procedural (auto manejable) — estacionado en el campamento
+            var carGO = CarBuilder.Build(root.transform, terrain);       // Renault 12 procedural (auto manejable) — estacionado en el campamento
+            // owner: "hace que se puedan sentar no mas en el auto decorativos" -- corre
+            // DESPUÉS de CarBuilder (los amigos ya están parados por LandmarkBuilder,
+            // pero el auto recién existe acá) para sentarlos en los 3 asientos libres.
+            FriendNpcBuilder.SeatInCar(root.transform, carGO.GetComponent<FolkloreArchives.CarController>());
             LuzMalaBuilder.Build(root.transform, terrain);   // La Luz Mala (aparece de noche)
             StoryTriggerBuilder.Build(root.transform, terrain);
             TestPlayerBuilder.Build(root.transform, terrain);
