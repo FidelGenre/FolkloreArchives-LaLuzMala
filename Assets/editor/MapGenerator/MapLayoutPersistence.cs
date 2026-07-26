@@ -81,11 +81,21 @@ namespace FolkloreArchives.MapGen
             Debug.Log($"<color=lime>[MapLayoutPersistence] Guardadas {layout.entries.Count} posiciones en {SavePath}</color>");
         }
 
+        // owner: "sigue diminuto el perro" -- el perro (DOG/Model) recalcula su propia
+        // escala CADA Generate midiendo la malla real (ver TestPlayerBuilder/
+        // NetworkBuilder). Si alguna vez se guardó el layout completo con el perro en un
+        // estado roto (chiquito/gigante de algún intento anterior), ese JSON viejo
+        // pisaba la escala recién calculada en cada Generate posterior -- ningún fix de
+        // escala podía sobrevivir a esto. Se excluye "DOG" (y sus hijos) de guardar/
+        // restaurar layout: su transform es 100% procedural, nunca manual.
+        static bool SkipSubtree(string name) => name == "DOG";
+
         static void Walk(Transform t, string parentPath, List<Entry> entries)
         {
             var nameCounts = new Dictionary<string, int>();
             foreach (Transform child in t)
             {
+                if (SkipSubtree(child.name)) continue;
                 int occ = nameCounts.TryGetValue(child.name, out var n) ? n : 0;
                 nameCounts[child.name] = occ + 1;
                 string path = parentPath + "/" + child.name + "#" + occ;
@@ -125,6 +135,7 @@ namespace FolkloreArchives.MapGen
             var nameCounts = new Dictionary<string, int>();
             foreach (Transform child in t)
             {
+                if (SkipSubtree(child.name)) continue;
                 int occ = nameCounts.TryGetValue(child.name, out var n) ? n : 0;
                 nameCounts[child.name] = occ + 1;
                 string path = parentPath + "/" + child.name + "#" + occ;
