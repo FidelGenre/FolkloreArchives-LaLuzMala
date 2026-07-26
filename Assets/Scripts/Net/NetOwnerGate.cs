@@ -24,6 +24,11 @@ namespace FolkloreArchives.Net
             var explorer = GetComponent<MapExplorer>();
             if (explorer != null) explorer.enabled = mine;
 
+            // owner: "no me deja interactuar... abrir puertas ni las opciones me salen"
+            // -- subir/bajar del auto y abrir/cerrar puertas (persona en red).
+            var interactor = GetComponent<PlayerVehicleInteractor>();
+            if (interactor != null) interactor.enabled = mine;
+
             var dog = GetComponent<DogController>();
             if (dog != null)
             {

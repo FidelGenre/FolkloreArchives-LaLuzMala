@@ -68,6 +68,12 @@ namespace FolkloreArchives.MapGen
             cc.height = 2.4f; cc.radius = 0.35f; cc.center = new Vector3(0f, 1.2f, 0f);
             var explorer = root.AddComponent<FolkloreArchives.MapExplorer>();
             explorer.enabled = false; // el gate lo prende para el dueño
+            // owner: "no me deja interactuar con las cosas... abrir puertas ni las
+            // opciones me salen ni nada" -- faltaba este componente entero en el
+            // personaje de red (subir/bajar del auto, abrir/cerrar puertas, y el texto
+            // "[E] ..." en pantalla salen todos de acá).
+            var interactor = root.AddComponent<FolkloreArchives.PlayerVehicleInteractor>();
+            interactor.enabled = false; // el gate lo prende para el dueño
 
             // cuerpo = modelo humano PSX (lo que ve el compañero). Si el FBX no está,
             // cae a una cápsula.
