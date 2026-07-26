@@ -34,9 +34,9 @@ namespace FolkloreArchives
 
         CharacterController cc;
         MapExplorer explorer;
+        DogController dog;
         Transform cam, camParent;
         Vector3 camLocalPos;
-        Renderer[] bodyRenderers;
 
         CarController car;      // null = a pie
         Transform mySeat, myDoor;
@@ -51,9 +51,9 @@ namespace FolkloreArchives
         {
             cc = GetComponent<CharacterController>();
             explorer = GetComponent<MapExplorer>();
+            dog = GetComponent<DogController>();
             var c = GetComponentInChildren<Camera>();
             if (c != null) { cam = c.transform; camParent = cam.parent; camLocalPos = cam.localPosition; }
-            bodyRenderers = GetComponentsInChildren<Renderer>(true);
         }
 
         // owner: "cuando se une otro jugador ya no me aparecen las opciones de
@@ -112,14 +112,9 @@ namespace FolkloreArchives
                     else if (canOpenDoors)
                     {
                         var doors = Doors(target.car);
-                        Debug.Log($"[DOOR-DIAG] E en puerta '{target.part.name}' -- target.car={(target.car!=null?target.car.name:"null")} doors={(doors!=null?"OK":"NULL")} isOpen={(doors!=null && doors.IsOpen(target.part))}");
                         doors?.SetDoor(target.part, doors != null && !doors.IsOpen(target.part)); // puerta → abrir/cerrar
                     }
                     // el perro apuntando a una puerta (no un asiento): no hace nada
-                }
-                else
-                {
-                    Debug.Log("[DOOR-DIAG] E sin target (la mira no encontró nada)");
                 }
             }
 
@@ -229,8 +224,20 @@ namespace FolkloreArchives
         {
             busy = true;
             if (explorer != null) explorer.enabled = false;
+            // owner: "desde la perspectiva del perro no me deja mirar hacia los lados
+            // dentro del auto" -- DogController tiene su PROPIA lógica de mouse-look
+            // (gira transform y camT todos los frames en modo Player) que nunca se
+            // enteraba de que estabas sentado, y peleaba con el mouse-look de acá mismo
+            // por la rotación de la cámara. Se apaga igual que explorer.
+            if (dog != null) dog.enabled = false;
             if (cc != null) cc.enabled = false;
-            SetBodyVisible(false);
+
+            // owner: "desde la perspectiva del humano no veo que se haya subido al
+            // auto" -- antes solo se movía la CÁMARA al asiento; el cuerpo (lo que ven
+            // los DEMÁS clientes por el NetworkTransform de la raíz) se quedaba parado
+            // afuera. Ahora el cuerpo también se teletransporta al asiento.
+            transform.position = seat.position;
+            transform.rotation = seat.rotation;
 
             yield return Glide(cam, seat.position, seat.rotation);
             cam.SetParent(seat, false);
@@ -311,15 +318,20 @@ namespace FolkloreArchives
             cam.localPosition = camLocalPos;
             cam.localRotation = Quaternion.Euler(exitPitch, 0f, 0f);
 
-            SetBodyVisible(true);
             if (cc != null) cc.enabled = true;
-            // MapExplorer guarda su propio "pitch" (privado) y lo reaplica ni bien se
-            // reactiva -- sincronizado con el mismo exitPitch de arriba, para que no haya
-            // ningún valor desactualizado que la pise al toque.
+            // MapExplorer/DogController guardan su propio "pitch" (privado) y lo
+            // reaplican ni bien se reactivan -- sincronizado con el mismo exitPitch de
+            // arriba, para que no haya ningún valor desactualizado que la pise al toque
+            // (mismo criterio para los dos, sea cual sea el que tenga este personaje).
             if (explorer != null)
             {
                 explorer.SetLookPitch(exitPitch);
                 explorer.enabled = true;
+            }
+            if (dog != null)
+            {
+                dog.SetLookPitch(exitPitch);
+                dog.enabled = true;
             }
             busy = false;
         }
@@ -354,12 +366,6 @@ namespace FolkloreArchives
                 if (d >= 0f && d < bestDist) { bestDist = d; bestY = h.point.y; }
             }
             return bestY;
-        }
-
-        void SetBodyVisible(bool v)
-        {
-            if (bodyRenderers == null) return;
-            foreach (var r in bodyRenderers) if (r != null) r.enabled = v;
         }
 
         void OnGUI()

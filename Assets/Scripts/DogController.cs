@@ -45,6 +45,12 @@ namespace FolkloreArchives
         float standHeight, camBaseY;
         float pitch;   // mirar arriba/abajo (grados); parte del ángulo base de la cámara
 
+        // owner: bajar del auto "me cambia la camara" -- este script guarda su propio
+        // pitch (privado) y lo reaplica ni bien se reactiva (al subir/bajar del auto,
+        // PlayerVehicleInteractor lo deshabilita/habilita igual que a MapExplorer); sin
+        // esto quedaría desactualizado y pisaría la vista recién puesta al bajar.
+        public void SetLookPitch(float p) { pitch = Mathf.Clamp(p, -80f, 80f); }
+
         // --- animación (perro riggeado: Idle/Walk/Run/Lie) ---
         Animator animator;
         int curAnim;
