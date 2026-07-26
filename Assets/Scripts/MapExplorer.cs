@@ -15,15 +15,16 @@ namespace FolkloreArchives
     public class MapExplorer : MonoBehaviour
     {
         public float walkSpeed = 2.6f;   // slower, tense walk (FtF-style)
-        public float runSpeed = 5f;
+        public float runSpeed = 4.3f;    // owner: "un poco mas lento el sprint" (era 5)
         public float crouchSpeed = 1.6f;
         public float jumpHeight = 1.1f;
         public float gravity = 18f;
         public float mouseSensitivity = 0.08f;
 
-        // Stamina: correr (Shift + moviéndose) la gasta; se regenera al no correr.
-        // Al llegar a 0 quedás "exhausted" y no podés correr hasta recuperar
-        // exhaustRecover. Barra en pantalla (OnGUI).
+        // Stamina: owner: "que la estamina siga estando pero infinita... que no este
+        // mas la barra" -- se sigue llevando la cuenta (drena corriendo, se regenera
+        // caminando) pero YA NO bloquea correr ni se muestra en pantalla; queda como
+        // estado interno nomás, por si hace falta reactivarla más adelante.
         [Header("Stamina")]
         public float maxStamina = 100f;
         public float staminaDrain = 28f;    // por segundo mientras corrés
@@ -173,19 +174,22 @@ namespace FolkloreArchives
                     h = v = 0f;
             }
 
-            // Stamina: solo corrés si apretás Shift, te estás moviendo, no estás
-            // agachado, te queda estamina y no estás exhausto.
+            // Stamina: owner: "necesito que la estamina siga estando pero infinita... no
+            // este mas la barra" -- el sistema sigue llevando la cuenta (por si hace
+            // falta más adelante), pero ya NO bloquea correr: sin el "&& stamina > 0f &&
+            // !exhausted" de antes, el jugador nunca se queda sin aire, y la barra en
+            // pantalla se sacó (ver OnGUI).
             bool movingNow = (Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f);
-            bool running = kb.leftShiftKey.isPressed && movingNow && !crouching && stamina > 0f && !exhausted;
+            bool running = kb.leftShiftKey.isPressed && movingNow && !crouching;
             if (running)
             {
                 stamina -= staminaDrain * Time.deltaTime;
-                if (stamina <= 0f) { stamina = 0f; exhausted = true; } // agotado: a caminar
+                if (stamina <= 0f) { stamina = 0f; exhausted = true; }
             }
             else
             {
                 stamina = Mathf.Min(maxStamina, stamina + staminaRegen * Time.deltaTime);
-                if (exhausted && stamina >= exhaustRecover) exhausted = false; // ya podés correr de nuevo
+                if (exhausted && stamina >= exhaustRecover) exhausted = false;
             }
 
             float speed = crouching ? crouchSpeed : (running ? runSpeed : walkSpeed);
@@ -268,21 +272,6 @@ namespace FolkloreArchives
             fpsStyle.normal.textColor = fpsDisplay < 30f ? Color.red : (fpsDisplay < 50f ? Color.yellow : Color.green);
             GUI.Box(new Rect(10, 10, 140, 28), GUIContent.none);
             GUI.Label(new Rect(10, 10, 140, 28), fpsText, fpsStyle);
-
-            // Stamina bar (abajo a la izquierda). Alloc-free: DrawTexture + GUI.color.
-            float barW = 220f, barH = 16f, bx = 14f;
-            float by = Screen.height - barH - 16f;
-            float frac = maxStamina > 0f ? Mathf.Clamp01(stamina / maxStamina) : 0f;
-            var prev = GUI.color;
-            // fondo
-            GUI.color = new Color(0f, 0f, 0f, 0.55f);
-            GUI.DrawTexture(new Rect(bx - 2f, by - 2f, barW + 4f, barH + 4f), Texture2D.whiteTexture);
-            // relleno: rojo si exhausto, si no de amarillo (bajo) a verde (lleno)
-            GUI.color = exhausted
-                ? new Color(0.80f, 0.18f, 0.14f, 0.95f)
-                : Color.Lerp(new Color(0.85f, 0.6f, 0.12f, 0.95f), new Color(0.32f, 0.72f, 0.26f, 0.95f), frac);
-            GUI.DrawTexture(new Rect(bx, by, barW * frac, barH), Texture2D.whiteTexture);
-            GUI.color = prev;
         }
     }
 }
