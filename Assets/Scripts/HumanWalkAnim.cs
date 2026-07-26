@@ -60,7 +60,13 @@ namespace FolkloreArchives
                 _t[i] = FindDeep(transform, limbs[i].bone);
                 if (_t[i] == null) continue;
                 Quaternion baseLocal = _t[i].localRotation;
-                bool isArm = limbs[i].bone.Contains("arm");
+                // owner: "el de barba sigue con los brazos extendidos" -- Contains() es
+                // case-SENSITIVE y el rig Mixamo nombra el hueso "mixamorig:LeftArm" (con
+                // "Arm" en mayúscula) -- nunca matcheaba "arm" en minúscula, así que ese
+                // personaje nunca tuvo la corrección de brazo (T-pose) NI, sentado, se
+                // libraba de que le apliquen el ángulo de MUSLO (quedaba tratado como
+                // pierna) -- de ahí el brazo "extendido" hacia adelante en el auto.
+                bool isArm = limbs[i].bone.ToLowerInvariant().Contains("arm");
                 Transform tip = isArm ? DeepestChild(_t[i]) : null;
                 if (tip != null && tip != _t[i] && _t[i].parent != null)
                 {
@@ -125,7 +131,7 @@ namespace FolkloreArchives
                 for (int i = 0; i < limbs.Length; i++)
                 {
                     if (_t[i] == null) continue;
-                    bool isArm = limbs[i].bone.Contains("arm");
+                    bool isArm = limbs[i].bone.ToLowerInvariant().Contains("arm");
                     _t[i].localRotation = isArm ? _rest[i] : _rest[i] * Quaternion.AngleAxis(seatedThighAngle, axis);
                 }
                 return;
@@ -151,7 +157,7 @@ namespace FolkloreArchives
             for (int i = 0; i < limbs.Length; i++)
             {
                 if (_t[i] == null) continue;
-                bool isArm = limbs[i].bone.Contains("arm");
+                bool isArm = limbs[i].bone.ToLowerInvariant().Contains("arm");
                 float amt = (isArm ? armSwing : legSwing) * limbs[i].phase * _amp * swingMul;
                 float ang = Mathf.Sin(_phase) * amt;
                 if (isArm && _t[i].parent != null)

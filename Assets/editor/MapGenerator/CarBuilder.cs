@@ -137,13 +137,19 @@ namespace FolkloreArchives.MapGen
                 seatBase = wheelLocal + new Vector3(0f, 0.42f * HeightBoost, 0f) * (TargetLength / 4.4f);
                 dSeat = seatBase + new Vector3(0f, 0f, -0.30f) * (TargetLength / 4.4f);
             }
+            // owner: "el otro chico esta mui adelante" -- seatBase (acompañante/traseros)
+            // nunca tenía el empuje hacia atrás de -0.30 que sí tiene el conductor (dSeat),
+            // así que quedaban a la profundidad del VOLANTE, casi pegados al tablero. Un
+            // empuje más chico (no hace falta tanto como el conductor, que tiene que
+            // despegarse del volante en sí) para separarlos del tablero/asiento delantero.
+            Vector3 paxBase = seatBase + new Vector3(0f, 0f, -0.15f) * (TargetLength / 4.4f);
             ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   dSeat);
-            ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", seatBase + new Vector3(seatSpread, 0f, 0f));
-            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    seatBase + new Vector3(0f, 0f, seatDepth));
-            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    seatBase + new Vector3(seatSpread, 0f, seatDepth));
+            ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", paxBase + new Vector3(seatSpread, 0f, 0f));
+            ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    paxBase + new Vector3(0f, 0f, seatDepth));
+            ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    paxBase + new Vector3(seatSpread, 0f, seatDepth));
             // owner: "asiento extra en el auto, en la parte de atras en medio" -- banco
             // trasero apretado a 3, a mitad de camino entre rearLeft y rearRight.
-            ctrl.rearMid        = Seat(car.transform, "Seat_RearMid",  seatBase + new Vector3(seatSpread * 0.5f, 0f, seatDepth));
+            ctrl.rearMid        = Seat(car.transform, "Seat_RearMid",  paxBase + new Vector3(seatSpread * 0.5f, 0f, seatDepth));
 
             // Colliders + marcadores para la MIRA (raycast): puertas y asientos.
             AddInteractColliders(ctrl);

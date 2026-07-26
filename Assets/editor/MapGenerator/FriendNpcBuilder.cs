@@ -120,7 +120,16 @@ namespace FolkloreArchives.MapGen
         // Puramente decorativo: sin interacción/E, no caminan más (se les saca
         // FriendWander) y quedan fijos con la MISMA pose "sentado" que ya usa el
         // jugador/perro (HumanWalkAnim.seated).
-        const float SeatEyeHeight = 2.3f; // mismo offset ojo-a-pies que NetworkBuilder/TestPlayerBuilder (personaje 2.3m)
+        // owner: "estan atravezando el asiento de abajo" -- el primer intento restaba
+        // la altura de OJO completa (2.3, mismo offset que usa PlayerVehicleInteractor
+        // para el jugador PARADO), pero acá el personaje queda VISIBLE (al jugador no
+        // se le ve el propio cuerpo sentado, por el layer SelfHidden -- nunca se notó
+        // este problema con el jugador). HumanWalkAnim.seated solo ROTA los muslos, no
+        // traslada el modelo -- restar la altura de ojo entera hunde la cadera/raíz
+        // muy por debajo del asiento real (el cuerpo entero quedaba atravesando el
+        // piso del auto). Restando solo la altura de CADERA aprox. (mitad del alto del
+        // personaje) la cadera queda a la altura del asiento y listo.
+        const float SeatHipHeight = 1.15f; // ~mitad de targetHeight (2.3) -- altura cadera parada
 
         public static void SeatInCar(Transform root, FolkloreArchives.CarController car)
         {
@@ -139,11 +148,10 @@ namespace FolkloreArchives.MapGen
                 if (wander != null) Object.DestroyImmediate(wander);
 
                 // seat.localRotation siempre es identity (ver Seat() en CarBuilder), así
-                // que se puede trabajar directo en el espacio LOCAL del auto: mismo criterio
-                // que PlayerVehicleInteractor.SitRoutine (seat = altura de OJO, no de pies).
+                // que se puede trabajar directo en el espacio LOCAL del auto.
                 friend.SetParent(car.transform, false);
                 friend.localRotation = Quaternion.identity;
-                friend.localPosition = seat.localPosition - new Vector3(0f, SeatEyeHeight, 0f);
+                friend.localPosition = seat.localPosition - new Vector3(0f, SeatHipHeight, 0f);
 
                 var anim = friend.GetComponent<FolkloreArchives.HumanWalkAnim>();
                 if (anim != null) anim.seated = true;

@@ -7,6 +7,44 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix: amigos sentados (brazo extendido + hundidos en el asiento)
+
+Owner mandó capturas de los amigos ya sentados en el auto (feature anterior):
+brazo del personaje de barba (Mixamo, `Friend_MaleGreenJkt`) extendido hacia
+adelante, y los 3 atravesando el asiento/piso del auto (el de acompañante
+además "muy adelante", pegado al tablero).
+
+- **Brazo extendido — bug real, no solo de calibración:** `HumanWalkAnim`
+  detecta huesos de brazo con `bone.Contains("arm")`, pero `Contains` es
+  **case-sensitive** y el rig Mixamo nombra el hueso `"mixamorig:LeftArm"`
+  (con "Arm" en mayúscula) — nunca matcheaba. Ese personaje NUNCA tuvo la
+  corrección de T-pose del brazo, y sentado encima lo trataba como PIERNA
+  (le aplicaba el ángulo de muslo -75°), de ahí el brazo "extendido" hacia
+  adelante. Nunca se notó de pie (parado, con los brazos ya en la T-pose sin
+  corregir, se veía raro pero no tan mal como sentado). Fix en
+  `HumanWalkAnim.cs`: las 3 comparaciones pasan a `bone.ToLowerInvariant()
+  .Contains("arm")`.
+- **Hundidos en el asiento:** `FriendNpcBuilder.SeatInCar` restaba la altura
+  de OJO completa (2.3, la misma que usa el jugador PARADO) para ubicar la
+  raíz del personaje desde el asiento — pero `HumanWalkAnim.seated` solo
+  ROTA los muslos, no traslada el modelo, así que la cadera quedaba a 2.3m
+  por DEBAJO del asiento (bajo el piso del auto). Nunca se notó con el
+  jugador porque su propio cuerpo sentado se OCULTA de su propia cámara
+  (layer SelfHidden) — nadie mira su propia cadera hundida. Cambiado a restar
+  solo la altura de CADERA aprox. (`SeatHipHeight = 1.15`, mitad de
+  `targetHeight`).
+- **Acompañante muy pegado al tablero:** `seatBase` (base de acompañante/
+  traseros) nunca tenía el empuje hacia atrás (-0.30) que sí tiene el
+  conductor (`dSeat`) — quedaban a la profundidad del VOLANTE. Nuevo
+  `paxBase` con un empuje más chico (-0.15) solo para
+  acompañante/traseros/rearMid (el conductor no se toca).
+- ⚠ **Sigue sin poder probarse visualmente** (sin Unity corriendo en esta
+  sesión) — son ajustes razonados a partir de la captura, no medidos. Mandá
+  otra captura después de regenerar para afinar `SeatHipHeight`/el -0.15 si
+  hace falta.
+
+---
+
 ## 2026-07-26 — 5to asiento (Seat_RearMid) + fix faros del auto (casi no se veían)
 
 Dos pedidos en la misma tanda:
