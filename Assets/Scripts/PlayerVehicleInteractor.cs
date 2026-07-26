@@ -5,6 +5,8 @@
 //    Afuera, PEGADO a un asiento (puerta abierta):  E te sienta.
 //    Sentado con la puerta CERRADA:  E abre la puerta nomás (seguís sentado).
 //    Sentado con la puerta ABIERTA, mirándola:  E la cierra (seguís sentado).
+//    Conductor mirando al FRENTE (parabrisas):  E prende/apaga los faros
+//      (misma acción que la tecla F de CarController, solo agrega el cartel).
 //    Sentado con la puerta ABIERTA, mirando para otro lado:  E te baja.
 //  Solo manejás desde el asiento del conductor. Mouse = free-look.
 //  El estado de las puertas (abierta/cerrada) vive en CarDoors (Net/),
@@ -139,6 +141,15 @@ namespace FolkloreArchives
                         // sola si hace falta, como parte de bajarte).
                         doors?.SetDoor(myDoor, !(doors != null && doors.IsOpen(myDoor)));
                     }
+                    else if (car.driving && LookingForward(car))
+                    {
+                        // owner: "al mirar hacia delante estando en el auto deberia darme
+                        // la opcion de prender y apagar las luces" -- mismo criterio que la
+                        // puerta (mira + E), pero solo para el CONDUCTOR (los faros ya se
+                        // podían prender con F; esto solo agrega el cartel/E mirando al
+                        // frente, sin sacarle la tecla F que ya funcionaba).
+                        car.SetHeadlights(!car.headlightsOn);
+                    }
                     else
                     {
                         StartCoroutine(ExitRoutine());
@@ -185,6 +196,15 @@ namespace FolkloreArchives
             Vector3 toDoor = door.position - cam.position;
             if (toDoor.sqrMagnitude < 0.0001f) return true;
             return Vector3.Angle(cam.forward, toDoor) < 45f;
+        }
+
+        // Sentado manejando, "¿estoy mirando al frente (el parabrisas)?" -- mismo
+        // criterio angular que LookingAtDoor, pero contra el forward del AUTO (no un
+        // punto), para no pisarse con la puerta (que queda ~90° al costado).
+        bool LookingForward(CarController c)
+        {
+            if (c == null || cam == null) return false;
+            return Vector3.Angle(cam.forward, c.transform.forward) < 45f;
         }
 
         // MIRA invisible: qué parte del auto apunta el centro de la pantalla.
@@ -504,6 +524,8 @@ namespace FolkloreArchives
                     var doors = Doors(car);
                     msg = (doors != null && doors.IsOpen(myDoor)) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
                 }
+                else if (car.driving && LookingForward(car))
+                    msg = car.headlightsOn ? "[ E ] Apagar luces" : "[ E ] Prender luces";
                 else msg = "[ E ] Bajar";
             }
             else if (target != null)

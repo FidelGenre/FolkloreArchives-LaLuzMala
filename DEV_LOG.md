@@ -7,6 +7,26 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Cartel + E para prender/apagar los faros mirando al frente
+
+Owner: "al mirar hacia delante estando en el auto deberia darme la opcion de
+prender y apagar las luces del auto". Los faros ya se podían prender/apagar
+con **F** mientras manejás (`CarController.Update`), pero no había ningún
+cartel que lo indicara — y el pedido es que use el mismo patrón mira+E que ya
+usan las puertas.
+
+`PlayerVehicleInteractor.cs`: nuevo `LookingForward(CarController)` (mismo
+criterio angular que `LookingAtDoor`, pero contra `car.transform.forward` en
+vez de la posición de la puerta, para no pisarse — la puerta queda ~90° al
+costado). En la cadena de prioridad de E estando sentado (mirando tu puerta →
+tocarla; si no...): ahora, **si sos el conductor y mirás al frente**, E
+alterna `SetHeadlights` en vez de bajarte; cualquier otro lado sigue bajando
+como antes. Mismo criterio en `OnGUI` para el cartel ("[ E ] Prender/Apagar
+luces"). Solo para el conductor (los pasajeros no tienen faros que tocar) y
+no le saca la tecla F que ya andaba.
+
+---
+
 ## 2026-07-26 — Friend_FemaleSec: reemplazo del asset (secretaria → chica retro)
 
 Owner: "descargue esa chica descomprimila y reemplazala por la que ya esta" —
