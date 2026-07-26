@@ -239,12 +239,15 @@ namespace FolkloreArchives
             // owner: "aparece asi arriba del auto y no sentado en el asiento" -- seat
             // es una posición de OJO (calculada desde el volante), no de PIES: poner la
             // raíz ahí directo dejaba al personaje parado a la altura del ojo, muy por
-            // encima del asiento real. Corrijo restando el mismo offset de altura que
-            // ya usa la cámara al pararse (camLocalPos, "altura del ojo" normal parado),
-            // así los PIES quedan a la altura del asiento y el ojo (donde ya está seat)
-            // coincide igual que antes.
+            // encima del asiento real. Corrijo restando la altura del ojo (camLocalPos.y)
+            // así los PIES quedan a la altura del asiento.
+            // owner (2): "aparece atravezado por fuera del auto" -- el perro tiene la
+            // cámara pegada al HOCICO (offset hacia ADELANTE, no solo arriba); restar el
+            // camLocalPos ENTERO empujaba el cuerpo hacia atrás y afuera del asiento.
+            // Solo importa la altura acá -- la posición horizontal la pone seat.position
+            // directo, sin tocar X/Z.
             transform.rotation = seat.rotation;
-            transform.position = seat.position - transform.rotation * camLocalPos;
+            transform.position = seat.position - transform.rotation * new Vector3(0f, camLocalPos.y, 0f);
 
             yield return Glide(cam, seat.position, seat.rotation);
             cam.SetParent(seat, false);
