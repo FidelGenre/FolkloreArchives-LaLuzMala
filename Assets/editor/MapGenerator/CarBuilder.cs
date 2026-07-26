@@ -101,6 +101,16 @@ namespace FolkloreArchives.MapGen
             ctrl.driverDoor = null;
             ctrl.doors = carDoors;
 
+            // owner: "necesito que el perro vea que esta abierta la puerta pq desde su
+            // camara se ve cerrada" -- antes cada jugador llevaba su PROPIO estado de
+            // puertas (local a PlayerVehicleInteractor), así que en red cada cliente veía
+            // algo distinto. CarDoors centraliza y sincroniza ese estado (NetworkObject
+            // "in-scene placed" -- no rompe nada si nunca se hostea/conecta, CarDoors
+            // detecta que no hay red activa y anima localmente igual que antes).
+            car.AddComponent<Unity.Netcode.NetworkObject>();
+            var carDoorsSync = car.AddComponent<FolkloreArchives.Net.CarDoors>();
+            carDoorsSync.car = ctrl;
+
             // Asiento del conductor: detrás y arriba del volante (auto-alineado).
             // Separaciones entre asientos como proporción de TargetLength (no un
             // número fijo) para que escalen solas si el auto vuelve a cambiar de tamaño.

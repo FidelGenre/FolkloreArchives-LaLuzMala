@@ -7,9 +7,18 @@
 //    Sentado con la puerta ABIERTA, mirándola:  E la cierra (seguís sentado).
 //    Sentado con la puerta ABIERTA, mirando para otro lado:  E te baja.
 //  Solo manejás desde el asiento del conductor. Mouse = free-look.
+//  El estado de las puertas (abierta/cerrada) vive en CarDoors (Net/),
+//  compartido entre todos los que miran el auto -- antes cada instancia
+//  de este script llevaba su PROPIO estado, así que en red cada cliente
+//  veía algo distinto (owner: "el perro ve que esta cerrada aunque la
+//  persona ya la abrio").
+//  canOpenDoors=false (el perro): puede sentarse si alguien más ya abrió
+//  la puerta, y bajarse, pero no puede abrir/cerrar puertas él mismo
+//  (owner: "necesito que el perro pueda subirse pero no abrir las
+//  puertas").
 // ============================================================
 using System.Collections;
-using System.Collections.Generic;
+using FolkloreArchives.Net;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -21,7 +30,7 @@ namespace FolkloreArchives
         public float sitRange  = 1.8f;   // distancia (chica) para sentarte: hay que estar PEGADO
         public float lookYawLimit = 120f, lookPitchLimit = 45f, lookSensitivity = 0.08f;
         public float enterDuration = 0.6f;
-        public float doorOpenDeg = 72f;
+        public bool canOpenDoors = true; // false para el perro: se sienta pero no abre/cierra puertas
 
         CharacterController cc;
         MapExplorer explorer;
@@ -35,8 +44,8 @@ namespace FolkloreArchives
         bool busy;
         bool flashlightWasOn;   // estado de la linterna al subir (para restaurarlo al bajar)
         float lookYaw, lookPitch;
-        readonly Dictionary<Transform, Quaternion> doorClosed = new Dictionary<Transform, Quaternion>();
-        readonly HashSet<Transform> openDoors = new HashSet<Transform>();
+
+        static CarDoors Doors(CarController c) => c != null ? c.GetComponent<CarDoors>() : null;
 
         void Start()
         {
@@ -69,11 +78,18 @@ namespace FolkloreArchives
                 var target = currentTarget;
                 if (car != null)   // sentado
                 {
-                    if (!openDoors.Contains(myDoor))
+                    var doors = Doors(car);
+                    if (!canOpenDoors)
+                    {
+                        // el perro: no toca puertas, E siempre te baja (owner: "necesito
+                        // que el perro pueda subirse pero no abrir las puertas")
+                        StartCoroutine(ExitRoutine());
+                    }
+                    else if (doors == null || !doors.IsOpen(myDoor))
                     {
                         // puerta cerrada → abrirla nomás, seguís sentado (owner: "cerre la
                         // puerta y luego al querer abrirla ya no me sale opcion")
-                        StartCoroutine(SetDoor(car, myDoor, true));
+                        doors?.SetDoor(myDoor, true);
                     }
                     else if (LookingAtDoor(myDoor))
                     {
@@ -81,7 +97,7 @@ namespace FolkloreArchives
                         // "apunto a la puerta y no me deja cerrarla" -- el raycast fallaba
                         // sentado tan cerca, seguramente pegándole antes al propio collider
                         // del asiento; ahora es un chequeo de ángulo puro, sin física)
-                        StartCoroutine(SetDoor(car, myDoor, false));
+                        doors.SetDoor(myDoor, false);
                     }
                     else
                     {
@@ -93,8 +109,12 @@ namespace FolkloreArchives
                 {
                     if (target.isSeat)
                         StartCoroutine(SitRoutine(target.car, target.part, NearestDoor(target.car, target.part.position))); // apunto el asiento → subir
-                    else
-                        StartCoroutine(SetDoor(target.car, target.part, !openDoors.Contains(target.part))); // puerta → abrir/cerrar
+                    else if (canOpenDoors)
+                    {
+                        var doors = Doors(target.car);
+                        doors?.SetDoor(target.part, doors != null && !doors.IsOpen(target.part)); // puerta → abrir/cerrar
+                    }
+                    // el perro apuntando a una puerta (no un asiento): no hace nada
                 }
             }
 
@@ -166,6 +186,7 @@ namespace FolkloreArchives
             // terminaba apuntando a OTRA puerta (cerrada), y por eso E te bajaba en vez
             // de cerrar la que sí estaba abierta. Preferí una puerta ABIERTA cercana
             // antes que la más cercana a secas.
+            var doors = Doors(c);
             Transform best = null; float bd = float.MaxValue;
             Transform bestOpen = null; float bdOpen = float.MaxValue;
             foreach (var d in c.doors)
@@ -173,7 +194,7 @@ namespace FolkloreArchives
                 if (d == null) continue;
                 float dd = Vector3.Distance(d.position, to);
                 if (dd < bd) { bd = dd; best = d; }
-                if (openDoors.Contains(d) && dd < bdOpen) { bdOpen = dd; bestOpen = d; }
+                if (doors != null && doors.IsOpen(d) && dd < bdOpen) { bdOpen = dd; bestOpen = d; }
             }
             return bestOpen != null ? bestOpen : best;
         }
@@ -183,6 +204,8 @@ namespace FolkloreArchives
         {
             Transform bs = null, bd = null; CarController bc = null; float best = sitRange;
             foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
+            {
+                var doors = Doors(c);
                 foreach (var s in Seats(c))
                 {
                     if (s == null) continue;
@@ -190,18 +213,11 @@ namespace FolkloreArchives
                     if (d < best)
                     {
                         Transform door = NearestDoor(c, s.position);
-                        if (door != null && openDoors.Contains(door)) { best = d; bs = s; bd = door; bc = c; }
+                        if (door != null && doors != null && doors.IsOpen(door)) { best = d; bs = s; bd = door; bc = c; }
                     }
                 }
+            }
             return (bs, bd, bc);
-        }
-
-        IEnumerator SetDoor(CarController c, Transform door, bool open)
-        {
-            busy = true;
-            yield return AnimateDoor(c, door, open, 0.35f);
-            if (open) openDoors.Add(door); else openDoors.Remove(door);
-            busy = false;
         }
 
         IEnumerator SitRoutine(CarController c, Transform seat, Transform door)
@@ -245,7 +261,8 @@ namespace FolkloreArchives
                 if (explorer != null) explorer.SetFlashlight(flashlightWasOn);
             }
 
-            if (door != null && !openDoors.Contains(door)) { yield return AnimateDoor(c, door, true, 0.30f); openDoors.Add(door); }
+            var exitDoors = Doors(c);
+            if (door != null && exitDoors != null && !exitDoors.IsOpen(door)) exitDoors.SetDoor(door, true);
 
             // bajar JUSTO AL LADO DEL ASIENTO (no en el centro del auto), sobre el piso.
             // owner: "al bajar no baja bien" -- el 1.5f fijo se calibró para un auto
@@ -334,28 +351,6 @@ namespace FolkloreArchives
             return bestY;
         }
 
-        IEnumerator AnimateDoor(CarController c, Transform door, bool open, float dur)
-        {
-            if (door == null) yield break;
-            if (!doorClosed.ContainsKey(door)) doorClosed[door] = door.localRotation;
-            Quaternion closed = doorClosed[door];
-            float sign = c.transform.InverseTransformPoint(door.position).x < 0f ? 1f : -1f;
-            // Bisagra en el eje vertical del MUNDO, no el eje Y "local" del nodo tal
-            // como vino del FBX (el pack nuevo trae los pivots de puerta con una
-            // rotación propia -- rotar en su Y local abría la puerta en diagonal).
-            Vector3 hingeAxis = door.parent.InverseTransformDirection(Vector3.up);
-            Quaternion openRot = Quaternion.AngleAxis(sign * doorOpenDeg, hingeAxis) * closed;
-            Quaternion from = door.localRotation, to = open ? openRot : closed;
-            float t = 0f;
-            while (t < 1f)
-            {
-                t += Time.deltaTime / Mathf.Max(0.05f, dur);
-                door.localRotation = Quaternion.Slerp(from, to, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t)));
-                yield return null;
-            }
-            door.localRotation = to;
-        }
-
         void SetBodyVisible(bool v)
         {
             if (bodyRenderers == null) return;
@@ -369,15 +364,24 @@ namespace FolkloreArchives
             string msg = null;
             if (car != null)
             {
-                // mismo criterio que la acción real de E: estado de la puerta + ángulo de mira.
-                if (!openDoors.Contains(myDoor)) msg = "[ E ] Abrir puerta";
-                else if (LookingAtDoor(myDoor)) msg = "[ E ] Cerrar puerta";
-                else msg = "[ E ] Bajar";
+                if (!canOpenDoors) msg = "[ E ] Bajar"; // el perro: nunca abre/cierra
+                else
+                {
+                    // mismo criterio que la acción real de E: estado de la puerta + ángulo de mira.
+                    var doors = Doors(car);
+                    if (doors == null || !doors.IsOpen(myDoor)) msg = "[ E ] Abrir puerta";
+                    else if (LookingAtDoor(myDoor)) msg = "[ E ] Cerrar puerta";
+                    else msg = "[ E ] Bajar";
+                }
             }
             else if (target != null)
             {
                 if (target.isSeat) msg = "[ E ] Subir";
-                else msg = openDoors.Contains(target.part) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
+                else if (canOpenDoors)
+                {
+                    var doors = Doors(target.car);
+                    msg = (doors != null && doors.IsOpen(target.part)) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
+                }
             }
             if (msg == null) return;
             var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };

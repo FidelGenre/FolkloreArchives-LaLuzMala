@@ -198,6 +198,13 @@ namespace FolkloreArchives.MapGen
             dogCtrl.enabled = false;
             root.AddComponent<FolkloreArchives.DogWalkAnim>(); // patas se mueven al caminar
 
+            // owner: "necesito que el perro pueda subirse pero no abrir las puertas" --
+            // se puede sentar (si alguien más ya abrió la puerta) y bajarse, pero no
+            // puede abrir/cerrar puertas él mismo.
+            var dogInteractor = root.AddComponent<FolkloreArchives.PlayerVehicleInteractor>();
+            dogInteractor.canOpenDoors = false;
+            dogInteractor.enabled = false; // el gate lo prende para el dueño
+
             BuildDogVisual(root.transform);
 
             // 1ª persona: la cámara va en el HOCICO mirando adelante. Como el modelo
