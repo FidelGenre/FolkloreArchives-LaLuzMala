@@ -40,6 +40,15 @@ namespace FolkloreArchives.Net
         void TryAddPrefab(GameObject p)
         {
             if (p == null) return;
+            // owner: consola tirando "NetworkPrefab (NetPerson) has a duplicate
+            // GlobalObjectIdHash source entry" -- NetworkBuilder reconstruye el prefab
+            // DE CERO (destruye y vuelve a crear el GameObject) en cada Generate y lo
+            // regraba sobre el mismo .prefab; entre eso y jugar la escena muchas veces
+            // en la misma sesión, la lista de prefabs de red del NetworkManager podía
+            // terminar con una entrada vieja/duplicada para el mismo prefab. Saco
+            // cualquier entrada previa para ESTE prefab antes de re-agregarlo, así
+            // nunca hay más de una.
+            if (_nm.NetworkConfig.Prefabs.Contains(p)) _nm.NetworkConfig.Prefabs.Remove(p);
             try { _nm.AddNetworkPrefab(p); } catch { /* ya estaba registrado */ }
         }
 
