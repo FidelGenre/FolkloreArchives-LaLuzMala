@@ -209,12 +209,6 @@ namespace FolkloreArchives.MapGen
             var dcc = dog.AddComponent<CharacterController>();
             dcc.height = 1.1f; dcc.radius = 0.35f; dcc.center = new Vector3(0f, 0.55f, 0f);
 
-            // [DIAGTEST] marcador temporal para confirmar que Generate está corriendo
-            // este código: si después de regenerar el Hierarchy NO dice "DOG_DIAGTEST",
-            // Play no está usando una escena recién generada con este script.
-            dog.name = "DOG_DIAGTEST";
-            Debug.LogError("[DIAGTEST] BuildDogAndParty corriendo — versión con escala fija de prueba.");
-
             const float DogTargetHeight = 1.4f;
             var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             model.name = "Model";
@@ -235,25 +229,7 @@ namespace FolkloreArchives.MapGen
                 model.transform.localPosition = new Vector3(0f, -bottomLocal - 0.06f, 0f); // -0.06: apoya patas sin hundir
                 Debug.Log($"Rufus: alto nativo {h:0.000} → escala {s:0.0000} (objetivo {DogTargetHeight} m).");
             }
-            else
-            {
-                // techo de seguridad: si la medición falló (mesh vacía, bounds ridículos),
-                // NUNCA dejar que el perro quede gigante -- mejor una escala fija razonable
-                // (calibrada para este glb: a escala 1 mide ~140x lo que debería, owner:
-                // "el PS1 Dog viene ENORME a escala 1") que un cálculo roto sin límite.
-                model.transform.localScale = Vector3.one * 0.01f;
-                Debug.LogError($"Rufus: medición de malla falló (measured={(measured.HasValue ? measured.Value.size.y.ToString("0.000") : "null")}) — uso escala fija 0.01 de emergencia.");
-            }
-
-            // [DIAGTEST] techo ABSOLUTO, sin excepción: bajo ningún cálculo el perro puede
-            // terminar más grande que esto. Si después de regenerar TODAVÍA se ve gigante,
-            // el problema no es la escala -- es que Play está usando una escena vieja, no
-            // la recién generada con este código.
-            if (model.transform.localScale.x > 0.05f)
-            {
-                Debug.LogError($"[DIAGTEST] localScale.x={model.transform.localScale.x:0.0000} superaba el techo -- clampeado a 0.05.");
-                model.transform.localScale = Vector3.one * 0.05f;
-            }
+            else Debug.LogWarning("Rufus: el modelo no tiene mallas para medir — queda a escala 1.");
 
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;
