@@ -56,29 +56,17 @@ namespace FolkloreArchives.Net
             }
 
             Debug.Log($"[NET] {name} spawn — IsOwner={mine} clientId={OwnerClientId} pos={transform.position}");
-            _isMine = mine;
-            _cc = cc;
-        }
-
-        // owner: "sigo cayendo al infinito al tocar el boton de create host" -- el log de
-        // spawn ya mostraba una altura correcta, así que lo que sea que rompe esto pasa
-        // DESPUÉS, cuadro a cuadro. Diagnóstico temporal: 1 log por segundo con la altura
-        // real y si el CharacterController se considera "en el piso" o no.
-        bool _isMine;
-        CharacterController _cc;
-        float _diagTimer;
-        void Update()
-        {
-            if (!_isMine) return;
-            _diagTimer += Time.deltaTime;
-            if (_diagTimer < 1f) return;
-            _diagTimer = 0f;
-            Debug.Log($"[NET-DIAG] y={transform.position.y:0.00} grounded={(_cc != null ? _cc.isGrounded.ToString() : "sin CC")} ccEnabled={(_cc != null ? _cc.enabled.ToString() : "-")}");
         }
 
         void TeleportToGround(CharacterController cc)
         {
-            Vector3 p = new Vector3(408f + (OwnerClientId % 4) * 2f, 0f, 440f); // cerca del campamento
+            // owner: "sigo cayendo al infinito al tocar create host" -- causa real
+            // encontrada con el diagnóstico [NET-DIAG] (isGrounded=False toda la caída,
+            // de +26 a -7564): el (408,440) viejo queda 27 unidades pasado el borde
+            // real del terreno (mide 413 en Z, MapLayout.MapSize, desde que el mapa se
+            // achicó), así que ahí no hay collider -- caída infinita real, no un tema
+            // de posición lógica. Coordenadas actualizadas a MapLayout.Campsite (246,232).
+            Vector3 p = new Vector3(246f + (OwnerClientId % 4) * 2f, 0f, 232f); // cerca del campamento
             var t = Terrain.activeTerrain;
             if (t != null) p.y = t.SampleHeight(p) + t.transform.position.y + 0.3f;
             else p.y = 30f;

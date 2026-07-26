@@ -17,9 +17,14 @@ namespace FolkloreArchives.Net
         public GameObject personPrefab;
         public GameObject dogPrefab;
 
-        // spawn cerca del campamento (MapLayout.Campsite ≈ 410,442). Runtime no puede
-        // ver MapLayout (es editor-only), así que va hardcodeado.
-        static readonly Vector2 SpawnXZ = new Vector2(408f, 440f);
+        // spawn cerca del campamento (MapLayout.Campsite). Runtime no puede ver
+        // MapLayout (es editor-only), así que va hardcodeado -- OJO: si el mapa
+        // se vuelve a achicar/mover, hay que actualizar esto a mano (owner: "sigo
+        // cayendo al infinito al tocar create host" -- el (408,440) viejo quedó
+        // 27 unidades pasado el borde real del terreno, que hoy mide 413 en Z
+        // (MapLayout.MapSize) desde que se achicó el mapa; ahí no hay collider,
+        // caída infinita. Valor actual de MapLayout.Campsite: (246, 232)).
+        static readonly Vector2 SpawnXZ = new Vector2(246f, 232f);
 
         readonly Dictionary<ulong, int> _choice = new Dictionary<ulong, int>(); // clientId → 0 persona / 1 perro
         NetworkManager _nm;
