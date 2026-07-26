@@ -143,7 +143,12 @@ namespace FolkloreArchives.MapGen
 
             // owner: "necesito ver como caminan" -- deambulan de a poco cerca de donde
             // arrancan (no es IA real, solo para que no queden parados como estatuas).
-            go.AddComponent<FolkloreArchives.FriendWander>();
+            // owner: "este tiene los pies bajo tierra" -- FriendWander es un script
+            // runtime, no puede ver MapLayout (editor-only); le pasamos el piso mínimo
+            // (mismo Mathf.Max que ya usa el spawn de acá arriba) para que no se hunda
+            // apenas empieza a caminar.
+            var wander = go.AddComponent<FolkloreArchives.FriendWander>();
+            wander.minGroundY = MapLayout.RoadSurfaceHeight;
         }
 
         static Texture2D LoadPointTex(string path)

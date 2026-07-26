@@ -19,6 +19,13 @@ namespace FolkloreArchives
         public float legRange = 2.5f;   // metros de ida y vuelta desde el punto de partida
         public float pauseTime = 1.5f;  // segundos parado en cada punta antes de girar
         public float arriveDistance = 0.15f;
+        // owner: "este tiene los pies bajo tierra" -- cerca del auto (lado este del
+        // mapa) el terreno CRUDO queda más bajo que la ruta pavimentada real (mismo bug
+        // ya visto en CarBuilder/TestPlayerBuilder/el perro); FriendNpcBuilder (que SÍ
+        // puede ver MapLayout.RoadSurfaceHeight, esto es un script runtime y no puede)
+        // le pasa ese piso acá. Sin esto, apenas arranca a caminar pisa el terreno
+        // crudo directo y se hunde.
+        public float minGroundY = float.NegativeInfinity;
 
         Vector3 _a, _b, _target;
         float _pauseUntil;
@@ -52,7 +59,7 @@ namespace FolkloreArchives
             Vector3 newPos = transform.position + to.normalized * walkSpeed * Time.deltaTime;
             var terrain = Terrain.activeTerrain;
             if (terrain != null)
-                newPos.y = terrain.SampleHeight(newPos) + terrain.transform.position.y;
+                newPos.y = Mathf.Max(minGroundY, terrain.SampleHeight(newPos) + terrain.transform.position.y);
             transform.position = newPos;
         }
     }

@@ -154,7 +154,24 @@ namespace FolkloreArchives
                 bool isArm = limbs[i].bone.Contains("arm");
                 float amt = (isArm ? armSwing : legSwing) * limbs[i].phase * _amp * swingMul;
                 float ang = Mathf.Sin(_phase) * amt;
-                _t[i].localRotation = _rest[i] * Quaternion.AngleAxis(ang, axis);
+                if (isArm && _t[i].parent != null)
+                {
+                    // owner: "necesito que muevan los brazos igual que el personaje
+                    // principal" -- _rest[i] de un brazo ya viene TORCIDO por la
+                    // corrección de T-pose (FromToRotation arbitraria), así que girar
+                    // en el eje LOCAL "axis" de ese hueso ya no cae en un plano
+                    // adelante-atrás predecible (varía según cómo haya quedado
+                    // orientado ese giro en cada rig) -- con las piernas no pasa porque
+                    // su _rest nunca se toca. Se gira en el eje "derecha" del PERSONAJE
+                    // (mundo), no del hueso, así el vaivén queda igual sin importar el rig.
+                    Quaternion worldSwing = Quaternion.AngleAxis(ang, transform.right);
+                    Quaternion pW = _t[i].parent.rotation;
+                    _t[i].localRotation = Quaternion.Inverse(pW) * worldSwing * (pW * _rest[i]);
+                }
+                else
+                {
+                    _t[i].localRotation = _rest[i] * Quaternion.AngleAxis(ang, axis);
+                }
             }
         }
 
