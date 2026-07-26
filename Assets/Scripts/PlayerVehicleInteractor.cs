@@ -38,6 +38,14 @@ namespace FolkloreArchives
         Transform cam, camParent;
         Vector3 camLocalPos;
 
+        // owner: "achicar el modelo del perro mientras esta sentado (como si se
+        // acurrucara en el asiento)" -- un cuadrúpedo no tiene una pose "sentado en
+        // silla humana" razonable a su tamaño normal; achicarlo mientras está en el
+        // auto evita que atraviese techo/puertas.
+        Transform dogModel;
+        Vector3 dogModelScale = Vector3.one;
+        const float DogSeatedScale = 0.55f;
+
         CarController car;      // null = a pie
         Transform mySeat, myDoor;
         CarInteractable currentTarget;   // lo que apunta la mira este frame
@@ -54,6 +62,11 @@ namespace FolkloreArchives
             dog = GetComponent<DogController>();
             var c = GetComponentInChildren<Camera>();
             if (c != null) { cam = c.transform; camParent = cam.parent; camLocalPos = cam.localPosition; }
+            if (dog != null)
+            {
+                dogModel = transform.Find("Model");
+                if (dogModel != null) dogModelScale = dogModel.localScale;
+            }
         }
 
         // owner: "cuando se une otro jugador ya no me aparecen las opciones de
@@ -230,6 +243,10 @@ namespace FolkloreArchives
             // enteraba de que estabas sentado, y peleaba con el mouse-look de acá mismo
             // por la rotación de la cámara. Se apaga igual que explorer.
             if (dog != null) dog.enabled = false;
+            // owner: "achicar el modelo del perro mientras esta sentado" -- a tamaño
+            // normal atravesaba techo/puertas (un cuadrúpedo no tiene una pose sentado
+            // razonable ahí). Se restaura al bajar (ExitRoutine).
+            if (dogModel != null) dogModel.localScale = dogModelScale * DogSeatedScale;
             if (cc != null) cc.enabled = false;
 
             // owner: "desde la perspectiva del humano no veo que se haya subido al
@@ -338,6 +355,7 @@ namespace FolkloreArchives
                 explorer.SetLookPitch(exitPitch);
                 explorer.enabled = true;
             }
+            if (dogModel != null) dogModel.localScale = dogModelScale; // tamaño normal al bajar
             if (dog != null)
             {
                 dog.SetLookPitch(exitPitch);
