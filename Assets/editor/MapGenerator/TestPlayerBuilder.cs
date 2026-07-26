@@ -153,16 +153,47 @@ namespace FolkloreArchives.MapGen
             BuildDogAndParty(player, camGO, spawnXZ, t);
         }
 
-        // Spawnea el perro (modelo PS1, mismo que en multiplayer) con CharacterController,
-        // su cámara de 3ª persona (apagada al inicio) y el DogController en modo Follow.
-        // Cuelga el PartyController en la persona para poder alternar el control con G.
+        // Mide una malla leyendo sus VÉRTICES CRUDOS (no Renderer.bounds ni Mesh.bounds:
+        // los dos vienen cacheados en cero para el glb del perro -- típico de mallas
+        // importadas por glTF/glTFast sin que nadie llame RecalculateBounds()). Esto no
+        // puede estar cacheado en cero bajo ningún escenario: solo mira posiciones reales.
+        static Bounds? MeasureRawVertexBounds(GameObject root)
+        {
+            Bounds? measured = null;
+            void EncapsulatePoint(Vector3 p)
+            {
+                if (measured == null) measured = new Bounds(p, Vector3.zero);
+                else { var m = measured.Value; m.Encapsulate(p); measured = m; }
+            }
+            foreach (var smr in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (smr.sharedMesh == null) continue;
+                foreach (var v in smr.sharedMesh.vertices) EncapsulatePoint(v);
+            }
+            foreach (var mf in root.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (mf.sharedMesh == null) continue;
+                foreach (var v in mf.sharedMesh.vertices) EncapsulatePoint(v);
+            }
+            return measured;
+        }
+
+        // Spawnea el perro (modelo PS1) con CharacterController, su cámara de 3ª persona
+        // (apagada al inicio) y el DogController en modo Follow. Cuelga el PartyController
+        // en la persona para poder alternar el control con G.
         static void BuildDogAndParty(GameObject player, GameObject personCamGO, Vector2 playerXZ, Terrain t)
         {
-            // owner: "usa el mismo que esta en multiplayer" -- en vez de tener acá una
-            // SEGUNDA copia del modelo/escala/rotación (que ya se había desalineado del
-            // de red y salió "gigante"), llama directo a NetworkBuilder.BuildDogVisual:
-            // literalmente el mismo código que arma el perro en NetDog.prefab, así los
-            // dos modos quedan atados y no pueden volver a divergir.
+            // owner: "usa lo mismo que usabas en el anterior pero con este asset" -- vuelve
+            // a ser una función independiente (sin depender de NetworkBuilder), igual que
+            // el perro riggeado de antes, solo que apuntando al glb del PS1 Dog.
+            const string glbPath = "Assets/ExternalAssets/Dog/PS1_Dog.glb";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(glbPath);
+            if (prefab == null)
+            {
+                Debug.LogWarning("Perro: no encontré/importé " + glbPath + ". Sigo sin perro.");
+                return;
+            }
+
             var dog = new GameObject("DOG");
             dog.transform.SetParent(player.transform.parent); // hermano del jugador, bajo FOLKLORE_MAP
             Vector2 dogXZ = playerXZ + new Vector2(1.6f, -1.2f);            // al lado y un poco atrás
@@ -172,36 +203,44 @@ namespace FolkloreArchives.MapGen
             var dcc = dog.AddComponent<CharacterController>();
             dcc.height = 1.1f; dcc.radius = 0.35f; dcc.center = new Vector3(0f, 0.55f, 0f);
 
-            NetworkBuilder.BuildDogVisual(dog.transform);
-            var model = dog.transform.Find("Model")?.gameObject;
-            if (model == null)
+            const float DogTargetHeight = 1.4f;
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            model.name = "Model";
+            model.transform.SetParent(dog.transform);
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f); // su "adelante" apunta al revés que el controlador
+            model.transform.localScale = Vector3.one;
+
+            var measured = MeasureRawVertexBounds(model);
+            if (measured.HasValue)
             {
-                Debug.LogWarning("Perro: BuildDogVisual no encontró el modelo. Sigo sin perro.");
-                return;
+                float h = Mathf.Max(0.0001f, measured.Value.size.y);
+                float s = DogTargetHeight / h;
+                model.transform.localScale = Vector3.one * s;
+                // el modelo sigue en localPosition=0 acá, así que su Y mundial == la del
+                // perro; una rotación en Y no cambia el valor Y de los bounds.
+                float bottomLocal = measured.Value.min.y * s;
+                model.transform.localPosition = new Vector3(0f, -bottomLocal - 0.06f, 0f); // -0.06: apoya patas sin hundir
+                Debug.Log($"Rufus: alto nativo {h:0.000} → escala {s:0.0000} (objetivo {DogTargetHeight} m).");
             }
+            else Debug.LogWarning("Rufus: el modelo no tiene mallas para medir — queda a escala 1.");
 
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;
             dogCtrl.mode = FolkloreArchives.DogController.Mode.Follow;
-            dog.AddComponent<FolkloreArchives.DogWalkAnim>(); // patas se mueven al caminar (el PS1 no trae clips, mismo que en red)
+            dog.AddComponent<FolkloreArchives.DogWalkAnim>(); // patas se mueven al caminar (el PS1 no trae clips)
 
-            // cámara 1ª persona del perro: en el HOCICO mirando adelante (igual que
-            // online). Como el modelo está girado 180°, la cabeza queda en +Z. Calculo
-            // ese borde con los bounds, pero con el perro en origen+identidad para que
-            // los bounds (que son en mundo) coincidan con el espacio LOCAL del perro.
-            float dEyeY = 0.9f, dNoseZ = 0.6f;
+            // cámara 1ª persona del perro: en el HOCICO mirando adelante. Como el modelo
+            // está girado 180°, la cabeza queda en +Z. "measured" está en espacio CRUDO
+            // del mesh (sin el giro de 180° todavía aplicado) -- ese giro invierte el
+            // signo de Z (post = -crudo), así que el lado "adelante" (post-giro, +Z) es
+            // el que en crudo era -min.z, no max.z.
+            float dEyeY = 0.62f * (DogTargetHeight - 0.06f); // ojos ≈ 62% del alto real (s*size.y == DogTargetHeight por construcción)
+            float dNoseZ = 0.6f;
+            if (measured.HasValue)
             {
-                var savedPos = dog.transform.position; var savedRot = dog.transform.rotation;
-                dog.transform.position = Vector3.zero; dog.transform.rotation = Quaternion.identity;
-                var drends = model.GetComponentsInChildren<Renderer>();
-                if (drends.Length > 0)
-                {
-                    Bounds mb = drends[0].bounds;
-                    for (int i = 1; i < drends.Length; i++) mb.Encapsulate(drends[i].bounds);
-                    dEyeY = mb.max.y * 0.62f;     // ojos ≈ 62% del alto
-                    dNoseZ = mb.max.z + 0.08f;    // justo delante del hocico
-                }
-                dog.transform.position = savedPos; dog.transform.rotation = savedRot;
+                float s = model.transform.localScale.y;
+                dNoseZ = (-measured.Value.min.z) * s + 0.08f;   // justo delante del hocico
             }
             var dogCamGO = new GameObject("DogCamera");
             dogCamGO.transform.SetParent(dog.transform);
