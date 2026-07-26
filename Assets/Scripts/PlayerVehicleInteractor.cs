@@ -45,11 +45,11 @@ namespace FolkloreArchives
         // acurrucara en el asiento)" -- un cuadrúpedo no tiene una pose "sentado en
         // silla humana" razonable a su tamaño normal; achicarlo mientras está en el
         // auto evita que atraviese techo/puertas.
-        Transform dogModel;
+        Transform ownModel;
         Vector3 dogModelScale = Vector3.one;
         const float DogSeatedScale = 0.45f; // owner: "las patas traseras atraviesan el asiento" -- un poco mas chico
         const float DogSeatedExtraDrop = 0.35f; // owner: "se ve volando mas alto de los asientos" -- hundirlo un poco mas
-        const float DogSeatedForwardOffset = 0.3f; // owner: "hacelo un poquito mas adelante"
+        const float DogSeatedForwardOffset = 0.1f; // owner: "ahora el perro esta muy adelantado" -- bajado de 0.3
         // owner: "el perro no deberia verse a si mismo" -- layer creado en Generate
         // (LayerSetup.cs) que la cámara EXCLUYE de su propio cullingMask mientras está
         // sentado. Es una propiedad LOCAL (layer + cullingMask), no sincronizada por
@@ -84,11 +84,11 @@ namespace FolkloreArchives
             netGate = GetComponent<NetOwnerGate>();
             var c = GetComponentInChildren<Camera>();
             if (c != null) { cam = c.transform; camComp = c; camParent = cam.parent; camLocalPos = cam.localPosition; }
-            if (dog != null && netGate == null) // en red, NetOwnerGate ya lleva su propia base de escala
-            {
-                dogModel = transform.Find("Model");
-                if (dogModel != null) dogModelScale = dogModel.localScale;
-            }
+            // ownModel: se usa tanto para el achicado del perro como para que
+            // cualquiera (perro o persona) se oculte de su propia cámara al sentarse.
+            ownModel = transform.Find("Model");
+            if (dog != null && netGate == null && ownModel != null) // en red, NetOwnerGate ya lleva su propia base de escala
+                dogModelScale = ownModel.localScale;
         }
 
         // owner: "cuando se une otro jugador ya no me aparecen las opciones de
@@ -273,7 +273,7 @@ namespace FolkloreArchives
             // NetworkVariable para esto y lo replica a todos. Sin red (un jugador solo,
             // netGate null), se sigue achicando directo como antes.
             if (netGate != null) netGate.SetDogSeated(true);
-            else if (dogModel != null) dogModel.localScale = dogModelScale * DogSeatedScale;
+            else if (ownModel != null) ownModel.localScale = dogModelScale * DogSeatedScale;
 
             // owner: "necesito que este en pose de conduccion... que lo sientes en la
             // silla como corresponde" -- sin esto la PERSONA se ve parada adentro del
@@ -314,17 +314,18 @@ namespace FolkloreArchives
             cam.localPosition = Vector3.zero; cam.localRotation = Quaternion.identity;
             lookYaw = 0f; lookPitch = 0f;
 
-            // owner: "el perro no deberia verse a si mismo" -- pone el modelo en el
-            // layer SelfHidden y lo excluye del cullingMask de SU PROPIA cámara. Layer +
-            // cullingMask son propiedades LOCALES (no sincronizadas por red): los demás
-            // jugadores siguen viendo al perro normal en su propia pantalla.
-            if (dog != null && dogModel != null && camComp != null)
+            // owner: "el perro no deberia verse a si mismo" / "me estoy viendo no
+            // deberia verme cuando me subi" -- vale para los DOS: pone el modelo propio
+            // en el layer SelfHidden y lo excluye del cullingMask de SU PROPIA cámara.
+            // Layer + cullingMask son propiedades LOCALES (no sincronizadas por red):
+            // los demás jugadores lo siguen viendo normal en su propia pantalla.
+            if (ownModel != null && camComp != null)
             {
                 int hidden = LayerMask.NameToLayer(SelfHiddenLayerName);
                 if (hidden >= 0)
                 {
-                    _prevModelLayer = dogModel.gameObject.layer;
-                    SetLayerRecursive(dogModel, hidden);
+                    _prevModelLayer = ownModel.gameObject.layer;
+                    SetLayerRecursive(ownModel, hidden);
                     _prevCullingMask = camComp.cullingMask;
                     camComp.cullingMask &= ~(1 << hidden);
                     _selfHideActive = true;
@@ -417,14 +418,14 @@ namespace FolkloreArchives
             }
             // tamaño normal al bajar -- en red vía NetOwnerGate (sincronizado), sin red directo.
             if (netGate != null) netGate.SetDogSeated(false);
-            else if (dogModel != null) dogModel.localScale = dogModelScale;
+            else if (ownModel != null) ownModel.localScale = dogModelScale;
             // pose normal (de pie) al bajar -- mismo criterio de sincronización.
             if (netGate != null) netGate.SetPersonSeated(false);
             else if (humanAnim != null) humanAnim.seated = false;
-            // restaurar el layer/cullingMask que ocultaban al perro de su propia cámara.
+            // restaurar el layer/cullingMask que ocultaban al personaje de su propia cámara.
             if (_selfHideActive)
             {
-                if (dogModel != null) SetLayerRecursive(dogModel, _prevModelLayer);
+                if (ownModel != null) SetLayerRecursive(ownModel, _prevModelLayer);
                 if (camComp != null) camComp.cullingMask = _prevCullingMask;
                 _selfHideActive = false;
             }

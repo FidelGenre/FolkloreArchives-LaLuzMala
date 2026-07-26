@@ -38,7 +38,10 @@ namespace FolkloreArchives
         // en la silla como corresponde" -- sin esto el personaje se ve PARADO adentro
         // del auto. PlayerVehicleInteractor prende/apaga esto al subir/bajar.
         public bool seated;
-        public float seatedThighAngle = 75f;  // grados que se doblan los muslos hacia adelante
+        // owner: "no se le ven las piernas al humano sentado" -- con +75 desaparecían
+        // (probablemente doblaban para el lado contrario, atravesando/deformando la
+        // malla). Probando el signo invertido.
+        public float seatedThighAngle = -75f;  // grados que se doblan los muslos hacia adelante
 
         Transform[] _t;
         Quaternion[] _rest;
