@@ -120,20 +120,16 @@ namespace FolkloreArchives.MapGen
         // Puramente decorativo: sin interacción/E, no caminan más (se les saca
         // FriendWander) y quedan fijos con la MISMA pose "sentado" que ya usa el
         // jugador/perro (HumanWalkAnim.seated).
-        // owner: "estan atravezando el asiento de abajo" -- el primer intento restaba
-        // la altura de OJO completa (2.3, mismo offset que usa PlayerVehicleInteractor
-        // para el jugador PARADO), pero acá el personaje queda VISIBLE (al jugador no
-        // se le ve el propio cuerpo sentado, por el layer SelfHidden -- nunca se notó
-        // este problema con el jugador). HumanWalkAnim.seated solo ROTA los muslos, no
-        // traslada el modelo -- restar la altura de ojo entera hunde la cadera/raíz
-        // muy por debajo del asiento real (el cuerpo entero quedaba atravesando el
-        // piso del auto). Restando solo la altura de CADERA aprox. (mitad del alto del
-        // personaje) la cadera queda a la altura del asiento y listo.
-        // owner (3ra vuelta, con captura): 0.65 se pasó MUCHÍSIMO -- quedaron sentados
-        // arriba del TECHO del auto, no adentro. El margen real entre "hundido en el
-        // asiento" (1.15) y "flotando sobre el techo" (0.65) parece angosto (auto
-        // compacto por dentro) -- paso chico esta vez, no otro salto grande.
-        const float SeatHipHeight = 1.0f;
+        // owner: varias vueltas moviendo esto SOLO (1.15 → 0.65 → 1.0) nunca convergió
+        // -- "hundido" y "flotando sobre el techo" pasaban casi con el mismo valor. La
+        // razón real: mover la raíz no ACHICA al personaje, solo lo desplaza entero --
+        // un personaje de 2.3m de pie no entra bajo el techo de un auto sin importar
+        // DÓNDE se ubique la raíz. El fix real ahora vive en HumanWalkAnim.seated
+        // (achica+baja el modelo, ver seatedScaleY/seatedModelDrop). Acá alcanza con
+        // alinear la CABEZA a la altura del asiento (raíz = seat - altura completa,
+        // como si estuviera parado) — el achicado de HumanWalkAnim se encarga de bajar
+        // esa cabeza a una altura de sentado razonable y de no hundir los pies.
+        const float SeatRootOffset = 2.3f; // = targetHeight de los 3 amigos
 
         public static void SeatInCar(Transform root, FolkloreArchives.CarController car)
         {
@@ -155,7 +151,7 @@ namespace FolkloreArchives.MapGen
                 // que se puede trabajar directo en el espacio LOCAL del auto.
                 friend.SetParent(car.transform, false);
                 friend.localRotation = Quaternion.identity;
-                friend.localPosition = seat.localPosition - new Vector3(0f, SeatHipHeight, 0f);
+                friend.localPosition = seat.localPosition - new Vector3(0f, SeatRootOffset, 0f);
 
                 var anim = friend.GetComponent<FolkloreArchives.HumanWalkAnim>();
                 if (anim != null) anim.seated = true;

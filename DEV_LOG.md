@@ -7,6 +7,44 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — 4ta vuelta: causa real encontrada (rotar el muslo no achica al personaje)
+
+Owner confirmó que SÍ regeneraba entre cada prueba, y aun así 0.65 y 1.0
+(`SeatHipHeight`) se veían casi IGUAL ("siguen por fuera") — eso descartó que
+fuera un problema de "no regeneró" y apuntó a que estaba tocando la variable
+equivocada.
+
+**Causa real:** `HumanWalkAnim.seated` (rama `if (seated)` de `LateUpdate`)
+SOLO rota los huesos de muslo — nunca traslada ni achica el modelo. La cabeza
+de un personaje de 2.3m de altura queda SIEMPRE a `raíz + 2.3` sin importar
+dónde se ubique la raíz (mover la raíz solo DESPLAZA el problema, no lo
+arregla) — un personaje de pie entero no entra bajo el techo de un auto por
+más que se reubique. Nunca se notó con el jugador porque su cuerpo sentado se
+OCULTA de su propia cámara (`SelfHidden`) — puede que este mismo bug afecte
+también cómo lo ven los DEMÁS clientes en red manejando/de acompañante, solo
+que nadie lo había mirado de cerca.
+
+**Fix real, en `HumanWalkAnim.cs`:** mismo mecanismo que ya usa el agachado
+(`crouchScaleY`/`crouchDrop`) pero para "sentado": nuevos `seatedScaleY`
+(0.55, achica el modelo) y `seatedModelDrop` (0.9, lo baja), aplicados fijos
+(sin lerp) en la rama `seated`. `FriendNpcBuilder.SeatRootOffset` vuelve a
+`2.3` (altura completa, como estaba en el primerísimo intento) — ahora la
+raíz alinea la CABEZA a la altura del asiento COMO SI ESTUVIERA PARADO, y el
+achicado nuevo de `HumanWalkAnim` es lo que la baja a una altura de sentado
+razonable y evita que los pies quedaran colgando.
+
+⚠ **Sin verificar visualmente** — los 3 intentos anteriores tocando SOLO la
+posición de la raíz (sin este mecanismo) nunca convergieron, así que en vez
+de arriesgar una 5ta vuelta a ciegas, mejor que el owner ajuste
+`seatedScaleY`/`seatedModelDrop` EN VIVO: Play, pausar con un amigo sentado a
+la vista, seleccionarlo en la Hierarchy (`Friend_X > Model`) y tantear
+Scale/Position hasta que se vea bien, o tocar los campos `Seated Scale Y` /
+`Seated Model Drop` en el `HumanWalkAnim` del padre (`Friend_X`) mientras está
+en Play — los cambios se ven al toque, sin tener que Salir de Play/regenerar/
+sacar captura por cada prueba.
+
+---
+
 ## 2026-07-26 — 3ra vuelta: 0.65 se pasó de largo (sentados arriba del techo)
 
 Captura del owner: con `SeatHipHeight=0.65` los 3 amigos quedaron sentados

@@ -43,6 +43,21 @@ namespace FolkloreArchives
         // malla). Probando el signo invertido.
         public float seatedThighAngle = -75f;  // grados que se doblan los muslos hacia adelante
 
+        // owner: "siguen por fuera" / "atravesando el asiento" (probado con los 3
+        // amigos sentados decorativos en el auto) -- rotar solo el muslo NO reduce el
+        // alto del personaje: la cabeza queda a la altura de PARADO (raíz + altura
+        // completa) sin importar dónde se ubique la raíz, así que NINGÚN offset de
+        // posición alcanza para que un personaje de pie entero (2.3m) quepa bajo el
+        // techo de un auto (más bajo que eso). Nunca se notó con el jugador porque su
+        // cuerpo sentado se OCULTA de su propia cámara (SelfHidden) -- este mismo bug
+        // probablemente también afecta cómo lo ven los DEMÁS clientes en red, solo que
+        // nadie lo había mirado de cerca todavía. Mismo truco que ya usa el agachado
+        // de acá arriba (achicar + bajar el modelo), pero fijo (sin lerp, como el
+        // resto de esta rama "seated"). Valores sin verificar visualmente todavía
+        // (pendiente ajuste en vivo en el Editor, ver DEV_LOG).
+        public float seatedScaleY = 0.55f;   // alto del modelo sentado (fracción, además de doblar los muslos)
+        public float seatedModelDrop = 0.9f; // cuánto baja el modelo al sentarse (m)
+
         Transform[] _t;
         Quaternion[] _rest;
         Transform _model;
@@ -125,6 +140,15 @@ namespace FolkloreArchives
 
             if (seated)
             {
+                // achicar+bajar el modelo (mismo mecanismo que el agachado): SIN esto,
+                // rotar solo los muslos deja al personaje con el alto ENTERO de pie,
+                // demasiado alto para caber bajo el techo del auto.
+                if (_model != null)
+                {
+                    var s = _modelScale; s.y = _modelScale.y * seatedScaleY;
+                    _model.localScale = s;
+                    _model.localPosition = _modelBasePos + Vector3.down * seatedModelDrop;
+                }
                 // pose fija: muslos doblados hacia adelante (sentado), brazos en
                 // reposo -- nada de ciclo de caminata ni agachado mientras estás en
                 // el auto.
