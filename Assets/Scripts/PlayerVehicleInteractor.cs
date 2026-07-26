@@ -120,23 +120,20 @@ namespace FolkloreArchives
                         // que el perro pueda subirse pero no abrir las puertas")
                         StartCoroutine(ExitRoutine());
                     }
-                    else if (doors == null || !doors.IsOpen(myDoor))
-                    {
-                        // puerta cerrada → abrirla nomás, seguís sentado (owner: "cerre la
-                        // puerta y luego al querer abrirla ya no me sale opcion")
-                        doors?.SetDoor(myDoor, true);
-                    }
                     else if (LookingAtDoor(myDoor))
                     {
-                        // puerta abierta y mirándola → cerrarla, seguís sentado (owner:
-                        // "apunto a la puerta y no me deja cerrarla" -- el raycast fallaba
-                        // sentado tan cerca, seguramente pegándole antes al propio collider
-                        // del asiento; ahora es un chequeo de ángulo puro, sin física)
-                        doors.SetDoor(myDoor, false);
+                        // mirando TU puerta → alterna abrir/cerrar, seguís sentado (owner:
+                        // "apunto a la puerta y no me deja cerrarla"). Antes, con la puerta
+                        // CERRADA, esto pasaba SIEMPRE sin importar hacia dónde miraras
+                        // (owner: "mirando para fuera no me da la opcion de bajar" -- si tu
+                        // puerta estaba cerrada, E solo la abría, nunca bajaba). Ahora el
+                        // criterio es siempre el mismo: mirás tu puerta → la tocás; mirás
+                        // para cualquier otro lado → bajás (ExitRoutine ya abre la puerta
+                        // sola si hace falta, como parte de bajarte).
+                        doors?.SetDoor(myDoor, !(doors != null && doors.IsOpen(myDoor)));
                     }
                     else
                     {
-                        // puerta abierta y NO mirándola → bajar
                         StartCoroutine(ExitRoutine());
                     }
                 }
@@ -477,14 +474,13 @@ namespace FolkloreArchives
             if (car != null)
             {
                 if (!canOpenDoors) msg = "[ E ] Bajar"; // el perro: nunca abre/cierra
-                else
+                else if (LookingAtDoor(myDoor))
                 {
-                    // mismo criterio que la acción real de E: estado de la puerta + ángulo de mira.
+                    // mismo criterio que la acción real de E: mirando TU puerta, alterna.
                     var doors = Doors(car);
-                    if (doors == null || !doors.IsOpen(myDoor)) msg = "[ E ] Abrir puerta";
-                    else if (LookingAtDoor(myDoor)) msg = "[ E ] Cerrar puerta";
-                    else msg = "[ E ] Bajar";
+                    msg = (doors != null && doors.IsOpen(myDoor)) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
                 }
+                else msg = "[ E ] Bajar";
             }
             else if (target != null)
             {
