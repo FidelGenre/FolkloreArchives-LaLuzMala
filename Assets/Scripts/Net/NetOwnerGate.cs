@@ -23,6 +23,13 @@ namespace FolkloreArchives.Net
         Vector3 _dogModelBaseScale = Vector3.one;
         const float DogSeatedScale = 0.45f; // owner: "las patas traseras atraviesan el asiento" -- un poco mas chico
 
+        // owner: "necesito que lo sientes en la silla como corresponde" -- la pose de
+        // sentado (piernas dobladas, HumanWalkAnim.seated) es un cambio de rotación de
+        // huesos LOCAL igual que el achicado del perro -- sin sincronizar, solo lo ve
+        // el dueño.
+        readonly NetworkVariable<bool> _personSeated = new NetworkVariable<bool>(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
         public override void OnNetworkSpawn()
         {
             bool mine = IsOwner;
@@ -61,6 +68,12 @@ namespace FolkloreArchives.Net
                 view.Apply();
             }
 
+            if (dog == null)
+            {
+                _personSeated.OnValueChanged += OnPersonSeatedChanged;
+                ApplyPersonSeated(_personSeated.Value); // por si te uniste ya sentado
+            }
+
             var cc = GetComponent<CharacterController>();
             // el que NO es dueño deja que el NetworkTransform mueva el transform:
             // un CharacterController activo pelearía con las posiciones que llegan.
@@ -83,6 +96,7 @@ namespace FolkloreArchives.Net
         public override void OnNetworkDespawn()
         {
             _dogSeated.OnValueChanged -= OnDogSeatedChanged;
+            _personSeated.OnValueChanged -= OnPersonSeatedChanged;
         }
 
         // llamado por PlayerVehicleInteractor (solo el DUEÑO puede escribir la
@@ -92,13 +106,26 @@ namespace FolkloreArchives.Net
             if (IsOwner) _dogSeated.Value = seated;
         }
 
+        // ídem, para la persona (pose de piernas dobladas al manejar/viajar).
+        public void SetPersonSeated(bool seated)
+        {
+            if (IsOwner) _personSeated.Value = seated;
+        }
+
         void OnDogSeatedChanged(bool prev, bool now) => ApplyDogSeated(now);
+        void OnPersonSeatedChanged(bool prev, bool now) => ApplyPersonSeated(now);
 
         void ApplyDogSeated(bool seated)
         {
             var model = transform.Find("Model");
             if (model == null) return;
             model.localScale = seated ? _dogModelBaseScale * DogSeatedScale : _dogModelBaseScale;
+        }
+
+        void ApplyPersonSeated(bool seated)
+        {
+            var anim = GetComponent<HumanWalkAnim>();
+            if (anim != null) anim.seated = seated;
         }
 
         void ReassertSpawnPosition(CharacterController cc)

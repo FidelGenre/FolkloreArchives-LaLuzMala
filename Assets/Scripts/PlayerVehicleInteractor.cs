@@ -35,6 +35,7 @@ namespace FolkloreArchives
         CharacterController cc;
         MapExplorer explorer;
         DogController dog;
+        HumanWalkAnim humanAnim;
         NetOwnerGate netGate;   // presente en red -- ahí vive la sincronización del achicado
         Transform cam, camParent;
         Camera camComp;
@@ -79,6 +80,7 @@ namespace FolkloreArchives
             cc = GetComponent<CharacterController>();
             explorer = GetComponent<MapExplorer>();
             dog = GetComponent<DogController>();
+            humanAnim = GetComponent<HumanWalkAnim>();
             netGate = GetComponent<NetOwnerGate>();
             var c = GetComponentInChildren<Camera>();
             if (c != null) { cam = c.transform; camComp = c; camParent = cam.parent; camLocalPos = cam.localPosition; }
@@ -272,6 +274,13 @@ namespace FolkloreArchives
             // netGate null), se sigue achicando directo como antes.
             if (netGate != null) netGate.SetDogSeated(true);
             else if (dogModel != null) dogModel.localScale = dogModelScale * DogSeatedScale;
+
+            // owner: "necesito que este en pose de conduccion... que lo sientes en la
+            // silla como corresponde" -- sin esto la PERSONA se ve parada adentro del
+            // auto. Mismo criterio de sincronización que el achicado del perro.
+            if (netGate != null) netGate.SetPersonSeated(true);
+            else if (humanAnim != null) humanAnim.seated = true;
+
             if (cc != null) cc.enabled = false;
 
             // owner: "desde la perspectiva del humano no veo que se haya subido al
@@ -409,6 +418,9 @@ namespace FolkloreArchives
             // tamaño normal al bajar -- en red vía NetOwnerGate (sincronizado), sin red directo.
             if (netGate != null) netGate.SetDogSeated(false);
             else if (dogModel != null) dogModel.localScale = dogModelScale;
+            // pose normal (de pie) al bajar -- mismo criterio de sincronización.
+            if (netGate != null) netGate.SetPersonSeated(false);
+            else if (humanAnim != null) humanAnim.seated = false;
             // restaurar el layer/cullingMask que ocultaban al perro de su propia cámara.
             if (_selfHideActive)
             {

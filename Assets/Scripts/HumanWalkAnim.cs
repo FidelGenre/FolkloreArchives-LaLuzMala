@@ -34,6 +34,12 @@ namespace FolkloreArchives
         public float crouchScaleY = 0.62f;   // alto del modelo al agacharse (fracción)
         public float crouchDrop = 0.35f;      // cuánto baja el modelo al agacharse (m)
 
+        // owner: "necesito que este en pose de conduccion... necesito que lo sientes
+        // en la silla como corresponde" -- sin esto el personaje se ve PARADO adentro
+        // del auto. PlayerVehicleInteractor prende/apaga esto al subir/bajar.
+        public bool seated;
+        public float seatedThighAngle = 75f;  // grados que se doblan los muslos hacia adelante
+
         Transform[] _t;
         Quaternion[] _rest;
         Transform _model;
@@ -91,6 +97,20 @@ namespace FolkloreArchives
             float dt = Mathf.Max(1e-5f, Time.deltaTime);
             float speed = (transform.position - _lastPos).magnitude / dt;
             _lastPos = transform.position;
+
+            if (seated)
+            {
+                // pose fija: muslos doblados hacia adelante (sentado), brazos en
+                // reposo -- nada de ciclo de caminata ni agachado mientras estás en
+                // el auto.
+                for (int i = 0; i < limbs.Length; i++)
+                {
+                    if (_t[i] == null) continue;
+                    bool isArm = limbs[i].bone.Contains("arm");
+                    _t[i].localRotation = isArm ? _rest[i] : _rest[i] * Quaternion.AngleAxis(seatedThighAngle, axis);
+                }
+                return;
+            }
 
             bool crouched = WantCrouch();
 
