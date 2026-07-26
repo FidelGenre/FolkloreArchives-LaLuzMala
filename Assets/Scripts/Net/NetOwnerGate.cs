@@ -56,6 +56,24 @@ namespace FolkloreArchives.Net
             }
 
             Debug.Log($"[NET] {name} spawn — IsOwner={mine} clientId={OwnerClientId} pos={transform.position}");
+            _isMine = mine;
+            _cc = cc;
+        }
+
+        // owner: "sigo cayendo al infinito al tocar el boton de create host" -- el log de
+        // spawn ya mostraba una altura correcta, así que lo que sea que rompe esto pasa
+        // DESPUÉS, cuadro a cuadro. Diagnóstico temporal: 1 log por segundo con la altura
+        // real y si el CharacterController se considera "en el piso" o no.
+        bool _isMine;
+        CharacterController _cc;
+        float _diagTimer;
+        void Update()
+        {
+            if (!_isMine) return;
+            _diagTimer += Time.deltaTime;
+            if (_diagTimer < 1f) return;
+            _diagTimer = 0f;
+            Debug.Log($"[NET-DIAG] y={transform.position.y:0.00} grounded={(_cc != null ? _cc.isGrounded.ToString() : "sin CC")} ccEnabled={(_cc != null ? _cc.enabled.ToString() : "-")}");
         }
 
         void TeleportToGround(CharacterController cc)
