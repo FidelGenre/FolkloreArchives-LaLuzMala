@@ -44,6 +44,7 @@ namespace FolkloreArchives
         Transform camT;
         float standHeight, camBaseY;
         float pitch;   // mirar arriba/abajo (grados); parte del ángulo base de la cámara
+        Terrain _terrain; // owner: "las patas metidas bajo tierra" -- ver GroundSnap()
 
         // owner: bajar del auto "me cambia la camara" -- este script guarda su propio
         // pitch (privado) y lo reaplica ni bien se reactiva (al subir/bajar del auto,
@@ -64,6 +65,7 @@ namespace FolkloreArchives
             cc = GetComponent<CharacterController>();
             animator = GetComponentInChildren<Animator>();
             standHeight = cc.height;
+            _terrain = Terrain.activeTerrain;
             var camGo = GetComponentInChildren<Camera>(true);
             if (camGo != null)
             {
@@ -93,6 +95,26 @@ namespace FolkloreArchives
             Vector3 move = planar;
             move.y = verticalVel;
             var flags = cc.Move(move * Time.deltaTime);
+
+            // owner: "las patas metidas bajo tierra" -- CharacterController.isGrounded
+            // puede fallar sutilmente (casi sin movimiento horizontal, pendientes, etc.)
+            // y el perro se va hundiendo de a poco con el tiempo sin que ningún choque
+            // lo frene del todo. Mientras está PARADO en el piso (no en medio de un
+            // salto: grounded ya fuerza verticalVel=-1f arriba), se pisa la Y directo
+            // contra el terreno real -- elimina cualquier deriva por chica que sea, sin
+            // tocar el salto (que solo corre con grounded==false).
+            if (grounded && _terrain != null)
+            {
+                float groundY = _terrain.SampleHeight(transform.position) + _terrain.transform.position.y;
+                float bottomOffset = cc.center.y - cc.height * 0.5f; // pies relativos al pivote
+                float targetY = groundY - bottomOffset;
+                if (Mathf.Abs(transform.position.y - targetY) > 0.001f)
+                {
+                    cc.enabled = false;
+                    transform.position = new Vector3(transform.position.x, targetY, transform.position.z);
+                    cc.enabled = true;
+                }
+            }
 
             // AUTO-SALTO: SOLO en modo Follow (IA). Controlado, el salto lo hace el
             // jugador (Espacio). Detecta que está BLOQUEADO: quería avanzar pero apenas
