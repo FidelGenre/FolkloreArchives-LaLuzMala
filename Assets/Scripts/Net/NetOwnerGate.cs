@@ -67,7 +67,18 @@ namespace FolkloreArchives.Net
             // mover un CharacterController requiere desactivarlo un instante
             bool had = cc != null && cc.enabled;
             if (cc != null) cc.enabled = false;
-            transform.position = p;
+
+            // owner: "al crear sala multiplayer aparezco volando cayendo en el mapa" --
+            // la posición LÓGICA quedaba bien (el log ya mostraba la altura correcta),
+            // pero un simple "transform.position = p" no le avisa al NetworkTransform que
+            // esto es un TELEPORT: sigue interpolando desde su último estado conocido
+            // (el spawn default, cerca de 0,0,0) hacia la posición real, y esa
+            // interpolación visible ES la "caída". Uso Teleport() del propio componente
+            // para resetear su buffer de interpolación de una, sin deslizar.
+            var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
+            if (nt != null) nt.Teleport(p, transform.rotation, transform.localScale);
+            else transform.position = p;
+
             if (cc != null) cc.enabled = had;
         }
     }
