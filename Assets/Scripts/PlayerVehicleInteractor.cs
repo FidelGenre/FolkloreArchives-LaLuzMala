@@ -114,6 +114,11 @@ namespace FolkloreArchives
                 if (car != null)   // sentado
                 {
                     var doors = Doors(car);
+                    if (myDoor != null && cam != null)
+                    {
+                        float ang = Vector3.Angle(cam.forward, myDoor.position - cam.position);
+                        Debug.Log($"[DOOR-ANGLE-DIAG] myDoor={myDoor.name} angulo={ang:0.0}");
+                    }
                     if (!canOpenDoors)
                     {
                         // el perro: no toca puertas, E siempre te baja (owner: "necesito
@@ -171,7 +176,7 @@ namespace FolkloreArchives
             if (door == null || cam == null) return false;
             Vector3 toDoor = door.position - cam.position;
             if (toDoor.sqrMagnitude < 0.0001f) return true;
-            return Vector3.Angle(cam.forward, toDoor) < 45f;
+            return Vector3.Angle(cam.forward, toDoor) < 70f;
         }
 
         // MIRA invisible: qué parte del auto apunta el centro de la pantalla.
