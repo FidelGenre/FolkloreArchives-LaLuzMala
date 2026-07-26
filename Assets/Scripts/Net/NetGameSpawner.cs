@@ -34,7 +34,14 @@ namespace FolkloreArchives.Net
             _nm = NetworkManager.Singleton;
             if (_nm == null) { Debug.LogError("[NET] NetGameSpawner: no hay NetworkManager."); return; }
 
-            // registrar los prefabs ANTES de conectar (deben estar en la lista de red)
+            // owner: seguía tirando "duplicate GlobalObjectIdHash" y ahora directamente
+            // rompía el arranque de la red ("Failed to start the network manager") --
+            // el fix anterior (Contains/Remove por referencia de GameObject) no servía
+            // porque NetworkBuilder reconstruye el prefab DE CERO en cada Generate: la
+            // entrada VIEJA en la lista apunta a una instancia de GameObject distinta
+            // (aunque sea el mismo archivo .prefab), así que nunca la encontraba para
+            // sacarla. Más simple y robusto: vaciar TODA la lista antes de re-agregar.
+            ClearAllPrefabs();
             TryAddPrefab(personPrefab);
             TryAddPrefab(dogPrefab);
 
@@ -42,18 +49,16 @@ namespace FolkloreArchives.Net
             _nm.OnClientConnectedCallback += OnClientConnected;
         }
 
+        void ClearAllPrefabs()
+        {
+            var stale = new List<GameObject>();
+            foreach (var p in _nm.NetworkConfig.Prefabs.Prefabs) if (p.Prefab != null) stale.Add(p.Prefab);
+            foreach (var g in stale) _nm.NetworkConfig.Prefabs.Remove(g);
+        }
+
         void TryAddPrefab(GameObject p)
         {
             if (p == null) return;
-            // owner: consola tirando "NetworkPrefab (NetPerson) has a duplicate
-            // GlobalObjectIdHash source entry" -- NetworkBuilder reconstruye el prefab
-            // DE CERO (destruye y vuelve a crear el GameObject) en cada Generate y lo
-            // regraba sobre el mismo .prefab; entre eso y jugar la escena muchas veces
-            // en la misma sesión, la lista de prefabs de red del NetworkManager podía
-            // terminar con una entrada vieja/duplicada para el mismo prefab. Saco
-            // cualquier entrada previa para ESTE prefab antes de re-agregarlo, así
-            // nunca hay más de una.
-            if (_nm.NetworkConfig.Prefabs.Contains(p)) _nm.NetworkConfig.Prefabs.Remove(p);
             try { _nm.AddNetworkPrefab(p); } catch { /* ya estaba registrado */ }
         }
 
