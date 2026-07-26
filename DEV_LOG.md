@@ -7,6 +7,38 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — "no spawnearon ahora": los 3 amigos sin Model (sin causa confirmada)
+
+Después de la 4ta vuelta (squash), el owner reportó que los 3 amigos dejaron
+de aparecer del todo en el auto — ni hundidos ni flotando, directamente
+INVISIBLES. Diagnóstico por preguntas (consola limpia, sin duplicados, sin
+"Model" en ningún lado de la Hierarchy, ni con el filtro de búsqueda vacío)
+confirmó que el GameObject `Friend_MaleCasual` (y los otros 2) existen con
+`Transform` + `HumanWalkAnim`, pero **sin ningún hijo** — el `Model`
+(instancia del fbx) nunca quedó colgado, o se perdió.
+
+`git diff` entre el commit que SÍ andaba (flotando sobre el techo, personajes
+visibles) y el que no muestra que el único cambio fue puramente ADITIVO
+dentro de `HumanWalkAnim.LateUpdate` (lee `_model`, lo modifica si no es
+null) — no hay forma de que ese diff borre un hijo. **No se encontró la
+causa real.** Se descartaron: `ManualLayoutPersistence` (no registra
+amigos), `MapLayoutPersistence.ApplySavedLayout` (reposiciona, no borra
+hijos), duplicados en escena (confirmado: uno solo de cada uno).
+
+**Lo que se hizo (hardening, no un fix confirmado):**
+- `LoadPointTex` (que llama `SaveAndReimport`, un reimport de asset a mitad
+  de construir la jerarquía — terreno conocido para rarezas del Editor) se
+  adelanta ahora al PRINCIPIO de `BuildOne`, antes de instanciar nada.
+- Nuevo warning en `SeatInCar`: si un amigo no tiene hijo `Model`, lo grita
+  en consola en vez de sentarlo invisible en silencio — la próxima vez que
+  pase esto, el log lo va a decir directo, sin 10 preguntas de por medio.
+- ⚠ Recomendado: **Delete Map** (Tools ▸ Folklore Archives ▸ Delete Map) +
+  Generate de nuevo, para descartar estado turbio del Editor acumulado
+  después de MUCHOS regenerados seguidos en la misma sesión de Unity. Si
+  falla otra vez, el warning nuevo va a decir exactamente cuál.
+
+---
+
 ## 2026-07-26 — 4ta vuelta: causa real encontrada (rotar el muslo no achica al personaje)
 
 Owner confirmó que SÍ regeneraba entre cada prueba, y aun así 0.65 y 1.0

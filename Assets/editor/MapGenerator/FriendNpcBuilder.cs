@@ -147,6 +147,12 @@ namespace FolkloreArchives.MapGen
                 var wander = friend.GetComponent<FolkloreArchives.FriendWander>();
                 if (wander != null) Object.DestroyImmediate(wander);
 
+                // owner: "no spawnearon ahora" -- diagnóstico defensivo: si el modelo
+                // visual no está (por lo que sea), avisar FUERTE en vez de sentar un
+                // GameObject invisible en silencio.
+                if (friend.Find("Model") == null)
+                    Debug.LogWarning($"FriendNpc: {friend.name} no tiene hijo 'Model' -- se sienta igual pero no se va a ver. Revisar BuildOne/el fbx.");
+
                 // seat.localRotation siempre es identity (ver Seat() en CarBuilder), así
                 // que se puede trabajar directo en el espacio LOCAL del auto.
                 friend.SetParent(car.transform, false);
@@ -162,6 +168,15 @@ namespace FolkloreArchives.MapGen
         {
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(f.fbx);
             if (fbx == null) { Debug.LogWarning("FriendNpc: no encontré " + f.fbx); return; }
+
+            // owner: "no spawnearon ahora" -- dureza defensiva: antes se reimportaba la
+            // textura (LoadPointTex → SaveAndReimport) DESPUÉS de instanciar el modelo
+            // del fbx, en la MISMA pasada. Reimportar un asset a mitad de construir la
+            // jerarquía es terreno conocido para comportamiento errático del Editor. Se
+            // adelanta ACÁ, antes de tocar nada del GameObject, para que cualquier
+            // reimport/refresh de AssetDatabase quede resuelto antes de instanciar.
+            if (f.texParts != null) foreach (var p in f.texParts) LoadPointTex(p.tex);
+            else LoadPointTex(f.tex);
 
             float wx = c.x + f.offX, wz = c.y + f.offZ;
             Vector3 pos = BuilderUtils.Ground(t, wx, wz);
