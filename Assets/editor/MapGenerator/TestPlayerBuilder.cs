@@ -203,7 +203,16 @@ namespace FolkloreArchives.MapGen
             var dog = new GameObject("DOG");
             dog.transform.SetParent(player.transform.parent); // hermano del jugador, bajo FOLKLORE_MAP
             Vector2 dogXZ = playerXZ + new Vector2(1.6f, -1.2f);            // al lado y un poco atrás
-            dog.transform.position = BuilderUtils.Ground(t, dogXZ.x, dogXZ.y) + Vector3.up * 0.2f;
+            // owner: "el perro esta con la mitad del cuerpo bajo tierra" -- mismo bug que
+            // ya se había arreglado en CarBuilder/SpawnPos: cerca de este punto (lado
+            // este, junto al auto) el terreno CRUDO muestreado queda más bajo que la ruta
+            // pavimentada real (otra malla encima) -- BuilderUtils.Ground a secas lo
+            // hacía nacer medio hundido, y un CharacterController no se "expulsa" solo de
+            // un overlap inicial. Pisa el mayor entre terreno real y la ruta, igual que
+            // el spawn del jugador.
+            Vector3 dogGround = BuilderUtils.Ground(t, dogXZ.x, dogXZ.y);
+            dogGround.y = Mathf.Max(MapLayout.RoadSurfaceHeight, dogGround.y);
+            dog.transform.position = dogGround + Vector3.up * 0.2f;
             dog.transform.rotation = player.transform.rotation;
 
             var dcc = dog.AddComponent<CharacterController>();
