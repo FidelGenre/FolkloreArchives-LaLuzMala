@@ -60,7 +60,8 @@ namespace FolkloreArchives
                 _t[i] = FindDeep(transform, limbs[i].bone);
                 if (_t[i] == null) continue;
                 Quaternion baseLocal = _t[i].localRotation;
-                Transform tip = limbs[i].bone.Contains("arm") ? DeepestChild(_t[i]) : null;
+                bool isArm = limbs[i].bone.Contains("arm");
+                Transform tip = isArm ? DeepestChild(_t[i]) : null;
                 if (tip != null && tip != _t[i] && _t[i].parent != null)
                 {
                     // dirección real del brazo (hombro → mano) y la roto para que apunte a -Y
@@ -70,6 +71,21 @@ namespace FolkloreArchives
                     _rest[i] = Quaternion.Inverse(pW) * worldDelta * (pW * baseLocal);
                 }
                 else _rest[i] = baseLocal;
+
+                // owner: "la chica sigue con los brazos muy abiertos" -- el cálculo de
+                // arriba solo endereza el HOMBRO (usa hombro→mano completo como
+                // referencia), así que si el rig tiene el codo apenas doblado en su bind
+                // pose (común, no todos los personajes vienen con el brazo perfectamente
+                // recto en T-pose), ese doblez queda "colgando" sin corregir y el brazo
+                // sigue viéndose abierto/en V aunque el hombro ya apunte para abajo.
+                // Se aplica YA la corrección del hombro (para que el resto de la cadena
+                // vea su posición final) y se endereza el resto del brazo (antebrazo,
+                // mano) con el mismo criterio, hueso por hueso.
+                if (isArm && tip != null && tip != _t[i])
+                {
+                    _t[i].localRotation = _rest[i];
+                    StraightenArmChain(_t[i].childCount > 0 ? _t[i].GetChild(0) : null, tip);
+                }
             }
             _model = transform.Find("Model");
             if (_model == null) { var smr = GetComponentInChildren<SkinnedMeshRenderer>(); if (smr != null) _model = smr.transform.parent; }
@@ -149,6 +165,33 @@ namespace FolkloreArchives
             int guard = 0;
             while (cur.childCount > 0 && guard++ < 16) cur = cur.GetChild(0);
             return cur;
+        }
+
+        // endereza el resto de la cadena del brazo (antebrazo, mano...) bajando desde
+        // "from" hasta (sin incluir) "tip": el hombro/upper_arm ya se corrigió arriba
+        // usando el vector completo hombro→mano, pero eso NO cambia la rotación LOCAL
+        // de los huesos intermedios -- si el bind pose del rig tenía el codo doblado,
+        // ese doblez queda intacto y el brazo se ve "en V" (abierto) aunque el hombro ya
+        // apunte para abajo. Mismo truco (FromToRotation hacia abajo) repetido hueso por
+        // hueso, cada uno viendo ya la posición FINAL de su padre (por eso el hombro se
+        // aplica antes de llamar acá).
+        static void StraightenArmChain(Transform from, Transform tip)
+        {
+            var bone = from;
+            int guard = 0;
+            while (bone != null && bone != tip && bone.parent != null && guard++ < 16)
+            {
+                var child = bone.childCount > 0 ? bone.GetChild(0) : null;
+                if (child == null) break;
+                Vector3 dir = child.position - bone.position;
+                if (dir.sqrMagnitude > 0.0001f)
+                {
+                    Quaternion delta = Quaternion.FromToRotation(dir.normalized, Vector3.down);
+                    Quaternion pW = bone.parent.rotation;
+                    bone.localRotation = Quaternion.Inverse(pW) * delta * (pW * bone.localRotation);
+                }
+                bone = child;
+            }
         }
 
         static Transform FindDeep(Transform root, string name)
