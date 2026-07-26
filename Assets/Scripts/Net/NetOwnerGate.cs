@@ -50,37 +50,44 @@ namespace FolkloreArchives.Net
             if (mine)
             {
                 Cursor.lockState = CursorLockMode.Locked;
-                // El DUEÑO se ubica en el piso. Con autoridad-del-dueño, si no lo hace,
-                // su origen (0,0,0) queda bajo el terreno y el personaje cae al infinito.
-                TeleportToGround(cc);
+                // El DUEÑO tiene que RE-AFIRMAR su posición. Con autoridad-del-dueño, el
+                // NetworkTransform local del cliente puede arrancar en otro lado (ej.
+                // 0,0,0, el transform original del prefab) aunque el SERVIDOR ya lo haya
+                // instanciado bien -- si no hacemos este Teleport, el personaje cae al
+                // infinito desde ese origen desincronizado.
+                ReassertSpawnPosition(cc);
             }
 
             Debug.Log($"[NET] {name} spawn — IsOwner={mine} clientId={OwnerClientId} pos={transform.position}");
         }
 
-        void TeleportToGround(CharacterController cc)
+        void ReassertSpawnPosition(CharacterController cc)
         {
-            // owner: "sigo cayendo al infinito al tocar create host" -- causa real
-            // encontrada con el diagnóstico [NET-DIAG] (isGrounded=False toda la caída,
-            // de +26 a -7564): el (408,440) viejo queda 27 unidades pasado el borde
-            // real del terreno (mide 413 en Z, MapLayout.MapSize, desde que el mapa se
-            // achicó), así que ahí no hay collider -- caída infinita real, no un tema
-            // de posición lógica. Coordenadas actualizadas a MapLayout.Campsite (246,232).
-            Vector3 p = new Vector3(246f + (OwnerClientId % 4) * 2f, 0f, 232f); // cerca del campamento
+            // owner: "necesito que aparezca donde este en el momento que lo toque" --
+            // NetGameSpawner ya instancia el prefab en la posición correcta (la de
+            // TEST_PLAYER si sigue activo, si no el campamento), pero con autoridad-del-
+            // dueño el transform LOCAL del cliente puede no reflejar todavía esa
+            // posición al momento de este callback. En vez de confiar en
+            // transform.position (que es justo lo que podía estar desincronizado),
+            // resuelvo el mismo origen que NetGameSpawner de forma independiente.
+            var tp = GameObject.Find("TEST_PLAYER");
+            Vector2 origin = (tp != null && tp.activeInHierarchy)
+                ? new Vector2(tp.transform.position.x, tp.transform.position.z)
+                : new Vector2(246f, 232f); // MapLayout.Campsite (runtime no puede ver MapLayout)
+
+            Vector3 p = new Vector3(origin.x + (OwnerClientId % 4) * 2f, 0f, origin.y);
             var t = Terrain.activeTerrain;
             if (t != null) p.y = t.SampleHeight(p) + t.transform.position.y + 0.3f;
             else p.y = 30f;
-            // mover un CharacterController requiere desactivarlo un instante
+
             bool had = cc != null && cc.enabled;
             if (cc != null) cc.enabled = false;
 
             // owner: "al crear sala multiplayer aparezco volando cayendo en el mapa" --
-            // la posición LÓGICA quedaba bien (el log ya mostraba la altura correcta),
-            // pero un simple "transform.position = p" no le avisa al NetworkTransform que
+            // un simple "transform.position = p" no le avisa al NetworkTransform que
             // esto es un TELEPORT: sigue interpolando desde su último estado conocido
-            // (el spawn default, cerca de 0,0,0) hacia la posición real, y esa
-            // interpolación visible ES la "caída". Uso Teleport() del propio componente
-            // para resetear su buffer de interpolación de una, sin deslizar.
+            // hacia la posición real, y esa interpolación visible ES la "caída". Uso
+            // Teleport() del propio componente para resetear su buffer de una.
             var nt = GetComponent<Unity.Netcode.Components.NetworkTransform>();
             if (nt != null) nt.Teleport(p, transform.rotation, transform.localScale);
             else transform.position = p;

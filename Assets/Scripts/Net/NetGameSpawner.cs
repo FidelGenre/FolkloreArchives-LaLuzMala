@@ -87,7 +87,18 @@ namespace FolkloreArchives.Net
             if (prefab == null) { Debug.LogError("[NET] Falta el prefab de personaje."); return; }
             if (choice == 1) _dogTaken = true; else _personTaken = true;
 
-            Vector3 pos = OnGround(new Vector3(SpawnXZ.x + (clientId % 4) * 2f, 0f, SpawnXZ.y));
+            // owner: "necesito que aparezca donde este en el momento que lo toque" --
+            // en vez de siempre spawnear en el campamento, si el jugador de un solo
+            // jugador (TEST_PLAYER) sigue activo en la escena (todavía no lo apagó
+            // NetworkBootstrap.OnConnected, que corre DESPUÉS de esto), uso SU posición
+            // actual como origen del spawn. Si no está (build sin el rig de un jugador,
+            // u otro cliente uniéndose desde otra máquina), cae al campamento de siempre.
+            var tp = GameObject.Find("TEST_PLAYER");
+            Vector2 origin = (tp != null && tp.activeInHierarchy)
+                ? new Vector2(tp.transform.position.x, tp.transform.position.z)
+                : SpawnXZ;
+
+            Vector3 pos = OnGround(new Vector3(origin.x + (clientId % 4) * 2f, 0f, origin.y));
             var go = Instantiate(prefab, pos, Quaternion.identity);
             go.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
             Debug.Log($"[NET] spawn {(choice == 1 ? "PERRO" : "PERSONA")} para cliente {clientId} en {pos}");
