@@ -23,6 +23,11 @@ namespace FolkloreArchives.MapGen
 
         public static void EnsureNet()
         {
+            // owner: "el perro no deberia verse a si mismo" -- asegura que exista el
+            // layer que PlayerVehicleInteractor usa para excluir el propio modelo de
+            // su propia cámara (ver LayerSetup.cs).
+            LayerSetup.EnsureLayer(LayerSetup.SelfHiddenLayer);
+
             var net = GameObject.Find("NET");
             if (net == null) net = new GameObject("NET");
 

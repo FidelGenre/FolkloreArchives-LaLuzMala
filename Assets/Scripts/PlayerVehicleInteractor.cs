@@ -37,6 +37,7 @@ namespace FolkloreArchives
         DogController dog;
         NetOwnerGate netGate;   // presente en red -- ahí vive la sincronización del achicado
         Transform cam, camParent;
+        Camera camComp;
         Vector3 camLocalPos;
 
         // owner: "achicar el modelo del perro mientras esta sentado (como si se
@@ -46,6 +47,16 @@ namespace FolkloreArchives
         Transform dogModel;
         Vector3 dogModelScale = Vector3.one;
         const float DogSeatedScale = 0.55f;
+        const float DogSeatedExtraDrop = 0.35f; // owner: "se ve volando mas alto de los asientos" -- hundirlo un poco mas
+        // owner: "el perro no deberia verse a si mismo" -- layer creado en Generate
+        // (LayerSetup.cs) que la cámara EXCLUYE de su propio cullingMask mientras está
+        // sentado. Es una propiedad LOCAL (layer + cullingMask), no sincronizada por
+        // red -- cada cliente decide qué renderiza su PROPIA cámara, así que los demás
+        // jugadores lo siguen viendo normal.
+        const string SelfHiddenLayerName = "SelfHidden";
+        int _prevModelLayer = -1;
+        int _prevCullingMask;
+        bool _selfHideActive;
 
         CarController car;      // null = a pie
         Transform mySeat, myDoor;
@@ -56,6 +67,12 @@ namespace FolkloreArchives
 
         static CarDoors Doors(CarController c) => c != null ? c.GetComponent<CarDoors>() : null;
 
+        static void SetLayerRecursive(Transform t, int layer)
+        {
+            t.gameObject.layer = layer;
+            foreach (Transform child in t) SetLayerRecursive(child, layer);
+        }
+
         void Start()
         {
             cc = GetComponent<CharacterController>();
@@ -63,7 +80,7 @@ namespace FolkloreArchives
             dog = GetComponent<DogController>();
             netGate = GetComponent<NetOwnerGate>();
             var c = GetComponentInChildren<Camera>();
-            if (c != null) { cam = c.transform; camParent = cam.parent; camLocalPos = cam.localPosition; }
+            if (c != null) { cam = c.transform; camComp = c; camParent = cam.parent; camLocalPos = cam.localPosition; }
             if (dog != null && netGate == null) // en red, NetOwnerGate ya lleva su propia base de escala
             {
                 dogModel = transform.Find("Model");
@@ -270,20 +287,38 @@ namespace FolkloreArchives
             // camLocalPos ENTERO empujaba el cuerpo hacia atrás y afuera del asiento.
             // Solo importa la altura acá -- la posición horizontal la pone seat.position
             // directo, sin tocar X/Z.
+            // owner (3): "se ve volando mas alto de los asientos y no sentado" -- el
+            // perro necesita hundirse un poco más en el asiento que lo que da la altura
+            // de ojo sola (DogSeatedExtraDrop, solo para el perro).
+            float extraDrop = dog != null ? DogSeatedExtraDrop : 0f;
             transform.rotation = seat.rotation;
-            transform.position = seat.position - transform.rotation * new Vector3(0f, camLocalPos.y, 0f);
+            transform.position = seat.position - transform.rotation * new Vector3(0f, camLocalPos.y + extraDrop, 0f);
 
-            // owner: la cámara del perro vive pegada al HOCICO (para seguirlo de cerca
-            // parado) -- reparentada al asiento con offset cero, esa misma cercanía
-            // hacía que el hocico (aunque ya achicado) quedara pegado/adentro de la
-            // cámara ("veo el hocico atravesado"). Para el perro, la corro un poco hacia
-            // atrás del asiento (alejándola del hocico); para la persona sigue en cero.
-            Vector3 camSeatOffset = dog != null ? new Vector3(0f, 0f, -0.6f) : Vector3.zero;
-            Vector3 camSeatPos = seat.position + seat.rotation * camSeatOffset;
-            yield return Glide(cam, camSeatPos, seat.rotation);
+            // owner: "quedo atras del asiento" -- ya no hace falta correr la cámara del
+            // hocico hacia atrás: ahora el modelo del perro se OCULTA de su propia
+            // cámara por layer (ver abajo), así que da igual si el hocico queda cerca o
+            // adentro de la cámara -- vuelvo la cámara a offset cero, igual que la persona.
+            yield return Glide(cam, seat.position, seat.rotation);
             cam.SetParent(seat, false);
-            cam.localPosition = camSeatOffset; cam.localRotation = Quaternion.identity;
+            cam.localPosition = Vector3.zero; cam.localRotation = Quaternion.identity;
             lookYaw = 0f; lookPitch = 0f;
+
+            // owner: "el perro no deberia verse a si mismo" -- pone el modelo en el
+            // layer SelfHidden y lo excluye del cullingMask de SU PROPIA cámara. Layer +
+            // cullingMask son propiedades LOCALES (no sincronizadas por red): los demás
+            // jugadores siguen viendo al perro normal en su propia pantalla.
+            if (dog != null && dogModel != null && camComp != null)
+            {
+                int hidden = LayerMask.NameToLayer(SelfHiddenLayerName);
+                if (hidden >= 0)
+                {
+                    _prevModelLayer = dogModel.gameObject.layer;
+                    SetLayerRecursive(dogModel, hidden);
+                    _prevCullingMask = camComp.cullingMask;
+                    camComp.cullingMask &= ~(1 << hidden);
+                    _selfHideActive = true;
+                }
+            }
 
             car = c; mySeat = seat; myDoor = door;
             c.driving = (seat == c.driverSeat);
@@ -372,6 +407,13 @@ namespace FolkloreArchives
             // tamaño normal al bajar -- en red vía NetOwnerGate (sincronizado), sin red directo.
             if (netGate != null) netGate.SetDogSeated(false);
             else if (dogModel != null) dogModel.localScale = dogModelScale;
+            // restaurar el layer/cullingMask que ocultaban al perro de su propia cámara.
+            if (_selfHideActive)
+            {
+                if (dogModel != null) SetLayerRecursive(dogModel, _prevModelLayer);
+                if (camComp != null) camComp.cullingMask = _prevCullingMask;
+                _selfHideActive = false;
+            }
             if (dog != null)
             {
                 dog.SetLookPitch(exitPitch);
