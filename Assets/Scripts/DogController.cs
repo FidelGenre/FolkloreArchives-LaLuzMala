@@ -96,23 +96,25 @@ namespace FolkloreArchives
             move.y = verticalVel;
             var flags = cc.Move(move * Time.deltaTime);
 
-            // owner: "las patas metidas bajo tierra" -- CharacterController.isGrounded
-            // puede fallar sutilmente (casi sin movimiento horizontal, pendientes, etc.)
-            // y el perro se va hundiendo de a poco con el tiempo sin que ningún choque
-            // lo frene del todo. Mientras está PARADO en el piso (no en medio de un
-            // salto: grounded ya fuerza verticalVel=-1f arriba), se pisa la Y directo
-            // contra el terreno real -- elimina cualquier deriva por chica que sea, sin
-            // tocar el salto (que solo corre con grounded==false).
-            if (grounded && _terrain != null)
+            // owner: "sigue spawneando el perro bajo tierra las patas" -- el intento
+            // anterior solo corregía cuando grounded==true, pero si YA nace superpuesto
+            // con el terreno (spawn embebido), un CharacterController casi nunca reporta
+            // grounded=true sobre un overlap inicial -- nunca se disparaba. Ahora es
+            // incondicional: si el pivote quedó POR DEBAJO de donde debería apoyar (el
+            // terreno real en esta XZ), se sube ahí directo, nazca embebido o se haya
+            // hundido de a poco caminando. Nunca interfiere con saltar hacia ARRIBA
+            // (ahí ya está por ENCIMA del target, la condición no entra).
+            if (_terrain != null)
             {
                 float groundY = _terrain.SampleHeight(transform.position) + _terrain.transform.position.y;
                 float bottomOffset = cc.center.y - cc.height * 0.5f; // pies relativos al pivote
                 float targetY = groundY - bottomOffset;
-                if (Mathf.Abs(transform.position.y - targetY) > 0.001f)
+                if (transform.position.y < targetY - 0.001f)
                 {
                     cc.enabled = false;
                     transform.position = new Vector3(transform.position.x, targetY, transform.position.z);
                     cc.enabled = true;
+                    if (verticalVel < 0f) verticalVel = -1f; // ya tocó piso, no seguir acumulando caída
                 }
             }
 
