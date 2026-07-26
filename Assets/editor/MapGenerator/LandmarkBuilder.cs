@@ -50,6 +50,16 @@ namespace FolkloreArchives.MapGen
             carSpawn.transform.rotation = Quaternion.LookRotation(Vector3.right); // facing east, out of tunnel
             BuilderUtils.Label(poi, "DIRT ROAD TURNOFF", BuilderUtils.Ground(t, MapLayout.DirtTurnoff) + Vector3.up * 7f);
 
+            // owner: "deben spawnear tambien en la ruta del mismo lado porque arrancan
+            // la historia todos juntos" -- antes estaban en el campamento; el auto
+            // manejable de verdad (CarBuilder.cs) arranca del lado ESTE de la ruta
+            // (MapLayout.MapSizeX - 30f), NO en SPAWN_CAR_START (marcador viejo del
+            // túnel, sin usar por el auto real desde que se movió). Mismo punto acá
+            // para que los amigos queden al lado del auto donde arranca la historia.
+            float friendsX = MapLayout.MapSizeX - 30f;
+            Vector2 friendsRoadPoint = new Vector2(friendsX, MapLayout.PavedRouteZAt(friendsX));
+            FriendNpcBuilder.Build(poi, t, friendsRoadPoint);
+
             // ---------- CAMPSITE (Act 1, tutorial; Act 4 return) ----------
             var camp = BuilderUtils.Group(poi, "Campsite", BuilderUtils.Ground(t, MapLayout.Campsite));
             BuilderUtils.Label(camp, "CAMPSITE", camp.position + Vector3.up * 8f);
@@ -58,7 +68,6 @@ namespace FolkloreArchives.MapGen
             // sin autos) → CampsiteBuilder, estilo PS1 texturizado. Reemplaza los
             // placeholders viejos (auto + fogata de cubos + carpas-cubo).
             CampsiteBuilder.Build(camp, t, MapLayout.Campsite);
-            FriendNpcBuilder.Build(camp, t, MapLayout.Campsite);
 
             BuilderUtils.Empty(camp, "SPAWN_PLAYER1", BuilderUtils.Ground(t, MapLayout.Campsite.x - 2f, MapLayout.Campsite.y - 4f) + Vector3.up * 0.5f);
             BuilderUtils.Empty(camp, "SPAWN_RUFUS", BuilderUtils.Ground(t, MapLayout.Campsite.x + 1f, MapLayout.Campsite.y - 5f) + Vector3.up * 0.5f);

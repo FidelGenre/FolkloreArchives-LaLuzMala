@@ -1,12 +1,18 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
 //  FriendNpcBuilder.cs — los 3 amigos del protagonista. Por ahora
-//  son estáticos (sin IA/diálogo/animación todavía), parados
-//  alrededor de la fogata del campamento, mismo tratamiento PSX
-//  (material URP + textura con filtro Point) que NetworkBuilder
-//  usa para el modelo del jugador. Se ubican en el lado oeste/este/
-//  norte de la fogata para no pisar SPAWN_PLAYER1/SPAWN_RUFUS
-//  (ambos del lado sur, por donde entra el jugador al campamento).
+//  son estáticos (sin IA/diálogo/animación todavía), mismo
+//  tratamiento PSX (material URP + textura con filtro Point) que
+//  NetworkBuilder usa para el modelo del jugador.
+//  owner: "deben spawnear tambien en la ruta del mismo lado porque
+//  arrancan la historia todos juntos" -- antes estaban parados en el
+//  campamento (la fogata); ahora arrancan junto al auto manejable
+//  (Renault12, lado ESTE de la ruta -- ver CarBuilder.cs), parados
+//  al costado de la ruta esperando/charlando cerca del auto.
+//  "y deben medir lo mismo que el personaje principal" -- las 3
+//  alturas eran inconsistentes (2.2/2.2/2.1); ahora las 3 miden
+//  2.3f, igual que NetworkBuilder.BuildPersonVisual (target del
+//  protagonista/red).
 //
 //  Créditos (assets gratuitos bajados por el owner):
 //   - Friend_MaleCasual:   "PSX Casual Male Character" by Vinrax (itch.io, free — credit required)
@@ -32,19 +38,21 @@ namespace FolkloreArchives.MapGen
 
         static readonly FriendDef[] Friends =
         {
-            // oeste de la fogata, mirando hacia el fuego (+X)
-            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.2f, -3.9f,  0.1f,  90f),
-            // este de la fogata, mirando hacia el fuego (-X)
-            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.2f,  3.9f, -0.2f, -90f),
-            // norte de la fogata (entre el fuego y las carpas), mirando hacia el sur
-            new FriendDef("Friend_FemaleSec",    Dir + "FemaleSecretary/female_secretary.fbx",  Dir + "FemaleSecretary/secretary_tex.png", 2.1f,  0.2f,  2.6f, 180f),
+            // al costado sur de la ruta, cerca del auto (que queda en offset 0,0), mirando hacia el auto (+X)
+            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f),
+            // al costado norte de la ruta, mirando hacia el auto (+X)
+            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f),
+            // un poco más atrás, entre los otros dos, mirando hacia el auto (+X)
+            new FriendDef("Friend_FemaleSec",    Dir + "FemaleSecretary/female_secretary.fbx",  Dir + "FemaleSecretary/secretary_tex.png", 2.3f, -8.0f,  0.2f,  90f),
         };
 
-        public static void Build(Transform root, Terrain t, Vector2 campCenter)
+        // roadCenter: mismo punto (X,Z) donde arranca el auto manejable (CarBuilder.cs,
+        // MapLayout.MapSizeX - 30f) -- así los amigos quedan al lado, no adentro del auto.
+        public static void Build(Transform root, Terrain t, Vector2 roadCenter)
         {
-            var group = BuilderUtils.Group(root, "FriendsNPC", BuilderUtils.Ground(t, campCenter.x, campCenter.y));
+            var group = BuilderUtils.Group(root, "FriendsNPC", BuilderUtils.Ground(t, roadCenter.x, roadCenter.y));
             foreach (var f in Friends)
-                BuildOne(group, t, f, campCenter);
+                BuildOne(group, t, f, roadCenter);
         }
 
         static void BuildOne(Transform parent, Terrain t, FriendDef f, Vector2 c)
