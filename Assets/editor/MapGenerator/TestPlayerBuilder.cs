@@ -234,12 +234,14 @@ namespace FolkloreArchives.MapGen
                 model.transform.localScale = Vector3.one * s;
                 // el modelo sigue en localPosition=0 acá, así que su Y mundial == la del
                 // perro; una rotación en Y no cambia el valor Y de los bounds.
-                // owner: "sigue bajo tierra" -- el -0.06 de antes hundía las patas 6cm
-                // por debajo del piso A PROPÓSITO (pensado para el Renderer.bounds viejo,
-                // que venía "inflado"); con la medición real por vértices esto ya no hace
-                // falta -- las patas quedan EXACTO en el piso, sin margen negativo.
+                // owner: "sigue bajo tierra" -- el cálculo puro (bottomLocal, sin más)
+                // seguía dejando las patas metidas; el propio owner lo subió a mano en el
+                // editor hasta que se vio bien (Model Position Y quedó en 0.576) -- se usa
+                // ese valor calibrado como el "extra" fijo por encima del cálculo, así
+                // sobrevive a cualquier regenerado futuro.
+                const float ManualLiftCalibrated = 0.567f; // 0.576 (verificado a mano) - ~0.009 (bottomLocal actual)
                 float bottomLocal = measured.Value.min.y * s;
-                model.transform.localPosition = new Vector3(0f, -bottomLocal, 0f);
+                model.transform.localPosition = new Vector3(0f, -bottomLocal + ManualLiftCalibrated, 0f);
                 Debug.Log($"Rufus: alto nativo {h:0.000} → escala {s:0.0000} (objetivo {DogTargetHeight} m).");
             }
             else Debug.LogWarning("Rufus: el modelo no tiene mallas para medir — queda a escala 1.");
