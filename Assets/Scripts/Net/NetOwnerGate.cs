@@ -63,22 +63,17 @@ namespace FolkloreArchives.Net
 
         void ReassertSpawnPosition(CharacterController cc)
         {
-            // owner: "necesito que aparezca donde este en el momento que lo toque" --
-            // NetGameSpawner ya instancia el prefab en la posición correcta (la de
-            // TEST_PLAYER si sigue activo, si no el campamento), pero con autoridad-del-
-            // dueño el transform LOCAL del cliente puede no reflejar todavía esa
-            // posición al momento de este callback. En vez de confiar en
-            // transform.position (que es justo lo que podía estar desincronizado),
-            // resuelvo el mismo origen que NetGameSpawner de forma independiente.
-            var tp = GameObject.Find("TEST_PLAYER");
-            Vector2 origin = (tp != null && tp.activeInHierarchy)
-                ? new Vector2(tp.transform.position.x, tp.transform.position.z)
-                : new Vector2(246f, 232f); // MapLayout.Campsite (runtime no puede ver MapLayout)
-
-            Vector3 p = new Vector3(origin.x + (OwnerClientId % 4) * 2f, 0f, origin.y);
-            var t = Terrain.activeTerrain;
-            if (t != null) p.y = t.SampleHeight(p) + t.transform.position.y + 0.3f;
-            else p.y = 30f;
+            // owner: "necesito que el jugador 2 al unirse aparezca al lado del 1" --
+            // NetGameSpawner (en el servidor) YA decide la posición correcta (al lado
+            // de TEST_PLAYER o de un jugador ya conectado) y la usa para Instantiate.
+            // Acá NO hay que recalcular nada de forma independiente: si buscáramos nuestro
+            // propio "TEST_PLAYER" local, en Multiplayer Play Mode cada cliente virtual
+            // corre en su PROPIO proceso con su PROPIO TEST_PLAYER (irrelevante al de los
+            // demás) -- eso pisaría la posición "al lado del jugador 1" con la del
+            // TEST_PLAYER local de ESTE cliente. Confío en transform.position, que ya
+            // llegó sincronizado del servidor al spawnear -- solo reafirmo ESA posición
+            // (fix de autoridad-del-dueño / interpolación), no invento una nueva.
+            Vector3 p = transform.position;
 
             bool had = cc != null && cc.enabled;
             if (cc != null) cc.enabled = false;

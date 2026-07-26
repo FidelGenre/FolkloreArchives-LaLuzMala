@@ -72,6 +72,7 @@ namespace FolkloreArchives.Net
         }
 
         bool _personTaken, _dogTaken;
+        readonly List<Transform> _spawned = new List<Transform>(); // jugadores ya spawneados, en orden
 
         void OnClientConnected(ulong clientId)
         {
@@ -87,19 +88,25 @@ namespace FolkloreArchives.Net
             if (prefab == null) { Debug.LogError("[NET] Falta el prefab de personaje."); return; }
             if (choice == 1) _dogTaken = true; else _personTaken = true;
 
-            // owner: "necesito que aparezca donde este en el momento que lo toque" --
-            // en vez de siempre spawnear en el campamento, si el jugador de un solo
-            // jugador (TEST_PLAYER) sigue activo en la escena (todavía no lo apagó
-            // NetworkBootstrap.OnConnected, que corre DESPUÉS de esto), uso SU posición
-            // actual como origen del spawn. Si no está (build sin el rig de un jugador,
-            // u otro cliente uniéndose desde otra máquina), cae al campamento de siempre.
-            var tp = GameObject.Find("TEST_PLAYER");
-            Vector2 origin = (tp != null && tp.activeInHierarchy)
-                ? new Vector2(tp.transform.position.x, tp.transform.position.z)
-                : SpawnXZ;
+            // owner: "necesito que el jugador 2 al unirse aparezca al lado del 1" --
+            // para el PRIMER jugador (normalmente el host) uso la posición de TEST_PLAYER
+            // si sigue activo (todavía no lo apagó NetworkBootstrap.OnConnected). Para
+            // cualquiera que se una DESPUÉS, TEST_PLAYER ya está apagado -- ahí uso la
+            // posición ACTUAL del jugador de red ya conectado, así el 2do aparece al
+            // lado del 1ro y no en el campamento. Si no hay nada de eso, cae al
+            // campamento de siempre.
+            Vector2 origin = SpawnXZ;
+            var already = _spawned.Find(tr => tr != null);
+            if (already != null) origin = new Vector2(already.position.x, already.position.z);
+            else
+            {
+                var tp = GameObject.Find("TEST_PLAYER");
+                if (tp != null && tp.activeInHierarchy) origin = new Vector2(tp.transform.position.x, tp.transform.position.z);
+            }
 
             Vector3 pos = OnGround(new Vector3(origin.x + (clientId % 4) * 2f, 0f, origin.y));
             var go = Instantiate(prefab, pos, Quaternion.identity);
+            _spawned.Add(go.transform);
             go.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
             Debug.Log($"[NET] spawn {(choice == 1 ? "PERRO" : "PERSONA")} para cliente {clientId} en {pos}");
         }

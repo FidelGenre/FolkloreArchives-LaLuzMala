@@ -88,6 +88,7 @@ namespace FolkloreArchives.MapGen
             camData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
             camData.antialiasingQuality = AntialiasingQuality.High;
             camGO.AddComponent<FolkloreArchives.VhsPostFx>();
+            camGO.AddComponent<FolkloreArchives.Crosshair>();  // owner: "necesito el crosshair en ambos pjs"
 
             var flashGO = new GameObject("Flashlight");
             flashGO.transform.SetParent(camGO.transform);
@@ -221,6 +222,7 @@ namespace FolkloreArchives.MapGen
             camData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
             camData.antialiasingQuality = AntialiasingQuality.High;
             camGO.AddComponent<FolkloreArchives.VhsPostFx>();
+            camGO.AddComponent<FolkloreArchives.Crosshair>();  // owner: "necesito el crosshair en ambos pjs"
             camGO.SetActive(false);
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, DogPrefabPath);
