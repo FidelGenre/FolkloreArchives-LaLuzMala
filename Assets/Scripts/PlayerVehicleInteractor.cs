@@ -66,7 +66,6 @@ namespace FolkloreArchives
             {
                 dogModel = transform.Find("Model");
                 if (dogModel != null) dogModelScale = dogModel.localScale;
-                Debug.Log($"[DOG-DIAG] Start: dogModel={(dogModel!=null?"OK escala="+dogModelScale:"NULL")} hijos={string.Join(",", System.Linq.Enumerable.Select(GetComponentsInChildren<Transform>(true), t=>t.name))}");
             }
         }
 
@@ -248,7 +247,6 @@ namespace FolkloreArchives
             // normal atravesaba techo/puertas (un cuadrúpedo no tiene una pose sentado
             // razonable ahí). Se restaura al bajar (ExitRoutine).
             if (dogModel != null) dogModel.localScale = dogModelScale * DogSeatedScale;
-            Debug.Log($"[DOG-DIAG] SitRoutine: dogModel={(dogModel!=null?"OK, nueva escala="+dogModel.localScale:"NULL")}");
             if (cc != null) cc.enabled = false;
 
             // owner: "desde la perspectiva del humano no veo que se haya subido al
@@ -268,9 +266,16 @@ namespace FolkloreArchives
             transform.rotation = seat.rotation;
             transform.position = seat.position - transform.rotation * new Vector3(0f, camLocalPos.y, 0f);
 
-            yield return Glide(cam, seat.position, seat.rotation);
+            // owner: la cámara del perro vive pegada al HOCICO (para seguirlo de cerca
+            // parado) -- reparentada al asiento con offset cero, esa misma cercanía
+            // hacía que el hocico (aunque ya achicado) quedara pegado/adentro de la
+            // cámara ("veo el hocico atravesado"). Para el perro, la corro un poco hacia
+            // atrás del asiento (alejándola del hocico); para la persona sigue en cero.
+            Vector3 camSeatOffset = dog != null ? new Vector3(0f, 0f, -0.6f) : Vector3.zero;
+            Vector3 camSeatPos = seat.position + seat.rotation * camSeatOffset;
+            yield return Glide(cam, camSeatPos, seat.rotation);
             cam.SetParent(seat, false);
-            cam.localPosition = Vector3.zero; cam.localRotation = Quaternion.identity;
+            cam.localPosition = camSeatOffset; cam.localRotation = Quaternion.identity;
             lookYaw = 0f; lookPitch = 0f;
 
             car = c; mySeat = seat; myDoor = door;
