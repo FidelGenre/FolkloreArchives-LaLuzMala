@@ -66,6 +66,7 @@ namespace FolkloreArchives
             {
                 dogModel = transform.Find("Model");
                 if (dogModel != null) dogModelScale = dogModel.localScale;
+                Debug.Log($"[DOG-DIAG] Start: dogModel={(dogModel!=null?"OK escala="+dogModelScale:"NULL")} hijos={string.Join(",", System.Linq.Enumerable.Select(GetComponentsInChildren<Transform>(true), t=>t.name))}");
             }
         }
 
@@ -247,6 +248,7 @@ namespace FolkloreArchives
             // normal atravesaba techo/puertas (un cuadrúpedo no tiene una pose sentado
             // razonable ahí). Se restaura al bajar (ExitRoutine).
             if (dogModel != null) dogModel.localScale = dogModelScale * DogSeatedScale;
+            Debug.Log($"[DOG-DIAG] SitRoutine: dogModel={(dogModel!=null?"OK, nueva escala="+dogModel.localScale:"NULL")}");
             if (cc != null) cc.enabled = false;
 
             // owner: "desde la perspectiva del humano no veo que se haya subido al
