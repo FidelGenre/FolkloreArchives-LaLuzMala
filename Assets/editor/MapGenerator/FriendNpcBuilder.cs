@@ -140,6 +140,10 @@ namespace FolkloreArchives.MapGen
             // reposo: brazos bajados en vez de en cruz (T-pose).
             var anim = go.AddComponent<FolkloreArchives.HumanWalkAnim>();
             if (f.limbs != null) anim.limbs = f.limbs;
+
+            // owner: "necesito ver como caminan" -- deambulan de a poco cerca de donde
+            // arrancan (no es IA real, solo para que no queden parados como estatuas).
+            go.AddComponent<FolkloreArchives.FriendWander>();
         }
 
         static Texture2D LoadPointTex(string path)
