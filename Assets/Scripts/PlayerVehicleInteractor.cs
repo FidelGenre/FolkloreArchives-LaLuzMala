@@ -35,6 +35,7 @@ namespace FolkloreArchives
         CharacterController cc;
         MapExplorer explorer;
         DogController dog;
+        NetOwnerGate netGate;   // presente en red -- ahí vive la sincronización del achicado
         Transform cam, camParent;
         Vector3 camLocalPos;
 
@@ -60,9 +61,10 @@ namespace FolkloreArchives
             cc = GetComponent<CharacterController>();
             explorer = GetComponent<MapExplorer>();
             dog = GetComponent<DogController>();
+            netGate = GetComponent<NetOwnerGate>();
             var c = GetComponentInChildren<Camera>();
             if (c != null) { cam = c.transform; camParent = cam.parent; camLocalPos = cam.localPosition; }
-            if (dog != null)
+            if (dog != null && netGate == null) // en red, NetOwnerGate ya lleva su propia base de escala
             {
                 dogModel = transform.Find("Model");
                 if (dogModel != null) dogModelScale = dogModel.localScale;
@@ -246,7 +248,12 @@ namespace FolkloreArchives
             // owner: "achicar el modelo del perro mientras esta sentado" -- a tamaño
             // normal atravesaba techo/puertas (un cuadrúpedo no tiene una pose sentado
             // razonable ahí). Se restaura al bajar (ExitRoutine).
-            if (dogModel != null) dogModel.localScale = dogModelScale * DogSeatedScale;
+            // owner: "viendolo desde el humano no se achica" -- un simple localScale acá
+            // es puramente LOCAL (no sincronizado); en red, NetOwnerGate lleva una
+            // NetworkVariable para esto y lo replica a todos. Sin red (un jugador solo,
+            // netGate null), se sigue achicando directo como antes.
+            if (netGate != null) netGate.SetDogSeated(true);
+            else if (dogModel != null) dogModel.localScale = dogModelScale * DogSeatedScale;
             if (cc != null) cc.enabled = false;
 
             // owner: "desde la perspectiva del humano no veo que se haya subido al
@@ -362,7 +369,9 @@ namespace FolkloreArchives
                 explorer.SetLookPitch(exitPitch);
                 explorer.enabled = true;
             }
-            if (dogModel != null) dogModel.localScale = dogModelScale; // tamaño normal al bajar
+            // tamaño normal al bajar -- en red vía NetOwnerGate (sincronizado), sin red directo.
+            if (netGate != null) netGate.SetDogSeated(false);
+            else if (dogModel != null) dogModel.localScale = dogModelScale;
             if (dog != null)
             {
                 dog.SetLookPitch(exitPitch);

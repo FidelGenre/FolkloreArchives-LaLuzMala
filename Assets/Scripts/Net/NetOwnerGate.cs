@@ -14,6 +14,15 @@ namespace FolkloreArchives.Net
 {
     public class NetOwnerGate : NetworkBehaviour
     {
+        // owner: "viendolo desde el humano no se achica" -- PlayerVehicleInteractor
+        // achicaba el modelo del perro solo LOCALMENTE (un simple localScale, sin
+        // sincronizar), así que solo lo veía el dueño, igual que había pasado antes
+        // con las puertas del auto. Sincronizado acá con una NetworkVariable.
+        readonly NetworkVariable<bool> _dogSeated = new NetworkVariable<bool>(
+            false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        Vector3 _dogModelBaseScale = Vector3.one;
+        const float DogSeatedScale = 0.55f;
+
         public override void OnNetworkSpawn()
         {
             bool mine = IsOwner;
@@ -34,6 +43,11 @@ namespace FolkloreArchives.Net
             {
                 dog.enabled = mine;
                 if (mine) dog.mode = DogController.Mode.Player;  // en co-op el dueño lo maneja
+
+                var model = transform.Find("Model");
+                if (model != null) _dogModelBaseScale = model.localScale;
+                _dogSeated.OnValueChanged += OnDogSeatedChanged;
+                ApplyDogSeated(_dogSeated.Value); // por si te uniste con el perro ya sentado
             }
 
             // Conciencia del cuerpo (solo la PERSONA dueña): ve su torso/piernas al mirar
@@ -64,6 +78,27 @@ namespace FolkloreArchives.Net
             }
 
             Debug.Log($"[NET] {name} spawn — IsOwner={mine} clientId={OwnerClientId} pos={transform.position}");
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            _dogSeated.OnValueChanged -= OnDogSeatedChanged;
+        }
+
+        // llamado por PlayerVehicleInteractor (solo el DUEÑO puede escribir la
+        // NetworkVariable) al subir/bajar del auto siendo el perro.
+        public void SetDogSeated(bool seated)
+        {
+            if (IsOwner) _dogSeated.Value = seated;
+        }
+
+        void OnDogSeatedChanged(bool prev, bool now) => ApplyDogSeated(now);
+
+        void ApplyDogSeated(bool seated)
+        {
+            var model = transform.Find("Model");
+            if (model == null) return;
+            model.localScale = seated ? _dogModelBaseScale * DogSeatedScale : _dogModelBaseScale;
         }
 
         void ReassertSpawnPosition(CharacterController cc)
