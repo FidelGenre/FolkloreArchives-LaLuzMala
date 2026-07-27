@@ -53,10 +53,16 @@ namespace FolkloreArchives
         // probablemente también afecta cómo lo ven los DEMÁS clientes en red, solo que
         // nadie lo había mirado de cerca todavía. Mismo truco que ya usa el agachado
         // de acá arriba (achicar + bajar el modelo), pero fijo (sin lerp, como el
-        // resto de esta rama "seated"). Valores sin verificar visualmente todavía
-        // (pendiente ajuste en vivo en el Editor, ver DEV_LOG).
+        // resto de esta rama "seated").
+        // owner: "siguen apareciendo detras y tambien debajo del auto" -- BUG REAL:
+        // FriendNpcBuilder.SeatRootOffset (2.3) YA baja la raíz para alinear la cabeza
+        // a la altura del asiento (como si estuviera parado); este drop ENCIMA la
+        // bajaba OTRO METRO más -- las dos correcciones se sumaban y el personaje
+        // terminaba bien por debajo del auto. El achicado (seatedScaleY) solo, alrededor
+        // del pivote del modelo, ya hace la mayor parte del trabajo de compactar --
+        // sacado el drop extra (0 por default).
         public float seatedScaleY = 0.55f;   // alto del modelo sentado (fracción, además de doblar los muslos)
-        public float seatedModelDrop = 0.9f; // cuánto baja el modelo al sentarse (m)
+        public float seatedModelDrop = 0f;   // ajuste fino opcional, además del achicado (m)
 
         Transform[] _t;
         Quaternion[] _rest;

@@ -7,6 +7,28 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — El bug de fondo: SeatRootOffset + seatedModelDrop se sumaban
+
+Con el "cayéndose" y el "no spawnearon" ya resueltos, el owner reportó que
+seguían apareciendo "detrás y también debajo del auto" — esta vez SIN caer
+con el tiempo, mal posicionados de entrada. Bug real que ya se había
+identificado como riesgo al agregar el squash (ver entrada "causa real
+encontrada") pero nunca se terminó de sacar: `FriendNpcBuilder.
+SeatRootOffset = 2.3` YA baja la raíz para alinear la cabeza a la altura del
+asiento (como si estuviera parado); `HumanWalkAnim.seatedModelDrop = 0.9`
+bajaba el modelo OTRO METRO encima de eso — las dos correcciones se sumaban,
+terminando bien por debajo del auto. `seatedModelDrop` default → **0**; el
+achicado (`seatedScaleY=0.55`, alrededor del pivote del modelo) hace la
+compactación sola, sin doble resta. Sigue existiendo el campo por si hace
+falta un ajuste fino chico, pero ya no arranca en 0.9.
+
+⚠ Pendiente confirmar si esto también resuelve el "detrás" (Z) — la
+evaluación de profundidad que se hizo antes fue siempre en Edit mode (sin el
+squash aplicado), así que no es dato confiable con este fix. Regenerar y
+mirar en Play.
+
+---
+
 ## 2026-07-26 — Encuentra la causa real de los amigos "cayéndose" al dar Play
 
 Owner: en Edit mode los 3 amigos se veían bien sentados (posición ya
