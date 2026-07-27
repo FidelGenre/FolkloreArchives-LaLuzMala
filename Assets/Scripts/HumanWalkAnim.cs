@@ -59,11 +59,14 @@ namespace FolkloreArchives
         // a la altura del asiento (como si estuviera parado); este drop ENCIMA la
         // bajaba OTRO METRO más -- las dos correcciones se sumaban y el personaje
         // terminaba bien por debajo del auto.
-        // owner (ajuste en vivo, con Play): -0.8 los deja bien ubicados -- horneado como
-        // default. Con la posición ya resuelta por el drop, "achatados" era el achicado
-        // (0.55) siendo demasiado agresivo -- subido a 0.8 (menos aplastado, sigue
-        // compactando un poco para no clavar la cabeza en el techo).
-        public float seatedScaleY = 0.8f;     // alto del modelo sentado (fracción, además de doblar los muslos)
+        // owner (ajuste en vivo, con Play): -0.8 los deja bien ubicados con scaleY=0.55.
+        // Subir SOLO la escala a 0.8 (sin re-probar el combo) los mandó DENTRO del piso
+        // del auto -- el achicado no pivotea desde los pies sino desde un punto más al
+        // medio del modelo, así que escala y drop están ACOPLADOS: más escala = las
+        // piernas se estiran más hacia abajo desde ese pivote, no solo "menos achatado".
+        // Vuelto al combo confirmado (0.55 / -0.8); si sigue "achatado", subir la escala
+        // DE A POCO (ej. 0.6, 0.65...) y volver a chequear el drop cada vez, no saltar.
+        public float seatedScaleY = 0.55f;    // alto del modelo sentado (fracción, además de doblar los muslos)
         public float seatedModelDrop = -0.8f; // cuánto sube/baja el modelo al sentarse (m) -- negativo = sube
 
         Transform[] _t;

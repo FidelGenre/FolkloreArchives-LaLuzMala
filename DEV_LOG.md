@@ -20,6 +20,14 @@ Mucho más rápido que seguir iterando por captura+regenerar — si hace falta
 un ajuste más, misma técnica: Play, tocar `Seated Scale Y`/`Seated Model
 Drop` en el Inspector del `Friend_X`, ver el resultado al toque.
 
+⚠ **Corrección:** subí `Seated Scale Y` solo (0.55→0.8) sin volver a probar
+el combo con el drop, asumiendo que eran independientes -- NO lo son: el
+achicado pivotea desde un punto que no es los pies, así que más escala
+estira las piernas más hacia abajo desde ese pivote (no solo "menos
+achatado"). Resultado: quedaron dentro del piso del auto. Vuelto al combo
+CONFIRMADO (0.55 / -0.8). Si sigue "achatado", subir la escala de a poco y
+re-chequear el drop en cada paso, no cambiar un valor solo.
+
 ---
 
 ## 2026-07-26 — El bug de fondo: SeatRootOffset + seatedModelDrop se sumaban
