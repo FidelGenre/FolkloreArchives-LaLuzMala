@@ -7,6 +7,21 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Delete Map + Generate arregló el "no spawnearon"; ajuste fino de profundidad
+
+Confirmado: **Delete Map + Generate limpio resolvió** que los amigos no
+aparecían — era estado turbio del Editor acumulado tras muchos regenerados
+seguidos en la misma sesión, no un bug de código (como se sospechaba en la
+entrada anterior).
+
+Con los personajes ya visibles y sentados, quedó un ajuste fino: el empuje
+hacia atrás de `paxBase` (-0.45, de la vuelta anterior) se pasó para el otro
+lado — ahora atraviesan el respaldo/asiento de ATRÁS. Bajado a **-0.30**, el
+MISMO valor que ya usa el conductor (`dSeat`) — ya probado que ese no choca
+contra nada.
+
+---
+
 ## 2026-07-26 — "no spawnearon ahora": los 3 amigos sin Model (sin causa confirmada)
 
 Después de la 4ta vuelta (squash), el owner reportó que los 3 amigos dejaron

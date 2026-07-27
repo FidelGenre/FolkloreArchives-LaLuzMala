@@ -137,13 +137,11 @@ namespace FolkloreArchives.MapGen
                 seatBase = wheelLocal + new Vector3(0f, 0.42f * HeightBoost, 0f) * (TargetLength / 4.4f);
                 dSeat = seatBase + new Vector3(0f, 0f, -0.30f) * (TargetLength / 4.4f);
             }
-            // owner: "el de adelante esta muy adelante, ponelo mas atras" -- seatBase
-            // (acompañante/traseros) nunca tenía el empuje hacia atrás que sí tiene el
-            // conductor (dSeat), así que quedaban a la profundidad del VOLANTE, casi
-            // pegados al tablero. Un primer intento (-0.15) no alcanzó (2da vuelta, con
-            // captura) -- subido a -0.45 (más que el propio conductor: el acompañante no
-            // necesita llegar al volante/pedales, puede ir bastante más atrás).
-            Vector3 paxBase = seatBase + new Vector3(0f, 0f, -0.45f) * (TargetLength / 4.4f);
+            // owner: "el de adelante esta muy adelante, ponelo mas atras" -- primer
+            // intento -0.15 no alcanzó; -0.45 se pasó para el otro lado (ahora atraviesa
+            // el respaldo/asiento de atrás). Vuelto a -0.30, el MISMO empuje que ya usa
+            // el conductor (dSeat) -- ya está probado que ese valor no choca contra nada.
+            Vector3 paxBase = seatBase + new Vector3(0f, 0f, -0.30f) * (TargetLength / 4.4f);
             ctrl.driverSeat     = Seat(car.transform, "Seat_Driver",   dSeat);
             ctrl.frontPassenger = Seat(car.transform, "Seat_FrontPax", paxBase + new Vector3(seatSpread, 0f, 0f));
             ctrl.rearLeft       = Seat(car.transform, "Seat_RearL",    paxBase + new Vector3(0f, 0f, seatDepth));
