@@ -7,6 +7,21 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Ajuste en vivo (Play): seatedModelDrop=-0.8, seatedScaleY=0.8
+
+Después de sacar el drop duplicado, el owner ajustó `Seated Model Drop` EN
+VIVO con Play apretado (el campo se re-aplica cada frame en `LateUpdate`,
+así que cambiarlo ahí da feedback inmediato sin regenerar) hasta encontrar
+**-0.8** — con eso quedan bien ubicados. Quedó "achatados" (el achicado
+0.55 muy agresivo una vez resuelta la posición) — subido a **0.8**.
+Horneados los dos como default en `HumanWalkAnim.cs`.
+
+Mucho más rápido que seguir iterando por captura+regenerar — si hace falta
+un ajuste más, misma técnica: Play, tocar `Seated Scale Y`/`Seated Model
+Drop` en el Inspector del `Friend_X`, ver el resultado al toque.
+
+---
+
 ## 2026-07-26 — El bug de fondo: SeatRootOffset + seatedModelDrop se sumaban
 
 Con el "cayéndose" y el "no spawnearon" ya resueltos, el owner reportó que

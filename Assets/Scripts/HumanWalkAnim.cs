@@ -58,11 +58,13 @@ namespace FolkloreArchives
         // FriendNpcBuilder.SeatRootOffset (2.3) YA baja la raíz para alinear la cabeza
         // a la altura del asiento (como si estuviera parado); este drop ENCIMA la
         // bajaba OTRO METRO más -- las dos correcciones se sumaban y el personaje
-        // terminaba bien por debajo del auto. El achicado (seatedScaleY) solo, alrededor
-        // del pivote del modelo, ya hace la mayor parte del trabajo de compactar --
-        // sacado el drop extra (0 por default).
-        public float seatedScaleY = 0.55f;   // alto del modelo sentado (fracción, además de doblar los muslos)
-        public float seatedModelDrop = 0f;   // ajuste fino opcional, además del achicado (m)
+        // terminaba bien por debajo del auto.
+        // owner (ajuste en vivo, con Play): -0.8 los deja bien ubicados -- horneado como
+        // default. Con la posición ya resuelta por el drop, "achatados" era el achicado
+        // (0.55) siendo demasiado agresivo -- subido a 0.8 (menos aplastado, sigue
+        // compactando un poco para no clavar la cabeza en el techo).
+        public float seatedScaleY = 0.8f;     // alto del modelo sentado (fracción, además de doblar los muslos)
+        public float seatedModelDrop = -0.8f; // cuánto sube/baja el modelo al sentarse (m) -- negativo = sube
 
         Transform[] _t;
         Quaternion[] _rest;
