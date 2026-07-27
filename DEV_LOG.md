@@ -7,6 +7,34 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Encuentra la causa real de los amigos "cayéndose" al dar Play
+
+Owner: en Edit mode los 3 amigos se veían bien sentados (posición ya
+resuelta), pero al apretar Play **caían visiblemente** hasta terminar bajo
+tierra, debajo del auto. Descartado que fuera el auto (Rigidbody) hundiéndose
+-- su Position se queda fija, confirmado por el owner. Como los amigos NO
+tienen física propia (sin Rigidbody/CharacterController), si se mueven con
+el tiempo tiene que ser un SCRIPT.
+
+**Causa:** `FriendWander` (el que los hacía caminar cerca de la ruta) se
+supone que `SeatInCar` lo destruye (`DestroyImmediate`) al sentarlos -- pero
+por lo que sea, esta vez no llegó a tiempo. Si sigue activo, `Update()` mueve
+`transform.position` en coordenadas de MUNDO cada frame Y PISA la altura Y
+contra el terreno real (`Terrain.SampleHeight`, clamp a
+`RoadSurfaceHeight`) -- sin ninguna noción de "estoy sentado adentro de un
+auto". Arranca desde donde el personaje YA está (adentro del auto, en alto)
+y lo arrastra hacia el nivel del piso/ruta con el tiempo -- coincide EXACTO
+con "cae gradualmente hasta abajo del auto".
+
+**Fix (segunda capa de seguridad, no reemplaza el Destroy):**
+`FriendWander.Start()` ahora chequea si hay un `HumanWalkAnim` con
+`seated=true` en el mismo objeto -- si es así, se autodesactiva
+(`enabled=false`) ANTES de calcular ningún punto de caminata, en vez de
+depender 100% de que `SeatInCar` lo haya destruido a tiempo. Así, aunque el
+`Destroy` falle por la razón que sea, el personaje sentado nunca camina.
+
+---
+
 ## 2026-07-26 — Delete Map + Generate arregló el "no spawnearon"; ajuste fino de profundidad
 
 Confirmado: **Delete Map + Generate limpio resolvió** que los amigos no

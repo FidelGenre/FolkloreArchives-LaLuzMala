@@ -32,6 +32,16 @@ namespace FolkloreArchives
 
         void Start()
         {
+            // owner: "cuando doy play... se caen abajo de la tierra debajo el auto" --
+            // este script mueve en coordenadas de MUNDO y pisa la Y contra el terreno
+            // cada frame, SIN saber que el personaje puede estar sentado adentro de un
+            // auto (FriendNpcBuilder.SeatInCar debería haber destruido este componente
+            // al sentarlo, pero por lo que sea a veces no llega a tiempo). Segunda capa
+            // de seguridad: si hay un HumanWalkAnim sentado en el mismo objeto, no
+            // caminar -- desactivarse solo en vez de arrastrar al personaje al piso.
+            var anim = GetComponent<HumanWalkAnim>();
+            if (anim != null && anim.seated) { enabled = false; return; }
+
             // arranca yendo hacia donde ya está mirando (el yaw que le puso FriendNpcBuilder)
             Vector3 fwd = transform.forward;
             _a = transform.position;
