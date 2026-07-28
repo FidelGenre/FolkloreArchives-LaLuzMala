@@ -61,8 +61,9 @@ namespace FolkloreArchives.MapGen
             // owner: ajustó Seated Model Drop en vivo para este personaje puntual (le
             // hacía falta un valor distinto al default global de HumanWalkAnim).
             public float? seatedModelDropOverride;
+            public float? seatedScaleYOverride;
             public FriendDef(string n, string f, string tx, float h, float ox, float oz, float y, FolkloreArchives.HumanWalkAnim.Limb[] customLimbs = null, TexPart[] parts = null)
-            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; texParts = parts; seatPosOverride = null; seatedThighAngleOverride = null; seatedModelDropOverride = null; }
+            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; texParts = parts; seatPosOverride = null; seatedThighAngleOverride = null; seatedModelDropOverride = null; seatedScaleYOverride = null; }
         }
 
         // owner: "que no esten todos duros en pose de t" -- HumanWalkAnim corrige la pose
@@ -125,7 +126,9 @@ namespace FolkloreArchives.MapGen
             // owner: "descargue esa chica descomprimila y reemplazala por la que ya
             // esta" -- reemplaza a la vieja "PSX Female Secretary" de Vinrax (no
             // pegaba con la ambientación rural). Misma posición/altura que antes.
-            new FriendDef("Friend_FemaleSec",    Dir + "GirlRetro/girl_retro.fbx",              null,                                      2.3f, -8.0f,  0.2f,  90f, GirlRetroLimbs, GirlRetroTex),
+            // Ajustada 100% en vivo (Play) hasta "esa es la female, guardala".
+            new FriendDef("Friend_FemaleSec",    Dir + "GirlRetro/girl_retro.fbx",              null,                                      2.3f, -8.0f,  0.2f,  90f, GirlRetroLimbs, GirlRetroTex)
+                { seatPosOverride = new Vector3(0.6090f, -0.1883f, -0.7f), seatedThighAngleOverride = -61f, seatedModelDropOverride = -0.5f, seatedScaleYOverride = 0.76f },
         };
 
         // roadCenter: mismo punto (X,Z) donde arranca el auto manejable (CarBuilder.cs,
@@ -296,6 +299,7 @@ namespace FolkloreArchives.MapGen
             if (f.limbs != null) anim.limbs = f.limbs;
             if (f.seatedThighAngleOverride.HasValue) anim.seatedThighAngle = f.seatedThighAngleOverride.Value;
             if (f.seatedModelDropOverride.HasValue) anim.seatedModelDrop = f.seatedModelDropOverride.Value;
+            if (f.seatedScaleYOverride.HasValue) anim.seatedScaleY = f.seatedScaleYOverride.Value;
 
             // owner: "necesito ver como caminan" -- deambulan de a poco cerca de donde
             // arrancan (no es IA real, solo para que no queden parados como estatuas).

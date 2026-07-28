@@ -7,6 +7,19 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Friend_FemaleSec: último de los 3, valores finales horneados
+
+Owner terminó de ajustar a mano en Play, "esa es la female, guardala":
+posición propia, ángulo -61, drop -0.5, escala 0.76 (levemente distinta del
+default global 0.77 -- nuevo `seatedScaleYOverride`, mismo patrón que los
+otros 3 campos de override). Con esto, **los 3 amigos** tienen su pose/
+posición individual horneada — nadie depende más de la fórmula genérica
+(`SeatRootOffset`/paxBase), que costó muchísimo afinar a ciegas por captura
+en las vueltas anteriores. `SeatRootOffset`/`paxBase` quedan como fallback
+sin usar (por si se agrega un 4to personaje sin ajustar a mano todavía).
+
+---
+
 ## 2026-07-26 — Friend_MaleGreenJkt: valores finales horneados
 
 Owner terminó de ajustar `Friend_MaleGreenJkt` 100% en vivo (Play) hasta
