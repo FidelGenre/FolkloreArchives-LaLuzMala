@@ -121,53 +121,10 @@ namespace FolkloreArchives.MapGen
         // ---------------- ESTEPA + MOLINO ----------------
         static Transform Estepa(Transform parent, Terrain t)
         {
-            var g = BuilderUtils.Group(parent, "Estepa", BuilderUtils.Ground(t, MapLayout.EstepaCenter));
-            BuilderUtils.Label(g, "ESTEPA", g.position + Vector3.up * 7f);
-
-            // molino australiano oxidado: torre reticulada + cabezal + aspas + veleta
-            var mp = BuilderUtils.Ground(t, MapLayout.Molino);
-            var mill = BuilderUtils.Group(g, "MolinoOxidado", mp);
-            BuilderUtils.Label(mill, "MOLINO", mp + Vector3.up * 10f);
-            // molino real descargado (Windmill/) — si no está, molino procedural
-            if (SpawnModel(DirWindmill, mill, mp, 8f, 0f, true, "MolinoModelo") == null)
-            {
-            float towerH = 7.5f;
-            // 4 patas que convergen (torre reticulada baja)
-            for (int i = 0; i < 4; i++)
-            {
-                float ang = i * 90f * Mathf.Deg2Rad;
-                Vector3 baseP = mp + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 1.6f;
-                Vector3 topP  = mp + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 0.35f + Vector3.up * towerH;
-                Beam(mill, baseP, topP, 0.10f, Rust);
-            }
-            // cruces (2 niveles)
-            RingRungs(mill, mp, 1.2f, 2.6f, Rust);
-            RingRungs(mill, mp, 0.7f, 5.2f, Rust);
-            // cabezal
-            Vector3 hub = mp + Vector3.up * (towerH + 0.2f);
-            BuilderUtils.Prim(PrimitiveType.Cube, "Head", mill, hub, new Vector3(0.7f, 0.6f, 1.1f), Rust);
-            // rueda de aspas (varias palas radiales sobre un disco)
-            var wheel = BuilderUtils.Group(mill, "Aspas", hub + new Vector3(0f, 0f, 0.7f));
-            for (int b = 0; b < 12; b++)
-            {
-                float a = b * 30f;
-                var blade = BuilderUtils.Prim(PrimitiveType.Cube, "Blade" + b, wheel,
-                    wheel.position, new Vector3(0.28f, 1.9f, 0.05f), MetalDark);
-                blade.transform.RotateAround(wheel.position, Vector3.forward, a);
-            }
-            BuilderUtils.Prim(PrimitiveType.Cylinder, "Axle", mill, hub + new Vector3(0f, 0f, 0.45f),
-                new Vector3(0.12f, 0.5f, 0.12f), MetalDark, new Vector3(90f, 0f, 0f));
-            // veleta (cola)
-            BuilderUtils.Prim(PrimitiveType.Cube, "Vane", mill, hub + new Vector3(0f, 0.1f, -1.2f),
-                new Vector3(0.05f, 0.9f, 1.4f), Rust);
-            } // fin fallback procedural del molino
-
-            // alambrado (2 tiradas) + huesos de oveja
-            Fence(g, t, MapLayout.EstepaCenter + new Vector2(-18, -6), MapLayout.EstepaCenter + new Vector2(20, 2), 6f);
-            Fence(g, t, MapLayout.EstepaCenter + new Vector2(8, 18), MapLayout.EstepaCenter + new Vector2(14, -20), 6f);
-            SheepBones(g, t, MapLayout.EstepaCenter + new Vector2(6, -4));
-            SheepBones(g, t, MapLayout.EstepaCenter + new Vector2(-10, 8));
-            return g;
+            // ESTEPA DESACTIVADA (decisión del owner): se sacó el molino oxidado, el
+            // alambrado (postes/vigas) y los huesos de oveja. Dejo el grupo VACÍO y
+            // registrado para NO correr los índices de persistencia de los demás POIs.
+            return BuilderUtils.Group(parent, "Estepa", BuilderUtils.Ground(t, MapLayout.EstepaCenter));
         }
 
         // ---------------- MALLÍN (pantano) ----------------
@@ -475,9 +432,18 @@ namespace FolkloreArchives.MapGen
             // HeightAt() ya aplana este lote a la altura de la ruta, solo falta ese paso.
             float halfX = MapLayout.YpfPadHalfX - 2f, halfZ = (farZ - nearZ) * 0.5f - 1f;
             float padTop = p.y + 0.12f;
-            BuilderUtils.Prim(PrimitiveType.Cube, "PlayonAsfalto", g,
+            // owner: "sigue frenandose en la entrada... choca/queda trabado contra
+            // algo fisico" -- CreatePrimitive(Cube) deja puesto un BoxCollider por
+            // default, nunca sacado acá (a diferencia de otros props decorativos que sí
+            // llaman DestroyCol). Ese collider cubre TODO el lote (X 437-461, Z
+            // roadZ+11 a roadZ+33) con un borde de ~0.3m de alto justo donde el auto
+            // tiene que cruzar para entrar -- un cordón invisible que lo frenaba en
+            // seco. El terreno de abajo ya está aplanado a esta altura (HeightAt()),
+            // así que este cubo es puramente visual -- no necesita colisión propia.
+            var playon = BuilderUtils.Prim(PrimitiveType.Cube, "PlayonAsfalto", g,
                 new Vector3(p.x, padTop - 0.15f, p.z),
                 new Vector3(halfX * 2f, 0.3f, halfZ * 2f), asphalt);
+            DestroyCol(playon);
             p.y = padTop;   // todo lo de la estación se apoya sobre el playón
 
             // La estación ENTERA es el modelo descargado: GasStationProps trae TIENDA +

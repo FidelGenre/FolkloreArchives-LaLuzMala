@@ -7,6 +7,39 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (14) — Fix real: un cordón invisible en el asfalto de la YPF trababa al auto (**necesita regenerar**)
+
+Owner: "sigue frenandose en la entrada" -- y al preguntar específicamente
+qué hacía, confirmó: "Choca/queda trabado contra algo físico" (no que
+decidía frenar). Todos los ajustes de las últimas ~6 entradas (velocidad,
+steerGain, piso de velocidad, geometría del giro) estaban afinando un
+sistema de waypoints que en realidad NUNCA fue el problema -- el auto se
+la pasó chocando contra un collider invisible.
+
+Causa real: `AreaPoiBuilder.YpfStation()` arma el "PlayonAsfalto" (el
+piso de asfalto visual del lote) con `CreatePrimitive(Cube)`, que deja
+puesto un `BoxCollider` por default -- a diferencia de otros props
+decorativos de este mismo archivo que sí llaman `DestroyCol()` después
+(la vidriera de la tienda, la boya, etc.), acá nunca se sacó. Ese
+collider cubre TODO el lote (X 437-461, Z roadZ+11 a roadZ+33) con un
+borde de ~0.3m de alto justo en la línea que el auto tiene que cruzar
+para entrar desde la ruta -- un cordón invisible actuando de tope físico,
+exactamente donde está el waypoint de "entrada al lote". El terreno de
+abajo ya está aplanado a esa altura por `TerrainBuilder.HeightAt()`, así
+que el cubo es puramente visual -- no necesitaba colisión propia.
+
+Fix: `DestroyCol(playon)` después de crearlo, mismo patrón que ya usan
+los demás props no-sólidos de este archivo. **Esto rehornea geometría del
+mapa -- hace falta Regenerar.**
+
+Lección para no repetir: cuando algo se describe como "choca" o "queda
+trabado", conviene preguntar primero si es un problema de LÓGICA (índice
+de ruta, velocidad, frenado) o de COLISIÓN FÍSICA con algo en la escena,
+antes de seguir afinando constantes de comportamiento que puede que nunca
+hayan sido la causa.
+
+---
+
 ## 2026-07-28 (13) — Fix: piso de velocidad durante el giro (el steerGain solo no alcanzaba)
 
 Owner (3ra vuelta): "sigue trabandose". El steerGain triplicado (entrada
