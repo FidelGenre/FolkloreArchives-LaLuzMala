@@ -7,6 +7,29 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix: perro que no se mueve del spawn + auto girando al llegar
+
+Owner: "aparece el perro pero atraviesa el auto y se queda en la misma
+posicion que spawneo... el auto al llegar a la gasolinera no frena se pone
+a girar". Dos más:
+
+1. **Perro sin moverse:** no era solo la cámara (fix anterior) -- CUALQUIER
+   referencia cacheada en `Start()` (`cc`, `dog` controller, etc.) corría
+   el mismo riesgo de no estar lista si `OpeningDriveSequence` llama a
+   `SitRoutine` antes de que el propio `Start()` de ESE objeto corriera.
+   Sacada toda la inicialización a `EnsureInit()` (idempotente), llamado
+   desde `Start()` Y defensivamente al principio de `SitRoutine`.
+2. **Auto girando al llegar:** con el waypoint final muy cerca, la
+   dirección hacia él se vuelve ruidosa (un pasito de más y el ángulo
+   salta) -- el steer clampeado a ±1 lo hacía girar en el lugar tratando
+   de corregir sin parar. `arriveRadius` subido (5→8) y, MUY cerca del
+   último waypoint, deja de perseguir el ángulo exacto (steer=0, solo
+   frena derecho) en vez de perseguir un punto tan puntual.
+
+Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Causa raíz real: un solo crash tumbaba TODA la secuencia
 
 Owner mandó el error completo de la Console (mucho más útil que adivinar):

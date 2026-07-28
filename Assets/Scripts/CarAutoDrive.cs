@@ -19,7 +19,12 @@ namespace FolkloreArchives
     public class CarAutoDrive : MonoBehaviour
     {
         public Vector2[] waypoints;      // puntos XZ, en orden, horneados por CarBuilder
-        public float arriveRadius = 5f;  // qué tan cerca hay que estar de un waypoint para pasar al siguiente
+        // owner: "se pone a girar" al llegar -- con el waypoint muy cerca, la
+        // DIRECCIÓN hacia él se vuelve muy ruidosa (un pasito de más y el ángulo salta
+        // 180°), y el steer clampeado a ±1 lo hacía girar en el lugar tratando de
+        // corregir sin parar. Radio más generoso para no perseguir un punto tan
+        // puntual.
+        public float arriveRadius = 8f;  // qué tan cerca hay que estar de un waypoint para pasar al siguiente
         public float cruiseThrottle = 0.55f;
         public float steerGain = 1f;
         // owner: "al llegar a la ypf no frena el auto choca" -- el frenado solo miraba
@@ -61,10 +66,6 @@ namespace FolkloreArchives
                 dist = Vector2.Distance(new Vector2(p.x, p.z), target);
             }
 
-            Vector3 toTarget = new Vector3(target.x - p.x, 0f, target.y - p.z);
-            float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
-            float steer = Mathf.Clamp(angle / 45f, -1f, 1f) * steerGain;
-
             // distancia TOTAL restante hasta el ÚLTIMO waypoint (el tramo actual + la
             // suma de los que faltan), no solo el tramo actual -- así un tramo final
             // corto (como el giro hacia el lote de la YPF) no deja al auto sin
@@ -72,6 +73,18 @@ namespace FolkloreArchives
             float remaining = dist;
             for (int j = _index; j < waypoints.Length - 1; j++)
                 remaining += Vector2.Distance(waypoints[j], waypoints[j + 1]);
+
+            // owner: "se pone a girar" -- MUY cerca del waypoint final, no perseguir
+            // más el ángulo exacto (ruidoso a corta distancia, causaba el giro en el
+            // lugar) -- ir derecho y solo frenar.
+            bool finalApproach = _index == waypoints.Length - 1 && dist < arriveRadius * 1.5f;
+            float steer = 0f;
+            if (!finalApproach)
+            {
+                Vector3 toTarget = new Vector3(target.x - p.x, 0f, target.y - p.z);
+                float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
+                steer = Mathf.Clamp(angle / 45f, -1f, 1f) * steerGain;
+            }
 
             // owner: "no frena el auto choca" -- soltar el acelerador solo desacelera
             // con coastDecel (suave); adentro de la zona de frenado hay que FRENAR de

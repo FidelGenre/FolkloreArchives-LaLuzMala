@@ -95,20 +95,29 @@ namespace FolkloreArchives
             foreach (Transform child in t) SetLayerRecursive(child, layer);
         }
 
-        void Start()
+        void Start() => EnsureInit();
+
+        // owner: "el perro no esta sentado en el medio... atraviesa el auto y se
+        // queda en la misma posicion que spawneo" -- no era solo la cámara: CUALQUIER
+        // referencia cacheada acá (cc, dog controller, etc.) podía no estar lista
+        // todavía si OpeningDriveSequence llamaba a SitRoutine antes de que el propio
+        // Start() de este objeto corriera (orden entre objetos DISTINTOS no
+        // garantizado en Unity). Sacado a un método aparte, idempotente (seguro
+        // llamarlo de nuevo), para poder invocarlo también defensivamente desde
+        // SitRoutine sin duplicar la lógica.
+        bool _inited;
+        void EnsureInit()
         {
+            if (_inited) return;
             cc = GetComponent<CharacterController>();
             explorer = GetComponent<MapExplorer>();
             dog = GetComponent<DogController>();
             humanAnim = GetComponent<HumanWalkAnim>();
             netGate = GetComponent<NetOwnerGate>();
-            // owner: "el perro no esta sentado en el medio" -- la cámara del perro
-            // (DogCamera) arranca DESACTIVADA (el juego empieza controlando a la
-            // persona, ver PartyController) -- GetComponentInChildren sin el flag
-            // "incluir inactivos" NUNCA la encontraba, así que `cam` quedaba null y
-            // SitRoutine se rompía en silencio (NullReferenceException adentro de
-            // Glide) apenas intentaba sentar al perro. `true` = buscar también en
-            // hijos desactivados.
+            // la cámara del perro (DogCamera) arranca DESACTIVADA (el juego empieza
+            // controlando a la persona, ver PartyController) -- GetComponentInChildren
+            // sin el flag "incluir inactivos" nunca la encontraba. `true` = buscar
+            // también en hijos desactivados.
             var c = GetComponentInChildren<Camera>(true);
             if (c != null) { cam = c.transform; camComp = c; camParent = cam.parent; camLocalPos = cam.localPosition; }
             // ownModel: se usa tanto para el achicado del perro como para que
@@ -116,6 +125,10 @@ namespace FolkloreArchives
             ownModel = transform.Find("Model");
             if (dog != null && netGate == null && ownModel != null) // en red, NetOwnerGate ya lleva su propia base de escala
                 dogModelScale = ownModel.localScale;
+            // "listo" solo si encontramos lo esencial (cámara) -- si no, reintentar
+            // la próxima vez que se llame (por si el hijo con la cámara todavía ni
+            // existía cuando corrió esto).
+            _inited = cam != null;
         }
 
         // owner: "cuando se une otro jugador ya no me aparecen las opciones de
@@ -357,16 +370,12 @@ namespace FolkloreArchives
         public IEnumerator SitRoutine(CarController c, Transform seat, Transform door)
         {
             busy = true;
-            // owner: "NullReferenceException adentro de Glide" -- segunda red de
-            // seguridad: si por lo que sea `cam` sigue sin estar seteado a esta altura
-            // (Start() no llegó a correr todavía, orden raro entre objetos distintos),
-            // se vuelve a buscar ACÁ, justo antes de necesitarla, en vez de romper la
-            // corrutina en silencio.
-            if (cam == null)
-            {
-                var c2 = GetComponentInChildren<Camera>(true);
-                if (c2 != null) { cam = c2.transform; camComp = c2; camParent = cam.parent; camLocalPos = cam.localPosition; }
-            }
+            // owner: "atraviesa el auto y se queda en la misma posicion que spawneo" --
+            // no era solo la cámara: CUALQUIER referencia (cc, dog controller, etc.)
+            // podía no estar lista si OpeningDriveSequence llama a esto antes de que el
+            // propio Start() de este objeto corra. Red de seguridad: re-inicializa acá
+            // si hace falta (EnsureInit es idempotente, no repite trabajo si ya corrió bien).
+            EnsureInit();
             if (explorer != null) explorer.enabled = false;
             // owner: "desde la perspectiva del perro no me deja mirar hacia los lados
             // dentro del auto" -- DogController tiene su PROPIA lógica de mouse-look
