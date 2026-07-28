@@ -7,6 +7,23 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix piernas al revés de Friend_MaleGreenJkt (rig Mixamo)
+
+Owner: "tiene las piernas alrevez daselas vuelta al malegreen". Causa: cada
+amigo viene de un rig distinto (Vinrax, Mixamo, UE Mannequin) con el eje del
+muslo orientado distinto — el mismo `seatedThighAngle` (compartido por
+`HumanWalkAnim`, ahora -62 por default, calibrado para `Friend_MaleCasual`/
+Vinrax) dobla la pierna para ADELANTE en un rig y para ATRÁS en otro.
+
+Nuevo `FriendDef.seatedThighAngleOverride` (mismo patrón que
+`seatPosOverride`): si está seteado, `BuildOne` lo aplica sobre el
+`HumanWalkAnim` de ESE personaje en vez del default del componente.
+`Friend_MaleGreenJkt` (Mixamo) → **+62** (signo invertido). Si sigue mal,
+probar magnitud distinta además del signo (no necesariamente el mismo
+62 en valor absoluto para un rig distinto).
+
+---
+
 ## 2026-07-26 — Friend_MaleCasual: valores finales horneados (ajustado 100% a mano en vivo)
 
 Owner terminó de ajustar todo EN VIVO con Play (arrastrando/tocando números

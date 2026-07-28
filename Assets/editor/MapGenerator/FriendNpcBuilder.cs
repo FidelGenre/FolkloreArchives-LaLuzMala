@@ -51,8 +51,15 @@ namespace FolkloreArchives.MapGen
             // en vez de calcularlo con la fórmula seat-SeatRootOffset (que costó mucho
             // afinar a ciegas por captura).
             public Vector3? seatPosOverride;
+            // owner: "tiene las piernas alrevez, daselas vuelta al malegreen" -- cada
+            // personaje viene de un rig distinto (Vinrax, Mixamo, UE Mannequin), con el
+            // eje del muslo orientado distinto -- el MISMO ángulo (seatedThighAngle,
+            // compartido por HumanWalkAnim) dobla para adelante en uno y para atrás en
+            // otro. No-null = usar ESTE ángulo en vez del default del componente, solo
+            // para este personaje.
+            public float? seatedThighAngleOverride;
             public FriendDef(string n, string f, string tx, float h, float ox, float oz, float y, FolkloreArchives.HumanWalkAnim.Limb[] customLimbs = null, TexPart[] parts = null)
-            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; texParts = parts; seatPosOverride = null; }
+            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; texParts = parts; seatPosOverride = null; seatedThighAngleOverride = null; }
         }
 
         // owner: "que no esten todos duros en pose de t" -- HumanWalkAnim corrige la pose
@@ -105,7 +112,10 @@ namespace FolkloreArchives.MapGen
             new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f, MaleCasualLimbs)
                 { seatPosOverride = new Vector3(0.5999f, -0.283f, 0.3031f) },
             // al costado norte de la ruta, mirando hacia el auto (+X)
-            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs),
+            // owner: "tiene las piernas alrevez" sentado -- rig Mixamo, eje del muslo
+            // orientado al revés que el de Vinrax (Friend_MaleCasual) -- signo invertido.
+            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs)
+                { seatedThighAngleOverride = 62f },
             // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) --
             // owner: "descargue esa chica descomprimila y reemplazala por la que ya
             // esta" -- reemplaza a la vieja "PSX Female Secretary" de Vinrax (no
@@ -279,6 +289,7 @@ namespace FolkloreArchives.MapGen
             // reposo: brazos bajados en vez de en cruz (T-pose).
             var anim = go.AddComponent<FolkloreArchives.HumanWalkAnim>();
             if (f.limbs != null) anim.limbs = f.limbs;
+            if (f.seatedThighAngleOverride.HasValue) anim.seatedThighAngle = f.seatedThighAngleOverride.Value;
 
             // owner: "necesito ver como caminan" -- deambulan de a poco cerca de donde
             // arrancan (no es IA real, solo para que no queden parados como estatuas).
