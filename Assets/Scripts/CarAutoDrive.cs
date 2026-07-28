@@ -91,10 +91,13 @@ namespace FolkloreArchives
             // hacia el lote); si ese tramo + el giro + el estacionamiento ya sumaban
             // menos de slowdownDistance, el auto empezaba a frenar todavía en la ruta,
             // antes de siquiera doblar hacia la YPF. La zona de frenado ahora solo
-            // aplica en los últimos 2 waypoints horneados por CarBuilder (el giro hacia
-            // ADENTRO del lote + el punto de estacionar) -- en la ruta, siempre a
-            // velocidad crucero.
-            bool inLotZone = _index >= waypoints.Length - 2;
+            // aplica en los últimos 3 waypoints horneados por CarBuilder (los DOS giros
+            // hacia ADENTRO del lote + el punto de estacionar) -- en la ruta, siempre a
+            // velocidad crucero. 3 en vez de 2: owner reportó después "no esta entrando
+            // al pavimento, sigue trabando" -- el giro cerrado a velocidad crucero se
+            // pasaba de largo sin capturar el waypoint; entrar más lento a la zona de
+            // giro (no solo al tramo final) ayuda al steer a completarlo a tiempo.
+            bool inLotZone = _index >= waypoints.Length - 3;
 
             // owner: "no frena el auto choca" -- soltar el acelerador solo desacelera
             // con coastDecel (suave); adentro de la zona de frenado hay que FRENAR de

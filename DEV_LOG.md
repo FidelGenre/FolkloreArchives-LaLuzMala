@@ -7,6 +7,33 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (3) — Fix: el auto pasaba de largo el giro hacia la YPF (**necesita regenerar**)
+
+Owner: "SE SIGUE TRABANDO Y ANDANDO PARA DELANTE EL AUTO NO ESTA ENTRANDO
+AL PAVIMENTO Y FRENANDO POR LO QUE NADIE BAJA" -- después del fix anterior
+(frenado solo en los últimos waypoints, ya no en toda la ruta), apareció
+un problema distinto: con UN SOLO waypoint de giro hacia el lote, el auto
+tenía que saltar ~12m de lado (Z, `YpfPadNearZ+2`) en muy pocos metros de
+avance (X, el tramo entre `turnInX` y `YpfStation.x`, apenas 6m) -- un
+giro demasiado cerrado para completarlo a velocidad crucero con el steer
+clampeado ±1. Lo pasaba de largo sin que `dist` bajara nunca de
+`arriveRadius`, así que `_index` nunca avanzaba al waypoint del lote --
+seguía "apuntando" para siempre a un punto que ya había pasado de largo,
+de ahí el "trabado andando para delante" sin fin.
+
+Fix en `CarBuilder.cs`: `turnInX` más lejos (`YpfStation.x - 14f` en vez
+de `-6f`, más metros de avance disponibles para girar) + el giro partido
+en DOS waypoints más suaves en vez de uno solo (giro 1 a mitad de camino,
+giro 2 ya adentro del lote). `CarAutoDrive.cs`: la zona de frenado
+(`inLotZone`) ahora cubre los últimos 3 waypoints (los 2 giros + el punto
+de estacionar) en vez de 2, para que el auto entre más lento a la zona de
+giro y el steer tenga margen de completarlo. **Esto rehornea la ruta en
+`CarBuilder.Build()` -- hace falta Regenerar el mapa para que tome
+efecto** (a diferencia del fix de throttle=0 anterior, que era código puro
+sin datos horneados).
+
+---
+
 ## 2026-07-28 (2) — Fix: frenado prematuro/interminable en YPF + cámara del perro atraviesa al humano
 
 Owner: "cuando miro desde la camara del perro veo atravez del humano, capaz

@@ -183,15 +183,23 @@ namespace FolkloreArchives.MapGen
             // ruta principal y frenaba EN el asfalto, nunca doblaba hacia el lote (que
             // está a un costado, al norte -- ver MapLayout.YpfPadNearZ/FarZ, un lote
             // aparte de la ruta, no sobre ella). Ahora sigue la ruta hasta pasar un
-            // poco YpfStation.x, y agrega 2 puntos más doblando hacia ADENTRO del lote
-            // (a mitad de camino entre el borde cercano y lejano) -- primera
-            // aproximación, a ajustar en vivo si el giro queda muy cerrado/ancho.
-            float turnInX = MapLayout.YpfStation.x - 6f;
+            // poco YpfStation.x, y agrega puntos más doblando hacia ADENTRO del lote.
+            // owner (2da vuelta): "no esta entrando al pavimento, sigue trabando y
+            // andando para delante" -- con UN SOLO waypoint de giro, el auto tenía que
+            // saltar ~12m de lado (Z) en muy pocos metros de avance (X, el tramo entre
+            // turnInX y YpfStation.x) -- un giro demasiado cerrado para completarlo a
+            // velocidad crucero con el steer clampeado; lo pasaba de largo sin llegar
+            // a "capturar" el waypoint (dist nunca bajaba de arriveRadius) y seguía de
+            // largo por la ruta para siempre. turnInX más lejos (más metros de avance
+            // para girar) + el giro partido en DOS pasos más suaves en vez de uno solo.
+            float turnInX = MapLayout.YpfStation.x - 14f;
             for (float x = carX; x > turnInX; x -= stepX)
                 waypoints.Add(new Vector2(x, MapLayout.PavedRouteZAt(x)));
             float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
             float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;
-            waypoints.Add(new Vector2(MapLayout.YpfStation.x, roadZAtStation + MapLayout.YpfPadNearZ + 2f)); // entra al lote
+            float padEntryZ = roadZAtStation + MapLayout.YpfPadNearZ + 2f;
+            waypoints.Add(new Vector2(MapLayout.YpfStation.x - 7f, (roadZAtStation + padEntryZ) * 0.5f)); // giro 1: a mitad de camino
+            waypoints.Add(new Vector2(MapLayout.YpfStation.x, padEntryZ)); // giro 2: ya adentro del lote
             waypoints.Add(new Vector2(MapLayout.YpfStation.x, padMidZ)); // frena adentro, cerca del centro del lote
 
             var auto = car.AddComponent<FolkloreArchives.CarAutoDrive>();
