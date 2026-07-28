@@ -7,6 +7,30 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (11) — Corrección importante: cambiar defaults de CarAutoDrive SIEMPRE necesita Regenerar
+
+Owner: "no esta yendo a 40". Encontrado el motivo: `cruiseSpeedKmh` (y
+`arriveRadius`/`steerGain`/`slowdownDistance`) son campos públicos de
+`CarAutoDrive` que `CarBuilder` NUNCA asigna explícitamente -- toman el
+valor default de C# solo en el instante en que `Generate` los agrega al
+auto (`AddComponent`). Una vez que el auto YA existe en la escena
+(generado antes), recompilar el script NO actualiza ese valor -- el
+componente serializado se queda con el número que tenía guardado desde la
+última vez que se generó. **Corrijo entradas anteriores de HOY: decir
+"puro código, no hace falta regenerar" para cambios de estos defaults
+estuvo MAL** -- la lógica que los usa sí es código puro, pero el VALOR en
+sí depende de cuándo se generó el auto por última vez.
+
+Fix concreto: `cruiseSpeedKmh = 40f` ahora se asigna EXPLÍCITO en
+`CarBuilder.cs` (no solo como default en `CarAutoDrive.cs`), para que
+quede claro en el código que este número se hornea en Generate. **Regla
+general para el resto de la sesión: cualquier cambio a un campo público
+de `CarAutoDrive`/`CarController` usado por el auto autopiloteado
+necesita Regenerar para tomar efecto, incluso si el cambio "es solo un
+número".**
+
+---
+
 ## 2026-07-28 (10) — Ajuste: 40 km/h de crucero + frenar ANTES del giro cerrado, no solo al entrar
 
 Owner: "necesito que vaya a 40kmh y ahora se esta trabando de nuevo

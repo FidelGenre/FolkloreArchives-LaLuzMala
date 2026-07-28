@@ -216,6 +216,14 @@ namespace FolkloreArchives.MapGen
 
             var auto = car.AddComponent<FolkloreArchives.CarAutoDrive>();
             auto.waypoints = waypoints.ToArray();
+            // owner: "no esta yendo a 40" -- este campo (y arriveRadius/steerGain/
+            // slowdownDistance) solo toman el valor default de C# en el momento en que
+            // Generate los agrega ACÁ; si el auto ya existía en la escena de una
+            // generación anterior, recompilar el script NO actualiza el valor ya
+            // guardado -- hace falta volver a Generar. Puesto EXPLÍCITO acá (en vez de
+            // depender solo del default en CarAutoDrive.cs) para que quede claro que
+            // cambiar este número siempre requiere Regenerar.
+            auto.cruiseSpeedKmh = 40f;
             // owner: "puse play y no spawnie dentro del auto se fue sin mi" -- si esto
             // arranca activo ACÁ (Generate/bake), el auto empieza a manejar desde el
             // frame 1 de Play, ANTES de que OpeningDriveSequence termine de sentar al
