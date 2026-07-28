@@ -22,7 +22,13 @@ namespace FolkloreArchives
         public float arriveRadius = 5f;  // qué tan cerca hay que estar de un waypoint para pasar al siguiente
         public float cruiseThrottle = 0.55f;
         public float steerGain = 1f;
-        public float slowdownDistance = 15f; // frena suave en los últimos metros antes del último waypoint
+        // owner: "al llegar a la ypf no frena el auto choca" -- el frenado solo miraba
+        // la distancia del ÚLTIMO tramo (waypoint a waypoint), pero el giro hacia
+        // adentro del lote de la YPF agrega un tramo final CORTO -- el auto llegaba a
+        // ese tramo todavía a velocidad crucero, sin espacio para frenar a tiempo.
+        // Ahora slowdownDistance se mide contra la distancia TOTAL restante (sumando
+        // TODOS los tramos que faltan, no solo el actual).
+        public float slowdownDistance = 25f; // frena suave en los últimos metros antes del último waypoint
 
         public bool active;
         public bool HasArrived { get; private set; }
@@ -59,11 +65,16 @@ namespace FolkloreArchives
             float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
             float steer = Mathf.Clamp(angle / 45f, -1f, 1f) * steerGain;
 
-            // frenar suave solo en el tramo final, hacia el último waypoint
-            bool lastLeg = _index == waypoints.Length - 1;
+            // frenar suave: distancia TOTAL restante hasta el ÚLTIMO waypoint (el
+            // tramo actual + la suma de los que faltan), no solo el tramo actual --
+            // así un tramo final corto (como el giro hacia el lote de la YPF) no deja
+            // al auto sin espacio para frenar.
+            float remaining = dist;
+            for (int j = _index; j < waypoints.Length - 1; j++)
+                remaining += Vector2.Distance(waypoints[j], waypoints[j + 1]);
             float throttle = cruiseThrottle;
-            if (lastLeg && dist < slowdownDistance)
-                throttle *= Mathf.Clamp01(dist / slowdownDistance);
+            if (remaining < slowdownDistance)
+                throttle *= Mathf.Clamp01(remaining / slowdownDistance);
 
             car.autoPilot = true;
             car.externalThrottle = throttle;

@@ -7,6 +7,36 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix: jugador "encima del malegreen" + auto que no frena y choca
+
+Owner: "aparezco sentado encima del malegreen no como el orden que te habia
+dado... y al llegar a la ypf no frena el auto choca". Dos bugs reales:
+
+1. **Overlap real, no solo mal ajustado:** al reasignar los 3 amigos a
+   asientos nuevos (entrada anterior), los `seatPosOverride` VIEJOS
+   quedaron puestos -- son posiciones ABSOLUTAS, no relativas al asiento
+   que se les pasa, así que cada uno seguía clavado en las coordenadas de
+   SU asiento ANTERIOR sin importar a qué seat apuntara el código.
+   `Friend_MaleGreenJkt` seguía en las coordenadas de `rearLeft` (su
+   asiento viejo) -- exactamente donde ahora se sienta el jugador real.
+   Encontrado el atajo: la posición VIEJA de `Friend_MaleCasual`
+   (calibrada para `frontPassenger`) es justo la que necesita
+   `Friend_FemaleSec` ahora, y la posición VIEJA de `Friend_FemaleSec`
+   (calibrada para `rearRight`) es justo la que necesita
+   `Friend_MaleGreenJkt` ahora -- las intercambié entre los dos.
+   `Friend_MaleCasual` (nuevo, al conductor, sin precedente) se quedó sin
+   override, cae al fallback de la fórmula.
+2. **Frenado insuficiente:** `CarAutoDrive` solo medía la distancia de
+   frenado contra el ÚLTIMO tramo (waypoint a waypoint) -- el giro nuevo
+   hacia el lote de la YPF agrega un tramo final CORTO, y el auto llegaba
+   ahí todavía a velocidad crucero sin espacio para frenar. Ahora suma la
+   distancia TOTAL restante (todos los tramos que faltan) contra
+   `slowdownDistance` (subida a 25).
+
+Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Fix: no entraba a la YPF + bajaban antes de frenar del todo
 
 Owner: "al llegar el auto no se mete dentro de la ypf y antes de frenar ya

@@ -110,35 +110,35 @@ namespace FolkloreArchives.MapGen
         static readonly FriendDef[] Friends =
         {
             // al costado sur de la ruta, cerca del auto (que queda en offset 0,0), mirando hacia el auto (+X)
-            // owner: ajustó Position a mano en vivo (Play) hasta que "quedó perfecto"
-            // sentado en el asiento del acompañante -- seatPosOverride usa ese valor
-            // exacto en vez de la fórmula (ver SeatInCar).
-            // ⚠ owner (2da vuelta): este personaje ahora va al asiento del CONDUCTOR
-            // (antes acompañante) -- el seatPosOverride de abajo quedó calibrado para
-            // el asiento VIEJO, va a estar mal. Pendiente re-ajustar en vivo como los
-            // demás asientos de esta sesión.
-            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f, MaleCasualLimbs)
-                { seatPosOverride = new Vector3(0.5999f, -0.283f, 0.3031f) },
+            // owner (2da vuelta, "aparezco sentado encima del malegreen, ninguno lo
+            // pusiste en el orden que te pedi"): BUG REAL -- al reasignar los 3 amigos
+            // a asientos nuevos, los seatPosOverride VIEJOS quedaron puestos (son
+            // posiciones ABSOLUTAS, no relativas al asiento que se les pasa) -- cada
+            // uno seguía clavado en las coordenadas de SU asiento ANTERIOR sin importar
+            // a qué seat apuntara el código. Este personaje ahora va al CONDUCTOR, un
+            // asiento que nunca tuvo un amigo decorativo antes (sin precedente) -- sin
+            // override, cae al fallback de la fórmula (seat - SeatRootOffset). Va a
+            // necesitar el mismo ajuste en vivo que todos los demás asientos.
+            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f, MaleCasualLimbs),
             // al costado norte de la ruta, mirando hacia el auto (+X)
             // owner: "tiene las piernas alrevez" sentado -- rig Mixamo, eje del muslo
-            // orientado al revés que el de Vinrax (Friend_MaleCasual). Ajustado 100% en
-            // vivo (Play) hasta "ahi esta, guardalo": ángulo +55 (no +62, primer intento),
-            // posición y drop propios (distintos del default global).
-            // ⚠ owner (2da vuelta): sigue en un asiento trasero (antes rearLeft, ahora
-            // rearRight) -- el ángulo/drop probablemente sigan sirviendo (mismo tipo de
-            // asiento), pero el seatPosOverride (X/Z) casi seguro necesita re-ajuste.
+            // orientado al revés que el de Vinrax. Ángulo +55 sigue siendo válido (es
+            // de SU rig, no del asiento).
+            // owner (2da vuelta): ahora va a rearRight -- reusa la posición que SÍ era
+            // de rearRight (la vieja de Friend_FemaleSec, que estaba ahí antes) en vez
+            // de la propia (que era de rearLeft, donde ahora se sienta el jugador real
+            // -- de ahí "encima del malegreen"). Sigue siendo una aproximación, no
+            // ajustada en vivo para ESTE personaje en ESTE asiento todavía.
             new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs)
-                { seatPosOverride = new Vector3(-0.620f, -0.1883f, -0.8f), seatedThighAngleOverride = 55f, seatedModelDropOverride = -0.5f },
+                { seatPosOverride = new Vector3(0.6090f, -0.1883f, -0.7f), seatedThighAngleOverride = 55f, seatedModelDropOverride = -0.5f },
             // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) --
             // owner: "descargue esa chica descomprimila y reemplazala por la que ya
-            // esta" -- reemplaza a la vieja "PSX Female Secretary" de Vinrax (no
-            // pegaba con la ambientación rural). Misma posición/altura que antes.
-            // Ajustada 100% en vivo (Play) hasta "esa es la female, guardala".
-            // ⚠ owner (2da vuelta): este personaje ahora va al asiento de ACOMPAÑANTE
-            // (antes rearRight) -- el seatPosOverride de abajo quedó calibrado para el
-            // asiento VIEJO, va a estar mal. Pendiente re-ajustar en vivo.
+            // esta" -- reemplaza a la vieja "PSX Female Secretary" de Vinrax.
+            // owner (2da vuelta): ahora va a frontPassenger -- reusa la posición que SÍ
+            // era de frontPassenger (la vieja de Friend_MaleCasual, que estaba ahí
+            // antes). El ángulo/drop/escala son de SU rig, se mantienen.
             new FriendDef("Friend_FemaleSec",    Dir + "GirlRetro/girl_retro.fbx",              null,                                      2.3f, -8.0f,  0.2f,  90f, GirlRetroLimbs, GirlRetroTex)
-                { seatPosOverride = new Vector3(0.6090f, -0.1883f, -0.7f), seatedThighAngleOverride = -61f, seatedModelDropOverride = -0.5f, seatedScaleYOverride = 0.76f },
+                { seatPosOverride = new Vector3(0.5999f, -0.283f, 0.3031f), seatedThighAngleOverride = -61f, seatedModelDropOverride = -0.5f, seatedScaleYOverride = 0.76f },
         };
 
         // roadCenter: mismo punto (X,Z) donde arranca el auto manejable (CarBuilder.cs,
