@@ -34,6 +34,17 @@ namespace FolkloreArchives
         public float enterDuration = 0.6f;
         public bool canOpenDoors = true; // false para el perro: se sienta pero no abre/cierra puertas
 
+        // owner: "vamos todos en el auto desde el inicio de mapa hasta la gasolinera...
+        // el nuevo orden al subirse es persona 1 manejando y perro de acompaniante" --
+        // marca el cambio de etapa (después de la parada en YPF), leído por el fallback
+        // del perro más abajo para saber a qué asiento apuntar (rearMid antes, acompañante
+        // después). Lo pone OpeningDriveSequence al terminar la secuencia de apertura.
+        public static bool PastGasStation = false;
+        // el asiento donde terminaste sentado (null = no estás sentado) -- lo usa
+        // OpeningDriveSequence para detectar "jugador manejando + perro de acompañante"
+        // y disparar que los 3 amigos vuelvan a aparecer atrás.
+        public Transform CurrentSeat => mySeat;
+
         CharacterController cc;
         MapExplorer explorer;
         DogController dog;
@@ -161,11 +172,15 @@ namespace FolkloreArchives
                     // alcanzaba con el fallback (solo actuaba si la mira NO encontraba
                     // nada apuntado); a veces igual apuntaba sin querer a otro asiento y
                     // terminaba ahí. Ahora el perro IGNORA la mira por completo: siempre
-                    // va directo a rearMid con solo estar cerca del auto, sin importar a
-                    // qué esté apuntando.
+                    // va directo al asiento que le corresponde con solo estar cerca del
+                    // auto, sin importar a qué esté apuntando.
+                    // owner: "el nuevo orden... es persona 1 manejando y perro de
+                    // acompaniante" -- después de la gasolinera (PastGasStation), el
+                    // asiento del perro pasa de rearMid a frontPassenger.
                     var nearCar = NearestCarInRange(doorRange);
-                    if (nearCar != null && nearCar.rearMid != null)
-                        StartCoroutine(SitRoutine(nearCar, nearCar.rearMid, PreferredDoor(nearCar, nearCar.rearMid.position)));
+                    var dogSeat = nearCar != null ? (PastGasStation ? nearCar.frontPassenger : nearCar.rearMid) : null;
+                    if (nearCar != null && dogSeat != null)
+                        StartCoroutine(SitRoutine(nearCar, dogSeat, PreferredDoor(nearCar, dogSeat.position)));
                 }
                 else if (target != null)   // a pie, apuntando algo del auto
                 {
@@ -329,7 +344,10 @@ namespace FolkloreArchives
             return (bs, bd, bc);
         }
 
-        IEnumerator SitRoutine(CarController c, Transform seat, Transform door)
+        // owner: "vamos todos en el auto desde el inicio de mapa..." -- pública para que
+        // OpeningDriveSequence pueda sentar al jugador/perro directo al arrancar el
+        // juego, sin pasar por la mira/tecla E. Misma corrutina, sin cambios de lógica.
+        public IEnumerator SitRoutine(CarController c, Transform seat, Transform door)
         {
             busy = true;
             if (explorer != null) explorer.enabled = false;
@@ -420,7 +438,9 @@ namespace FolkloreArchives
             busy = false;
         }
 
-        IEnumerator ExitRoutine()
+        // pública por el mismo motivo que SitRoutine -- OpeningDriveSequence baja al
+        // jugador/perro del auto al llegar a la gasolinera, sin usar E.
+        public IEnumerator ExitRoutine()
         {
             busy = true;
             var c = car; var seat = mySeat; var door = myDoor;
@@ -563,8 +583,8 @@ namespace FolkloreArchives
             }
             else if (!canOpenDoors)
             {
-                // el perro solo puede sentarse en el medio -- mismo criterio que la
-                // acción real de E, ignora la mira por completo.
+                // el perro solo puede sentarse en el asiento que le corresponde -- mismo
+                // criterio que la acción real de E, ignora la mira por completo.
                 if (NearestCarInRange(doorRange) != null) msg = "[ E ] Subir";
             }
             else if (target != null)

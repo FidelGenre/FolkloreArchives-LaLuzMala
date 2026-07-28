@@ -108,6 +108,28 @@ namespace FolkloreArchives.MapGen
             LuzMalaBuilder.Build(root.transform, terrain);   // La Luz Mala (aparece de noche)
             StoryTriggerBuilder.Build(root.transform, terrain);
             TestPlayerBuilder.Build(root.transform, terrain);
+
+            // owner: "vamos todos en el auto desde el inicio de mapa hasta la
+            // gasolinera" -- arma la secuencia de apertura (auto maneja solo, jugador+
+            // perro sentados atrás desde el arranque, parada en YPF, reaparición de
+            // los 3 amigos después). Corre DESPUÉS de TestPlayerBuilder (necesita
+            // TEST_PLAYER/DOG ya armados) y de FriendNpcBuilder.SeatInCar (necesita los
+            // 3 amigos ya reparentados bajo el auto).
+            var testPlayerGO = GameObject.Find("TEST_PLAYER");
+            var dogGO = GameObject.Find("DOG");
+            if (testPlayerGO != null && dogGO != null)
+            {
+                var seq = carGO.AddComponent<FolkloreArchives.OpeningDriveSequence>();
+                seq.car = carGO.GetComponent<FolkloreArchives.CarController>();
+                seq.autoDrive = carGO.GetComponent<FolkloreArchives.CarAutoDrive>();
+                seq.carDoors = carGO.GetComponent<FolkloreArchives.Net.CarDoors>();
+                seq.player = testPlayerGO.GetComponent<FolkloreArchives.PlayerVehicleInteractor>();
+                seq.dog = dogGO.GetComponent<FolkloreArchives.PlayerVehicleInteractor>();
+                seq.friendMaleCasual = carGO.transform.Find("Friend_MaleCasual");
+                seq.friendMaleGreenJkt = carGO.transform.Find("Friend_MaleGreenJkt");
+                seq.friendFemaleSec = carGO.transform.Find("Friend_FemaleSec");
+            }
+            else Debug.LogWarning("[MapGenerator] No encontré TEST_PLAYER/DOG -- OpeningDriveSequence no se armó.");
             Lap("Casa+Story+Player");
 
             // Red (co-op): NET con NetworkManager + transporte + panel de conexión +

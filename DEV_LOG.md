@@ -7,6 +7,73 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Secuencia de apertura: el auto maneja solo hasta la gasolinera
+
+Feature grande, planeada primero (ver `.claude/plans/swirling-drifting-
+patterson.md` si sigue existiendo) antes de tocar código, dado el tamaño.
+Owner: "vamos todos en el auto desde el inicio de mapa hasta la gasolinera...
+el jugador 1 a la derecha del perro... el greenmale a la izquierda... la
+female adelante de acompañante... el male azul [MaleCasual] conduciendo...
+al llegar a la gasolinera se bajan todos... y el nuevo orden al subirse es
+persona 1 manejando y perro de acompañante, y al subirse ambos spawnean los
+otros 3 detrás". Confirmado con el owner: los 3 amigos decorativos quedan
+parados quietos al lado del auto al bajarse (nada de caminar a un edificio,
+por ahora), y la cámara del jugador puede mirar libre durante todo el viaje
+(gratis, ya lo soporta el free-look sentado que ya existía).
+
+**Ruta (`CarBuilder.cs` + nuevo `CarAutoDrive.cs`):** al final de
+`CarBuilder.Build()` se hornea un `Vector2[]` de waypoints XZ cada 8m,
+siguiendo `MapLayout.PavedRouteZAt(x)` desde el spawn del auto hasta
+`MapLayout.YpfStation.x + 8f`. `MapLayout` es editor-only (no accesible
+desde scripts runtime), así que la ruta se calcula UNA VEZ acá y se guarda
+como datos simples en el nuevo componente runtime `CarAutoDrive`, que la
+sigue en `Update()` (ángulo hacia el próximo punto → steer, frena suave en
+el tramo final) y expone `HasArrived`.
+
+**`CarController.cs`:** nuevo `autoPilot`/`externalThrottle`/
+`externalSteer` -- si `autoPilot`, el throttle/steer vienen de ahí en vez
+del teclado; el resto (FixedUpdate, velocidad, giro) queda IGUAL, mismo
+camino de física ya probado estable con el manejo normal.
+
+**`PlayerVehicleInteractor.cs`:** `SitRoutine`/`ExitRoutine` pasan a
+`public` (sin cambiar lógica) para que un script externo pueda sentar/
+bajar al jugador y al perro sin pasar por la mira/tecla E. Nuevo
+`public static bool PastGasStation` y `public Transform CurrentSeat`. El
+fallback del perro (siempre va a un asiento fijo, sin apuntar) ahora
+calcula `dogSeat` dinámico: `rearMid` antes de la gasolinera, `frontPassenger`
+después.
+
+**`FriendNpcBuilder.cs`:** el array `seats` de `SeatInCar` pasa de
+`{ frontPassenger, rearLeft, rearRight }` a `{ driverSeat, rearRight,
+frontPassenger }` -- MaleCasual pasa a manejar, FemaleSec a acompañante,
+MaleGreenJkt al asiento trasero libre. `rearLeft`/`rearMid` quedan sin
+tocar, reservados para el jugador/perro reales. ⚠ Los `seatPosOverride` de
+los 3 quedaron calibrados para sus asientos VIEJOS -- van a estar mal,
+marcados en comentario, pendiente re-ajustar en vivo (mismo método de
+siempre: Play, tocar Position/ángulos, pasar los números finales).
+
+**Nuevo `OpeningDriveSequence.cs`** (orquestador, un componente en el
+auto): sienta jugador+perro en rearLeft/rearMid al arrancar → espera
+`autoDrive.HasArrived` → frena, abre las 5 puertas, baja a jugador+perro →
+para a los 3 amigos cerca del auto (posiciones `standXLocal`, placeholders)
+→ marca `PastGasStation=true` → espera a que jugador esté en driverSeat Y
+perro en frontPassenger → reaparecen los 3 amigos sentados atrás
+(posiciones `rearXLocal`, placeholders). Wireado por `MapGenerator.cs` al
+final de `Generate()` (busca `TEST_PLAYER`/`DOG` por nombre, los 3
+`Friend_X` como hijos del auto).
+
+⚠ **Nada de esto se pudo probar visualmente** (sin Unity corriendo en esta
+sesión) -- es la feature más grande de toda la sesión de trabajo sobre el
+auto, construida en 7 pasos según el plan aprobado. Recomendado probarla
+por partes en ese mismo orden (ver el plan) en vez de todo junto, para
+encontrar más rápido en qué paso específico algo no anda. Esperables:
+ruta que se sale del camino o frena mal (ajustar `cruiseThrottle`/
+`steerGain`/`endX` en `CarAutoDrive`/`CarBuilder`), posiciones de los 3
+amigos mal (paradas y sentadas, ambas son placeholders), y timing de la
+secuencia (los `WaitForSeconds` son estimaciones).
+
+---
+
 ## 2026-07-26 — Sigue "adelantado": empuja DogSeatedForwardOffset a negativo
 
 Con el targeting ya forzado a rearMid siempre (entrada anterior), el owner

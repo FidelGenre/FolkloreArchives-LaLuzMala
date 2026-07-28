@@ -48,6 +48,15 @@ namespace FolkloreArchives
 
         [HideInInspector] public bool driving = false;
 
+        // owner: "vamos todos en el auto desde el inicio de mapa hasta la gasolinera" --
+        // el auto maneja SOLO durante esa secuencia de apertura (ver CarAutoDrive.cs y
+        // OpeningDriveSequence.cs). Mismo camino de física que el manejo normal (probado
+        // estable): autoPilot reemplaza el throttle/steer del teclado por estos dos
+        // campos, sin tocar nada de FixedUpdate/velocidad/giro.
+        [HideInInspector] public bool autoPilot = false;
+        [HideInInspector] public float externalThrottle = 0f;
+        [HideInInspector] public float externalSteer = 0f;
+
         Rigidbody rb;
         float speed;   // velocidad hacia adelante con signo
         float steer;
@@ -70,7 +79,12 @@ namespace FolkloreArchives
             float throttle = 0f;
             steer = 0f;
             var kb = Keyboard.current;
-            if (driving && kb != null && !SettingsMenu.IsOpen)
+            if (autoPilot)
+            {
+                throttle = externalThrottle;
+                steer = externalSteer;
+            }
+            else if (driving && kb != null && !SettingsMenu.IsOpen)
             {
                 throttle = (kb.wKey.isPressed || kb.upArrowKey.isPressed ? 1f : 0f)
                          - (kb.sKey.isPressed || kb.downArrowKey.isPressed ? 1f : 0f);

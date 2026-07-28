@@ -171,6 +171,24 @@ namespace FolkloreArchives.MapGen
 
             car.transform.position = pos + Vector3.up * 0.05f;
             car.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            // owner: "vamos todos en el auto desde el inicio de mapa hasta la
+            // gasolinera" -- hornea la ruta REAL (sigue la curva de PavedRouteZAt)
+            // desde el spawn hasta la estación YPF. MapLayout es editor-only, así que
+            // esto se calcula UNA SOLA VEZ acá en Generate -- CarAutoDrive (runtime)
+            // solo sigue esta lista de puntos, sin necesitar acceso a MapLayout.
+            var waypoints = new System.Collections.Generic.List<Vector2>();
+            float stepX = 8f;
+            float endX = MapLayout.YpfStation.x + 8f; // frena unos metros antes del lote -- a ajustar en vivo
+            for (float x = carX; x > endX; x -= stepX)
+                waypoints.Add(new Vector2(x, MapLayout.PavedRouteZAt(x)));
+            waypoints.Add(new Vector2(endX, MapLayout.PavedRouteZAt(endX)));
+
+            var auto = car.AddComponent<FolkloreArchives.CarAutoDrive>();
+            auto.waypoints = waypoints.ToArray();
+            auto.active = true;
+            ctrl.autoPilot = true;
+
             return car;
         }
 

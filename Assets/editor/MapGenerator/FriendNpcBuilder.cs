@@ -113,6 +113,10 @@ namespace FolkloreArchives.MapGen
             // owner: ajustó Position a mano en vivo (Play) hasta que "quedó perfecto"
             // sentado en el asiento del acompañante -- seatPosOverride usa ese valor
             // exacto en vez de la fórmula (ver SeatInCar).
+            // ⚠ owner (2da vuelta): este personaje ahora va al asiento del CONDUCTOR
+            // (antes acompañante) -- el seatPosOverride de abajo quedó calibrado para
+            // el asiento VIEJO, va a estar mal. Pendiente re-ajustar en vivo como los
+            // demás asientos de esta sesión.
             new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f, MaleCasualLimbs)
                 { seatPosOverride = new Vector3(0.5999f, -0.283f, 0.3031f) },
             // al costado norte de la ruta, mirando hacia el auto (+X)
@@ -120,6 +124,9 @@ namespace FolkloreArchives.MapGen
             // orientado al revés que el de Vinrax (Friend_MaleCasual). Ajustado 100% en
             // vivo (Play) hasta "ahi esta, guardalo": ángulo +55 (no +62, primer intento),
             // posición y drop propios (distintos del default global).
+            // ⚠ owner (2da vuelta): sigue en un asiento trasero (antes rearLeft, ahora
+            // rearRight) -- el ángulo/drop probablemente sigan sirviendo (mismo tipo de
+            // asiento), pero el seatPosOverride (X/Z) casi seguro necesita re-ajuste.
             new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs)
                 { seatPosOverride = new Vector3(-0.620f, -0.1883f, -0.8f), seatedThighAngleOverride = 55f, seatedModelDropOverride = -0.5f },
             // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) --
@@ -127,6 +134,9 @@ namespace FolkloreArchives.MapGen
             // esta" -- reemplaza a la vieja "PSX Female Secretary" de Vinrax (no
             // pegaba con la ambientación rural). Misma posición/altura que antes.
             // Ajustada 100% en vivo (Play) hasta "esa es la female, guardala".
+            // ⚠ owner (2da vuelta): este personaje ahora va al asiento de ACOMPAÑANTE
+            // (antes rearRight) -- el seatPosOverride de abajo quedó calibrado para el
+            // asiento VIEJO, va a estar mal. Pendiente re-ajustar en vivo.
             new FriendDef("Friend_FemaleSec",    Dir + "GirlRetro/girl_retro.fbx",              null,                                      2.3f, -8.0f,  0.2f,  90f, GirlRetroLimbs, GirlRetroTex)
                 { seatPosOverride = new Vector3(0.6090f, -0.1883f, -0.7f), seatedThighAngleOverride = -61f, seatedModelDropOverride = -0.5f, seatedScaleYOverride = 0.76f },
         };
@@ -142,9 +152,14 @@ namespace FolkloreArchives.MapGen
 
         // owner: "hace que se puedan sentar no mas en el auto decorativos" -- llamado
         // por CarBuilder DESPUÉS de armar el auto (Build de acá arriba corre antes,
-        // desde LandmarkBuilder, cuando el auto todavía no existe). Sienta a los 3
-        // amigos ya construidos en los 3 asientos libres (conductor = jugador):
-        // acompañante, trasero izq., trasero der. — mismo orden que `Friends`.
+        // desde LandmarkBuilder, cuando el auto todavía no existe).
+        // owner (2da vuelta, "vamos todos en el auto desde el inicio de mapa hasta la
+        // gasolinera"): los 3 amigos van AHORA en conductor/rearRight/acompañante --
+        // MaleCasual maneja (la secuencia de apertura, OpeningDriveSequence.cs, mueve
+        // el auto solo; MaleCasual solo necesita la pose), FemaleSec de acompañante,
+        // MaleGreenJkt en el asiento trasero libre. `rearLeft`/`rearMid` quedan SIN
+        // TOCAR acá a propósito -- los reserva OpeningDriveSequence para sentar ahí al
+        // jugador y al perro REALES al arrancar el juego. Mismo orden que `Friends`.
         // Puramente decorativo: sin interacción/E, no caminan más (se les saca
         // FriendWander) y quedan fijos con la MISMA pose "sentado" que ya usa el
         // jugador/perro (HumanWalkAnim.seated).
@@ -165,7 +180,7 @@ namespace FolkloreArchives.MapGen
             var group = root.Find("PointsOfInterest/FriendsNPC");
             if (group == null) { Debug.LogWarning("FriendNpc: no encontré FriendsNPC para sentar en el auto."); return; }
 
-            Transform[] seats = { car.frontPassenger, car.rearLeft, car.rearRight };
+            Transform[] seats = { car.driverSeat, car.rearRight, car.frontPassenger };
             for (int i = 0; i < Friends.Length && i < seats.Length; i++)
             {
                 var f = Friends[i];
