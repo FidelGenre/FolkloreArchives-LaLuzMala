@@ -7,6 +7,25 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (16) — Fix: las puertas quedaban abiertas para siempre tras el 2do embarque
+
+Owner: "no se me esta dejando cerrar la puierta luego de que se suben
+todos de nuevo al auto, y cuando se suben todos de nuevo al auto las
+puertas traseras deben cerrarse solas". Las 5 puertas se abren TODAS en
+el paso 3 de `OpeningDriveSequence` (para que jugador+perro+3 amigos se
+bajen en la YPF) -- pero las 3 traseras nunca se volvían a cerrar,
+porque los amigos se re-sientan con un teleport/reparent directo
+(`ReseatFriend`), sin pasar por ninguna interacción de puerta que las
+cierre.
+
+Fix: al final del paso 6 (cuando jugador+perro ya están sentados de
+verdad como conductor+acompañante y los 3 amigos se re-sentaron atrás),
+`OpeningDriveSequence` cierra las 5 puertas del auto directamente vía
+`carDoors.SetDoor(d, false)`. Puro código, sin datos horneados -- no hace
+falta Regenerar.
+
+---
+
 ## 2026-07-28 (15) — Fix: no aparecía la opción de cerrar la puerta durante la secuencia de apertura
 
 Owner: "no me esta saliendo la opcion de cerrar la puerta" (sentado

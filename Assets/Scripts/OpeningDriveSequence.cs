@@ -118,6 +118,16 @@ namespace FolkloreArchives
             ReseatFriend(friendMaleCasual, car.rearLeft, rearLeftLocal);
             ReseatFriend(friendMaleGreenJkt, car.rearMid, rearMidLocal);
             ReseatFriend(friendFemaleSec, car.rearRight, rearRightLocal);
+
+            // owner: "cuando se suben todos de nuevo al auto las puertas traseras
+            // deben cerrarse solas" -- las 5 puertas se abrieron TODAS en el paso 3
+            // para que todos se bajaran; las traseras nunca se vuelven a cerrar porque
+            // los 3 amigos se re-sientan con un teleport/reparent directo (ReseatFriend,
+            // arriba), sin pasar por ninguna interacción de puerta. Cerrarlas acá a
+            // mano, ya con todos adentro de verdad.
+            if (carDoors != null && car.doors != null)
+                foreach (var d in car.doors)
+                    if (d != null) carDoors.SetDoor(d, false);
         }
 
         // desparenta al amigo del auto y lo deja parado (quieto, sin FriendWander --
