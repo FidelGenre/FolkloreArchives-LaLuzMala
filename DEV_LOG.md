@@ -7,6 +7,24 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — El perro sube sin apuntar (va directo al asiento del medio)
+
+El fix de la mira por ángulo funcionó (owner: "se esta subiendo bien"), pero
+pidió algo más: "al ser el perro necesito que no deba apuntar a donde se
+quiero subir ya que no llega a ver, que se suba al que este vacio no mas" —
+el perro es bajo y le cuesta apuntar la mira al asiento por la ventana.
+
+`PlayerVehicleInteractor`: nuevo caso para `canOpenDoors=false` (el perro)
+cuando la mira no encuentra nada apuntado (`target == null`) — nuevo
+`NearestCarInRange(doorRange)` (auto más cercano por su transform raíz, no
+un asiento puntual) y sube directo a `car.rearMid` sin necesitar apuntar,
+con solo estar cerca del auto. Mismo criterio en el cartel (`OnGUI`) para
+que muestre "[ E ] Subir" en esa situación. Si en algún momento SÍ apunta
+bien a un asiento, sigue respetando eso (la mira por ángulo tiene
+prioridad; este es solo el fallback).
+
+---
+
 ## 2026-07-26 — Fix real de la mira: elegir por ÁNGULO, no por distancia del barrido
 
 Angostar las hitboxes (entrada anterior) no alcanzó: el perro seguía

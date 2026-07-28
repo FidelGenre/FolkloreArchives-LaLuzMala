@@ -172,6 +172,18 @@ namespace FolkloreArchives
                     }
                     // el perro apuntando a una puerta (no un asiento): no hace nada
                 }
+                else if (!canOpenDoors)
+                {
+                    // owner: "al ser el perro necesito que no deba apuntar a donde se
+                    // quiere subir ya que no llega a ver, que se suba al que este vacio
+                    // no mas" -- el perro es bajo y le cuesta apuntar bien la mira al
+                    // asiento por la ventana. Si no hay nada apuntado (target null),
+                    // sube directo al asiento del medio del auto más cercano (el que le
+                    // corresponde a él) con solo estar cerca, sin necesitar mira precisa.
+                    var nearCar = NearestCarInRange(doorRange);
+                    if (nearCar != null && nearCar.rearMid != null)
+                        StartCoroutine(SitRoutine(nearCar, nearCar.rearMid, PreferredDoor(nearCar, nearCar.rearMid.position)));
+                }
             }
 
             if (car != null && cam != null && Cursor.lockState == CursorLockMode.Locked)
@@ -233,6 +245,20 @@ namespace FolkloreArchives
         }
 
         static Transform[] Seats(CarController c) => new[] { c.driverSeat, c.frontPassenger, c.rearLeft, c.rearRight, c.rearMid };
+
+        // el auto (por su transform raíz, no un asiento puntual) más cercano dentro de
+        // 'range' -- usado por el perro para subir directo al asiento del medio sin
+        // necesitar apuntar (ver Update).
+        CarController NearestCarInRange(float range)
+        {
+            CarController best = null; float bd = range;
+            foreach (var c in Object.FindObjectsByType<CarController>(FindObjectsSortMode.None))
+            {
+                float d = Vector3.Distance(transform.position, c.transform.position);
+                if (d < bd) { bd = d; best = c; }
+            }
+            return best;
+        }
 
         (CarController, Transform) FindNearestDoor(Vector3 from, float range)
         {
@@ -544,6 +570,11 @@ namespace FolkloreArchives
                     var doors = Doors(target.car);
                     msg = (doors != null && doors.IsOpen(target.part)) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
                 }
+            }
+            else if (!canOpenDoors && NearestCarInRange(doorRange) != null)
+            {
+                // mismo criterio que la acción real de E (el perro no necesita apuntar).
+                msg = "[ E ] Subir";
             }
             if (msg == null) return;
             var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
