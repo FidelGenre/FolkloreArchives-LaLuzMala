@@ -7,6 +7,31 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix: "el auto se fue sin mi" (dos bugs de orden de ejecución)
+
+Owner: "puse play y no spawnie dentro del auto se fue sin mi... y tambien
+se fue sin el perro" -- el auto arrancó a manejar solo pero nadie quedó
+sentado. Dos bugs de orden de ejecución en Unity, ambos reales:
+
+1. `CarBuilder` activaba `CarAutoDrive`/`autoPilot` YA en Generate (bake) --
+   el auto arrancaba a manejar desde el frame 1 de Play, antes de que
+   `OpeningDriveSequence` terminara de sentar al jugador/perro (el glide de
+   cámara tarda `enterDuration`). Ahora arrancan APAGADOS; `OpeningDriveSequence`
+   los prende recién después de sentar a los dos.
+2. `OpeningDriveSequence` vive en el auto; `PlayerVehicleInteractor` del
+   jugador vive en `TEST_PLAYER` -- son objetos DISTINTOS, y el orden de
+   `Start()` entre objetos distintos no está garantizado en Unity. Si
+   `OpeningDriveSequence.Start()` corría antes que el `Start()` del jugador
+   (que arma su referencia a la cámara), `SitRoutine` fallaba a mitad de
+   camino. Agregado `yield return null;` (esperar un frame) al principio de
+   la secuencia para asegurar que todos los `Start()` de la escena ya
+   corrieron.
+
+También: warning nuevo si `car`/`player`/`dog` no están conectados, para
+diagnosticar más rápido si esto vuelve a fallar. Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Secuencia de apertura: el auto maneja solo hasta la gasolinera
 
 Feature grande, planeada primero (ver `.claude/plans/swirling-drifting-

@@ -53,20 +53,36 @@ namespace FolkloreArchives
 
         void Start()
         {
-            if (car == null || player == null || dog == null) return;
+            if (car == null || player == null || dog == null)
+            {
+                Debug.LogWarning($"OpeningDriveSequence: referencia sin conectar (car={car != null}, player={player != null}, dog={dog != null}) -- la secuencia no arranca.");
+                return;
+            }
             StartCoroutine(Run());
         }
 
         IEnumerator Run()
         {
+            // owner: "no spawnie dentro del auto se fue sin mi" -- Start() de objetos
+            // DISTINTOS (este script vive en el auto; player/dog en TEST_PLAYER/DOG) no
+            // tiene orden garantizado en Unity. Esperar un frame acá asegura que el
+            // PROPIO Start() de PlayerVehicleInteractor (que arma su referencia a la
+            // cámara) ya corrió antes de llamar a SitRoutine.
+            yield return null;
+
             // 1) sentar al jugador y al perro reales, sin mira/E.
             if (car.rearLeft != null) player.StartCoroutine(player.SitRoutine(car, car.rearLeft, null));
             if (car.rearMid != null) dog.StartCoroutine(dog.SitRoutine(car, car.rearMid, null));
             yield return new WaitForSeconds(player.enterDuration + 0.1f);
 
-            // 2) autoDrive ya viene activo desde CarBuilder -- solo esperar la llegada.
+            // 2) recién ACÁ arranca el auto solo -- ya con jugador y perro sentados
+            // del todo (glide de cámara terminado).
             if (autoDrive != null)
+            {
+                car.autoPilot = true;
+                autoDrive.active = true;
                 yield return new WaitUntil(() => autoDrive.HasArrived);
+            }
 
             // 3) frenar del todo (por las dudas) y abrir las 5 puertas.
             car.externalThrottle = 0f;

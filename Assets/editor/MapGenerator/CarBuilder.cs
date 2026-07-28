@@ -186,8 +186,13 @@ namespace FolkloreArchives.MapGen
 
             var auto = car.AddComponent<FolkloreArchives.CarAutoDrive>();
             auto.waypoints = waypoints.ToArray();
-            auto.active = true;
-            ctrl.autoPilot = true;
+            // owner: "puse play y no spawnie dentro del auto se fue sin mi" -- si esto
+            // arranca activo ACÁ (Generate/bake), el auto empieza a manejar desde el
+            // frame 1 de Play, ANTES de que OpeningDriveSequence termine de sentar al
+            // jugador/perro (el glide de la cámara tarda enterDuration). Queda apagado
+            // acá; OpeningDriveSequence lo prende recién después de sentar a los dos.
+            auto.active = false;
+            ctrl.autoPilot = false;
 
             return car;
         }
