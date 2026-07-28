@@ -31,7 +31,21 @@ namespace FolkloreArchives
         bool controllingDog;
         bool dogStay;   // el perro está esperando quieto (no te sigue)
 
-        void Start() => Apply();
+        // owner: "cambie al perro y ahora puede abrir y cerrar puertas... y no se esta
+        // podiendo subir" -- Apply() apagaba el MapExplorer de la persona al cambiar al
+        // perro, pero NUNCA su PlayerVehicleInteractor: ese componente seguía activo
+        // todo el tiempo (Update/OnGUI corren en CUALQUIER script enabled, sin importar
+        // "quién controlás"), dibujando su propio cartel de puerta y compitiendo por la
+        // tecla E contra el interactor del perro. Cacheados acá para poder
+        // habilitar/deshabilitar el que corresponda en Apply().
+        PlayerVehicleInteractor _personInteractor, _dogInteractor;
+
+        void Start()
+        {
+            if (person != null) _personInteractor = person.GetComponent<PlayerVehicleInteractor>();
+            if (dog != null) _dogInteractor = dog.GetComponent<PlayerVehicleInteractor>();
+            Apply();
+        }
 
         void Update()
         {
@@ -55,6 +69,10 @@ namespace FolkloreArchives
         {
             // persona: activa solo si NO controlás al perro
             if (person != null) person.enabled = !controllingDog;
+            // mismo criterio para el interactor del auto de cada uno -- solo el que
+            // controlás activamente puede subir/bajar/tocar puertas.
+            if (_personInteractor != null) _personInteractor.enabled = !controllingDog;
+            if (_dogInteractor != null) _dogInteractor.enabled = controllingDog;
             // perro: Player si lo controlás; si no, Idle (quieto) si le dijiste que espere,
             // o Follow (te sigue).
             if (dog != null)

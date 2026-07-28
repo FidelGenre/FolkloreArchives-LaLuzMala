@@ -7,6 +7,28 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix real: PartyController dejaba el interactor de la persona activo
+
+Owner (con MAYÚSCULAS, plantado): "CAMBIE AL PERRO Y AHORA PUEDE ABRIR Y
+CERRAR PUERTAS LO CUAL NO DEBERIA PODER HACER Y NO SE ESTA PODIENDO SUBIR".
+El fix anterior (agregarle `PlayerVehicleInteractor` al perro) no alcanzaba
+-- causa real distinta: `PartyController.Apply()` apagaba el `MapExplorer`
+de la persona al cambiar al perro (`person.enabled = !controllingDog`),
+pero **nunca tocaba su `PlayerVehicleInteractor`** -- ese componente seguía
+activo TODO el tiempo (`Update`/`OnGUI` corren en cualquier script
+`enabled`, sin importar a quién "controlás" vía cámara). Resultado: el
+cartel de puerta que se veía era el de la PERSONA (congelada donde estaba
+parada antes de cambiar), no el del perro -- y los dos interactores
+competían por la misma tecla E al mismo tiempo, rompiendo también el
+"subirse" del perro.
+
+Fix en `PartyController.cs`: cachea `PlayerVehicleInteractor` de persona y
+perro en `Start()`, y `Apply()` ahora también habilita/deshabilita el que
+corresponda junto con la cámara -- solo el personaje que controlás
+activamente puede interactuar con el auto. Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Fix: el perro (modo solo) no podía subir al auto
 
 Owner: "al cambiar con la g al perro no me da la opcion de subirme siendo
