@@ -422,6 +422,16 @@ namespace FolkloreArchives
             float forwardOffset = dog != null ? DogSeatedForwardOffset : 0f;
             transform.rotation = seat.rotation;
             transform.position = seat.position - transform.rotation * new Vector3(0f, camLocalPos.y + extraDrop, -forwardOffset);
+            // owner: "el perro no se queda dentro del auto y no se mueve con el
+            // mismo... pero su camara si" -- el cuerpo se posicionaba UNA VEZ acá pero
+            // nunca se reparentaba al auto (a diferencia de la cámara, que sí se
+            // reparenta al asiento más abajo) -- en cuanto el auto arrancaba a andar,
+            // el cuerpo quedaba clavado en el mundo donde estaba el asiento en ESE
+            // instante. Nunca se notó con el jugador normal porque no ve su propio
+            // cuerpo sentado (self-hide de acá abajo) -- con el perro visible desde
+            // afuera sí se nota. Reparentado al asiento (que sí es hijo del auto) para
+            // que se mueva junto con él; ExitRoutine lo desparenta al bajar.
+            transform.SetParent(seat, true);
 
             // owner: "quedo atras del asiento" -- ya no hace falta correr la cámara del
             // hocico hacia atrás: ahora el modelo del perro se OCULTA de su propia
@@ -474,6 +484,10 @@ namespace FolkloreArchives
             var c = car; var seat = mySeat; var door = myDoor;
             bool wasDriving = c.driving;
             car = null; mySeat = null; myDoor = null; c.driving = false;
+            // desparentar del asiento (SitRoutine lo reparentó ahí para que se mueva
+            // con el auto) -- si no, el cálculo de posición de salida de acá abajo
+            // quedaría relativo al auto en vez de en el mundo.
+            transform.SetParent(null, true);
 
             // apagar los faros del auto (solo si manejabas) y devolverle al jugador su
             // linterna como estaba antes de subir (prendida o apagada) -- esto último

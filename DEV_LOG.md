@@ -7,6 +7,31 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix real: el cuerpo nunca se reparentaba al auto (solo la cámara)
+
+Owner: "se queda ahi parado el perro no se mueve con el auto... pero su
+camara si". Bug de fondo, distinto de los anteriores: `SitRoutine`
+reparenta la CÁMARA al asiento (`cam.SetParent(seat, false)`, más abajo en
+la corrutina), pero el CUERPO (`transform` de la raíz) solo se
+REPOSICIONA una vez (`transform.position = seat.position - ...`), nunca se
+reparenta -- en cuanto el auto arranca a andar, el cuerpo queda clavado en
+el mundo donde estaba el asiento en ESE instante, mientras la cámara (sí
+reparentada) lo sigue perfecto. Nunca se había notado con el jugador
+normal porque no ve su propio cuerpo sentado (self-hide) -- con el perro
+visible desde afuera (la persona lo mira de lejos) sí se nota.
+
+Fix en `PlayerVehicleInteractor.cs`: `SitRoutine` ahora también
+`transform.SetParent(seat, true)` (el cuerpo entero pasa a ser hijo del
+asiento, que sí es hijo del auto -- se mueve con él). `ExitRoutine`
+desparenta (`SetParent(null, true)`) antes de calcular la posición de
+bajada, para no quedar relativo al auto en el mundo.
+
+⚠ No probado en modo RED (co-op/hosted) -- reparentar la raíz de un
+objeto con NetworkTransform podría necesitar atención aparte si algún día
+se prueba con host. Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Fix: perro que no se mueve del spawn + auto girando al llegar
 
 Owner: "aparece el perro pero atraviesa el auto y se queda en la misma
