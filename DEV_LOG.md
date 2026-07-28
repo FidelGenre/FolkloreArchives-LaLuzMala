@@ -7,6 +7,37 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (5) — Fix: el auto no frenaba nunca en la YPF (índice de ruta trabado) + doblaba tarde
+
+Owner: "sigue yendose de largo el auto no frena nunca cuando entra a la
+ypf" / "y dobla muy tarde deberia doblar antes".
+
+**No frena nunca:** efecto secundario del fix anterior (mirar al
+SIGUIENTE waypoint cerca del actual, para evitar el ángulo ruidoso). Con
+eso, el auto podía empezar a girar hacia el siguiente punto ANTES de
+cerrar la distancia al actual ("corner cutting" -- corta camino por
+adentro de la curva) y terminar pasándolo de largo sin nunca entrar en su
+`arriveRadius`. Como el avance de `_index` dependía SOLO de esa distancia,
+quedaba trabado ahí para siempre -- nunca llegaba a `inLotZone` (que mira
+el índice, no la posición real), así que la lógica de frenado nunca se
+activaba por más que el auto físicamente ya hubiera pasado ese punto.
+Fix: `_index` ahora también avanza si el waypoint quedó DETRÁS del auto
+(producto punto negativo entre `transform.forward` y el vector hacia el
+waypoint), sin importar la distancia -- garantiza que el índice siempre
+progresa a medida que el auto efectivamente avanza por la ruta.
+
+**Dobla muy tarde:** el auto recién empezaba a mirar hacia el siguiente
+waypoint a 1.5x `arriveRadius` (12m) de distancia -- muy poco margen para
+acomodar el rumbo antes de un giro cerrado como el de entrada al lote.
+Separado en dos radios: uno más grande (2.5x, ~20m) solo para EMPEZAR a
+mirar hacia el siguiente punto con más anticipación, y el chico (1.5x) se
+guarda nomás para soltar el volante del todo bien cerca del waypoint
+FINAL (ahí sí hace falta estar pegado, es donde frena de verdad).
+
+Puro código, sin datos horneados -- no hace falta Regenerar.
+
+---
+
 ## 2026-07-28 (4) — Fix: el auto se ponía a girar y atravesaba objetos en los giros nuevos
 
 Owner (después de regenerar con el fix anterior): "ahora el auto sigue de

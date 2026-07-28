@@ -51,7 +51,20 @@ namespace FolkloreArchives
             Vector2 target = waypoints[_index];
             float dist = Vector2.Distance(new Vector2(p.x, p.z), target);
 
-            if (dist < arriveRadius)
+            // owner: "sigue yendose de largo... no frena nunca" -- el fix de "se pone a
+            // girar" (más abajo) hace que el auto apunte al SIGUIENTE waypoint apenas
+            // se acerca al actual, así que puede terminar pasando de largo un waypoint
+            // sin nunca entrar en su arriveRadius (corta camino, "corner cutting" -- el
+            // giro hacia el siguiente empieza antes de cerrar la distancia al actual).
+            // Con solo la condición de distancia, _index se quedaba trabado ahí para
+            // siempre -- nunca llegaba a la zona de frenado (inLotZone mira _index, no
+            // la posición real). Ahora también avanza si el waypoint quedó DETRÁS
+            // nuestro (producto punto negativo con transform.forward), sin importar
+            // qué tan lejos haya pasado -- garantiza que el índice siempre progresa a
+            // medida que el auto avanza por la ruta.
+            Vector3 toTargetNow = new Vector3(target.x - p.x, 0f, target.y - p.z);
+            bool passedWaypoint = Vector3.Dot(transform.forward, toTargetNow) < 0f;
+            if (dist < arriveRadius || passedWaypoint)
             {
                 _index++;
                 if (_index >= waypoints.Length)
@@ -88,13 +101,20 @@ namespace FolkloreArchives
             // el punto que estamos a punto de pasar -- da un ángulo estable en vez de
             // ruidoso. Solo cerca del waypoint FINAL (sin "siguiente" al cual mirar) se
             // suelta el volante del todo.
+            // owner: "dobla muy tarde deberia doblar antes" -- mirar al siguiente punto
+            // recién a 1.5x arriveRadius (12m) daba muy poco margen para acomodar el
+            // rumbo antes de un giro cerrado como el de entrada al lote. Radio de
+            // anticipación aparte (más grande) solo para ESTO -- el radio chico
+            // (arriveRadius*1.5) se guarda nomás para soltar el volante del todo cerca
+            // del waypoint FINAL (ahí sí hace falta estar bien cerca, es donde frena).
             bool isLastWaypoint = _index == waypoints.Length - 1;
-            bool closeToTarget = dist < arriveRadius * 1.5f;
+            bool nearForAim = dist < arriveRadius * 2.5f;
+            bool nearForStop = dist < arriveRadius * 1.5f;
             Vector2 aim = target;
-            if (closeToTarget && !isLastWaypoint) aim = waypoints[_index + 1];
+            if (nearForAim && !isLastWaypoint) aim = waypoints[_index + 1];
 
             float steer = 0f;
-            if (!(closeToTarget && isLastWaypoint))
+            if (!(nearForStop && isLastWaypoint))
             {
                 Vector3 toTarget = new Vector3(aim.x - p.x, 0f, aim.y - p.z);
                 float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
