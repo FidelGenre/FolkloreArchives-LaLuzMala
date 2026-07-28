@@ -7,6 +7,29 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix: no entraba a la YPF + bajaban antes de frenar del todo
+
+Owner: "al llegar el auto no se mete dentro de la ypf y antes de frenar ya
+saltan los personajes del auto" -- con el auto ya sentando bien a todos
+(fix anterior), dos problemas más en la llegada:
+
+1. **No entraba al lote:** la ruta horneada solo seguía la ruta PRINCIPAL
+   y frenaba encima del asfalto -- la estación YPF tiene su propio lote
+   aparte (`MapLayout.YpfPadNearZ/FarZ`, al NORTE de la ruta, no sobre
+   ella). `CarBuilder.cs`: la ruta ahora sigue la ruta principal hasta un
+   poco antes de `YpfStation.x`, y agrega 2 puntos más doblando hacia
+   ADENTRO del lote (primera aproximación al centro del lote -- a ajustar
+   en vivo si el giro queda muy cerrado/ancho).
+2. **Bajaban con el auto todavía en movimiento:** `CarAutoDrive.HasArrived`
+   se prende apenas está CERCA del último punto, pero el auto puede seguir
+   con inercia (throttle en 0 no frena en seco). `OpeningDriveSequence`
+   ahora espera ADEMÁS a que `car.SpeedKmh < 2f` antes de abrir puertas y
+   bajar a todos.
+
+Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Fix: "el auto se fue sin mi" (dos bugs de orden de ejecución)
 
 Owner: "puse play y no spawnie dentro del auto se fue sin mi... y tambien

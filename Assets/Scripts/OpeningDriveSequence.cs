@@ -82,6 +82,12 @@ namespace FolkloreArchives
                 car.autoPilot = true;
                 autoDrive.active = true;
                 yield return new WaitUntil(() => autoDrive.HasArrived);
+                // owner: "antes de frenar ya saltan los personajes del auto" --
+                // HasArrived se prende apenas el auto está CERCA del último punto,
+                // pero todavía puede tener velocidad/inercia (el throttle en 0 no para
+                // en seco). Esperar a que la velocidad real baje antes de abrir puertas
+                // y bajar a todos.
+                yield return new WaitUntil(() => car.SpeedKmh < 2f);
             }
 
             // 3) frenar del todo (por las dudas) y abrir las 5 puertas.

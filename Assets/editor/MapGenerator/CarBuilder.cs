@@ -174,15 +174,25 @@ namespace FolkloreArchives.MapGen
 
             // owner: "vamos todos en el auto desde el inicio de mapa hasta la
             // gasolinera" -- hornea la ruta REAL (sigue la curva de PavedRouteZAt)
-            // desde el spawn hasta la estación YPF. MapLayout es editor-only, así que
-            // esto se calcula UNA SOLA VEZ acá en Generate -- CarAutoDrive (runtime)
-            // solo sigue esta lista de puntos, sin necesitar acceso a MapLayout.
+            // desde el spawn hasta ADENTRO del lote de la estación YPF. MapLayout es
+            // editor-only, así que esto se calcula UNA SOLA VEZ acá en Generate --
+            // CarAutoDrive (runtime) solo sigue esta lista de puntos.
             var waypoints = new System.Collections.Generic.List<Vector2>();
             float stepX = 8f;
-            float endX = MapLayout.YpfStation.x + 8f; // frena unos metros antes del lote -- a ajustar en vivo
-            for (float x = carX; x > endX; x -= stepX)
+            // owner: "no se mete dentro de la ypf" -- primer intento solo seguía la
+            // ruta principal y frenaba EN el asfalto, nunca doblaba hacia el lote (que
+            // está a un costado, al norte -- ver MapLayout.YpfPadNearZ/FarZ, un lote
+            // aparte de la ruta, no sobre ella). Ahora sigue la ruta hasta pasar un
+            // poco YpfStation.x, y agrega 2 puntos más doblando hacia ADENTRO del lote
+            // (a mitad de camino entre el borde cercano y lejano) -- primera
+            // aproximación, a ajustar en vivo si el giro queda muy cerrado/ancho.
+            float turnInX = MapLayout.YpfStation.x - 6f;
+            for (float x = carX; x > turnInX; x -= stepX)
                 waypoints.Add(new Vector2(x, MapLayout.PavedRouteZAt(x)));
-            waypoints.Add(new Vector2(endX, MapLayout.PavedRouteZAt(endX)));
+            float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
+            float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;
+            waypoints.Add(new Vector2(MapLayout.YpfStation.x, roadZAtStation + MapLayout.YpfPadNearZ + 2f)); // entra al lote
+            waypoints.Add(new Vector2(MapLayout.YpfStation.x, padMidZ)); // frena adentro, cerca del centro del lote
 
             var auto = car.AddComponent<FolkloreArchives.CarAutoDrive>();
             auto.waypoints = waypoints.ToArray();
