@@ -137,8 +137,15 @@ namespace FolkloreArchives.MapGen
             // owner (2da vuelta): ahora va a frontPassenger -- reusa la posición que SÍ
             // era de frontPassenger (la vieja de Friend_MaleCasual, que estaba ahí
             // antes). El ángulo/drop/escala son de SU rig, se mantienen.
+            // owner: "cuando va adelante hay que subirle un poco las piernas y moverla
+            // apenitas para adelante asi no atravieza" -- piernas más dobladas
+            // (thighAngle más negativo, mismo sentido "hacia adelante" que el default
+            // -62 de HumanWalkAnim) + un empujón chico hacia +Z (adelante del auto, ver
+            // CarBuilder: paxBase resta Z para atrás, así que +Z es hacia el
+            // tablero/parabrisas). Primer ajuste a ojo -- falta confirmar en vivo como
+            // el resto de las poses de esta sesión.
             new FriendDef("Friend_FemaleSec",    Dir + "GirlRetro/girl_retro.fbx",              null,                                      2.3f, -8.0f,  0.2f,  90f, GirlRetroLimbs, GirlRetroTex)
-                { seatPosOverride = new Vector3(0.5999f, -0.283f, 0.3031f), seatedThighAngleOverride = -61f, seatedModelDropOverride = -0.5f, seatedScaleYOverride = 0.76f },
+                { seatPosOverride = new Vector3(0.5999f, -0.283f, 0.38f), seatedThighAngleOverride = -72f, seatedModelDropOverride = -0.5f, seatedScaleYOverride = 0.76f },
         };
 
         // roadCenter: mismo punto (X,Z) donde arranca el auto manejable (CarBuilder.cs,

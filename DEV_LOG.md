@@ -7,6 +7,28 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (18) — Ajuste: piernas de FemaleSec atravesaban el auto sentada de adelante (**necesita regenerar, sin confirmar**)
+
+Owner: "a la female cuando va adelanta hay que subirle un poco las
+piernas y moverla apenitas para adelante asi no atravieza" (viendo el
+modelo atravesando geometría del auto en la vista Scene). Ajuste a ojo,
+SIN confirmar en vivo todavía (a diferencia de la mayoría de las poses de
+esta sesión, que quedaron horneadas recién después de que el owner
+probara en Play y dijera "toma"):
+
+- `seatedThighAngleOverride`: -61° → -72° (muslos más doblados hacia
+  arriba).
+- `seatPosOverride.z`: 0.3031 → 0.38 (empujón chico hacia +Z, que es
+  "adelante" hacia el tablero/parabrisas -- ver `CarBuilder.cs`: `paxBase`
+  resta Z para tirar los asientos hacia ATRÁS del volante, así que +Z es
+  la dirección contraria, hacia adelante).
+
+**Necesita Regenerar** (son datos horneados en `FriendNpcBuilder.cs`) Y
+necesita confirmación del owner en Play -- primer número a ojo, no una
+posición ya probada.
+
+---
+
 ## 2026-07-28 (17) — Hornea posición confirmada del perro sentado de acompañante
 
 Owner probó al perro sentado de acompañante (`frontPassenger`, el asiento
