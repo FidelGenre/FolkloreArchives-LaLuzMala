@@ -7,6 +7,29 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Friend_MaleCasual: valores finales horneados (ajustado 100% a mano en vivo)
+
+Owner terminó de ajustar todo EN VIVO con Play (arrastrando/tocando números
+en el Inspector mientras miraba la vista Game) hasta que "quedó perfecto"
+sentado en el asiento del acompañante:
+- **Pose** (`HumanWalkAnim`, defaults nuevos — aplican a los 3 amigos y al
+  jugador, comparten el mismo script): `seatedThighAngle` -75→**-62**,
+  `seatedScaleY` 0.55→**0.77**, `seatedModelDrop` -0.8→**-0.63**.
+- **Posición** (solo `Friend_MaleCasual`, específica de su asiento): en vez
+  de seguir peleando con la fórmula (`seat.localPosition - SeatRootOffset`,
+  que costó MUCHÍSIMO afinar a ciegas por captura en las vueltas
+  anteriores), nuevo `FriendDef.seatPosOverride` — si está seteado,
+  `SeatInCar` lo usa TAL CUAL en vez de calcularlo. Valor horneado:
+  `(0.5999, -0.283, 0.3031)` local al auto.
+- Los otros 2 (`Friend_MaleGreenJkt`, `Friend_FemaleSec`) siguen con la
+  fórmula vieja (sin `seatPosOverride`) — mismo criterio si el owner los
+  quiere ajustar: mover en Play, pasar los 3 números finales, hornear como
+  `seatPosOverride` de esa entrada en el array `Friends`.
+- **Necesita regenerar** para ver el resultado horneado (los cambios en vivo
+  de Play no persisten solos al salir).
+
+---
+
 ## 2026-07-26 — Ajuste en vivo (Play): seatedModelDrop=-0.8, seatedScaleY=0.8
 
 Después de sacar el drop duplicado, el owner ajustó `Seated Model Drop` EN

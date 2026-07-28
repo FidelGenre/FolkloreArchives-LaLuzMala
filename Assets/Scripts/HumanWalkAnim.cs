@@ -41,7 +41,9 @@ namespace FolkloreArchives
         // owner: "no se le ven las piernas al humano sentado" -- con +75 desaparecían
         // (probablemente doblaban para el lado contrario, atravesando/deformando la
         // malla). Probando el signo invertido.
-        public float seatedThighAngle = -75f;  // grados que se doblan los muslos hacia adelante
+        // owner (ajuste en vivo, con Play, sentado en el auto): -62 quedó perfecto,
+        // junto con seatedScaleY/seatedModelDrop de abajo.
+        public float seatedThighAngle = -62f;  // grados que se doblan los muslos hacia adelante
 
         // owner: "siguen por fuera" / "atravesando el asiento" (probado con los 3
         // amigos sentados decorativos en el auto) -- rotar solo el muslo NO reduce el
@@ -64,10 +66,12 @@ namespace FolkloreArchives
         // del auto -- el achicado no pivotea desde los pies sino desde un punto más al
         // medio del modelo, así que escala y drop están ACOPLADOS: más escala = las
         // piernas se estiran más hacia abajo desde ese pivote, no solo "menos achatado".
-        // Vuelto al combo confirmado (0.55 / -0.8); si sigue "achatado", subir la escala
-        // DE A POCO (ej. 0.6, 0.65...) y volver a chequear el drop cada vez, no saltar.
-        public float seatedScaleY = 0.55f;    // alto del modelo sentado (fracción, además de doblar los muslos)
-        public float seatedModelDrop = -0.8f; // cuánto sube/baja el modelo al sentarse (m) -- negativo = sube
+        // owner (ajuste en vivo final, con Play, Friend_MaleCasual sentado en el auto):
+        // combo confirmado que "quedó perfecto" -- scaleY=0.77 (subida de a poco desde
+        // 0.55, re-chequeando el drop en cada paso como quedó anotado arriba) + drop
+        // recalibrado a -0.63 para esa escala.
+        public float seatedScaleY = 0.77f;     // alto del modelo sentado (fracción, además de doblar los muslos)
+        public float seatedModelDrop = -0.63f; // cuánto sube/baja el modelo al sentarse (m) -- negativo = sube
 
         Transform[] _t;
         Quaternion[] _rest;

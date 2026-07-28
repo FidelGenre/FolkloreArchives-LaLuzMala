@@ -45,8 +45,14 @@ namespace FolkloreArchives.MapGen
             public TexPart[] texParts; // no-null = multi-material (match por nombre de submaterial); null = usar `tex` para todo el modelo
             public float targetHeight, offX, offZ, yaw;
             public FolkloreArchives.HumanWalkAnim.Limb[] limbs; // null = usar los default de HumanWalkAnim (rig estilo Blender: thigh.L/upper_arm.L)
+            // owner: ajustó a mano, en vivo (Play), la posición LOCAL sentada de este
+            // amigo dentro del auto (arrastrando el gizmo / tocando Position en el
+            // Inspector) hasta que "quedó perfecto" -- no-null = usar ESTE valor exacto
+            // en vez de calcularlo con la fórmula seat-SeatRootOffset (que costó mucho
+            // afinar a ciegas por captura).
+            public Vector3? seatPosOverride;
             public FriendDef(string n, string f, string tx, float h, float ox, float oz, float y, FolkloreArchives.HumanWalkAnim.Limb[] customLimbs = null, TexPart[] parts = null)
-            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; texParts = parts; }
+            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; texParts = parts; seatPosOverride = null; }
         }
 
         // owner: "que no esten todos duros en pose de t" -- HumanWalkAnim corrige la pose
@@ -93,7 +99,11 @@ namespace FolkloreArchives.MapGen
         static readonly FriendDef[] Friends =
         {
             // al costado sur de la ruta, cerca del auto (que queda en offset 0,0), mirando hacia el auto (+X)
-            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f, MaleCasualLimbs),
+            // owner: ajustó Position a mano en vivo (Play) hasta que "quedó perfecto"
+            // sentado en el asiento del acompañante -- seatPosOverride usa ese valor
+            // exacto en vez de la fórmula (ver SeatInCar).
+            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f, MaleCasualLimbs)
+                { seatPosOverride = new Vector3(0.5999f, -0.283f, 0.3031f) },
             // al costado norte de la ruta, mirando hacia el auto (+X)
             new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs),
             // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) --
@@ -140,8 +150,9 @@ namespace FolkloreArchives.MapGen
             Transform[] seats = { car.frontPassenger, car.rearLeft, car.rearRight };
             for (int i = 0; i < Friends.Length && i < seats.Length; i++)
             {
+                var f = Friends[i];
                 var seat = seats[i];
-                var friend = group.Find(Friends[i].name);
+                var friend = group.Find(f.name);
                 if (seat == null || friend == null) continue;
 
                 var wander = friend.GetComponent<FolkloreArchives.FriendWander>();
@@ -157,7 +168,7 @@ namespace FolkloreArchives.MapGen
                 // que se puede trabajar directo en el espacio LOCAL del auto.
                 friend.SetParent(car.transform, false);
                 friend.localRotation = Quaternion.identity;
-                friend.localPosition = seat.localPosition - new Vector3(0f, SeatRootOffset, 0f);
+                friend.localPosition = f.seatPosOverride ?? (seat.localPosition - new Vector3(0f, SeatRootOffset, 0f));
 
                 var anim = friend.GetComponent<FolkloreArchives.HumanWalkAnim>();
                 if (anim != null) anim.seated = true;
