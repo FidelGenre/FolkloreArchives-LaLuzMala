@@ -121,10 +121,14 @@ namespace FolkloreArchives
             // anticipación aparte (más grande) solo para ESTO -- el radio chico
             // (arriveRadius*1.5) se guarda nomás para soltar el volante del todo cerca
             // del waypoint FINAL (ahí sí hace falta estar bien cerca, es donde frena).
-            // owner: "deberia doblar antes" -- 2.5x seguía quedando corto para el giro
-            // cerrado hacia el lote. Más radio de anticipación (~32m).
+            // owner: "dobla muy despues... se sigue trabando" -- agrandar este radio a
+            // 4x para que doble antes resultó frágil (cuanto más grande, más fácil que
+            // el auto cortara camino y el índice de ruta quedara trabado, ver más
+            // arriba). Vuelto a 2.5x -- el "doblar antes" ahora se resuelve con
+            // geometría (CarBuilder arranca el giro 30m antes, en TRES pasos
+            // graduales) en vez de con un lookahead de runtime más agresivo.
             bool isLastWaypoint = _index == waypoints.Length - 1;
-            bool nearForAim = dist < arriveRadius * 4f;
+            bool nearForAim = dist < arriveRadius * 2.5f;
             bool nearForStop = dist < arriveRadius * 1.5f;
             Vector2 aim = target;
             if (nearForAim && !isLastWaypoint) aim = waypoints[_index + 1];
@@ -137,21 +141,20 @@ namespace FolkloreArchives
                 steer = Mathf.Clamp(angle / 45f, -1f, 1f) * steerGain;
             }
 
-            // owner: "se frena antes de entrar al pavimento" -- remaining sumaba TODOS
-            // los tramos que faltan, incluido el último tramo de RUTA (antes de doblar
-            // hacia el lote); si ese tramo + el giro + el estacionamiento ya sumaban
-            // menos de slowdownDistance, el auto empezaba a frenar todavía en la ruta,
-            // antes de siquiera doblar hacia la YPF. La zona de frenado ahora solo
-            // aplica en los últimos 3 waypoints horneados por CarBuilder (los DOS giros
-            // hacia ADENTRO del lote + el punto de estacionar) -- en la ruta, siempre a
-            // velocidad crucero. 3 en vez de 2: owner reportó después "no esta entrando
-            // al pavimento, sigue trabando" -- el giro cerrado a velocidad crucero se
-            // pasaba de largo sin capturar el waypoint; entrar más lento a la zona de
-            // giro (no solo al tramo final) ayuda al steer a completarlo a tiempo.
-            // owner: "deberia... frenarse antes" -- un waypoint más de margen (incluye
-            // el último tramo de RUTA, no solo los 2 giros + estacionar) para que el
-            // frenado pueda empezar un poco antes de llegar a la zona de giro.
-            bool inLotZone = _index >= waypoints.Length - 4;
+            // owner: "se frena antes de entrar al pavimento" -- remaining suma TODOS
+            // los tramos que faltan desde el waypoint actual (no solo el tramo actual),
+            // así un tramo final corto no deja al auto sin espacio para frenar a
+            // tiempo -- pero eso solo importa mientras `inLotZone` (abajo) es cierto.
+            // owner: "frenar ni bien entra" -- CarBuilder ahora hornea el giro en TRES
+            // pasos MUY antes de la estación (30m) más el punto de entrada real al
+            // lote + el de estacionar (4 waypoints en total para el lote). Frenar
+            // desde que arranca el giro (los 4) lo frenaría de más mientras todavía
+            // viene acomodando el rumbo -- ahora la zona de frenado son solo los
+            // ÚLTIMOS 2 (la entrada real al pavimento + el punto de estacionar): fuera
+            // de eso, incluidos los 2 primeros pasos del giro, sigue a velocidad
+            // crucero (más lenta ahora, ver cruiseThrottle) y solo frena de verdad
+            // apenas "entra" de verdad al lote.
+            bool inLotZone = _index >= waypoints.Length - 2;
 
             // owner: "no frena el auto choca" -- soltar el acelerador solo desacelera
             // con coastDecel (suave); adentro de la zona de frenado hay que FRENAR de

@@ -7,6 +7,43 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (8) — Rediseño: giro hacia la YPF más temprano y gradual (**necesita regenerar**)
+
+Owner: "nop. se sigue trabando hace dos commits funcionaba bien pero
+dobla muy despues deberia doblar antes osea entrar antes a la ypf, y
+frenar ni bien entra". Patrón detectado en los últimos commits: agrandar
+el radio de anticipación de runtime (`nearForAim`, en `CarAutoDrive.cs`)
+para que el auto "mire" el giro más temprano es frágil -- cuanto más
+grande ese radio, más fácil que corte camino y el índice de ruta quede
+trabado (2 rondas de esto ya, ver entradas de arriba). El problema real
+no era cuándo el auto empieza a MIRAR el giro, sino que la geometría del
+giro en sí (horneada en `CarBuilder.cs`) seguía siendo la misma, apretada
+en 14m.
+
+Fix:
+- `CarAutoDrive.cs`: `nearForAim` vuelto a 2.5x `arriveRadius` (el valor
+  que funcionaba sin trabarse). El "doblar antes" ahora se resuelve con
+  geometría, no con más lookahead de runtime.
+- `CarBuilder.cs`: el giro hacia el lote arranca 30m antes de la estación
+  (antes 14m) y se reparte en TRES pasos graduales en vez de dos -- el
+  auto empieza a desviarse de la ruta mucho más temprano y con ángulos
+  más suaves en cada paso.
+- `CarAutoDrive.cs`: "frenar ni bien entra" -- la zona de frenado
+  (`inLotZone`) ahora son solo los ÚLTIMOS 2 waypoints (la entrada real al
+  pavimento + el punto de estacionar), NO los 2 pasos previos del giro
+  (que ahora están lejos, todavía acomodando el rumbo, no adentro del
+  lote todavía) -- el auto sigue a velocidad crucero durante el giro y
+  recién frena de verdad al llegar a la entrada real.
+
+**Esto rehornea la ruta -- hace falta Regenerar el mapa.** Si los cambios
+anteriores de esta sesión sobre `CarBuilder.cs` (giro en dos pasos, 14m)
+tampoco se habían regenerado todavía, puede que parte de la rareza
+reportada ("se sigue trabando") viniera de estar corriendo la lógica
+nueva de `CarAutoDrive.cs` contra datos de ruta VIEJOS -- vale la pena
+confirmar que se regeneró después de este cambio en particular.
+
+---
+
 ## 2026-07-28 (7) — Fix: índice de ruta trabado otra vez (criterio "pasado" dependía del morro)
 
 Owner: "ahora se esta quedando trabado nuevamente" -- después de agrandar
