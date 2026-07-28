@@ -7,6 +7,21 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (10) — Ajuste: 40 km/h de crucero + frenar ANTES del giro cerrado, no solo al entrar
+
+Owner: "necesito que vaya a 40kmh y ahora se esta trabando de nuevo
+contra la entrada de la ypf". `cruiseSpeedKmh` 20→40. Con la velocidad de
+crucero más alta y la zona de frenado empezando recién en la entrada real
+al pavimento, el auto llegaba al waypoint de GIRO (5m antes, cerrado)
+todavía a 40 km/h -- muy rápido para completar un giro tan cerrado,
+terminaba chocando/atascado contra la entrada de la estación. Fix:
+`inLotZone` ahora incluye también el waypoint de giro (últimos 3:
+giro + entrada real + estacionar), no solo los últimos 2 -- empieza a
+soltar velocidad ANTES de encarar el giro cerrado, no recién al entrar al
+pavimento. Puro código, sin datos horneados -- no hace falta Regenerar.
+
+---
+
 ## 2026-07-28 (9) — Corrección: giro vuelto a 5m + fix real de la velocidad de crucero (**necesita regenerar**)
 
 Owner: "lo hiciste mal deberia ser a los 5m no a los 30m" / "y de

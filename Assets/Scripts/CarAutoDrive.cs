@@ -35,7 +35,7 @@ namespace FolkloreArchives
         // velocidad objetivo: acelera mientras esté por debajo de cruiseSpeedKmh,
         // corta el acelerador al alcanzarlo (mismo patrón que ya usaba la frenada en
         // el lote, ahora aplicado a TODO el trayecto).
-        public float cruiseSpeedKmh = 20f;
+        public float cruiseSpeedKmh = 40f;
         public float steerGain = 1f;
         // owner: "al llegar a la ypf no frena el auto choca" -- el frenado solo miraba
         // la distancia del ÚLTIMO tramo (waypoint a waypoint), pero el giro hacia
@@ -155,13 +155,16 @@ namespace FolkloreArchives
             // los tramos que faltan desde el waypoint actual (no solo el tramo actual),
             // así un tramo final corto no deja al auto sin espacio para frenar a
             // tiempo -- pero eso solo importa mientras `inLotZone` (abajo) es cierto.
-            // owner: "frenar ni bien entra" -- CarBuilder hornea un punto de giro cerca
-            // de la estación, más el punto de entrada real al lote + el de estacionar.
-            // La zona de frenado activo son solo los ÚLTIMOS 2 (la entrada real al
-            // pavimento + el punto de estacionar) -- durante el giro previo sigue a la
-            // velocidad de crucero (ya más lenta, ver cruiseSpeedKmh) y recién frena
-            // de verdad apenas "entra" de verdad al lote.
-            bool inLotZone = _index >= waypoints.Length - 2;
+            // owner: "necesito que vaya a 40kmh y ahora se esta trabando de nuevo
+            // contra la entrada de la ypf" -- con cruiseSpeedKmh subido a 40 y la zona
+            // de frenado empezando recién en la entrada real al pavimento, el auto
+            // llegaba al punto de GIRO (5m antes, cerrado) todavía a 40 -- muy rápido
+            // para completar un giro tan cerrado, terminaba chocando/atascado contra
+            // la entrada. La zona de frenado ahora incluye también el waypoint de
+            // GIRO (últimos 3: giro + entrada real + estacionar), no solo los últimos
+            // 2 -- empieza a soltar velocidad ANTES del giro cerrado, no solo al
+            // entrar al pavimento.
+            bool inLotZone = _index >= waypoints.Length - 3;
 
             // owner: "todo el trayecto... vaya mas lento" -- velocidad objetivo: la de
             // crucero en la ruta abierta, o la que va bajando (tapering) cerca del
