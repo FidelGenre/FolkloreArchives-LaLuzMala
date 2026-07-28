@@ -7,6 +7,24 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix real de la mira: elegir por ÁNGULO, no por distancia del barrido
+
+Angostar las hitboxes (entrada anterior) no alcanzó: el perro seguía
+entrando al asiento de al lado (`Seat_RearL`, donde está `Friend_
+MaleGreenJkt`) en vez del medio. Causa real: `RaycastTarget()` elegía el
+`CarInteractable` cuyo collider tocaba PRIMERO el barrido del SphereCast
+(por distancia a lo largo del rayo) -- con 3 asientos pegados, el vecino
+puede tocar la esfera antes aunque no sea el que estás mirando, sin importar
+qué tan angosta sea la hitbox.
+
+Fix real en `PlayerVehicleInteractor.RaycastTarget()`: ahora elige por
+ÁNGULO -- el `CarInteractable` cuyo anchor (`ci.part.position`) esté más
+cerca del centro exacto de la mira (`Vector3.Angle` contra `cam.forward`),
+sin importar cuál collider tocó primero. Debería apuntar de forma mucho más
+confiable al asiento que estás mirando de verdad. Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Seat_RearMid: posición confirmada horneada (perro sentado, en vivo)
 
 Con los fixes anteriores (seatDepth, hitboxes, PartyController) el perro por

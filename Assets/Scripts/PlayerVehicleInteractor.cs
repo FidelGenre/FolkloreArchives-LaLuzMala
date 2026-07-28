@@ -211,15 +211,23 @@ namespace FolkloreArchives
         // SphereCast (no un rayo de radio 0) porque sentado adentro, muy cerca de la
         // puerta, un rayo finito fallaba fácil por unos grados de diferencia -- eso
         // fue justo lo que causaba "quiero cerrar la puerta y me bajo" antes.
+        // owner: "subo con el perro y lo sube al lado del male green, no en el medio" --
+        // con los 3 asientos traseros pegados (Seat_RearMid entre RearL/RearR), elegir
+        // por DISTANCIA a lo largo del barrido (quién toca primero) no es fiable: el
+        // asiento vecino puede tocar la esfera antes aunque no sea al que apuntás. Ahora
+        // se elige por ÁNGULO -- el CarInteractable cuyo anchor (ci.part.position) esté
+        // más cerca del centro de la mira, sin importar cuál tocó primero.
         CarInteractable RaycastTarget()
         {
             if (cam == null) return null;
             var hits = Physics.SphereCastAll(cam.position, 0.15f, cam.forward, 4.5f, ~0, QueryTriggerInteraction.Collide);
-            CarInteractable best = null; float bd = float.MaxValue;
+            CarInteractable best = null; float bestAngle = float.MaxValue;
             foreach (var h in hits)
             {
                 var ci = h.collider.GetComponentInParent<CarInteractable>();
-                if (ci != null && h.distance < bd) { bd = h.distance; best = ci; }
+                if (ci == null) continue;
+                float angle = Vector3.Angle(cam.forward, ci.part.position - cam.position);
+                if (angle < bestAngle) { bestAngle = angle; best = ci; }
             }
             return best;
         }
