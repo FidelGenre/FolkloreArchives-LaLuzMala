@@ -65,16 +65,30 @@ namespace FolkloreArchives
             float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
             float steer = Mathf.Clamp(angle / 45f, -1f, 1f) * steerGain;
 
-            // frenar suave: distancia TOTAL restante hasta el ÚLTIMO waypoint (el
-            // tramo actual + la suma de los que faltan), no solo el tramo actual --
-            // así un tramo final corto (como el giro hacia el lote de la YPF) no deja
-            // al auto sin espacio para frenar.
+            // distancia TOTAL restante hasta el ÚLTIMO waypoint (el tramo actual + la
+            // suma de los que faltan), no solo el tramo actual -- así un tramo final
+            // corto (como el giro hacia el lote de la YPF) no deja al auto sin
+            // espacio para frenar.
             float remaining = dist;
             for (int j = _index; j < waypoints.Length - 1; j++)
                 remaining += Vector2.Distance(waypoints[j], waypoints[j + 1]);
-            float throttle = cruiseThrottle;
+
+            // owner: "no frena el auto choca" -- soltar el acelerador solo desacelera
+            // con coastDecel (suave); adentro de la zona de frenado hay que FRENAR de
+            // verdad (throttle negativo → CarController usa brakeDecel, mucho más
+            // fuerte) si la velocidad actual supera lo que "debería" tener a esta
+            // distancia del final.
+            float throttle;
             if (remaining < slowdownDistance)
-                throttle *= Mathf.Clamp01(remaining / slowdownDistance);
+            {
+                float targetSpeed = car.maxSpeed * Mathf.Clamp01(remaining / slowdownDistance);
+                float currentSpeed = car.SpeedKmh / 3.6f;
+                throttle = currentSpeed > targetSpeed + 0.5f ? -0.6f : cruiseThrottle * 0.3f;
+            }
+            else
+            {
+                throttle = cruiseThrottle;
+            }
 
             car.autoPilot = true;
             car.externalThrottle = throttle;

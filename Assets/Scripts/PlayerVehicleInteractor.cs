@@ -102,7 +102,14 @@ namespace FolkloreArchives
             dog = GetComponent<DogController>();
             humanAnim = GetComponent<HumanWalkAnim>();
             netGate = GetComponent<NetOwnerGate>();
-            var c = GetComponentInChildren<Camera>();
+            // owner: "el perro no esta sentado en el medio" -- la cámara del perro
+            // (DogCamera) arranca DESACTIVADA (el juego empieza controlando a la
+            // persona, ver PartyController) -- GetComponentInChildren sin el flag
+            // "incluir inactivos" NUNCA la encontraba, así que `cam` quedaba null y
+            // SitRoutine se rompía en silencio (NullReferenceException adentro de
+            // Glide) apenas intentaba sentar al perro. `true` = buscar también en
+            // hijos desactivados.
+            var c = GetComponentInChildren<Camera>(true);
             if (c != null) { cam = c.transform; camComp = c; camParent = cam.parent; camLocalPos = cam.localPosition; }
             // ownModel: se usa tanto para el achicado del perro como para que
             // cualquiera (perro o persona) se oculte de su propia cámara al sentarse.
@@ -427,10 +434,12 @@ namespace FolkloreArchives
             car = c; mySeat = seat; myDoor = door;
             c.driving = (seat == c.driverSeat);
 
-            // owner: "al entrar deberia apagarse mi linterna y usarse las del auto con
-            // la misma tecla que la normal" -- solo al MANEJAR (los faros son del
-            // auto, no tiene sentido para un pasajero).
-            if (c.driving && explorer != null)
+            // owner: "al entrar deberia apagarse mi linterna" -- originalmente solo al
+            // MANEJAR (los faros del auto reemplazan la linterna); pero owner (2da
+            // vuelta): "tengo la linterna prendida dentro del auto no deberia pasar
+            // eso" -- también se ve rara prendida siendo pasajero, adentro de un
+            // habitáculo cerrado. Ahora se apaga al sentarse en CUALQUIER asiento.
+            if (explorer != null)
             {
                 flashlightWasOn = explorer.FlashlightOn;
                 explorer.SetFlashlight(false);
@@ -447,13 +456,11 @@ namespace FolkloreArchives
             bool wasDriving = c.driving;
             car = null; mySeat = null; myDoor = null; c.driving = false;
 
-            // apagar los faros del auto y devolverle al jugador su linterna como
-            // estaba antes de subir (prendida o apagada).
-            if (wasDriving)
-            {
-                c.SetHeadlights(false);
-                if (explorer != null) explorer.SetFlashlight(flashlightWasOn);
-            }
+            // apagar los faros del auto (solo si manejabas) y devolverle al jugador su
+            // linterna como estaba antes de subir (prendida o apagada) -- esto último
+            // ahora pasa siempre, ya que también se apaga al entrar como pasajero.
+            if (wasDriving) c.SetHeadlights(false);
+            if (explorer != null) explorer.SetFlashlight(flashlightWasOn);
 
             var exitDoors = Doors(c);
             if (door != null && exitDoors != null && !exitDoors.IsOpen(door)) exitDoors.SetDoor(door, true);

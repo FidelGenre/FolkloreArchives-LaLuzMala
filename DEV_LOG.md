@@ -7,6 +7,38 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix: linterna prendida adentro + perro que no se sienta + frenado débil
+
+Owner: "tengo la linterna prendida dentro del auto no deberia pasar eso...
+el perro no esta sentado en el medio... el auto al llega no frena y esta
+yendo demasiado rapido". Tres bugs:
+
+1. **Linterna:** solo se apagaba si te sentabas de CONDUCTOR (`c.driving`)
+   -- como en la secuencia de apertura el jugador va atrás, nunca se
+   apagaba. Ahora se apaga al sentarse en CUALQUIER asiento (y se restaura
+   siempre al bajar, no solo si manejabas -- los faros del auto sí siguen
+   siendo solo del conductor).
+2. **Perro sin sentar -- causa real encontrada:** `PlayerVehicleInteractor.
+   Start()` buscaba la cámara con `GetComponentInChildren<Camera>()`, que
+   por defecto IGNORA objetos desactivados. La cámara del perro
+   (`DogCamera`) arranca DESACTIVADA (el juego empieza controlando a la
+   persona, ver `PartyController`) -- nunca la encontraba, `cam` quedaba
+   `null`, y `SitRoutine` se rompía en silencio (`NullReferenceException`
+   adentro de `Glide`) apenas intentaba sentar al perro. Cambiado a
+   `GetComponentInChildren<Camera>(true)` (incluye inactivos). Este bug
+   probablemente ya existía antes de esta feature (afecta también sentar
+   al perro con E normal, no solo la secuencia de apertura).
+3. **Frenado débil:** soltar el acelerador solo desacelera con
+   `coastDecel` (4, suave) -- adentro de la zona de frenado ahora
+   `CarAutoDrive` compara la velocidad ACTUAL contra una curva de
+   velocidad objetivo (según distancia restante) y aplica throttle
+   NEGATIVO (frenado real, `brakeDecel`=22, mucho más fuerte) si la va
+   superando.
+
+Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Fix: jugador "encima del malegreen" + auto que no frena y choca
 
 Owner: "aparezco sentado encima del malegreen no como el orden que te habia
