@@ -7,6 +7,20 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Seat_RearMid: posición confirmada horneada (perro sentado, en vivo)
+
+Con los fixes anteriores (seatDepth, hitboxes, PartyController) el perro por
+fin se pudo sentar bien en el asiento del medio. Owner confirmó la posición
+en Play ("toma") — en vez de leer el offset calculado por la fórmula
+(`paxBase + seatSpread*0.5, seatDepth`), se le pidió el valor de
+`Seat_RearMid` DIRECTO del Inspector (ya en coordenadas locales, al ser
+hijo del auto — más confiable que convertir a mano la posición del perro en
+MUNDO, que tiene mucho margen de error por redondeo). Horneado tal cual:
+`(-0.1558, 2.11162, -0.4575)`, reemplazando el cálculo de la fórmula para
+este asiento. Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Fix real: PartyController dejaba el interactor de la persona activo
 
 Owner (con MAYÚSCULAS, plantado): "CAMBIE AL PERRO Y AHORA PUEDE ABRIR Y

@@ -155,7 +155,11 @@ namespace FolkloreArchives.MapGen
             ctrl.rearRight      = Seat(car.transform, "Seat_RearR",    paxBase + new Vector3(seatSpread, 0f, seatDepth));
             // owner: "asiento extra en el auto, en la parte de atras en medio" -- banco
             // trasero apretado a 3, a mitad de camino entre rearLeft y rearRight.
-            ctrl.rearMid        = Seat(car.transform, "Seat_RearMid",  paxBase + new Vector3(seatSpread * 0.5f, 0f, seatDepth));
+            // owner: probó sentar al perro ahí en vivo (Play) y confirmó "toma" con la
+            // posición resultante -- horneada TAL CUAL en vez de seguir de la fórmula
+            // (mismo criterio que los seatPosOverride de los amigos: más confiable que
+            // perseguir la fórmula a ciegas).
+            ctrl.rearMid        = Seat(car.transform, "Seat_RearMid",  new Vector3(-0.1558f, 2.11162f, -0.4575f));
 
             // Colliders + marcadores para la MIRA (raycast): puertas y asientos.
             AddInteractColliders(ctrl);
