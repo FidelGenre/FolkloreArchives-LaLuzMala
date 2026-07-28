@@ -7,6 +7,33 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix: la mira agarraba el asiento vecino en vez del del medio
+
+Con `Seat_RearMid` ya en buena posición, el owner reportó que al intentar
+subirse ahí terminaba arriba de `Friend_MaleGreenJkt` (el asiento de al
+lado) en vez del asiento vacío. Causa: los 3 hitboxes traseros (colliders
+invisibles que usa la mira para elegir a qué asiento apuntás) se pisaban —
+`rearLeft`/`rearMid`/`rearRight` están separados solo ~0.93m (`seatSpread`)
+pero cada hitbox medía 0.85m de ancho (mitad 0.425), así que los vecinos se
+superponían y la mira podía agarrar el equivocado. `CarBuilder.
+SeatCollider`: ancho angostado a 0.35m (mitad 0.175, bien adentro de los
+0.465m de separación a cada vecino). Necesita regenerar.
+
+**Nota de diseño (script de la secuencia del auto, para más adelante — NO
+implementado, solo anotado):**
+1. Arranca manejando `Friend_MaleCasual` ("el male normal"), con
+   `Friend_FemaleSec` de acompañante.
+2. El perro va en el medio de atrás, junto con el jugador 1 (humano) y
+   `Friend_MaleGreenJkt`.
+3. El auto avanza hasta la gasolinera; al llegar frena y se bajan todos.
+4. Al volver a subir: el jugador 1 pasa a manejar (chofer), el perro es el
+   acompañante (adelante), y los otros 3 amigos van atrás.
+Falta: lógica de quién controla el auto en cada tramo, el evento de parada
+en la gasolinera, y reasignar los `seatPosOverride` de los amigos si
+cambian de asiento entre tramos.
+
+---
+
 ## 2026-07-26 — Fix cámara "detrás de los asientos" al sentarse en Seat_RearMid
 
 Owner probó sentarse (como jugador real, no decorativo) en el asiento nuevo

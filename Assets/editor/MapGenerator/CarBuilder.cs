@@ -326,7 +326,13 @@ namespace FolkloreArchives.MapGen
             if (seat == null) return;
             var bc = seat.gameObject.AddComponent<BoxCollider>();
             bc.center = new Vector3(0f, -0.35f, 0f);   // baja al asiento (el ancla está a la altura del ojo)
-            bc.size = new Vector3(0.85f, 1.25f, 0.85f); // grande, fácil de apuntar
+            // owner: "al subirme atras aparezco arriba del male green" -- con el nuevo
+            // Seat_RearMid apretado ENTRE rearLeft/rearRight (separados solo ~0.93m,
+            // seatSpread), el ancho viejo (0.85, mitad 0.425) hacía que los 3 hitboxes
+            // traseros se pisaran entre sí -- la mira agarraba el asiento vecino en vez
+            // del que apuntabas. Angosto en X (mitad 0.175, bien adentro de los 0.465m
+            // de separación a cada vecino) para que cada asiento se targetee solo.
+            bc.size = new Vector3(0.35f, 1.25f, 0.85f);
             bc.isTrigger = true;
             var ci = seat.gameObject.AddComponent<FolkloreArchives.CarInteractable>();
             ci.car = ctrl; ci.part = seat; ci.isSeat = true;
