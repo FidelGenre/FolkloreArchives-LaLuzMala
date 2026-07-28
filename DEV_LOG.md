@@ -7,6 +7,43 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (2) — Fix: frenado prematuro/interminable en YPF + cámara del perro atraviesa al humano
+
+Owner: "cuando miro desde la camara del perro veo atravez del humano, capaz
+que move apenias el perro para el lado del greenmale solo apenitas asi al
+girar la camara no lo veo atravez" / "y al llegar a la estacion se frena
+pero se frena antes de entrar al pavimento y no frena del todo el auto se
+queda trancado andando y nadie se baja".
+
+**Perro atraviesa al humano:** `Seat_RearMid` (x=-0.1558 local del auto)
+quedó, horneado a mano, del lado del jugador (`rearLeft`, x=0) en vez de a
+mitad de camino real entre los dos asientos traseros -- la cámara del
+perro terminaba pegada al cuerpo del humano al girar hacia él. Fix
+(siguiendo la sugerencia exacta del owner): `PlayerVehicleInteractor` nueva
+constante `DogSeatedSideOffset` (0.15, primer número a ajustar en vivo) que
+empuja tanto el CUERPO como el OJO de la cámara del perro hacia el lado de
+`rearRight`/MaleGreenJkt (+X local del auto). Ojo: la cámara se reparenta
+DIRECTO al asiento (no al transform del personaje), así que hubo que
+correr su `localPosition` aparte del offset del cuerpo -- moviendo solo
+uno de los dos no alcanzaba.
+
+**Frenado en la YPF:** dos bugs en `CarAutoDrive.cs`. (1) "se frena antes
+de entrar al pavimento": `remaining` sumaba TODOS los tramos que faltan,
+incluido el último tramo de RUTA (antes de doblar hacia el lote) -- si ese
+tramo + el giro + el estacionamiento ya sumaban menos de
+`slowdownDistance`, el auto frenaba todavía en la ruta. Ahora la zona de
+frenado solo se activa en los últimos 2 waypoints horneados por
+`CarBuilder` (el giro hacia adentro del lote + el punto de estacionar);
+en la ruta, siempre a velocidad crucero. (2) "no frena del todo... queda
+trancado andando": el throttle de "acercamiento suave"
+(`cruiseThrottle*0.3`) nunca llegaba a CERO, así que muy cerca del punto
+final el auto seguía reptando para siempre sin entrar nunca en el radio de
+"llegada" (`HasArrived`) -- por eso tampoco se abrían las puertas ni bajaba
+nadie. Ahora, adentro de `arriveRadius` del último waypoint, el throttle
+pasa a 0 directo (frena solo por resistencia) en vez de seguir empujando.
+
+---
+
 ## 2026-07-28 — Fix: el perro "camina" con las patas mientras está sentado
 
 Owner: "de la vista del humano veo al perro moviendo los pies como si

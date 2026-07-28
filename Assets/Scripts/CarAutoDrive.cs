@@ -86,17 +86,37 @@ namespace FolkloreArchives
                 steer = Mathf.Clamp(angle / 45f, -1f, 1f) * steerGain;
             }
 
+            // owner: "se frena antes de entrar al pavimento" -- remaining sumaba TODOS
+            // los tramos que faltan, incluido el último tramo de RUTA (antes de doblar
+            // hacia el lote); si ese tramo + el giro + el estacionamiento ya sumaban
+            // menos de slowdownDistance, el auto empezaba a frenar todavía en la ruta,
+            // antes de siquiera doblar hacia la YPF. La zona de frenado ahora solo
+            // aplica en los últimos 2 waypoints horneados por CarBuilder (el giro hacia
+            // ADENTRO del lote + el punto de estacionar) -- en la ruta, siempre a
+            // velocidad crucero.
+            bool inLotZone = _index >= waypoints.Length - 2;
+
             // owner: "no frena el auto choca" -- soltar el acelerador solo desacelera
             // con coastDecel (suave); adentro de la zona de frenado hay que FRENAR de
             // verdad (throttle negativo → CarController usa brakeDecel, mucho más
             // fuerte) si la velocidad actual supera lo que "debería" tener a esta
             // distancia del final.
             float throttle;
-            if (remaining < slowdownDistance)
+            if (inLotZone && remaining < slowdownDistance)
             {
                 float targetSpeed = car.maxSpeed * Mathf.Clamp01(remaining / slowdownDistance);
                 float currentSpeed = car.SpeedKmh / 3.6f;
-                throttle = currentSpeed > targetSpeed + 0.5f ? -0.6f : cruiseThrottle * 0.3f;
+                if (currentSpeed > targetSpeed + 0.5f)
+                    throttle = -0.6f; // frenar activo
+                else if (remaining < arriveRadius)
+                    // owner: "no frena del todo el auto se queda trancado andando" --
+                    // este empuje chiquito (cruiseThrottle*0.3) nunca llegaba a CERO,
+                    // así que tan cerca del punto final el auto seguía reptando para
+                    // siempre sin nunca entrar en el radio de "llegada". Sin acelerador
+                    // ahí, frena solo por resistencia (coastDecel) hasta pararse de verdad.
+                    throttle = 0f;
+                else
+                    throttle = cruiseThrottle * 0.3f;
             }
             else
             {

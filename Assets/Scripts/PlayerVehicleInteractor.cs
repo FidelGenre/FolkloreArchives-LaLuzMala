@@ -64,6 +64,15 @@ namespace FolkloreArchives
         const float DogSeatedScale = 0.45f; // owner: "las patas traseras atraviesan el asiento" -- un poco mas chico
         const float DogSeatedExtraDrop = 0.35f; // owner: "se ve volando mas alto de los asientos" -- hundirlo un poco mas
         const float DogSeatedForwardOffset = -0.3f; // owner: "sigue sentandose adelantado" en rearMid -- 0.1 empujaba hacia adelante todavía; invertido a negativo (empuja hacia atrás)
+        // owner: "cuando miro desde la camara del perro veo atravez del humano...
+        // capaz que mueve apenas el perro para el lado del greenmale" -- rearMid
+        // (x=-0.1558 local del auto) ya cae del lado del jugador (rearLeft, x=0) en
+        // vez de a mitad de camino real entre los dos asientos traseros, así que la
+        // cámara del perro queda pegada al cuerpo del humano. Empuja tanto el
+        // cuerpo como el OJO de la cámara hacia el lado de rearRight/MaleGreenJkt
+        // (+X local del auto, ver CarBuilder.Seat: rearRight = paxBase + seatSpread
+        // en +X). Primer numero chico a ajustar en vivo si no alcanza/se pasa.
+        const float DogSeatedSideOffset = 0.15f;
         // owner: "el perro no deberia verse a si mismo" -- layer creado en Generate
         // (LayerSetup.cs) que la cámara EXCLUYE de su propio cullingMask mientras está
         // sentado. Es una propiedad LOCAL (layer + cullingMask), no sincronizada por
@@ -439,6 +448,7 @@ namespace FolkloreArchives
             float forwardOffset = dog != null ? DogSeatedForwardOffset : 0f;
             transform.rotation = seat.rotation;
             transform.position = seat.position - transform.rotation * new Vector3(0f, camLocalPos.y + extraDrop, -forwardOffset);
+            if (dog != null) transform.position += transform.right * DogSeatedSideOffset;
             // owner: "el perro no se queda dentro del auto y no se mueve con el
             // mismo... pero su camara si" -- el cuerpo se posicionaba UNA VEZ acá pero
             // nunca se reparentaba al auto (a diferencia de la cámara, que sí se
@@ -454,9 +464,15 @@ namespace FolkloreArchives
             // hocico hacia atrás: ahora el modelo del perro se OCULTA de su propia
             // cámara por layer (ver abajo), así que da igual si el hocico queda cerca o
             // adentro de la cámara -- vuelvo la cámara a offset cero, igual que la persona.
-            yield return Glide(cam, seat.position, seat.rotation);
+            // owner: "veo atravez del humano" -- cam se reparenta DIRECTO al seat (no
+            // al transform del personaje), así que el offset lateral de arriba (que
+            // mueve el CUERPO) no alcanza a mover el OJO de la cámara -- hay que
+            // correr también su localPosition acá.
+            Vector3 camGlideTarget = dog != null ? seat.position + transform.right * DogSeatedSideOffset : seat.position;
+            yield return Glide(cam, camGlideTarget, seat.rotation);
             cam.SetParent(seat, false);
-            cam.localPosition = Vector3.zero; cam.localRotation = Quaternion.identity;
+            cam.localPosition = dog != null ? new Vector3(DogSeatedSideOffset, 0f, 0f) : Vector3.zero;
+            cam.localRotation = Quaternion.identity;
             lookYaw = 0f; lookPitch = 0f;
 
             // owner: "el perro no deberia verse a si mismo" / "me estoy viendo no
