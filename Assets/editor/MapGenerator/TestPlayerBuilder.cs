@@ -279,6 +279,14 @@ namespace FolkloreArchives.MapGen
             dogCamGO.AddComponent<FolkloreArchives.VhsPostFx>();
             dogCamGO.SetActive(false); // arranca controlando la persona
 
+            // owner: "al cambiar con la g al perro no me da la opcion de subirme siendo
+            // perro" -- en modo SOLO (sin host) el DOG nunca tuvo este componente, solo
+            // se le agregaba al jugador humano (línea de arriba, `player.AddComponent
+            // <PlayerVehicleInteractor>`). El prefab de RED (NetworkBuilder.cs) sí lo
+            // tiene para el perro (`canOpenDoors = false`) -- mismo criterio acá.
+            var dogInteractor = dog.AddComponent<FolkloreArchives.PlayerVehicleInteractor>();
+            dogInteractor.canOpenDoors = false;
+
             var party = player.AddComponent<FolkloreArchives.PartyController>();
             party.person    = player.GetComponent<FolkloreArchives.MapExplorer>();
             party.dog       = dogCtrl;

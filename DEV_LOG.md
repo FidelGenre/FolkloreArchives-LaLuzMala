@@ -7,6 +7,19 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix: el perro (modo solo) no podía subir al auto
+
+Owner: "al cambiar con la g al perro no me da la opcion de subirme siendo
+perro". En modo SOLO (sin host, `PartyController` con G para tomar control
+del perro), el DOG que arma `TestPlayerBuilder` nunca tuvo
+`PlayerVehicleInteractor` — solo se le agregaba al jugador humano. El perro
+de RED (`NetworkBuilder.cs`) sí lo tiene (`canOpenDoors = false`), pero el
+perro de modo solo se armó en un archivo distinto y se pasó por alto.
+Agregado con el mismo criterio (`canOpenDoors = false`, no abre/cierra
+puertas, solo se sienta/baja). Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Fix: la mira agarraba el asiento vecino en vez del del medio
 
 Con `Seat_RearMid` ya en buena posición, el owner reportó que al intentar
