@@ -7,6 +7,23 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (15) — Fix: no aparecía la opción de cerrar la puerta durante la secuencia de apertura
+
+Owner: "no me esta saliendo la opcion de cerrar la puerta" (sentado
+durante el viaje en autopiloto hacia la YPF). Causa: `OpeningDriveSequence`
+llama `SitRoutine(car, seat, null)` -- sienta directo, sin pasar por abrir
+una puerta con E. `myDoor` quedaba en `null`, y `LookingAtDoor(myDoor)`
+chequea explícitamente `door == null` y devuelve `false` siempre -- nunca
+ofrece abrir/cerrar, sin importar hacia dónde mires, y `[E]` solo baja.
+
+Fix: si `SitRoutine` no recibe una puerta explícita, usa `NearestDoor(c,
+seat.position)` (la misma función que ya usaba `PreferredDoor` en otro
+lado) para tener igual una referencia razonable -- así abrir/cerrar la
+puerta funciona aunque te hayan sentado sin pasar por el flujo manual.
+Puro código, sin datos horneados -- no hace falta Regenerar.
+
+---
+
 ## 2026-07-28 (14) — Fix real: un cordón invisible en el asfalto de la YPF trababa al auto (**necesita regenerar**)
 
 Owner: "sigue frenandose en la entrada" -- y al preguntar específicamente

@@ -493,7 +493,15 @@ namespace FolkloreArchives
                 }
             }
 
-            car = c; mySeat = seat; myDoor = door;
+            // owner: "no me esta saliendo la opcion de cerrar la puerta" -- durante la
+            // secuencia de apertura (OpeningDriveSequence), SitRoutine se llama con
+            // door=null (te sienta directo, sin pasar por abrir una puerta con E). Con
+            // myDoor en null, LookingAtDoor(myDoor) siempre da false (chequea
+            // explícitamente door==null) -- nunca se ofrece abrir/cerrar, aunque estés
+            // mirando justo la puerta. Si no vino una puerta explícita, uso la más
+            // cercana al asiento como referencia igual, para que abrir/cerrar funcione
+            // aunque te hayan sentado sin pasar por el flujo manual de la puerta.
+            car = c; mySeat = seat; myDoor = door != null ? door : NearestDoor(c, seat.position);
             c.driving = (seat == c.driverSeat);
 
             // owner: "al entrar deberia apagarse mi linterna" -- originalmente solo al
