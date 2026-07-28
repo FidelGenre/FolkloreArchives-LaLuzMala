@@ -7,7 +7,29 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
-## 2026-07-28 (12) — Fix: por qué frenar antes del giro also le sacaba fuerza para girar
+## 2026-07-28 (13) — Fix: piso de velocidad durante el giro (el steerGain solo no alcanzaba)
+
+Owner (3ra vuelta): "sigue trabandose". El steerGain triplicado (entrada
+anterior) no sirve de nada si la velocidad cae por debajo de 0.3 m/s --
+`CarController.FixedUpdate()` ni siquiera intenta girar bajo ese umbral
+(`if (Mathf.Abs(speed) > 0.3f)`), sin importar cuánto steer se le mande.
+El tapering de `targetSpeed` baja hacia CERO a medida que `remaining` se
+achica, pero `remaining` mide distancia hasta el FINAL (no si el auto ya
+terminó de girar) -- así que la velocidad objetivo podía caer casi a cero
+todavía a mitad del giro, mucho antes de necesitarlo, dejando al auto sin
+velocidad Y sin poder girar al mismo tiempo.
+
+Fix: piso de velocidad (4 m/s, ~14 km/h) mientras `braking` es cierto Y
+todavía queda algún waypoint por delante que no sea el último -- no deja
+caer la velocidad por debajo de lo necesario para retener autoridad de
+giro hasta terminar el giro de verdad. Recién en el ÚLTIMO tramo (entrada
+→ estacionar, ya en línea recta, sin más giros) el tapering baja del todo
+hasta pararse. Puro código, sin datos horneados -- no hace falta
+Regenerar.
+
+---
+
+## 2026-07-28 (12) — Fix: por qué frenar antes del giro también le sacaba fuerza para girar
 
 Owner: "se sigue quedando trabado ahora si va a 40" (después de subir la
 velocidad y frenar antes del giro cerrado, fix de la entrada anterior).

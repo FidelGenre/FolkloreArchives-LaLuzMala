@@ -182,6 +182,19 @@ namespace FolkloreArchives
                 targetSpeed = Mathf.Min(cruiseSpeedMs, car.maxSpeed * Mathf.Clamp01(remaining / slowdownDistance));
                 braking = true;
             }
+            // owner (3ra vuelta): "sigue trabandose" -- el steerGain triplicado (fix
+            // anterior) no alcanza si la velocidad misma cae por debajo de 0.3 m/s:
+            // CarController.FixedUpdate() ni siquiera INTENTA girar bajo ese umbral
+            // (`if (Mathf.Abs(speed) > 0.3f)`), sin importar cuánto steer se le mande.
+            // El tapering de `targetSpeed` de arriba baja hacia CERO a medida que
+            // `remaining` se achica -- pero `remaining` se achica ANTES de terminar el
+            // giro (mide distancia hasta el final, no si ya se enderezó), así que el
+            // auto podía quedarse casi sin velocidad todavía a mitad del giro, mucho
+            // antes de necesitarlo. Piso de velocidad mientras todavía queda ALGÚN
+            // waypoint por delante (no el último, que es el que sí frena a fondo):
+            // no lo deja caer por debajo de lo necesario para retener autoridad de giro.
+            if (braking && !isLastWaypoint)
+                targetSpeed = Mathf.Max(targetSpeed, 4f); // ~14 km/h, piso para poder girar
 
             // owner: "no frena el auto choca" -- soltar el acelerador solo desacelera
             // con coastDecel (suave); adentro de la zona de frenado hay que FRENAR de
