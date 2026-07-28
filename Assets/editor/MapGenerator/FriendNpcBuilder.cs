@@ -121,7 +121,7 @@ namespace FolkloreArchives.MapGen
             // vivo (Play) hasta "ahi esta, guardalo": ángulo +55 (no +62, primer intento),
             // posición y drop propios (distintos del default global).
             new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs)
-                { seatPosOverride = new Vector3(-0.7201f, -0.1883f, -0.8f), seatedThighAngleOverride = 55f, seatedModelDropOverride = -0.5f },
+                { seatPosOverride = new Vector3(-0.620f, -0.1883f, -0.8f), seatedThighAngleOverride = 55f, seatedModelDropOverride = -0.5f },
             // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) --
             // owner: "descargue esa chica descomprimila y reemplazala por la que ya
             // esta" -- reemplaza a la vieja "PSX Female Secretary" de Vinrax (no
