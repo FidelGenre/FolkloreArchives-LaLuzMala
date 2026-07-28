@@ -7,6 +7,25 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (6) — Ajuste: doblar/frenar antes en la YPF + crucero más lento
+
+Owner: "ahora si frena etc pero deberia doblar antes y frenarse antes" /
+"y de camino ir mas lento". Ya no era un bug -- la secuencia funciona,
+solo afinando valores en vivo (mismo criterio que el resto del auto en
+esta sesión):
+
+- `cruiseThrottle`: 0.55 → 0.4 (más lento en la ruta principal).
+- `slowdownDistance`: 25 → 45 (más margen para empezar a soltar
+  velocidad).
+- radio de anticipación para mirar al siguiente waypoint: 2.5x →
+  4x `arriveRadius` (~32m, dobla con más margen antes del giro cerrado).
+- `inLotZone` (dónde empieza a considerar el frenado): últimos 3
+  waypoints → últimos 4 (incluye un tramo más de ruta antes del giro).
+
+Puro código, sin datos horneados -- no hace falta Regenerar.
+
+---
+
 ## 2026-07-28 (5) — Fix: el auto no frenaba nunca en la YPF (índice de ruta trabado) + doblaba tarde
 
 Owner: "sigue yendose de largo el auto no frena nunca cuando entra a la

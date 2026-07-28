@@ -25,7 +25,8 @@ namespace FolkloreArchives
         // corregir sin parar. Radio más generoso para no perseguir un punto tan
         // puntual.
         public float arriveRadius = 8f;  // qué tan cerca hay que estar de un waypoint para pasar al siguiente
-        public float cruiseThrottle = 0.55f;
+        // owner: "de camino ir mas lento" -- crucero más bajo en la ruta principal.
+        public float cruiseThrottle = 0.4f;
         public float steerGain = 1f;
         // owner: "al llegar a la ypf no frena el auto choca" -- el frenado solo miraba
         // la distancia del ÚLTIMO tramo (waypoint a waypoint), pero el giro hacia
@@ -33,7 +34,9 @@ namespace FolkloreArchives
         // ese tramo todavía a velocidad crucero, sin espacio para frenar a tiempo.
         // Ahora slowdownDistance se mide contra la distancia TOTAL restante (sumando
         // TODOS los tramos que faltan, no solo el actual).
-        public float slowdownDistance = 25f; // frena suave en los últimos metros antes del último waypoint
+        // owner: "deberia... frenarse antes" -- más metros de margen para empezar a
+        // soltar velocidad antes del giro/estacionamiento.
+        public float slowdownDistance = 45f; // frena suave en los últimos metros antes del último waypoint
 
         public bool active;
         public bool HasArrived { get; private set; }
@@ -107,8 +110,10 @@ namespace FolkloreArchives
             // anticipación aparte (más grande) solo para ESTO -- el radio chico
             // (arriveRadius*1.5) se guarda nomás para soltar el volante del todo cerca
             // del waypoint FINAL (ahí sí hace falta estar bien cerca, es donde frena).
+            // owner: "deberia doblar antes" -- 2.5x seguía quedando corto para el giro
+            // cerrado hacia el lote. Más radio de anticipación (~32m).
             bool isLastWaypoint = _index == waypoints.Length - 1;
-            bool nearForAim = dist < arriveRadius * 2.5f;
+            bool nearForAim = dist < arriveRadius * 4f;
             bool nearForStop = dist < arriveRadius * 1.5f;
             Vector2 aim = target;
             if (nearForAim && !isLastWaypoint) aim = waypoints[_index + 1];
@@ -132,7 +137,10 @@ namespace FolkloreArchives
             // al pavimento, sigue trabando" -- el giro cerrado a velocidad crucero se
             // pasaba de largo sin capturar el waypoint; entrar más lento a la zona de
             // giro (no solo al tramo final) ayuda al steer a completarlo a tiempo.
-            bool inLotZone = _index >= waypoints.Length - 3;
+            // owner: "deberia... frenarse antes" -- un waypoint más de margen (incluye
+            // el último tramo de RUTA, no solo los 2 giros + estacionar) para que el
+            // frenado pueda empezar un poco antes de llegar a la zona de giro.
+            bool inLotZone = _index >= waypoints.Length - 4;
 
             // owner: "no frena el auto choca" -- soltar el acelerador solo desacelera
             // con coastDecel (suave); adentro de la zona de frenado hay que FRENAR de
