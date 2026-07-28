@@ -61,12 +61,23 @@ namespace FolkloreArchives
             // giro hacia el siguiente empieza antes de cerrar la distancia al actual).
             // Con solo la condición de distancia, _index se quedaba trabado ahí para
             // siempre -- nunca llegaba a la zona de frenado (inLotZone mira _index, no
-            // la posición real). Ahora también avanza si el waypoint quedó DETRÁS
-            // nuestro (producto punto negativo con transform.forward), sin importar
-            // qué tan lejos haya pasado -- garantiza que el índice siempre progresa a
-            // medida que el auto avanza por la ruta.
+            // la posición real).
+            // owner (2da vuelta, "se esta quedando trabado nuevamente"): el primer
+            // intento de este fix usaba transform.forward (hacia dónde apunta el
+            // MORRO del auto AHORA) -- con el radio de anticipación agrandado después
+            // (4x arriveRadius) el auto empieza a curvar hacia el siguiente punto
+            // TAN pronto que el waypoint actual puede terminar bien al COSTADO en vez
+            // de atrás, y el morro (que gira siguiendo el volante) puede seguir
+            // "mirando" hacia adelante de él sin que el producto punto se vuelva
+            // negativo nunca -- se quedaba trabado otra vez. Cambiado a un criterio
+            // que no depende de hacia dónde mira el auto: proyección sobre la
+            // dirección del TRAMO de ruta (waypoint anterior → actual) -- "pasado" si
+            // el auto, medido a lo largo de esa línea, ya dejó atrás al punto, sin
+            // importar el ángulo del volante en este instante.
+            Vector2 segFrom = _index > 0 ? waypoints[_index - 1] : new Vector2(p.x, p.z);
+            Vector3 segDir = new Vector3(target.x - segFrom.x, 0f, target.y - segFrom.y);
             Vector3 toTargetNow = new Vector3(target.x - p.x, 0f, target.y - p.z);
-            bool passedWaypoint = Vector3.Dot(transform.forward, toTargetNow) < 0f;
+            bool passedWaypoint = segDir.sqrMagnitude > 1f && Vector3.Dot(toTargetNow, segDir) < 0f;
             if (dist < arriveRadius || passedWaypoint)
             {
                 _index++;

@@ -7,6 +7,26 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (7) — Fix: índice de ruta trabado otra vez (criterio "pasado" dependía del morro)
+
+Owner: "ahora se esta quedando trabado nuevamente" -- después de agrandar
+el radio de anticipación a 4x `arriveRadius` (~32m, ajuste anterior), el
+criterio de "waypoint pasado" (`Vector3.Dot(transform.forward,
+toTargetNow) < 0`) dejó de servir: con tanta anticipación el auto empieza
+a curvar hacia el SIGUIENTE punto muy pronto, así que el waypoint actual
+puede terminar bien al COSTADO en vez de atrás -- y como el morro gira
+siguiendo el volante, puede seguir "mirando" hacia delante de él
+indefinidamente sin que el producto punto se vuelva negativo nunca.
+Índice trabado de nuevo, mismo síntoma que antes por una causa distinta.
+
+Fix: criterio de "pasado" que no depende de hacia dónde apunta el auto en
+este instante -- proyección sobre la dirección del TRAMO de ruta (waypoint
+anterior → actual). El auto se considera que pasó el punto si, medido a
+lo largo de esa línea (no del morro), ya lo dejó atrás. Puro código, sin
+datos horneados -- no hace falta Regenerar.
+
+---
+
 ## 2026-07-28 (6) — Ajuste: doblar/frenar antes en la YPF + crucero más lento
 
 Owner: "ahora si frena etc pero deberia doblar antes y frenarse antes" /
