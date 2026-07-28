@@ -7,6 +7,20 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Sigue "adelantado": empuja DogSeatedForwardOffset a negativo
+
+Con el targeting ya forzado a rearMid siempre (entrada anterior), el owner
+reportó que el perro SIGUE sentándose adelantado (muy pegado/superpuesto a
+`Friend_MaleGreenJkt`). El targeting ya no debería ser la causa -- lo que
+queda es el offset de posición propio del perro al sentarse:
+`DogSeatedForwardOffset` (0.1) empuja la raíz hacia ADELANTE respecto al
+asiento. Invertido a **-0.3** (empuja hacia ATRÁS en vez de adelante).
+Sin verificar visualmente (sin Unity en esta sesión) -- necesita regenerar
+y probar; si sigue mal, seguir ajustando ESTE número específico (no el
+targeting, que ya está resuelto).
+
+---
+
 ## 2026-07-26 — El perro SOLO puede sentarse en el medio (ignora la mira)
 
 El fallback (entrada anterior) no alcanzaba: seguía terminando "adelantado"

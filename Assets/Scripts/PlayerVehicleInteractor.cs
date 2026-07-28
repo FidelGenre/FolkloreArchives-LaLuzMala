@@ -51,7 +51,7 @@ namespace FolkloreArchives
         Vector3 dogModelScale = Vector3.one;
         const float DogSeatedScale = 0.45f; // owner: "las patas traseras atraviesan el asiento" -- un poco mas chico
         const float DogSeatedExtraDrop = 0.35f; // owner: "se ve volando mas alto de los asientos" -- hundirlo un poco mas
-        const float DogSeatedForwardOffset = 0.1f; // owner: "ahora el perro esta muy adelantado" -- bajado de 0.3
+        const float DogSeatedForwardOffset = -0.3f; // owner: "sigue sentandose adelantado" en rearMid -- 0.1 empujaba hacia adelante todavía; invertido a negativo (empuja hacia atrás)
         // owner: "el perro no deberia verse a si mismo" -- layer creado en Generate
         // (LayerSetup.cs) que la cámara EXCLUYE de su propio cullingMask mientras está
         // sentado. Es una propiedad LOCAL (layer + cullingMask), no sincronizada por
