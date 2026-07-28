@@ -74,14 +74,29 @@ namespace FolkloreArchives
             for (int j = _index; j < waypoints.Length - 1; j++)
                 remaining += Vector2.Distance(waypoints[j], waypoints[j + 1]);
 
-            // owner: "se pone a girar" -- MUY cerca del waypoint final, no perseguir
-            // más el ángulo exacto (ruidoso a corta distancia, causaba el giro en el
-            // lugar) -- ir derecho y solo frenar.
-            bool finalApproach = _index == waypoints.Length - 1 && dist < arriveRadius * 1.5f;
+            // owner: "se pone a girar" -- MUY cerca de un waypoint, la dirección hacia
+            // ÉSE punto se vuelve ruidosísima (un paso más y el ángulo salta 180°),
+            // steer clampeado a ±1 lo hacía girar en el lugar. El fix anterior solo
+            // apagaba el steer cerca del ÚLTIMO waypoint (finalApproach) -- ahí es
+            // correcto porque ya no hay a dónde girar, solo frenar derecho. Pero con
+            // los waypoints de giro NUEVOS hacia el lote (waypoints intermedios, no el
+            // último) apagar el steer ahí hacía que el auto soltara el volante
+            // JUSTO en medio del giro y siguiera de largo sin doblar -- owner: "sigue
+            // de largo y atraviesa todo" / "se pone a girar". Fix general (estilo
+            // "pure pursuit"): cerca de un waypoint que NO es el último, mirar hacia
+            // el SIGUIENTE de una vez (ya vamos para allá) en vez de fijar la mirada en
+            // el punto que estamos a punto de pasar -- da un ángulo estable en vez de
+            // ruidoso. Solo cerca del waypoint FINAL (sin "siguiente" al cual mirar) se
+            // suelta el volante del todo.
+            bool isLastWaypoint = _index == waypoints.Length - 1;
+            bool closeToTarget = dist < arriveRadius * 1.5f;
+            Vector2 aim = target;
+            if (closeToTarget && !isLastWaypoint) aim = waypoints[_index + 1];
+
             float steer = 0f;
-            if (!finalApproach)
+            if (!(closeToTarget && isLastWaypoint))
             {
-                Vector3 toTarget = new Vector3(target.x - p.x, 0f, target.y - p.z);
+                Vector3 toTarget = new Vector3(aim.x - p.x, 0f, aim.y - p.z);
                 float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
                 steer = Mathf.Clamp(angle / 45f, -1f, 1f) * steerGain;
             }

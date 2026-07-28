@@ -7,6 +7,29 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (4) — Fix: el auto se ponía a girar y atravesaba objetos en los giros nuevos
+
+Owner (después de regenerar con el fix anterior): "ahora el auto sigue de
+largo y atraviesa todo" / "y se pone a girar". El fix de "se pone a girar"
+de esta misma sesión (más abajo) solo apagaba el steer cerca del ÚLTIMO
+waypoint (`finalApproach`) -- correcto ahí porque ya no hay más a dónde
+girar, solo frenar derecho. Pero la entrada anterior de HOY agregó DOS
+waypoints de giro NUEVOS que NO son el último -- cerca de esos, la misma
+lógica no se activaba, así que el ángulo hacia un punto pegado al auto
+volvía a ser ruidosísimo (el bug original) y el auto giraba en el lugar,
+rozando/atravesando lo que tuviera cerca.
+
+Fix en `CarAutoDrive.cs`: generalizado a un esquema tipo "pure pursuit" --
+cerca de CUALQUIER waypoint que no sea el último, el auto mira hacia el
+SIGUIENTE de una vez (ya va para allá) en lugar de fijar la mirada en el
+punto que está a punto de pasar -- da un ángulo estable en vez de
+ruidoso, y de paso el volante nunca se suelta a mitad de un giro (lo que
+antes hacía que seguiera derecho sin doblar). El "soltar el volante del
+todo" ahora es exclusivo del waypoint final, sin más a dónde girar. Puro
+código, sin datos horneados -- no hace falta Regenerar.
+
+---
+
 ## 2026-07-28 (3) — Fix: el auto pasaba de largo el giro hacia la YPF (**necesita regenerar**)
 
 Owner: "SE SIGUE TRABANDO Y ANDANDO PARA DELANTE EL AUTO NO ESTA ENTRANDO
