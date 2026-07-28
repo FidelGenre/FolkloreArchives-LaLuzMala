@@ -7,6 +7,20 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (17) — Hornea posición confirmada del perro sentado de acompañante
+
+Owner probó al perro sentado de acompañante (`frontPassenger`, el asiento
+que le toca después de la gasolinera) en vivo y confirmó la posición
+local exacta vía el Inspector: `(0.25001, -1.1808, 0)`. `PlayerVehicleInteractor.
+SitRoutine` ahora, después de reparentar al perro al asiento, si el
+asiento es `car.frontPassenger`, pisa la fórmula genérica con este valor
+horneado directo (mismo criterio que `Seat_RearMid` en `CarBuilder.cs`:
+un asiento con geometría propia es más confiable horneado a mano que
+persiguiendo la fórmula general del resto de los asientos). Puro código,
+sin datos horneados en el mapa -- no hace falta Regenerar.
+
+---
+
 ## 2026-07-28 (16) — Fix: las puertas quedaban abiertas para siempre tras el 2do embarque
 
 Owner: "no se me esta dejando cerrar la puierta luego de que se suben

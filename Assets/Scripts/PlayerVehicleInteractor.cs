@@ -73,6 +73,12 @@ namespace FolkloreArchives
         // (+X local del auto, ver CarBuilder.Seat: rearRight = paxBase + seatSpread
         // en +X). Primer numero chico a ajustar en vivo si no alcanza/se pasa.
         const float DogSeatedSideOffset = 0.15f;
+        // owner: probó al perro sentado de ACOMPAÑANTE (frontPassenger, después de la
+        // gasolinera) en vivo (Play) y confirmó esta posición local exacta -- horneada
+        // TAL CUAL en vez de seguir la fórmula genérica de arriba (mismo criterio que
+        // Seat_RearMid en CarBuilder.cs: más confiable que perseguir la fórmula a
+        // ciegas para un asiento con geometría propia).
+        static readonly Vector3 DogSeatedFrontPassengerLocalPos = new Vector3(0.25001f, -1.1808f, 0f);
         // owner: "el perro no deberia verse a si mismo" -- layer creado en Generate
         // (LayerSetup.cs) que la cámara EXCLUYE de su propio cullingMask mientras está
         // sentado. Es una propiedad LOCAL (layer + cullingMask), no sincronizada por
@@ -459,6 +465,8 @@ namespace FolkloreArchives
             // afuera sí se nota. Reparentado al asiento (que sí es hijo del auto) para
             // que se mueva junto con él; ExitRoutine lo desparenta al bajar.
             transform.SetParent(seat, true);
+            if (dog != null && seat == c.frontPassenger)
+                transform.localPosition = DogSeatedFrontPassengerLocalPos;
 
             // owner: "quedo atras del asiento" -- ya no hace falta correr la cámara del
             // hocico hacia atrás: ahora el modelo del perro se OCULTA de su propia
