@@ -23,10 +23,13 @@ namespace FolkloreArchives.MapGen
 
         public static void EnsureNet()
         {
-            // owner: "el perro no deberia verse a si mismo" -- asegura que exista el
-            // layer que PlayerVehicleInteractor usa para excluir el propio modelo de
-            // su propia cámara (ver LayerSetup.cs).
+            // owner: "el perro no deberia verse a si mismo" -- asegura que existan los
+            // layers que PlayerVehicleInteractor usa para excluir el propio modelo de
+            // su propia cámara (ver LayerSetup.cs). Uno para la persona y OTRO aparte
+            // para el perro -- si compartieran el mismo, cuando los dos están sentados
+            // a la vez cada uno terminaría ocultando también al otro.
             LayerSetup.EnsureLayer(LayerSetup.SelfHiddenLayer);
+            LayerSetup.EnsureLayer(LayerSetup.SelfHiddenLayerDog);
 
             var net = GameObject.Find("NET");
             if (net == null) net = new GameObject("NET");
@@ -208,6 +211,7 @@ namespace FolkloreArchives.MapGen
             // puede abrir/cerrar puertas él mismo.
             var dogInteractor = root.AddComponent<FolkloreArchives.PlayerVehicleInteractor>();
             dogInteractor.canOpenDoors = false;
+            dogInteractor.selfHiddenLayerName = LayerSetup.SelfHiddenLayerDog; // layer propio, no compartido con la persona
             dogInteractor.enabled = false; // el gate lo prende para el dueño
 
             BuildDogVisual(root.transform);

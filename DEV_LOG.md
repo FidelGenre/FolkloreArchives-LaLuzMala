@@ -7,6 +7,30 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix: layer "SelfHidden" compartido ocultaba a los DOS entre sí
+
+Owner: "sigo sin ver al perro desde la camara del humano y sigo sin ver al
+humano desde la camara del perro" (y confirmó, aparte, que el fix anterior
+del reparentado SÍ funcionó: "se ve que si se mueven con el auto porque al
+bajarme luego si estan"). Bug real, no falta de regenerar: `SelfHiddenLayer`
+era un layer ÚNICO Y COMPARTIDO -- cuando la persona Y el perro están
+sentados a la vez, cada uno pone su PROPIO modelo en ESE MISMO layer para
+ocultarse de su PROPIA cámara (`camComp.cullingMask &= ~(1 << hidden)`),
+pero como el layer es el mismo número para los dos, la cámara de cada uno
+termina excluyendo TODO ese layer -- oculta también al otro, no solo a sí
+mismo.
+
+Fix: `LayerSetup.SelfHiddenLayerDog` (layer nuevo, aparte del `SelfHidden`
+que sigue usando la persona). `PlayerVehicleInteractor.
+SelfHiddenLayerName` pasa de `const` COMPARTIDA a campo `public
+selfHiddenLayerName` POR INSTANCIA -- `TestPlayerBuilder.cs` (modo solo,
+el que se prueba esta sesión) y `NetworkBuilder.cs` (modo red) le asignan
+el layer del perro a su interactor específicamente. `NetworkBuilder.
+EnsureNet()` ahora crea los DOS layers (antes solo uno). Necesita
+regenerar.
+
+---
+
 ## 2026-07-26 — Fix real: el cuerpo nunca se reparentaba al auto (solo la cámara)
 
 Owner: "se queda ahi parado el perro no se mueve con el auto... pero su

@@ -286,6 +286,10 @@ namespace FolkloreArchives.MapGen
             // tiene para el perro (`canOpenDoors = false`) -- mismo criterio acá.
             var dogInteractor = dog.AddComponent<FolkloreArchives.PlayerVehicleInteractor>();
             dogInteractor.canOpenDoors = false;
+            // owner: "no veo al perro desde la camara del humano y no veo al humano
+            // desde la camara del perro" -- layer propio para el perro, no compartido
+            // con la persona (ver PlayerVehicleInteractor.selfHiddenLayerName).
+            dogInteractor.selfHiddenLayerName = FolkloreArchives.MapGen.LayerSetup.SelfHiddenLayerDog;
 
             var party = player.AddComponent<FolkloreArchives.PartyController>();
             party.person    = player.GetComponent<FolkloreArchives.MapExplorer>();

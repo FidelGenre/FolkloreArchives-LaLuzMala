@@ -68,7 +68,14 @@ namespace FolkloreArchives
         // sentado. Es una propiedad LOCAL (layer + cullingMask), no sincronizada por
         // red -- cada cliente decide qué renderiza su PROPIA cámara, así que los demás
         // jugadores lo siguen viendo normal.
-        const string SelfHiddenLayerName = "SelfHidden";
+        // owner (2da vuelta): "no veo al perro desde la camara del humano y no veo al
+        // humano desde la camara del perro" -- si esto fuera una const COMPARTIDA
+        // (mismo layer para los dos), cuando ambos están sentados a la vez cada uno se
+        // pone en ESE layer para ocultarse de su PROPIA cámara, pero la cámara de cada
+        // uno excluye TODO el layer -- termina ocultando también al otro. Pasa a ser
+        // un campo por INSTANCIA (no const), para que TestPlayerBuilder/NetworkBuilder
+        // le den un layer distinto al perro (ver LayerSetup.SelfHiddenLayerDog).
+        public string selfHiddenLayerName = "SelfHidden";
         int _prevModelLayer = -1;
         int _prevCullingMask;
         bool _selfHideActive;
@@ -449,7 +456,7 @@ namespace FolkloreArchives
             // los demás jugadores lo siguen viendo normal en su propia pantalla.
             if (ownModel != null && camComp != null)
             {
-                int hidden = LayerMask.NameToLayer(SelfHiddenLayerName);
+                int hidden = LayerMask.NameToLayer(selfHiddenLayerName);
                 if (hidden >= 0)
                 {
                     _prevModelLayer = ownModel.gameObject.layer;

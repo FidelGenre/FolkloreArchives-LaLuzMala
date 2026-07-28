@@ -17,6 +17,13 @@ namespace FolkloreArchives.MapGen
     public static class LayerSetup
     {
         public const string SelfHiddenLayer = "SelfHidden";
+        // owner: "sigo sin ver al perro desde la camara del humano y sigo sin ver al
+        // humano desde la camara del perro" -- con UN SOLO layer compartido, cuando
+        // los dos están sentados a la vez cada uno pone su modelo en ESE layer para
+        // ocultarse de su PROPIA cámara, pero la cámara de cada uno excluye TODO el
+        // layer -- termina ocultando también al otro (mismo layer = mismo filtro).
+        // Layer aparte para el perro específicamente.
+        public const string SelfHiddenLayerDog = "SelfHiddenDog";
 
         // Devuelve el índice del layer, creándolo en el primer slot de usuario libre
         // (8..31) si todavía no existe. Llamar durante Generate (antes de Play).
