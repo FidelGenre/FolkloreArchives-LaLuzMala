@@ -7,6 +7,35 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 — Fix: el perro "camina" con las patas mientras está sentado
+
+Owner: "de la vista del humano veo al perro moviendo los pies como si
+estuviera caminando mientras esta sentado". Efecto secundario directo del
+fix anterior del reparentado del cuerpo (ver entrada del reparentado más
+abajo): `DogWalkAnim.LateUpdate()` detecta "me estoy moviendo" únicamente
+por el delta de `transform.position` cuadro a cuadro, sin ninguna noción
+de "estoy sentado". Antes, el perro sentado se quedaba clavado en el
+mundo (por eso nunca animaba caminar); ahora que el cuerpo viaja de
+verdad con el asiento del auto (reparentado), esa posición cambia todo el
+tiempo aunque esté quieto en la silla -- el script lo interpreta como
+"caminando" y anima las 4 patas con el swing de siempre.
+
+Fix: `PlayerVehicleInteractor` cachea `DogWalkAnim` en `EnsureInit()` y lo
+apaga (`dogWalkAnim.enabled = false`) en `SitRoutine`, restaurándolo
+(`= true`) en `ExitRoutine` -- mismo patrón ya usado para `DogController`
+(`dog.enabled`). No hace falta regenerar el mapa, es cambio de código
+puro.
+
+Nota aparte (no arreglado todavía): el owner también reportó que "desde
+la vista del perro atravieso el cuerpo cuando lo miro del humano" -- la
+cámara en primera persona no tiene colisión propia contra otros
+personajes, así que a corta distancia atraviesa el modelo del otro. Es
+una limitación general de este sistema de cámara libre (no algo que rompió
+ningún fix de esta sesión); no se tocó nada todavía, a la espera de que
+el owner confirme si quiere que se le agregue colisión.
+
+---
+
 ## 2026-07-26 — Fix: layer "SelfHidden" compartido ocultaba a los DOS entre sí
 
 Owner: "sigo sin ver al perro desde la camara del humano y sigo sin ver al

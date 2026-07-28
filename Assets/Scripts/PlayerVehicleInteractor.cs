@@ -49,6 +49,7 @@ namespace FolkloreArchives
         MapExplorer explorer;
         DogController dog;
         HumanWalkAnim humanAnim;
+        DogWalkAnim dogWalkAnim;
         NetOwnerGate netGate;   // presente en red -- ahí vive la sincronización del achicado
         Transform cam, camParent;
         Camera camComp;
@@ -120,6 +121,7 @@ namespace FolkloreArchives
             explorer = GetComponent<MapExplorer>();
             dog = GetComponent<DogController>();
             humanAnim = GetComponent<HumanWalkAnim>();
+            dogWalkAnim = GetComponent<DogWalkAnim>();
             netGate = GetComponent<NetOwnerGate>();
             // la cámara del perro (DogCamera) arranca DESACTIVADA (el juego empieza
             // controlando a la persona, ver PartyController) -- GetComponentInChildren
@@ -390,6 +392,14 @@ namespace FolkloreArchives
             // enteraba de que estabas sentado, y peleaba con el mouse-look de acá mismo
             // por la rotación de la cámara. Se apaga igual que explorer.
             if (dog != null) dog.enabled = false;
+            // owner: "veo al perro moviendo los pies como si estuviera caminando
+            // mientras esta sentado" -- DogWalkAnim detecta "me estoy moviendo" por
+            // delta de POSICIÓN MUNDO cuadro a cuadro; ahora que el cuerpo se
+            // reparenta al asiento (ver SetParent más abajo) y viaja de verdad con el
+            // auto, esa posición cambia todo el tiempo aunque esté quieto sentado --
+            // el script interpreta eso como "caminando". Se apaga mientras está
+            // sentado, se restaura al bajar (ExitRoutine).
+            if (dogWalkAnim != null) dogWalkAnim.enabled = false;
             // owner: "achicar el modelo del perro mientras esta sentado" -- a tamaño
             // normal atravesaba techo/puertas (un cuadrúpedo no tiene una pose sentado
             // razonable ahí). Se restaura al bajar (ExitRoutine).
@@ -575,6 +585,7 @@ namespace FolkloreArchives
                 dog.SetLookPitch(exitPitch);
                 dog.enabled = true;
             }
+            if (dogWalkAnim != null) dogWalkAnim.enabled = true;
             busy = false;
         }
 
