@@ -25,8 +25,17 @@ namespace FolkloreArchives
         // corregir sin parar. Radio más generoso para no perseguir un punto tan
         // puntual.
         public float arriveRadius = 8f;  // qué tan cerca hay que estar de un waypoint para pasar al siguiente
-        // owner: "de camino ir mas lento" -- crucero más bajo en la ruta principal.
-        public float cruiseThrottle = 0.4f;
+        // owner: "de camino ir mas lento... sigue igual" -- bajar cruiseThrottle (0.55
+        // -> 0.4) no cambió NADA la velocidad real porque CarController.Update() no
+        // usa el VALOR del throttle para nada, solo su signo: `if (throttle > 0.1f)
+        // speed = MoveTowards(speed, maxSpeed, accel*dt)` -- acelera a fondo hacia
+        // maxSpeed sin importar si el throttle es 0.11 o 1.0. Frenar el crucero de
+        // verdad necesita que ESTE script decida cuándo CORTAR el acelerador (no solo
+        // bajar un número que CarController ignora) -- reemplazado por un control de
+        // velocidad objetivo: acelera mientras esté por debajo de cruiseSpeedKmh,
+        // corta el acelerador al alcanzarlo (mismo patrón que ya usaba la frenada en
+        // el lote, ahora aplicado a TODO el trayecto).
+        public float cruiseSpeedKmh = 20f;
         public float steerGain = 1f;
         // owner: "al llegar a la ypf no frena el auto choca" -- el frenado solo miraba
         // la distancia del ÚLTIMO tramo (waypoint a waypoint), pero el giro hacia
@@ -124,9 +133,10 @@ namespace FolkloreArchives
             // owner: "dobla muy despues... se sigue trabando" -- agrandar este radio a
             // 4x para que doble antes resultó frágil (cuanto más grande, más fácil que
             // el auto cortara camino y el índice de ruta quedara trabado, ver más
-            // arriba). Vuelto a 2.5x -- el "doblar antes" ahora se resuelve con
-            // geometría (CarBuilder arranca el giro 30m antes, en TRES pasos
-            // graduales) en vez de con un lookahead de runtime más agresivo.
+            // arriba). Vuelto a 2.5x -- estable. La geometría del giro en sí la maneja
+            // CarBuilder (owner pidió que sea cerca de la estación, 5m); lo que hace
+            // que un giro tan cerrado sea completable ahora es la velocidad de crucero
+            // más baja (cruiseSpeedKmh), no un lookahead de runtime agresivo.
             bool isLastWaypoint = _index == waypoints.Length - 1;
             bool nearForAim = dist < arriveRadius * 2.5f;
             bool nearForStop = dist < arriveRadius * 1.5f;
@@ -145,43 +155,49 @@ namespace FolkloreArchives
             // los tramos que faltan desde el waypoint actual (no solo el tramo actual),
             // así un tramo final corto no deja al auto sin espacio para frenar a
             // tiempo -- pero eso solo importa mientras `inLotZone` (abajo) es cierto.
-            // owner: "frenar ni bien entra" -- CarBuilder ahora hornea el giro en TRES
-            // pasos MUY antes de la estación (30m) más el punto de entrada real al
-            // lote + el de estacionar (4 waypoints en total para el lote). Frenar
-            // desde que arranca el giro (los 4) lo frenaría de más mientras todavía
-            // viene acomodando el rumbo -- ahora la zona de frenado son solo los
-            // ÚLTIMOS 2 (la entrada real al pavimento + el punto de estacionar): fuera
-            // de eso, incluidos los 2 primeros pasos del giro, sigue a velocidad
-            // crucero (más lenta ahora, ver cruiseThrottle) y solo frena de verdad
-            // apenas "entra" de verdad al lote.
+            // owner: "frenar ni bien entra" -- CarBuilder hornea un punto de giro cerca
+            // de la estación, más el punto de entrada real al lote + el de estacionar.
+            // La zona de frenado activo son solo los ÚLTIMOS 2 (la entrada real al
+            // pavimento + el punto de estacionar) -- durante el giro previo sigue a la
+            // velocidad de crucero (ya más lenta, ver cruiseSpeedKmh) y recién frena
+            // de verdad apenas "entra" de verdad al lote.
             bool inLotZone = _index >= waypoints.Length - 2;
+
+            // owner: "todo el trayecto... vaya mas lento" -- velocidad objetivo: la de
+            // crucero en la ruta abierta, o la que va bajando (tapering) cerca del
+            // final dentro de la zona de frenado -- la que sea más chica de las dos
+            // (por si cruiseSpeedKmh ya es menor que lo que pediría el tapering).
+            float cruiseSpeedMs = cruiseSpeedKmh / 3.6f;
+            float currentSpeed = car.SpeedKmh / 3.6f;
+            float targetSpeed = cruiseSpeedMs;
+            bool braking = false;
+            if (inLotZone && remaining < slowdownDistance)
+            {
+                targetSpeed = Mathf.Min(cruiseSpeedMs, car.maxSpeed * Mathf.Clamp01(remaining / slowdownDistance));
+                braking = true;
+            }
 
             // owner: "no frena el auto choca" -- soltar el acelerador solo desacelera
             // con coastDecel (suave); adentro de la zona de frenado hay que FRENAR de
             // verdad (throttle negativo → CarController usa brakeDecel, mucho más
             // fuerte) si la velocidad actual supera lo que "debería" tener a esta
-            // distancia del final.
+            // distancia del final. Fuera de la zona de frenado (en la ruta abierta),
+            // alcanza con CORTAR el acelerador (throttle=0 → coastDecel, suave) para
+            // no pasarse de cruiseSpeedKmh -- no hace falta frenar activo ahí.
             float throttle;
-            if (inLotZone && remaining < slowdownDistance)
-            {
-                float targetSpeed = car.maxSpeed * Mathf.Clamp01(remaining / slowdownDistance);
-                float currentSpeed = car.SpeedKmh / 3.6f;
-                if (currentSpeed > targetSpeed + 0.5f)
-                    throttle = -0.6f; // frenar activo
-                else if (remaining < arriveRadius)
-                    // owner: "no frena del todo el auto se queda trancado andando" --
-                    // este empuje chiquito (cruiseThrottle*0.3) nunca llegaba a CERO,
-                    // así que tan cerca del punto final el auto seguía reptando para
-                    // siempre sin nunca entrar en el radio de "llegada". Sin acelerador
-                    // ahí, frena solo por resistencia (coastDecel) hasta pararse de verdad.
-                    throttle = 0f;
-                else
-                    throttle = cruiseThrottle * 0.3f;
-            }
+            if (currentSpeed > targetSpeed + 0.5f)
+                throttle = braking ? -0.6f : 0f;
+            else if (braking && remaining < arriveRadius)
+                // owner: "no frena del todo el auto se queda trancado andando" -- un
+                // empuje chiquito acá nunca llegaba a CERO, así que tan cerca del punto
+                // final el auto seguía reptando para siempre sin nunca entrar en el
+                // radio de "llegada". Sin acelerador ahí, frena solo por resistencia
+                // (coastDecel) hasta pararse de verdad.
+                throttle = 0f;
+            else if (currentSpeed < targetSpeed - 0.5f)
+                throttle = 1f; // acelerar hacia la velocidad objetivo
             else
-            {
-                throttle = cruiseThrottle;
-            }
+                throttle = 0f; // ya en la velocidad objetivo -- no acelerar más
 
             car.autoPilot = true;
             car.externalThrottle = throttle;

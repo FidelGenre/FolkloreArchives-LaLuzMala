@@ -192,23 +192,22 @@ namespace FolkloreArchives.MapGen
             // a "capturar" el waypoint (dist nunca bajaba de arriveRadius) y seguía de
             // largo por la ruta para siempre.
             // owner (3ra vuelta): "dobla muy despues deberia doblar antes osea entrar
-            // antes a la ypf, y frenar ni bien entra" -- afinar el radio de anticipación
-            // en runtime (CarAutoDrive) para "mirar" el giro más temprano resultó
-            // frágil (cuanto más grande ese radio, más fácil que el auto cortara camino
-            // y el índice de ruta quedara trabado -- ver DEV_LOG). La geometría del
-            // giro en sí seguía siendo la misma (apretada en 14m). Ahora el giro
-            // arranca mucho antes (30m de anticipación) y se reparte en TRES pasos
-            // graduales en vez de dos -- el auto entra al lote de verdad más temprano,
-            // sin depender de un lookahead de runtime tan agresivo.
-            float turnInX = MapLayout.YpfStation.x - 30f;
+            // antes a la ypf, y frenar ni bien entra" -- probé estirar el giro a 30m de
+            // anticipación (fue demasiado -- se veía doblando en plena ruta abierta).
+            // owner (4ta vuelta): "lo hiciste mal deberia ser a los 5m no a los 30m" --
+            // vuelto a un giro CERCA de la estación (5m), como el owner pidió
+            // explícitamente. El problema de fondo que hacía que un giro tan cerrado
+            // fallara (auto pasándolo de largo a velocidad crucero) se ataca ahora
+            // desde el otro lado: CarAutoDrive frena la velocidad de CRUCERO en toda
+            // la ruta (ver cruiseSpeedKmh), así que el auto llega mucho más lento a
+            // este giro cerrado y sí lo puede completar.
+            float turnInX = MapLayout.YpfStation.x - 5f;
             for (float x = carX; x > turnInX; x -= stepX)
                 waypoints.Add(new Vector2(x, MapLayout.PavedRouteZAt(x)));
             float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
             float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;
             float padEntryZ = roadZAtStation + MapLayout.YpfPadNearZ + 2f;
-            float turnSpanZ = padEntryZ - roadZAtStation;
-            waypoints.Add(new Vector2(MapLayout.YpfStation.x - 20f, roadZAtStation + turnSpanZ * 0.33f)); // giro 1: recién empieza a desviarse
-            waypoints.Add(new Vector2(MapLayout.YpfStation.x - 10f, roadZAtStation + turnSpanZ * 0.66f)); // giro 2: a mitad de camino
+            waypoints.Add(new Vector2(MapLayout.YpfStation.x - 2.5f, (roadZAtStation + padEntryZ) * 0.5f)); // giro: a mitad de camino
             // owner: "frenar ni bien entra" -- este punto (padEntryZ) marca "ya está
             // ADENTRO del pavimento"; CarAutoDrive.inLotZone frena recién desde acá,
             // no antes (mientras todavía viene acomodando el giro).

@@ -7,6 +7,40 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (9) — Corrección: giro vuelto a 5m + fix real de la velocidad de crucero (**necesita regenerar**)
+
+Owner: "lo hiciste mal deberia ser a los 5m no a los 30m" / "y de
+velocidad sigue iguawl necesito que todo el trayecto desde donde arranca
+hasta llegar a la ypf vaya mas lento el auto".
+
+**Giro a 5m:** el intento anterior (30m, tres pasos) se pasó de largo --
+vuelto a un giro cerca de la estación (5m, un solo punto intermedio a
+mitad de camino) como pidió el owner explícitamente. Lo que hace que un
+giro tan cerrado sea completable no es más anticipación de runtime (ya
+demostrado frágil, ver entradas de arriba) sino que el auto ahora llega
+mucho más lento a la YPF (ver el punto siguiente).
+
+**La velocidad "sigue igual" -- causa real encontrada:** bajar
+`cruiseThrottle` (0.55→0.4 en el ajuste anterior) no cambió NADA la
+velocidad real observable, porque `CarController.Update()` NUNCA usa el
+VALOR del throttle -- solo su signo: `if (throttle > 0.1f) speed =
+MoveTowards(speed, maxSpeed, accel*dt)` acelera a FONDO hacia `maxSpeed`
+sin importar si el throttle es 0.11 o 1.0. `cruiseThrottle` en
+`CarAutoDrive` era un número completamente ignorado por la física en la
+práctica -- moverlo de 0.55 a 0.4 no tenía forma de frenar nada.
+
+Fix real: `CarAutoDrive` reemplaza `cruiseThrottle` por `cruiseSpeedKmh`
+(20 km/h, primer número a ajustar en vivo) y un control de velocidad
+objetivo -- acelera (throttle=1) mientras esté por debajo del objetivo,
+CORTA el acelerador (throttle=0, no un número intermedio que igual
+acelera a fondo) al alcanzarlo. Mismo patrón que ya usaba el frenado en
+el lote (comparar contra una velocidad objetivo), ahora aplicado a TODO
+el trayecto, no solo la zona de frenado final.
+
+**Esto rehornea la ruta -- hace falta Regenerar.**
+
+---
+
 ## 2026-07-28 (8) — Rediseño: giro hacia la YPF más temprano y gradual (**necesita regenerar**)
 
 Owner: "nop. se sigue trabando hace dos commits funcionaba bien pero
