@@ -155,11 +155,23 @@ namespace FolkloreArchives
                         StartCoroutine(ExitRoutine());
                     }
                 }
+                else if (!canOpenDoors)
+                {
+                    // owner: "haz que el perro solo pueda sentarse en el medio" -- ya no
+                    // alcanzaba con el fallback (solo actuaba si la mira NO encontraba
+                    // nada apuntado); a veces igual apuntaba sin querer a otro asiento y
+                    // terminaba ahí. Ahora el perro IGNORA la mira por completo: siempre
+                    // va directo a rearMid con solo estar cerca del auto, sin importar a
+                    // qué esté apuntando.
+                    var nearCar = NearestCarInRange(doorRange);
+                    if (nearCar != null && nearCar.rearMid != null)
+                        StartCoroutine(SitRoutine(nearCar, nearCar.rearMid, PreferredDoor(nearCar, nearCar.rearMid.position)));
+                }
                 else if (target != null)   // a pie, apuntando algo del auto
                 {
                     if (target.isSeat)
                         StartCoroutine(SitRoutine(target.car, target.part, PreferredDoor(target.car, target.part.position))); // apunto el asiento → subir
-                    else if (canOpenDoors)
+                    else
                     {
                         var doors = Doors(target.car);
                         bool willOpen = doors != null && !doors.IsOpen(target.part);
@@ -170,19 +182,6 @@ namespace FolkloreArchives
                         // una prueba anterior en el mismo auto.
                         if (willOpen) { _lastDoorOpened = target.part; _lastDoorOpenedCar = target.car; }
                     }
-                    // el perro apuntando a una puerta (no un asiento): no hace nada
-                }
-                else if (!canOpenDoors)
-                {
-                    // owner: "al ser el perro necesito que no deba apuntar a donde se
-                    // quiere subir ya que no llega a ver, que se suba al que este vacio
-                    // no mas" -- el perro es bajo y le cuesta apuntar bien la mira al
-                    // asiento por la ventana. Si no hay nada apuntado (target null),
-                    // sube directo al asiento del medio del auto más cercano (el que le
-                    // corresponde a él) con solo estar cerca, sin necesitar mira precisa.
-                    var nearCar = NearestCarInRange(doorRange);
-                    if (nearCar != null && nearCar.rearMid != null)
-                        StartCoroutine(SitRoutine(nearCar, nearCar.rearMid, PreferredDoor(nearCar, nearCar.rearMid.position)));
                 }
             }
 
@@ -562,19 +561,20 @@ namespace FolkloreArchives
                     msg = car.headlightsOn ? "[ E ] Apagar luces" : "[ E ] Prender luces";
                 else msg = "[ E ] Bajar";
             }
+            else if (!canOpenDoors)
+            {
+                // el perro solo puede sentarse en el medio -- mismo criterio que la
+                // acción real de E, ignora la mira por completo.
+                if (NearestCarInRange(doorRange) != null) msg = "[ E ] Subir";
+            }
             else if (target != null)
             {
                 if (target.isSeat) msg = "[ E ] Subir";
-                else if (canOpenDoors)
+                else
                 {
                     var doors = Doors(target.car);
                     msg = (doors != null && doors.IsOpen(target.part)) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
                 }
-            }
-            else if (!canOpenDoors && NearestCarInRange(doorRange) != null)
-            {
-                // mismo criterio que la acción real de E (el perro no necesita apuntar).
-                msg = "[ E ] Subir";
             }
             if (msg == null) return;
             var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };

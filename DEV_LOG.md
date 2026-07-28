@@ -7,6 +7,22 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — El perro SOLO puede sentarse en el medio (ignora la mira)
+
+El fallback (entrada anterior) no alcanzaba: seguía terminando "adelantado"
+encima de `Friend_MaleGreenJkt` porque a veces la mira SÍ encontraba algo
+(otro asiento) sin querer, y el fallback solo actuaba cuando `target` daba
+null. Owner: "haz que el perro solo pueda sentarse en el medio".
+
+Reordenado en `PlayerVehicleInteractor.cs`: el chequeo `!canOpenDoors` ahora
+va PRIMERO en la cadena de E (antes de mirar `target`), así el perro
+siempre va directo a `rearMid` con solo estar cerca del auto, sin importar
+a qué esté apuntando la mira -- ignora aim por completo, no es un
+fallback. Mismo orden de prioridad en el cartel (`OnGUI`). Necesita
+regenerar.
+
+---
+
 ## 2026-07-26 — El perro sube sin apuntar (va directo al asiento del medio)
 
 El fix de la mira por ángulo funcionó (owner: "se esta subiendo bien"), pero
