@@ -7,6 +7,37 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Causa raíz real: un solo crash tumbaba TODA la secuencia
+
+Owner mandó el error completo de la Console (mucho más útil que adivinar):
+`NullReferenceException` en `PlayerVehicleInteractor+<Glide>d__54.MoveNext()`
+(`PlayerVehicleInteractor.cs:544`), disparado desde
+`dog.StartCoroutine(dog.SitRoutine(...))` en `OpeningDriveSequence.cs:75`.
+El fix anterior (`GetComponentInChildren<Camera>(true)`) no alcanzó a
+tiempo -- `cam` seguía null para el perro en ese momento.
+
+**El hallazgo importante:** `dog.StartCoroutine(dog.SitRoutine(...))`
+corre TODO el arranque de esa corrutina (hasta el primer yield adentro de
+`Glide`) de forma SINCRÓNICA, como parte de la llamada -- confirmado por
+el stack trace, que muestra `Run()` (de `OpeningDriveSequence`) como
+llamador directo. Como no había ningún try/catch en el medio, la
+excepción se propagaba hacia ARRIBA y tumbaba TODA la corrutina `Run()`,
+no solo la del perro -- por eso el auto TAMPOCO frenaba: la secuencia
+nunca llegaba a la parte que activa `autoPilot`/`CarAutoDrive`.
+
+**Fix, dos capas:**
+1. `SitRoutine` ahora vuelve a buscar la cámara (`GetComponentInChildren
+   <Camera>(true)`) justo antes de necesitarla si `cam` sigue null a esa
+   altura -- no depende de cuándo corrió `Start()`.
+2. `Glide()` ahora chequea `tr == null` al entrar y sale con `yield break`
+   + un `Debug.LogError` en vez de tirar la excepción -- así una falla
+   puntual en UN personaje no puede tumbar toda la secuencia de apertura
+   de nuevo.
+
+Necesita regenerar.
+
+---
+
 ## 2026-07-26 — Fix: linterna prendida adentro + perro que no se sienta + frenado débil
 
 Owner: "tengo la linterna prendida dentro del auto no deberia pasar eso...

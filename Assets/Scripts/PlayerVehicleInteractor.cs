@@ -357,6 +357,16 @@ namespace FolkloreArchives
         public IEnumerator SitRoutine(CarController c, Transform seat, Transform door)
         {
             busy = true;
+            // owner: "NullReferenceException adentro de Glide" -- segunda red de
+            // seguridad: si por lo que sea `cam` sigue sin estar seteado a esta altura
+            // (Start() no llegó a correr todavía, orden raro entre objetos distintos),
+            // se vuelve a buscar ACÁ, justo antes de necesitarla, en vez de romper la
+            // corrutina en silencio.
+            if (cam == null)
+            {
+                var c2 = GetComponentInChildren<Camera>(true);
+                if (c2 != null) { cam = c2.transform; camComp = c2; camParent = cam.parent; camLocalPos = cam.localPosition; }
+            }
             if (explorer != null) explorer.enabled = false;
             // owner: "desde la perspectiva del perro no me deja mirar hacia los lados
             // dentro del auto" -- DogController tiene su PROPIA lógica de mouse-look
@@ -541,6 +551,11 @@ namespace FolkloreArchives
         // desliza un transform (la cámara) hasta pos/rot en el mundo
         IEnumerator Glide(Transform tr, Vector3 pos, Quaternion rot)
         {
+            // owner: "NullReferenceException adentro de Glide" -- si por lo que sea
+            // 'tr' (la cámara) sigue siendo null a esta altura, avisar FUERTE y salir
+            // en vez de romper toda la corrutina en silencio (dejaba SitRoutine a
+            // mitad de camino: sin cámara movida, `busy` trabado en true para siempre).
+            if (tr == null) { Debug.LogError($"{name}: Glide llamado con cámara null -- SitRoutine no puede terminar de sentar."); yield break; }
             tr.SetParent(null, true);
             Vector3 p0 = tr.position; Quaternion r0 = tr.rotation;
             float t = 0f;
