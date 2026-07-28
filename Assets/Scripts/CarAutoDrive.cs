@@ -110,6 +110,24 @@ namespace FolkloreArchives
             for (int j = _index; j < waypoints.Length - 1; j++)
                 remaining += Vector2.Distance(waypoints[j], waypoints[j + 1]);
 
+            // owner: "necesito que vaya a 40kmh y ahora se esta trabando de nuevo
+            // contra la entrada de la ypf" -- la zona de frenado ahora incluye también
+            // el waypoint de GIRO (últimos 3: giro + entrada real + estacionar), no
+            // solo los últimos 2 -- empieza a soltar velocidad ANTES del giro cerrado.
+            // Calculado ACÁ (antes del steer) porque el siguiente fix también lo usa.
+            bool inLotZone = _index >= waypoints.Length - 3;
+
+            // owner (2da vuelta): "se sigue quedando trabado ahora si va a 40" --
+            // CarController.FixedUpdate() escala la capacidad de GIRO con la
+            // velocidad (`turnRate * Clamp01(speed/maxSpeed)`): a velocidad CERO no
+            // gira nada. Frenar antes del giro cerrado (fix anterior) reduce la
+            // velocidad para no pasarse de largo, pero ESO MISMO le saca autoridad de
+            // giro justo cuando más la necesita -- frenar de más y no poder doblar son
+            // la MISMA perilla, tirando para lados opuestos. Solución: no pelear más
+            // con la velocidad, compensar con más steerGain SOLO dentro del lote --
+            // así el auto puede cerrar el giro aunque venga más lento.
+            float lotSteerGain = inLotZone ? steerGain * 3f : steerGain;
+
             // owner: "se pone a girar" -- MUY cerca de un waypoint, la dirección hacia
             // ÉSE punto se vuelve ruidosísima (un paso más y el ángulo salta 180°),
             // steer clampeado a ±1 lo hacía girar en el lugar. El fix anterior solo
@@ -148,23 +166,8 @@ namespace FolkloreArchives
             {
                 Vector3 toTarget = new Vector3(aim.x - p.x, 0f, aim.y - p.z);
                 float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
-                steer = Mathf.Clamp(angle / 45f, -1f, 1f) * steerGain;
+                steer = Mathf.Clamp(angle / 45f, -1f, 1f) * lotSteerGain;
             }
-
-            // owner: "se frena antes de entrar al pavimento" -- remaining suma TODOS
-            // los tramos que faltan desde el waypoint actual (no solo el tramo actual),
-            // así un tramo final corto no deja al auto sin espacio para frenar a
-            // tiempo -- pero eso solo importa mientras `inLotZone` (abajo) es cierto.
-            // owner: "necesito que vaya a 40kmh y ahora se esta trabando de nuevo
-            // contra la entrada de la ypf" -- con cruiseSpeedKmh subido a 40 y la zona
-            // de frenado empezando recién en la entrada real al pavimento, el auto
-            // llegaba al punto de GIRO (5m antes, cerrado) todavía a 40 -- muy rápido
-            // para completar un giro tan cerrado, terminaba chocando/atascado contra
-            // la entrada. La zona de frenado ahora incluye también el waypoint de
-            // GIRO (últimos 3: giro + entrada real + estacionar), no solo los últimos
-            // 2 -- empieza a soltar velocidad ANTES del giro cerrado, no solo al
-            // entrar al pavimento.
-            bool inLotZone = _index >= waypoints.Length - 3;
 
             // owner: "todo el trayecto... vaya mas lento" -- velocidad objetivo: la de
             // crucero en la ruta abierta, o la que va bajando (tapering) cerca del

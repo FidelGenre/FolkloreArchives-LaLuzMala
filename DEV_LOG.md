@@ -7,6 +7,31 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (12) — Fix: por qué frenar antes del giro also le sacaba fuerza para girar
+
+Owner: "se sigue quedando trabado ahora si va a 40" (después de subir la
+velocidad y frenar antes del giro cerrado, fix de la entrada anterior).
+
+Causa real: `CarController.FixedUpdate()` escala la capacidad de GIRO con
+la velocidad actual -- `turn = steer * turnRate *
+Clamp01(Abs(speed)/maxSpeed) * dir`. A velocidad CERO, el auto no gira
+NADA; a `maxSpeed`, gira a full. El fix anterior (frenar ANTES del giro
+cerrado para no pasarlo de largo) reduce la velocidad -- pero eso mismo
+le saca autoridad de giro justo en el momento en que más la necesita para
+completar un giro cerrado de 5m. "Frenar para no pasarse de largo" y
+"tener velocidad para poder girar" tiraban de la MISMA perilla en
+direcciones opuestas -- por eso las últimas rondas de ajuste no
+convergían pase lo que pase con la velocidad sola.
+
+Fix: en vez de seguir peleando con la velocidad, `CarAutoDrive` ahora
+TRIPLICA `steerGain` (compensación de autoridad de giro) mientras está
+dentro de la zona del lote (`inLotZone`) -- así el auto puede cerrar el
+giro apretado aunque venga frenando. Fuera del lote, `steerGain` normal
+(1x) sin cambios. Puro código, sin datos horneados -- no hace falta
+Regenerar.
+
+---
+
 ## 2026-07-28 (11) — Corrección importante: cambiar defaults de CarAutoDrive SIEMPRE necesita Regenerar
 
 Owner: "no esta yendo a 40". Encontrado el motivo: `cruiseSpeedKmh` (y
