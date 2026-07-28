@@ -7,6 +7,37 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Fix cámara "detrás de los asientos" al sentarse en Seat_RearMid
+
+Owner probó sentarse (como jugador real, no decorativo) en el asiento nuevo
+del medio-atrás y la cámara quedó metida detrás de los asientos, no en el
+asiento. Ese anchor nunca se había probado con un jugador real sentado ahí
+-- solo se usaba antes como REFERENCIA para calcular la posición de los
+amigos decorativos (que ahora tienen su propia posición horneada,
+desconectada del anchor).
+
+Comparando con los valores que sí terminaron sirviendo para los amigos
+(ajustados 100% a mano): quedaron con Z ~-0.8, mucho menos que el
+`seatDepth` que usa el anchor (-1.71, calculado como `TargetLength *
+-0.2591`) -- la fórmula empuja los asientos traseros (rearLeft/rearRight/
+rearMid) bien más atrás de la butaca real del auto. Reducido a la mitad
+(`TargetLength * -0.13`, Z ~-0.86).
+
+⚠ Afecta también a `Seat_RearL`/`Seat_RearR` (comparten el mismo
+`seatDepth`) -- son los anchors que usa la CÁMARA de un jugador real (no
+los amigos decorativos, que ya no dependen de esto), así que si alguien se
+sienta ahí como jugador debería mejorar también. Sin confirmar
+visualmente -- pendiente que el owner pruebe sentarse en el del medio de
+nuevo.
+
+**Nota de diseño (para más adelante, no implementado):** el owner quiere
+que al arrancar el juego el auto vaya con perro en el medio-atrás y
+Friend_MaleGreenJkt a un lado; después, en una parada en la gasolinera,
+el jugador humano y el perro cambian a los asientos de adelante. Story/
+gameplay logic pendiente, no es parte de este fix.
+
+---
+
 ## 2026-07-26 — Friend_FemaleSec: último de los 3, valores finales horneados
 
 Owner terminó de ajustar a mano en Play, "esa es la female, guardala":

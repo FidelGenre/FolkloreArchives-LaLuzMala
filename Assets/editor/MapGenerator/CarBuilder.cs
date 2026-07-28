@@ -116,7 +116,14 @@ namespace FolkloreArchives.MapGen
             // Asiento del conductor: detrás y arriba del volante (auto-alineado).
             // Separaciones entre asientos como proporción de TargetLength (no un
             // número fijo) para que escalen solas si el auto vuelve a cambiar de tamaño.
-            float seatSpread = TargetLength * 0.1409f, seatDepth = TargetLength * -0.2591f;
+            // owner: "cuando me subo quedo detras de los asientos" -- probando el
+            // asiento del medio de atrás (nuevo, nunca probado con un jugador real
+            // sentado ahí -- solo se usaba como referencia para calcular la posición de
+            // los amigos decorativos). Las posiciones finales que terminaron sirviendo
+            // para los amigos (ajustadas 100% a mano) quedaron con Z ~-0.8, MUCHO menos
+            // que lo que da este seatDepth (-1.71) -- la fórmula empuja los asientos
+            // traseros bien más atrás de la butaca real. Reducido a la mitad.
+            float seatSpread = TargetLength * 0.1409f, seatDepth = TargetLength * -0.13f;
             // owner: "al subirme atras la camara queda detras del asiento" -- los otros
             // 3 asientos se calculaban a partir de dSeat, que YA incluye el empuje hacia
             // atrás (-0.30) para despegar al conductor del volante/tablero. Ese empuje
