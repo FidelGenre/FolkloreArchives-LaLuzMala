@@ -58,8 +58,11 @@ namespace FolkloreArchives.MapGen
             // otro. No-null = usar ESTE ángulo en vez del default del componente, solo
             // para este personaje.
             public float? seatedThighAngleOverride;
+            // owner: ajustó Seated Model Drop en vivo para este personaje puntual (le
+            // hacía falta un valor distinto al default global de HumanWalkAnim).
+            public float? seatedModelDropOverride;
             public FriendDef(string n, string f, string tx, float h, float ox, float oz, float y, FolkloreArchives.HumanWalkAnim.Limb[] customLimbs = null, TexPart[] parts = null)
-            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; texParts = parts; seatPosOverride = null; seatedThighAngleOverride = null; }
+            { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; limbs = customLimbs; texParts = parts; seatPosOverride = null; seatedThighAngleOverride = null; seatedModelDropOverride = null; }
         }
 
         // owner: "que no esten todos duros en pose de t" -- HumanWalkAnim corrige la pose
@@ -113,9 +116,11 @@ namespace FolkloreArchives.MapGen
                 { seatPosOverride = new Vector3(0.5999f, -0.283f, 0.3031f) },
             // al costado norte de la ruta, mirando hacia el auto (+X)
             // owner: "tiene las piernas alrevez" sentado -- rig Mixamo, eje del muslo
-            // orientado al revés que el de Vinrax (Friend_MaleCasual) -- signo invertido.
+            // orientado al revés que el de Vinrax (Friend_MaleCasual). Ajustado 100% en
+            // vivo (Play) hasta "ahi esta, guardalo": ángulo +55 (no +62, primer intento),
+            // posición y drop propios (distintos del default global).
             new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs)
-                { seatedThighAngleOverride = 62f },
+                { seatPosOverride = new Vector3(-0.7201f, -0.1883f, -0.8f), seatedThighAngleOverride = 55f, seatedModelDropOverride = -0.5f },
             // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) --
             // owner: "descargue esa chica descomprimila y reemplazala por la que ya
             // esta" -- reemplaza a la vieja "PSX Female Secretary" de Vinrax (no
@@ -290,6 +295,7 @@ namespace FolkloreArchives.MapGen
             var anim = go.AddComponent<FolkloreArchives.HumanWalkAnim>();
             if (f.limbs != null) anim.limbs = f.limbs;
             if (f.seatedThighAngleOverride.HasValue) anim.seatedThighAngle = f.seatedThighAngleOverride.Value;
+            if (f.seatedModelDropOverride.HasValue) anim.seatedModelDrop = f.seatedModelDropOverride.Value;
 
             // owner: "necesito ver como caminan" -- deambulan de a poco cerca de donde
             // arrancan (no es IA real, solo para que no queden parados como estatuas).

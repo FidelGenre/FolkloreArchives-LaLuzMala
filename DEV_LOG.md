@@ -7,6 +7,23 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-26 — Friend_MaleGreenJkt: valores finales horneados
+
+Owner terminó de ajustar `Friend_MaleGreenJkt` 100% en vivo (Play) hasta
+"ahi esta, guardalo": ángulo del muslo +55 (el primer intento, +62, no era
+el correcto todavía), posición propia del asiento, y `Seated Model Drop`
+distinto del default global (-0.5, no -0.63 como `Friend_MaleCasual`).
+Nuevo `FriendDef.seatedModelDropOverride` (mismo patrón que los otros dos
+overrides) para que cada personaje pueda tener su propio drop además de su
+propio ángulo/posición. Horneado en la entrada de `Friend_MaleGreenJkt`:
+`seatPosOverride=(-0.7201, -0.1883, -0.8)`, `seatedThighAngleOverride=55`,
+`seatedModelDropOverride=-0.5`.
+
+Queda `Friend_FemaleSec` con la fórmula vieja (sin overrides) — mismo
+método si el owner la quiere ajustar.
+
+---
+
 ## 2026-07-26 — Fix piernas al revés de Friend_MaleGreenJkt (rig Mixamo)
 
 Owner: "tiene las piernas alrevez daselas vuelta al malegreen". Causa: cada
