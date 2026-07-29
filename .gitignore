@@ -109,6 +109,10 @@ crashlytics-build.properties
 !/[Aa]ssets/_FolkloreArchives/
 !/[Aa]ssets/_FolkloreArchives.meta
 /[Aa]ssets/_FolkloreArchives/Generated/
+# copias de conflicto de sincronización (OneDrive/Drive/etc. renombran así
+# cuando dos máquinas tocan el mismo archivo a la vez) -- nunca versionar,
+# son artefactos locales, no datos del proyecto.
+/[Aa]ssets/_FolkloreArchives/*(name_conflict)*
 
 # Carpetas/paquetes de terceros fuera de Assets
 /EasyRoads3Dv3/
