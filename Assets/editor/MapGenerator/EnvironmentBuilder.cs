@@ -46,10 +46,14 @@ namespace FolkloreArchives.MapGen
             go.transform.SetParent(parent);
             var wind = go.AddComponent<FolkloreArchives.WindAmbience>();
             wind.clips = clips.ToArray();
-            // owner: "el viento esta fuertisimo" -- horneado explícito (no depender del
-            // default de C#, que no se actualiza solo en un objeto ya generado antes --
-            // mismo caso que CarAutoDrive.cruiseSpeedKmh/MapExplorer.flySpeed, ver DEV_LOG).
-            wind.volume = 0.12f;
+            // owner: "muchisimo mas bajo... parece ruido feo no viento" -- horneado
+            // explícito (no depender del default de C#, que no se actualiza solo en un
+            // objeto ya generado antes -- mismo caso que
+            // CarAutoDrive.cruiseSpeedKmh/MapExplorer.flySpeed, ver DEV_LOG). Si a este
+            // volumen sigue sonando mal, el problema es del CLIP en sí (el "digital
+            // crunch" del pack puede sonar a estática más que a viento) -- avisar para
+            // sacarlo del todo en vez de seguir bajando el número.
+            wind.volume = 0.03f;
         }
 
         // Sistema de partículas de niebla flotando bajo sobre el agua. Muchas partículas

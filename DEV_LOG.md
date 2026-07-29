@@ -7,6 +7,24 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-29 (4) — Ajuste: viento MUCHO más bajo (posible problema del clip, no solo volumen) + pisadas más bajas (**necesita regenerar**)
+
+Owner: "lo necesito muchisimo mas bajo al viento o tal vez quitarlo pq
+parece que es ruido feo no viento, y los demas sonidos tambien bajales un
+poco". `WindAmbience.volume` 0.12 → 0.03 (casi un susurro). Pisadas
+0.5 → 0.35.
+
+Nota dejada en el código: si a 0.03 el viento sigue sonando mal, es
+probable que el problema sea del CLIP en sí (el pack "Free PSX Wind
+Ambience" procesa el audio con "digital crunch" estilo PS1, que puede
+sonar más a estática que a viento real) y no algo que se arregle bajando
+más el número -- en ese caso avisar para sacarlo del todo y buscar otro
+clip en vez de seguir ajustando el volumen.
+
+**Requiere Regenerar.**
+
+---
+
 ## 2026-07-29 (3) — Ajuste: viento y pisadas más bajos (**necesita regenerar**)
 
 Owner: "bajale al sonido del viento esta fuertisimo y los otros bajalos
