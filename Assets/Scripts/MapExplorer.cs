@@ -30,7 +30,7 @@ namespace FolkloreArchives
         // inclinación de cámara no los afecta -- mismo comportamiento que el vuelo
         // creativo de Minecraft sin tocar nada del movimiento existente).
         [Header("Vuelo (debug, doble Espacio)")]
-        public float flySpeed = 8f;
+        public float flySpeed = 30f; // owner: "va muy lento" -- era 8, para recorrer el mapa rápido
         public float doubleTapWindow = 0.3f;
         bool flying;
         float lastSpaceTapTime = -10f;

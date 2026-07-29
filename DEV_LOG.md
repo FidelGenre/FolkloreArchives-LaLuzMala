@@ -7,6 +7,14 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (29) — Ajuste: vuelo de debug más rápido
+
+Owner: "va muy lento cuando vuela". `flySpeed` 8 → 30 en `MapExplorer.cs`
+y `DogController.cs` (casi 4x). No toca datos horneados -- no hace falta
+Regenerar.
+
+---
+
 ## 2026-07-28 (28) — Vuelo de debug (doble Espacio, modo creativo Minecraft) para jugador y perro
 
 Owner: "hace que dando doble click con el espacio pueda volar como modo

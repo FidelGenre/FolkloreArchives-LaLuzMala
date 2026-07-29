@@ -32,7 +32,7 @@ namespace FolkloreArchives
         // como jugador 1" -- mismo feature de debug que MapExplorer, solo activo en
         // Mode.Player (no tiene sentido que la IA de Follow vuele sola).
         [Header("Vuelo (debug, doble Espacio, solo Mode.Player)")]
-        public float flySpeed = 8f;
+        public float flySpeed = 30f; // owner: "va muy lento" -- era 8, para recorrer el mapa rápido
         public float doubleTapWindow = 0.3f;
         bool flying;
         float lastSpaceTapTime = -10f;
