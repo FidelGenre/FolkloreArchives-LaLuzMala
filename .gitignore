@@ -94,6 +94,21 @@ crashlytics-build.properties
 !/[Aa]ssets/Editor.meta
 !/[Aa]ssets/Settings/
 !/[Aa]ssets/Settings.meta
+# owner: "cuando me traigo los cambios de terreno... no me llegan, no se
+# pinta lo que el hizo" -- Assets/_FolkloreArchives/ NO estaba en esta
+# lista blanca, así que el /[Aa]ssets/* de arriba lo ignoraba ENTERO sin
+# querer -- incluye terrain_edits.bytes, terrain_paint_alpha/detail.bytes,
+# layout_FullMap.json, tree_removals.bytes, grass_removals.bytes: los
+# archivos de PERSISTENCIA de ediciones/pintado/layout A MANO (ver
+# TerrainEditPersistence.cs/TerrainPaintPersistence.cs/
+# ManualLayoutPersistence.cs/TreePersistence.cs/GrassPersistence.cs) que
+# existen justamente para que el equipo COMPARTA esas personalizaciones —
+# nunca se pudieron commitear ni de un lado ni del otro. Generated/ (el
+# TerrainData cacheado + prefabs horneados, pesado y regenerable desde
+# el Seed + estos mismos archivos) se queda afuera a propósito.
+!/[Aa]ssets/_FolkloreArchives/
+!/[Aa]ssets/_FolkloreArchives.meta
+/[Aa]ssets/_FolkloreArchives/Generated/
 
 # Carpetas/paquetes de terceros fuera de Assets
 /EasyRoads3Dv3/

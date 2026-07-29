@@ -7,6 +7,39 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-29 — Fix real: .gitignore excluía TODA la persistencia de terreno/layout a mano
+
+Owner: "cuando me traigo los cambios de terreno etc de mi companiero no
+me llegan no se pinta lo que el hizo ni los terrenos que modifico agrego
+etc pasto". Causa: la sección "CODE-ONLY" del `.gitignore` ignora
+`/[Aa]ssets/*` entero y solo tiene lista blanca para
+`Scripts/`/`editor/`/`Editor/`/`Settings/` -- `Assets/_FolkloreArchives/`
+NUNCA estuvo en esa lista, así que TODO lo de ahí quedaba ignorado sin
+querer, incluyendo los archivos de persistencia que
+`TerrainEditPersistence.cs`/`TerrainPaintPersistence.cs`/
+`ManualLayoutPersistence.cs`/`TreePersistence.cs`/`GrassPersistence.cs`
+guardan justamente para que el EQUIPO comparta ediciones/pintado/layout a
+mano (`terrain_edits.bytes`, `terrain_paint_alpha/detail.bytes`,
+`layout_*.json`, `tree_removals.bytes`, `grass_removals.bytes`). Nunca se
+pudieron commitear ni de un lado ni del otro -- por eso "no llegan": nunca
+se fueron.
+
+Fix: `.gitignore` ahora incluye `Assets/_FolkloreArchives/` en la lista
+blanca, pero sigue excluyendo específicamente `Generated/` adentro (el
+`TerrainData` cacheado + prefabs horneados -- pesado y 100% regenerable
+desde el Seed + estos mismos archivos de edits/paint/layout, no hace
+falta versionarlo).
+
+**Importante, sin resolver todavía:** esto solo arregla el problema HACIA
+ADELANTE. Los archivos de persistencia que ya existen localmente en esta
+máquina (incluye un `(name_conflict)_terrain_paint_detail.bytes`
+sospechoso, revisar) todavía no se subieron -- hace falta decidir CON EL
+OWNER si se commitean tal cual están ahora, y coordinar con el compañero
+para que también suba lo suyo después de bajarse este fix (son archivos
+binarios que no mergean solos si los dos tienen versiones distintas).
+
+---
+
 ## 2026-07-28 (30) — Corrección: flySpeed no tomaba el valor nuevo sin Regenerar (**necesita regenerar**)
 
 Owner: "no aumento la velocidad". Mismo bug que ya pasó con
