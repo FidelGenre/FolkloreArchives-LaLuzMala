@@ -16,7 +16,24 @@ namespace FolkloreArchives.MapGen
         // The map is now LONGER in x than in z, so the paved road has a long approach
         // before it reaches the inhabited area. `MapSize` keeps its old meaning (the z
         // extent) since most z-axis code already uses it; `MapSizeX` is the x extent.
-        public const float MapSize  = 413f;        // z extent (metres) — 2ª pasada de reducción, factor 0.75 (owner: "achicalo más")
+        // owner: "necesito alargar la distancia desde la ruta hasta el campamento...
+        // prefiero empujar la ruta mas lejos y agregar terreno" -- el mapa se extiende
+        // 200m hacia el SUR (Z negativo) para alejar la ruta del campamento (que NO se
+        // mueve). Esto rompe el supuesto implícito de que el mundo arranca en Z=0 (el
+        // GameObject del Terrain estaba en Vector3.zero) -- de ahí las 3 constantes:
+        //  - OriginalMapSize: el Z-extent VIEJO, fijo. Para fórmulas que NO deben
+        //    estirarse con la extensión (la cresta de montañas del borde norte, el
+        //    centro de elementos de fondo lejano como el anillo de montañas/agua) --
+        //    así quedan exactamente donde están hoy.
+        //  - MapOriginZ: dónde cae Z=0 de la GRILLA del terreno en coordenadas de
+        //    MUNDO (antes 0, ahora -200 -- el terreno arranca 200m más al sur). Toda
+        //    conversión índice-de-grilla↔mundo tiene que sumar/restar esto.
+        //  - MapSize: el Z-extent NUEVO total (OriginalMapSize + 200) -- usado para el
+        //    tamaño real del TerrainData y para límites de loop que deben cubrir TODO
+        //    el terreno nuevo (para que la extensión quede decorada, no vacía).
+        public const float OriginalMapSize = 413f; // z extent VIEJO (fijo) -- ver nota arriba
+        public const float MapOriginZ = -200f;     // offset: dónde cae la grilla Z=0 en el mundo
+        public const float MapSize  = OriginalMapSize + 200f; // z extent NUEVO (613) -- 2ª pasada de reducción, factor 0.75 (owner: "achicalo más")
         public const float MapSizeX = 600f;        // x extent (metres) — 2ª pasada de reducción, factor 0.75
         public const float MaxHeight = 135f;       // subido para picos nevados altos (antes 60)
         public const string RootName = "FOLKLORE_MAP";
@@ -173,14 +190,17 @@ namespace FolkloreArchives.MapGen
         // wavelength + small amplitude = a believable rural road with sweeping bends.
         // Control points run past both map edges (x < 0 and x > MapSize) so the road
         // enters and leaves the terrain mid-curve instead of ending square-on.
+        // owner: "empujar la ruta mas lejos" del campamento -- todos los Z corridos
+        // -200 (misma forma/curva relativa, solo movida al sur junto con MapOriginZ).
+        const float RouteZShift = -200f;
         static readonly Vector2[] PavedControls = {
-            new Vector2(-136f, 45f),
-            new Vector2(79f, 37f),
-            new Vector2(273f, 48f),
-            new Vector2(462f, 38f),
-            new Vector2(620f, 47f),
-            new Vector2(788f, 39f),   // long approach across the extended east half of the map
-            new Vector2(872f, 43f)
+            new Vector2(-136f, 45f + RouteZShift),
+            new Vector2(79f, 37f + RouteZShift),
+            new Vector2(273f, 48f + RouteZShift),
+            new Vector2(462f, 38f + RouteZShift),
+            new Vector2(620f, 47f + RouteZShift),
+            new Vector2(788f, 39f + RouteZShift),   // long approach across the extended east half of the map
+            new Vector2(872f, 43f + RouteZShift)
         };
         // Sampled into a fine polyline (~22m spacing) so it reads as a true curve, not
         // a set of straights with kinks. Stays x-monotonic, so PavedRouteZAt still works.

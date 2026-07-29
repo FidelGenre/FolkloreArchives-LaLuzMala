@@ -114,7 +114,7 @@ namespace FolkloreArchives.MapGen
                     int applied = 0, skippedNearLake = 0;
                     for (int z = 0; z < res; z++)
                     {
-                        float wz = z / (float)(res - 1) * MapLayout.MapSize;
+                        float wz = MapLayout.MapOriginZ + z / (float)(res - 1) * MapLayout.MapSize;
                         for (int x = 0; x < res; x++)
                         {
                             float d = br.ReadSingle();

@@ -26,7 +26,10 @@ namespace FolkloreArchives.MapGen
         static void BuildRing(Transform parent, int layer, string name, float radius,
                               float minH, float maxH, Color col, int segs, float noiseSeed, float baseY)
         {
-            float cx = MapLayout.MapSizeX * 0.5f, cz = MapLayout.MapSize * 0.5f;
+            // owner: "empujar la ruta mas lejos" (extensión de 200m al sur) -- la
+            // silueta de montañas de fondo no necesita seguir la extensión, usa
+            // OriginalMapSize (fijo) para quedarse centrada donde está hoy.
+            float cx = MapLayout.MapSizeX * 0.5f, cz = MapLayout.OriginalMapSize * 0.5f;
             var verts = new List<Vector3>();
             var tris  = new List<int>();
 

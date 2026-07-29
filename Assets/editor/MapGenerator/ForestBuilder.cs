@@ -135,9 +135,16 @@ namespace FolkloreArchives.MapGen
             TreePersistence.CaptureBaseline(td);   // set procedural completo (para diffear borrados)
             TreePersistence.ApplyTreeRemovals(td); // re-aplica los árboles borrados a mano (Save Terrain Paint)
             SetupGrass(td);
-            TerrainPaintPersistence.ApplyDetailPaint(td); // pasto pintado a mano (Save Terrain Paint)
+            GrassPersistence.CaptureBaseline(td);   // pasto REAL recién generado = baseline (para diffear borrados)
+            GrassPersistence.ApplyRemovals(td);     // re-aplica el pasto borrado a mano (Save Terrain Paint)
             }
             else Debug.Log("Bosque cacheado (árboles/pasto ya en el terreno) — Rebuild Forest para rehacer.");
+
+            // Re-aplicar SIEMPRE (idempotente) el pasto borrado a mano y los árboles
+            // borrados, aunque el bosque venga CACHEADO. Antes solo se aplicaba en el
+            // rebuild → si el bosque estaba cacheado, el pasto/árboles borrados volvían.
+            GrassPersistence.ApplyRemovals(td);
+            TreePersistence.ApplyTreeRemovals(td);
 
             // fade del césped: por defecto (noche) el corte es DetailRenderDistance.
             // El toggle día/noche re-setea estas globales para seguir su distancia.
@@ -226,7 +233,7 @@ namespace FolkloreArchives.MapGen
             // 2) a few scattered puddles in low forest spots
             float step = MapLayout.PuddleGridStep;
             for (float x = 30f; x < MapLayout.MapSizeX - 30f; x += step)
-                for (float z = 30f; z < MapLayout.MapSize - 30f; z += step)
+                for (float z = MapLayout.MapOriginZ + 30f; z < MapLayout.MapOriginZ + MapLayout.MapSize - 30f; z += step)
                 {
                     var p = new Vector2(x + Random.Range(-step * 0.4f, step * 0.4f), z + Random.Range(-step * 0.4f, step * 0.4f));
                     if (BuilderUtils.DistToRivers(p) < 26f) continue;
@@ -328,7 +335,7 @@ namespace FolkloreArchives.MapGen
             int placed = 0;
             for (float x = 20f; x < MapLayout.MapSizeX - 20f; x += step)
             {
-                for (float z = 20f; z < MapLayout.MapSize - 20f; z += step)
+                for (float z = MapLayout.MapOriginZ + 20f; z < MapLayout.MapOriginZ + MapLayout.MapSize - 20f; z += step)
                 {
                     var p = new Vector2(x + Random.Range(-step * 0.5f, step * 0.5f), z + Random.Range(-step * 0.5f, step * 0.5f));
                     // keep clutter off the roads, river and right at spawn
@@ -420,7 +427,7 @@ namespace FolkloreArchives.MapGen
             float jitter = step * 0.2f;
             for (float x = 10f; x < MapLayout.MapSizeX - 10f; x += step)
             {
-                for (float z = 10f; z < MapLayout.MapSize - 10f; z += step)
+                for (float z = MapLayout.MapOriginZ + 10f; z < MapLayout.MapOriginZ + MapLayout.MapSize - 10f; z += step)
                 {
                     var p = new Vector2(x + Random.Range(-jitter, jitter), z + Random.Range(-jitter, jitter));
 
@@ -442,7 +449,7 @@ namespace FolkloreArchives.MapGen
                             float st = Random.Range(0.72f, 1.08f);
                             trees.Add(new TreeInstance
                             {
-                                position = new Vector3(p.x / MapLayout.MapSizeX, 0f, p.y / MapLayout.MapSize),
+                                position = new Vector3(p.x / MapLayout.MapSizeX, 0f, (p.y - MapLayout.MapOriginZ) / MapLayout.MapSize),
                                 prototypeIndex = PickRealTreeIndex(p.x),
                                 heightScale = ss,
                                 widthScale = ss * Random.Range(0.8f, 1.2f),
@@ -619,7 +626,7 @@ namespace FolkloreArchives.MapGen
                     float tint = Random.Range(0.72f, 1.08f); // breaks the "identical clones" look
                     trees.Add(new TreeInstance
                     {
-                        position = new Vector3(p.x / MapLayout.MapSizeX, 0f, p.y / MapLayout.MapSize),
+                        position = new Vector3(p.x / MapLayout.MapSizeX, 0f, (p.y - MapLayout.MapOriginZ) / MapLayout.MapSize),
                         prototypeIndex = protoIndex,
                         heightScale = s,
                         widthScale = s * Random.Range(0.8f, 1.25f),
@@ -1478,7 +1485,7 @@ namespace FolkloreArchives.MapGen
             float jitter = step * 0.4f;
             for (float x = 10f; x < MapLayout.MapSizeX - 10f; x += step)
             {
-                for (float z = 10f; z < MapLayout.MapSize - 10f; z += step)
+                for (float z = MapLayout.MapOriginZ + 10f; z < MapLayout.MapOriginZ + MapLayout.MapSize - 10f; z += step)
                 {
                     var p = new Vector2(x + Random.Range(-jitter, jitter), z + Random.Range(-jitter, jitter));
 
@@ -1494,7 +1501,7 @@ namespace FolkloreArchives.MapGen
                             float bt = Random.Range(0.75f, 1.05f);
                             trees.Add(new TreeInstance
                             {
-                                position = new Vector3(p.x / MapLayout.MapSizeX, 0f, p.y / MapLayout.MapSize),
+                                position = new Vector3(p.x / MapLayout.MapSizeX, 0f, (p.y - MapLayout.MapOriginZ) / MapLayout.MapSize),
                                 prototypeIndex = bushProtoStart + Random.Range(0, bushProtoCount),
                                 heightScale = bs,
                                 widthScale = bs * Random.Range(0.85f, 1.2f),
@@ -1531,7 +1538,7 @@ namespace FolkloreArchives.MapGen
                     float tint = Random.Range(0.75f, 1.05f);
                     trees.Add(new TreeInstance
                     {
-                        position = new Vector3(p.x / MapLayout.MapSizeX, 0f, p.y / MapLayout.MapSize),
+                        position = new Vector3(p.x / MapLayout.MapSizeX, 0f, (p.y - MapLayout.MapOriginZ) / MapLayout.MapSize),
                         prototypeIndex = bushProtoStart + Random.Range(0, bushProtoCount),
                         heightScale = s,
                         widthScale = s * Random.Range(0.85f, 1.2f),
@@ -1799,7 +1806,7 @@ namespace FolkloreArchives.MapGen
                 for (int xi = 0; xi < res; xi++)
                 {
                     float wx = xi / (float)(res - 1) * MapLayout.MapSizeX;
-                    float wz = zi / (float)(res - 1) * MapLayout.MapSize;
+                    float wz = MapLayout.MapOriginZ + zi / (float)(res - 1) * MapLayout.MapSize;
                     var p = new Vector2(wx, wz);
 
                     // sin pasto SOLO bajo la huella de la casa (que no atraviese el piso);
@@ -1849,7 +1856,7 @@ namespace FolkloreArchives.MapGen
                     // franja de arena de la ribera (TerrainBuilder pinta arena por
                     // altura hasta ~10m): sin pasto encima de la arena
                     if (dRiv < 34f &&
-                        td.GetInterpolatedHeight(wx / MapLayout.MapSizeX, wz / MapLayout.MapSize) < 9.6f) continue;
+                        td.GetInterpolatedHeight(wx / MapLayout.MapSizeX, (wz - MapLayout.MapOriginZ) / MapLayout.MapSize) < 9.6f) continue;
 
                     // claro del campamento PRIMERO: el BeachPath arranca EN el campamento,
                     // así que si el "pasto corto" del sendero (abajo) va antes, mete briznas
@@ -2278,7 +2285,7 @@ namespace FolkloreArchives.MapGen
                 for (int xi = 0; xi < res; xi++)
                 {
                     float wx = xi / (float)(res - 1) * MapLayout.MapSizeX;
-                    float wz = zi / (float)(res - 1) * MapLayout.MapSize;
+                    float wz = MapLayout.MapOriginZ + zi / (float)(res - 1) * MapLayout.MapSize;
                     var p = new Vector2(wx, wz);
 
                     // sin pasto SOLO bajo la huella de la casa (que no atraviese el piso);

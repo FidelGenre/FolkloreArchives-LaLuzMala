@@ -7,6 +7,88 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (24) — Mapa extendido 200m al sur: la ruta se aleja del campamento (**necesita Rebuild Terrain completo + regenerar**)
+
+Owner: "necesito alargar la distancia desde la ruta hasta el campamento...
+prefiero empujar la ruta mas lejos y agregar terreno etc" -- explícitamente
+sin mover el campamento ni nada anclado a él. Planificado con Plan Mode
+antes de tocar código (ver `C:\Users\f\.claude\plans\swirling-drifting-patterson.md`)
+por el tamaño real del cambio: toda la generación procedural de terreno
+asumía implícitamente que el mundo arranca en Z=0 (mismo origen que el
+GameObject del `Terrain`) -- extender 200m al sur rompe ese supuesto en
+~20 lugares repartidos en 7 archivos.
+
+**3 constantes nuevas en `MapLayout.cs`:**
+- `OriginalMapSize = 413f` -- el Z-extent VIEJO, fijo, para fórmulas que
+  NO deben estirarse con la extensión (cresta de montañas del borde
+  norte, elementos de fondo lejano: anillo de montañas, silueta, agua de
+  fondo del río).
+- `MapOriginZ = -200f` -- dónde cae la grilla Z=0 del terreno en
+  coordenadas de mundo (antes 0, ahora 200m más al sur).
+- `MapSize = OriginalMapSize + 200f` (613) -- el Z-extent NUEVO total,
+  usado para el tamaño real del `TerrainData` y límites de loop que
+  deben cubrir TODO el terreno nuevo (para que la extensión quede
+  decorada de verdad, no vacía).
+
+**`PavedControls`** (los 7 puntos de control de la curva de la ruta):
+todos los Z corridos -200 -- este es el único lever que mueve la ruta;
+todo lo demás que depende de ella (banquina, guardarail, costa del lago,
+YPF, puente, túnel, marcadores DirtTurnoff/DifuntaCorrea/GauchitoGil) se
+recalcula solo, porque lee `PavedRouteZAt`/`PavedRoute` en el momento, no
+cachea una Z vieja.
+
+**Terreno (`TerrainBuilder.cs`):** el GameObject del `Terrain` pasa de
+`Vector3.zero` a `(0,0,MapOriginZ)`. Todas las conversiones
+índice-de-grilla↔mundo (`ComputeProceduralHeights`, `PaintTextures`,
+`ClearGrassOnMud`) suman `MapOriginZ`. `HeightAt`: el umbral de la cresta
+norte y el gate oeste/este pasan de `MapSize` a `OriginalMapSize` (fijo)
+para no correrse.
+
+**Mismo patrón de conversión** (sumar/restar `MapOriginZ` según sea
+índice→mundo o mundo→normalizado) aplicado en: `TerrainPaintPersistence.cs`,
+`TerrainEditPersistence.cs`, `ForestBuilder.cs` (4 límites de loop, 4
+posiciones normalizadas de `TreeInstance`, 1 `GetInterpolatedHeight`, 2
+conversiones de grilla), `TunnelBuilder.cs` (1 `GetInterpolatedNormal`
+para el pasto de la entrada). **Fondo lejano fijo** (`OriginalMapSize`,
+no debe seguir la extensión): `EnvironmentBuilder.cs` (plano de agua del
+río), `MountainRingBuilder.cs`, `SilhouetteMountainBuilder.cs`.
+
+**`CarBuilder.cs` no necesitó tocarse** -- el spawn del auto ya usa
+`PavedRoute[^1].x`/`PavedRouteZAt` dinámicamente (fix de la entrada
+anterior sobre "la punta real de la ruta"), así que sigue automáticamente
+a la ruta reubicada.
+
+**Riesgo real, sin verificar (no tengo acceso visual a Unity):**
+`TerrainPaintPersistence`/`TerrainEditPersistence` aplican datos
+GUARDADOS (pintado de barro a mano, ediciones de altura a mano) sobre
+índices de grilla -- esos índices se guardaron cuando la grilla
+representaba el mapa VIEJO (413, origen 0). Con la grilla nueva
+(613, origen -200) la escala índice→mundo cambió, así que cualquier
+pintado/edición manual guardada previamente puede aparecer desplazada
+del lugar donde se dibujó originalmente (mismo tipo de problema que ya
+pasó una vez con el lago, ver comentario en `TerrainEditPersistence.cs`
+sobre "diffs viejos desalineados contra la base nueva"). Si el barro de
+los caminos o alguna edición de altura a mano se ve rara después de
+Regenerar, probablemente haga falta re-pintar/re-editar esa parte.
+
+**Sin tocar, puede necesitar ajuste manual:** `MapLayout.TunnelGroupOffset`
+es un nudge a mano capturado desde la escena -- el comentario ya
+advertía "puede necesitar re-nudge manual"; con la ruta movida, revisar
+si el túnel sigue bien alineado.
+
+**Pasos para probar (en este orden):**
+1. `Tools > Folklore Archives > Rebuild Terrain (forzar)` -- OBLIGATORIO,
+   el terreno está cacheado y un Generate normal NO recalcula tamaño/
+   heightmap aunque cambie el código.
+2. Generate (tarda ~3.6 min por el rebuild forzado).
+3. Revisar en la vista Scene: cresta norte en el mismo lugar de siempre,
+   hueco nuevo al sur con terreno/bosque real (no vacío), ruta arrancando
+   200m más lejos del campamento.
+4. Play: la secuencia de apertura completa (auto+jugador+perro+3 amigos)
+   con el tramo más largo hasta la YPF.
+
+---
+
 ## 2026-07-28 (23) — Ajuste: crucero a 50 km/h (**necesita regenerar**)
 
 Owner: "pone el auto a 50 kmh". `cruiseSpeedKmh` 40 → 50 en
