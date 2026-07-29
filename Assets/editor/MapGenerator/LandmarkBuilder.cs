@@ -52,13 +52,13 @@ namespace FolkloreArchives.MapGen
 
             // owner: "deben spawnear tambien en la ruta del mismo lado porque arrancan
             // la historia todos juntos" -- antes estaban en el campamento; el auto
-            // manejable de verdad (CarBuilder.cs) arranca donde el owner lo posicionó
-            // a mano en la vista Scene (X=-22.5, cerca del túnel, oeste), NO en
+            // manejable de verdad (CarBuilder.cs) arranca del lado ESTE de la ruta
+            // (MapLayout.MapSizeX - 80f, movido más atrás -- ver CarBuilder.cs), NO en
             // SPAWN_CAR_START (marcador viejo del túnel, sin usar por el auto real
             // desde que se movió). Mismo punto acá para que los amigos queden al lado
-            // del auto donde arranca la historia -- si CarBuilder.carX cambia de nuevo,
-            // actualizar acá también (no hay una única fuente compartida todavía).
-            float friendsX = -22.5f;
+            // del auto donde arranca la historia -- si CarBuilder.carX cambia de
+            // nuevo, actualizar acá también (no hay una única fuente compartida todavía).
+            float friendsX = MapLayout.MapSizeX - 80f;
             Vector2 friendsRoadPoint = new Vector2(friendsX, MapLayout.PavedRouteZAt(friendsX));
             FriendNpcBuilder.Build(poi, t, friendsRoadPoint);
 

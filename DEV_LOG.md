@@ -7,6 +7,29 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (20) — Corrección: el spawn "oeste" estaba mal entendido, revertido + movido más atrás en el ESTE (**necesita regenerar**)
+
+Owner: "eh? no nada que ver es del lado contrario que lo necesito, osea
+donde staba pero mas para atras el tunel ya no sera el principio". La
+coordenada X=-22.5 que pasó en el mensaje anterior (leída del Inspector
+en la vista Scene) probablemente era posición LOCAL relativa a algún
+padre, no la posición MUNDIAL real -- terminé mandando el spawn casi al
+extremo opuesto del mapa (cerca del túnel, oeste) en vez de "más atrás"
+del lado este donde ya estaba. Revertido `CarBuilder.cs`/
+`LandmarkBuilder.cs` al commit anterior (37862d8) con `git checkout`.
+
+Fix real: mismo lado ESTE de siempre, pero más lejos del final del mapa
+(`MapLayout.MapSizeX - 80f` en vez de `-30f`) -- viaje más largo hasta la
+YPF, sin tocar el túnel ni la dirección del recorrido (yaw/waypoints
+vuelven a la versión original, sin invertir nada). 80 es un primer número
+a ojo, mismo criterio que el resto de la sesión -- a ajustar en vivo.
+`LandmarkBuilder.friendsX` actualizado igual, mismo criterio de siempre
+(al lado del auto donde arranca la historia).
+
+**Requiere Regenerar.**
+
+---
+
 ## 2026-07-28 (19) — Cambio de spawn del auto: ahora arranca del lado OESTE (**necesita regenerar**)
 
 Owner: "podes hcer que el auto arranque desde ahi?: con todos los
