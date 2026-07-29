@@ -131,7 +131,12 @@ namespace FolkloreArchives.MapGen
             flashlight.color = new Color(1f, 0.78f, 0.38f); // warm amber-yellow
             flashlight.shadows = LightShadows.None; // shadows from this were a real cost too; skip them
 
-            player.AddComponent<FolkloreArchives.MapExplorer>();
+            var explorer = player.AddComponent<FolkloreArchives.MapExplorer>();
+            // owner: "no aumento la velocidad" -- flySpeed es un campo público; un
+            // GameObject YA generado en una escena anterior se queda con el valor
+            // viejo aunque cambie el default en el código (mismo bug que
+            // CarAutoDrive.cruiseSpeedKmh, ver DEV_LOG) -- horneado explícito acá.
+            explorer.flySpeed = 30f;
             player.AddComponent<FolkloreArchives.PlayerVehicleInteractor>(); // subir/bajar del auto con E
             // El menú de opciones (Esc) ahora va en el objeto NET (NetworkBuilder), que
             // NO se desactiva en online — así Esc abre el menú también en co-op.
@@ -249,6 +254,7 @@ namespace FolkloreArchives.MapGen
             var dogCtrl = dog.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.followTarget = player.transform;
             dogCtrl.mode = FolkloreArchives.DogController.Mode.Follow;
+            dogCtrl.flySpeed = 30f; // ver nota en MapExplorer más arriba -- horneado explícito
             dog.AddComponent<FolkloreArchives.DogWalkAnim>(); // patas se mueven al caminar (el PS1 no trae clips)
 
             // cámara 1ª persona del perro: en el HOCICO mirando adelante. Como el modelo

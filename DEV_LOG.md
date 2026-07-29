@@ -7,6 +7,23 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (30) — Corrección: flySpeed no tomaba el valor nuevo sin Regenerar (**necesita regenerar**)
+
+Owner: "no aumento la velocidad". Mismo bug que ya pasó con
+`CarAutoDrive.cruiseSpeedKmh`: `MapExplorer`/`DogController` se agregan a
+TEST_PLAYER/DOG (y a los objetos de red) en `TestPlayerBuilder.cs`/
+`NetworkBuilder.cs` en el momento de Generate -- si el jugador/perro ya
+existían en la escena de una generación anterior, el `flySpeed` quedó
+serializado con el valor VIEJO (8), y subir el default en el código a 30
+no actualiza ese valor ya guardado.
+
+Fix: `flySpeed = 30f` asignado EXPLÍCITO en los 4 lugares donde se
+agregan estos componentes (`TestPlayerBuilder.cs` x2,
+`NetworkBuilder.cs` x2), en vez de depender del default de C#. **Requiere
+Regenerar** para que el jugador/perro tomen el valor nuevo.
+
+---
+
 ## 2026-07-28 (29) — Ajuste: vuelo de debug más rápido
 
 Owner: "va muy lento cuando vuela". `flySpeed` 8 → 30 en `MapExplorer.cs`

@@ -76,6 +76,12 @@ namespace FolkloreArchives.MapGen
             cc.height = 2.4f; cc.radius = 0.35f; cc.center = new Vector3(0f, 1.2f, 0f);
             var explorer = root.AddComponent<FolkloreArchives.MapExplorer>();
             explorer.enabled = false; // el gate lo prende para el dueño
+            // owner: "no aumento la velocidad" -- flySpeed es un campo público; un
+            // GameObject YA generado en una escena anterior se queda con el valor
+            // viejo aunque cambie el default en el código (mismo bug que
+            // CarAutoDrive.cruiseSpeedKmh, ver DEV_LOG) -- asignado EXPLÍCITO acá para
+            // que quede claro que este número se hornea y necesita Regenerar.
+            explorer.flySpeed = 30f;
             // owner: "no me deja interactuar con las cosas... abrir puertas ni las
             // opciones me salen ni nada" -- faltaba este componente entero en el
             // personaje de red (subir/bajar del auto, abrir/cerrar puertas, y el texto
@@ -204,6 +210,7 @@ namespace FolkloreArchives.MapGen
             cc.height = 1.1f; cc.radius = 0.35f; cc.center = new Vector3(0f, 0.55f, 0f);
             var dogCtrl = root.AddComponent<FolkloreArchives.DogController>();
             dogCtrl.enabled = false;
+            dogCtrl.flySpeed = 30f; // ver nota en MapExplorer más arriba -- horneado explícito
             root.AddComponent<FolkloreArchives.DogWalkAnim>(); // patas se mueven al caminar
 
             // owner: "necesito que el perro pueda subirse pero no abrir las puertas" --
