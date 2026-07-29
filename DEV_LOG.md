@@ -7,6 +7,42 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-29 (7) — Herramienta para borrar FOLKLORE_MAP duplicado/roto (causa real de "terreno fragmentado, islas flotando")
+
+Owner: reportó que el terreno extra que mandó el compañero (por Unity
+Version Control / Plastic SCM, no git) no se veía como en la referencia —
+terreno fragmentado, "islas" flotando sobre el vacío. Investigado a mano
+en el `.unity` (sin acceso a Unity, grepeando el YAML):
+
+- El terreno extra del compañero (`Terrain_(0.00, 0.00, -413.00)`) está
+  bien: vive en la raíz de la escena (no dentro de `FOLKLORE_MAP`), con
+  su propio `TerrainData` válido, pegado justo al sur del terreno
+  principal (un tile completo de 413m) para coserse por auto-connect.
+  Eso no era el problema.
+- El problema real: la escena tenía **dos objetos `FOLKLORE_MAP`**
+  (mismo nombre, misma posición 0,0,0, mismos 7 grupos hijos). Uno con
+  el `Terrain` generado real (`terrainData` válido). El otro con un
+  `Terrain` cuyo `terrainData` está **sin asignar** (`fileID: 0`) —
+  no dibuja nada — pero con sus propias casas/árboles/props ya
+  posicionados como si hubiera piso debajo. Superpuesto sobre el mapa
+  bueno, eso se ve exactamente como "islas flotando sobre el vacío".
+- Causa raíz: `DeleteMap()` usa `GameObject.Find(RootName)`, que solo
+  encuentra UN objeto con ese nombre. Si por lo que sea (un Generate
+  interrumpido, ej. cuando el compile-error tenía roto el menú Tools)
+  quedaron dos `FOLKLORE_MAP` en la escena, cada Generate reconstruye
+  siempre el mismo y el otro queda huérfano para siempre.
+
+Fix: nuevo `Tools > Folklore Archives > Remove Duplicate Map Roots` en
+`MapGenerator.cs` — busca TODOS los `FOLKLORE_MAP` de la escena (no solo
+el primero como `GameObject.Find`), identifica cuál tiene el
+`TerrainData` generado real, y borra el/los otro(s). No toca el terreno
+extra del compañero (vive fuera de cualquier `FOLKLORE_MAP`).
+
+**Pendiente que pruebe el owner:** correr esa herramienta una vez, después
+`Rebuild Terrain (forzar)` + Generate, y confirmar visualmente que el
+mapa quedó limpio (sin islas) y el terreno extra del compañero se ve
+cosido al sur de la ruta.
+
 ## 2026-07-29 (6) — Corrimiento permanente de la ruta (-143.5 en Z), copiado de un ajuste manual del compañero (**necesita regenerar**)
 
 Owner: mostró en capturas que su compañero había corrido el objeto
