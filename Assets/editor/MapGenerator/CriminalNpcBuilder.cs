@@ -53,15 +53,19 @@ namespace FolkloreArchives.MapGen
             { name = n; fbx = f; tex = tx; targetHeight = h; offX = ox; offZ = oz; yaw = y; }
         }
 
+        // owner: "los asesinos deben medir lo mismo que los personajes no?" -- los 5
+        // estaban en 2.2-2.25, mientras que los 3 amigos decorativos (FriendNpcBuilder)
+        // usan 2.3 parejo. Sin ningún comentario que explique la diferencia (parece un
+        // descuido, no una decisión a propósito) -- unificados los 5 a 2.3.
         static readonly CriminalDef[] Criminals =
         {
             // líder (máscara de chancho), más cerca de la fogata, mirando hacia el centro
-            new CriminalDef("Criminal_PigMask_Leader",      Dir + "Killer_PigMask/Character_Killer_05.fbx",          Dir + "Killer_PigMask/Character_Killer_05.png",           2.25f, -2f,  -3f,  34f),
+            new CriminalDef("Criminal_PigMask_Leader",      Dir + "Killer_PigMask/Character_Killer_05.fbx",          Dir + "Killer_PigMask/Character_Killer_05.png",           2.3f, -2f,  -3f,  34f),
             // 4 guardias, en las 4 direcciones cardinales alrededor de la fogata
-            new CriminalDef("Criminal_SackheadFlannel",     Dir + "Killer_Sackhead_Flannel/Character_Killer.fbx",    Dir + "Killer_Sackhead_Flannel/Character_Killer.png",    2.2f,  0f,   6.5f, 180f),
-            new CriminalDef("Criminal_SkullJacket",         Dir + "Killer_SkullJacket/Character_Killer_02.fbx",      Dir + "Killer_SkullJacket/Character_Killer_02.png",      2.2f,  6.5f, 0f,   -90f),
-            new CriminalDef("Criminal_SackheadHoodie",      Dir + "Killer_Sackhead_Hoodie/Character_Killer_01.fbx",  Dir + "Killer_Sackhead_Hoodie/Character_Killer_01.png",  2.2f,  0f,  -6.5f,  0f),
-            new CriminalDef("Criminal_BloodyUniform",       Dir + "Killer_BloodyUniform/Character_Killer_06.fbx",    Dir + "Killer_BloodyUniform/Character_Killer_06.png",    2.2f, -6.5f, 0f,   90f),
+            new CriminalDef("Criminal_SackheadFlannel",     Dir + "Killer_Sackhead_Flannel/Character_Killer.fbx",    Dir + "Killer_Sackhead_Flannel/Character_Killer.png",    2.3f,  0f,   6.5f, 180f),
+            new CriminalDef("Criminal_SkullJacket",         Dir + "Killer_SkullJacket/Character_Killer_02.fbx",      Dir + "Killer_SkullJacket/Character_Killer_02.png",      2.3f,  6.5f, 0f,   -90f),
+            new CriminalDef("Criminal_SackheadHoodie",      Dir + "Killer_Sackhead_Hoodie/Character_Killer_01.fbx",  Dir + "Killer_Sackhead_Hoodie/Character_Killer_01.png",  2.3f,  0f,  -6.5f,  0f),
+            new CriminalDef("Criminal_BloodyUniform",       Dir + "Killer_BloodyUniform/Character_Killer_06.fbx",    Dir + "Killer_BloodyUniform/Character_Killer_06.png",    2.3f, -6.5f, 0f,   90f),
         };
 
         public static void Build(Transform criminalCamp, Terrain t, Vector2 campCenter)

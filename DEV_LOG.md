@@ -7,6 +7,16 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (27) — Ajuste: altura de los 5 asesinos igualada a la de los amigos (**necesita regenerar**)
+
+Owner: "los asesinos deben medir lo mismo que los personajes no?". Los 5
+estaban en 2.2-2.25 (sin comentario que explique por qué), mientras que
+los 3 amigos decorativos (`FriendNpcBuilder`) usan 2.3 parejo -- parece
+un descuido, no una decisión a propósito. `targetHeight` de los 5
+unificado a 2.3. **Requiere Regenerar.**
+
+---
+
 ## 2026-07-28 (26) — Movilidad para los 5 asesinos del campamento (**necesita regenerar**)
 
 Owner: "sigamos con movilidad de los asesinos" -- los 5 criminales
