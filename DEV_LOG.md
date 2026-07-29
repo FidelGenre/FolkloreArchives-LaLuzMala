@@ -7,6 +7,34 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (22) — La ruta sigue mucho más allá del "mapa" -- spawn en la punta real (**necesita regenerar**)
+
+Owner, mostrando la vista Scene: "queda muchisimo espacio hacia atras
+fijate la ruta es mas larga que el mapa ponelo en la punta". Tenía mal el
+supuesto de fondo: pensé que `MapLayout.MapSizeX` (600, el ancho del
+`Terrain`) era el límite físico duro del mundo jugable, pero
+`MapLayout.PavedRoute` (la curva real de la ruta, generada por
+`RoadsideBuilder.BuildPavedRoadMesh` con su PROPIO `MeshCollider`,
+independiente del terreno) tiene puntos de control hasta X=872 -- la
+ruta sigue, con colisión real, mucho más allá del terreno "decorado".
+
+Fix en `CarBuilder.cs`: `carX` ahora es
+`MapLayout.PavedRoute[^1].x - 15f` (la punta real de la ruta, con un
+pequeño margen), en vez de una fórmula atada a `MapSizeX`. Como X ya
+queda bien afuera del ancho del `Terrain` (600), `terrain.SampleHeight()`
+ya no es confiable ahí (clampea al borde del heightmap, no representa la
+altura real) -- reemplazado por `MapLayout.RoadSurfaceHeight` directo,
+la misma altura fija que usa el propio mesh de la ruta (independiente del
+terreno de abajo, por diseño). `LandmarkBuilder.friendsX` actualizado
+igual.
+
+**Requiere Regenerar.** Zona sin decorar (fuera del margen donde
+`ForestBuilder`/etc. generan bosque/props) -- esperable que se vea pelada
+ahí, el owner ya lo vio en la vista Scene (niebla, agua, montañas
+lejanas) y lo pidió así de todos modos.
+
+---
+
 ## 2026-07-28 (21) — Corrección 2: "más atrás" iba en la dirección contraria + tope real del mapa (**necesita regenerar**)
 
 Owner: "lo necesito mucho mas para atras unos 200 metros mas". El ajuste

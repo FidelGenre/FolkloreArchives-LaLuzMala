@@ -33,23 +33,22 @@ namespace FolkloreArchives.MapGen
             // atras" -- entendido AL REVÉS acá (MapSizeX-80 achica la distancia a la
             // YPF en vez de agrandarla, porque restar MÁS de MapSizeX da un X más
             // CHICO, más cerca de la estación). Corregido.
-            // owner (3ra vuelta): "unos 200 metros mas" -- el mapa mide 600m y la YPF
-            // está en X=449; de este lado quedan como mucho ~80m antes de salirse del
-            // mapa generado, no 200 (esos 200 solo entrarían cruzando al otro lado de
-            // la YPF, invirtiendo la dirección del viaje). Aclarado con el owner: se
-            // queda de este mismo lado, lo más lejos posible sin salirse (~X=590, un
-            // margen de 10 en vez de 30 -- bien pegado al borde generado del mapa).
-            float carX = MapLayout.MapSizeX - 10f;
+            // owner (3ra vuelta): "unos 200 metros mas" -- pensé que el límite era el
+            // ancho del terreno (MapSizeX=600), pero el owner mostró en la vista Scene
+            // que la ruta pavimentada sigue mucho más allá -- MapLayout.PavedRoute (la
+            // curva real, con SU PROPIO MeshCollider en RoadsideBuilder, no depende del
+            // terreno) tiene puntos de control hasta X=872, bien pasado el borde del
+            // terreno "decorado". "queda muchisimo espacio... ponelo en la punta" --
+            // la punta real de la ruta, no el borde del terreno.
+            float carX = MapLayout.PavedRoute[MapLayout.PavedRoute.Length - 1].x - 15f; // un pelo antes de la punta misma
             float carZ = MapLayout.PavedRouteZAt(carX);
-            // owner: "esta spwaneado debajo de la tierra" -- RoadSurfaceHeight es la
-            // altura NOMINAL de la ruta pavimentada, pero cerca del borde este del
-            // mapa el terreno real puede quedar más alto que ese valor fijo (mismo
-            // bug que ya se había arreglado en TestPlayerBuilder). Muestreo el
-            // terreno real y uso el mayor de los dos.
-            float terrainY = terrain != null
-                ? terrain.SampleHeight(new Vector3(carX, 0f, carZ)) + terrain.transform.position.y
-                : MapLayout.RoadSurfaceHeight;
-            float groundY = Mathf.Max(MapLayout.RoadSurfaceHeight, terrainY);
+            // owner: "esta spwaneado debajo de la tierra" (bug viejo, con X dentro del
+            // terreno) -- acá X ya está bien MÁS ALLÁ del ancho del terreno (600), así
+            // que terrain.SampleHeight ya no es confiable (clampea al borde del
+            // heightmap, no representa nada real ahí). La ruta pavimentada tiene su
+            // propia altura FIJA e independiente del terreno (RoadSurfaceHeight, ver
+            // RoadsideBuilder.BuildPavedRoadMesh) -- uso esa directo, sin muestrear.
+            float groundY = MapLayout.RoadSurfaceHeight;
             var pos = new Vector3(carX, groundY, carZ);
             float dz = MapLayout.PavedRouteZAt(carX + 6f) - MapLayout.PavedRouteZAt(carX - 6f);
             // owner: "el auto esta mirando en direccion contraria" -- la fórmula
