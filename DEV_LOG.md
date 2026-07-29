@@ -7,6 +7,28 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-29 (6) — Corrimiento permanente de la ruta (-143.5 en Z), copiado de un ajuste manual del compañero (**necesita regenerar**)
+
+Owner: mostró en capturas que su compañero había corrido el objeto
+`PavedRoad_Surface` -143.5 en Z a mano, directo en el Editor, para alejar
+la ruta del campamento. Confirmado con el owner que ese corrimiento debía
+hornearse en el código (la alternativa -- dejarlo como estaba, a mano --
+se pierde solo en el próximo Regenerate de cualquiera de los dos, porque
+`RoadsideBuilder.BuildPavedRoadMesh` reconstruye el mesh siempre en Z=0
+desde `MapLayout.PavedControls`).
+
+Fix: nueva constante `RouteZShift = -143.5f` sumada a los 7 puntos de
+`PavedControls`. A diferencia del intento anterior (extender el mapa
+200m, revertido), esta vez NO se tocó el terreno/origen -- el tramo sur
+de la ruta cae en la zona sin decorar más allá del borde del `Terrain`,
+mismo caso que ya tiene la punta este (`CarBuilder.cs`, "la punta real de
+la ruta"). Todo lo que sigue la ruta vía `PavedRouteZAt` (costa del lago,
+guardarail, YPF, spawn/waypoints del auto) se corre solo, automático.
+
+**Requiere Regenerar.**
+
+---
+
 ## 2026-07-29 (5) — Ajuste: viento a 0.02 + pisadas a 0.2 -- ojo, capaz falta Regenerar (**necesita regenerar**)
 
 Owner: "bajalo a 0.02 al viento y las pisadas creo que ni las tocaste o

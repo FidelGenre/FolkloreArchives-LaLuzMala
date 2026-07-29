@@ -173,14 +173,24 @@ namespace FolkloreArchives.MapGen
         // wavelength + small amplitude = a believable rural road with sweeping bends.
         // Control points run past both map edges (x < 0 and x > MapSize) so the road
         // enters and leaves the terrain mid-curve instead of ending square-on.
+        // owner: el compañero corrió la ruta -143.5 en Z a mano en el Editor
+        // (arrastrando el GameObject "PavedRoad_Surface") para alejarla del
+        // campamento -- eso NO sobrevive un Regenerate (BuildPavedRoadMesh
+        // reconstruye el mesh siempre en Z=0 desde estos puntos). Horneado acá
+        // para que el corrimiento sea permanente. NO se tocó el terreno/origen
+        // esta vez (a diferencia del intento anterior, revertido) -- el tramo
+        // sur de la ruta simplemente cae en la zona sin decorar más allá del
+        // borde del Terrain, mismo caso que ya tiene la punta este (ver
+        // CarBuilder.cs, "la punta real de la ruta").
+        const float RouteZShift = -143.5f;
         static readonly Vector2[] PavedControls = {
-            new Vector2(-136f, 45f),
-            new Vector2(79f, 37f),
-            new Vector2(273f, 48f),
-            new Vector2(462f, 38f),
-            new Vector2(620f, 47f),
-            new Vector2(788f, 39f),   // long approach across the extended east half of the map
-            new Vector2(872f, 43f)
+            new Vector2(-136f, 45f + RouteZShift),
+            new Vector2(79f, 37f + RouteZShift),
+            new Vector2(273f, 48f + RouteZShift),
+            new Vector2(462f, 38f + RouteZShift),
+            new Vector2(620f, 47f + RouteZShift),
+            new Vector2(788f, 39f + RouteZShift),   // long approach across the extended east half of the map
+            new Vector2(872f, 43f + RouteZShift)
         };
         // Sampled into a fine polyline (~22m spacing) so it reads as a true curve, not
         // a set of straights with kinks. Stays x-monotonic, so PavedRouteZAt still works.
