@@ -3,9 +3,9 @@
 //  CriminalNpcBuilder.cs — los 5 ladrones/asesinos enmascarados
 //  (owner: "4-5 mejor" + capturas del pack "Characters PSX" de
 //  Elbolilloduro eligiendo justo estos 5 disfraces). Mismo
-//  tratamiento PSX que FriendNpcBuilder: estáticos por ahora
-//  (sin IA/animación todavía), material URP propio + textura en
-//  filtro Point.
+//  tratamiento PSX que FriendNpcBuilder: material URP propio +
+//  textura en filtro Point + HumanWalkAnim/FriendWander (owner:
+//  "movilidad de los asesinos" -- antes estaban 100% estáticos).
 //
 //  Los 5 van juntos en MainCriminalCamp (owner: "quiero que esten
 //  los 5 ahi en ese campamento malo"). El campamento tiene 4 ranchos
@@ -29,6 +29,21 @@ namespace FolkloreArchives.MapGen
     public static class CriminalNpcBuilder
     {
         const string Dir = "Assets/ExternalAssets/CriminalNPCs/";
+
+        // owner: "vamos con la opcion 2" (HumanWalkAnim procedural en vez de bajar
+        // animaciones de otro asset) -- confirmado grepeando los 5 FBX (binarios,
+        // pero los nombres de hueso quedan legibles adentro): los 5 killers de este
+        // pack ("Characters PSX" de Elbolilloduro) SON rig Mixamo de verdad
+        // (mixamorig:Hips/LeftArm/LeftUpLeg/etc, mismos nombres en los 5 archivos) --
+        // mismo Limb[] que ya usa FriendNpcBuilder.MixamoLimbs para el amigo con el
+        // mismo tipo de rig.
+        static readonly FolkloreArchives.HumanWalkAnim.Limb[] MixamoLimbs =
+        {
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:LeftUpLeg",  phase =  1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:RightUpLeg", phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:LeftArm",    phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:RightArm",   phase =  1f },
+        };
 
         struct CriminalDef
         {
@@ -105,6 +120,22 @@ namespace FolkloreArchives.MapGen
                 for (int k = 0; k < arr.Length; k++) arr[k] = mat;
                 r.sharedMaterials = arr;
             }
+
+            // owner: "sigamos con movilidad de los asesinos" -- estaban 100% estáticos
+            // (comentario viejo de este archivo: "sin IA/animación todavía"). Mismo
+            // combo que ya usan los 3 amigos decorativos: HumanWalkAnim corrige la
+            // T-pose y anima el ciclo de caminata (rig Mixamo confirmado, ver
+            // MixamoLimbs arriba); FriendWander los hace deambular de a poco cerca de
+            // donde arrancan (no es IA real, solo para que no queden parados como
+            // estatuas alrededor de la fogata).
+            var anim = go.AddComponent<FolkloreArchives.HumanWalkAnim>();
+            anim.limbs = MixamoLimbs;
+
+            // owner: sin minGroundY -- ese piso mínimo en FriendNpcBuilder existe para
+            // un bug puntual del lado ESTE del mapa (cerca del auto), no del campamento
+            // de los ladrones; forzarlo acá podría flotarlos si el campamento está en
+            // una zona más baja del terreno. Se deja el default (confía en el terreno).
+            var wander = go.AddComponent<FolkloreArchives.FriendWander>();
         }
 
         static Texture2D LoadPointTex(string path)

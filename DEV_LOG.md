@@ -7,6 +7,35 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (26) — Movilidad para los 5 asesinos del campamento (**necesita regenerar**)
+
+Owner: "sigamos con movilidad de los asesinos" -- los 5 criminales
+enmascarados de `MainCriminalCamp` estaban 100% estáticos desde que se
+armaron (sin IA/animación, el comentario del archivo ya lo decía).
+Exploramos bajar un asset nuevo con animaciones reales (Sackhead Killer /
+Hockey Mask Killer de itch.io) pero el owner eligió la opción sin
+descargas: reusar el mismo sistema procedural que ya usan los 3 amigos
+decorativos.
+
+Verificado ANTES de tocar código (los FBX son binarios, pero los nombres
+de hueso quedan legibles adentro -- grep directo al archivo): los 5
+killers del pack "Characters PSX" de Elbolilloduro SON rig Mixamo real
+(`mixamorig:Hips/LeftArm/LeftUpLeg/...`, confirmado en los 5 archivos por
+igual) -- mismo Limb[] que ya usa `FriendNpcBuilder.MixamoLimbs`.
+
+Fix en `CriminalNpcBuilder.cs`: cada uno de los 5 recibe ahora
+`HumanWalkAnim` (corrige la T-pose + anima el ciclo de caminata) +
+`FriendWander` (deambulan de a poco cerca de donde arrancan -- no es IA
+real, mismo criterio ya usado con los amigos). A diferencia de
+`FriendNpcBuilder`, NO se les puso `minGroundY` -- ese piso mínimo existe
+ahí por un bug puntual del lado este del mapa (cerca del auto), no
+aplica necesariamente al campamento de los ladrones; forzarlo podría
+flotarlos si el terreno ahí es más bajo.
+
+**Requiere Regenerar** (agrega componentes en el momento de Build).
+
+---
+
 ## 2026-07-28 (25) — Revertida la extensión del mapa 200m al sur
 
 Owner: "volvelo atras como estaba". Revertida por completo la entrada
