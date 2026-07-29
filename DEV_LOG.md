@@ -7,6 +7,28 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (21) — Corrección 2: "más atrás" iba en la dirección contraria + tope real del mapa (**necesita regenerar**)
+
+Owner: "lo necesito mucho mas para atras unos 200 metros mas". El ajuste
+anterior (`MapSizeX - 80f`) iba en la dirección CONTRARIA a lo pedido --
+restar MÁS de `MapSizeX` da un X más CHICO, que queda más CERCA de la YPF
+(x=449), no más lejos. Confirmado con el owner por las dudas: el mapa
+mide 600m y la YPF está en x=449, así que de este lado (este) quedan como
+mucho ~80m antes de salirse del terreno generado -- los "200m más" que
+pedía no entran de este lado sin cruzar al oeste de la estación
+(invertiría la dirección del viaje, lo mismo que el intento fallido de
+antes). El owner eligió quedarse del mismo lado, lo más lejos posible sin
+salirse: `MapLayout.MapSizeX - 10f` (antes `-30f`, después mal corregido
+a `-80f`) -- bien pegado al borde del mapa generado. `LandmarkBuilder.
+friendsX` actualizado igual.
+
+**Requiere Regenerar.** Nota: a `MapSizeX - 10f` el spawn queda un poco
+afuera del margen donde `ForestBuilder` genera bosque (`[30,
+MapSizeX-30]`) -- puede verse más pelado/sin árboles ahí cerca; avisame
+si se ve raro.
+
+---
+
 ## 2026-07-28 (20) — Corrección: el spawn "oeste" estaba mal entendido, revertido + movido más atrás en el ESTE (**necesita regenerar**)
 
 Owner: "eh? no nada que ver es del lado contrario que lo necesito, osea

@@ -30,10 +30,16 @@ namespace FolkloreArchives.MapGen
             // este (mismo criterio de offset, del otro extremo), para no tener que
             // manejar todo el mapa para probar el cementerio/campamento/cabañas nuevos.
             // owner (2da vuelta): "lo necesito donde estaba antes... pero mas para
-            // atras" -- mismo lado ESTE, más lejos del final del mapa (más lejos de la
-            // YPF, viaje más largo). 80 en vez de 30 -- primer número a ojo, mismo
-            // criterio que el resto de esta sesión: se ajusta en vivo si hace falta.
-            float carX = MapLayout.MapSizeX - 80f;
+            // atras" -- entendido AL REVÉS acá (MapSizeX-80 achica la distancia a la
+            // YPF en vez de agrandarla, porque restar MÁS de MapSizeX da un X más
+            // CHICO, más cerca de la estación). Corregido.
+            // owner (3ra vuelta): "unos 200 metros mas" -- el mapa mide 600m y la YPF
+            // está en X=449; de este lado quedan como mucho ~80m antes de salirse del
+            // mapa generado, no 200 (esos 200 solo entrarían cruzando al otro lado de
+            // la YPF, invirtiendo la dirección del viaje). Aclarado con el owner: se
+            // queda de este mismo lado, lo más lejos posible sin salirse (~X=590, un
+            // margen de 10 en vez de 30 -- bien pegado al borde generado del mapa).
+            float carX = MapLayout.MapSizeX - 10f;
             float carZ = MapLayout.PavedRouteZAt(carX);
             // owner: "esta spwaneado debajo de la tierra" -- RoadSurfaceHeight es la
             // altura NOMINAL de la ruta pavimentada, pero cerca del borde este del
