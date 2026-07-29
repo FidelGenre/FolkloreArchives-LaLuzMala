@@ -7,6 +7,28 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (28) — Vuelo de debug (doble Espacio, modo creativo Minecraft) para jugador y perro
+
+Owner: "hace que dando doble click con el espacio pueda volar como modo
+creativo de minecraft, esto es solo por ahora para recorrer mientras
+pruebo el mapa, tanto en perro como jugador 1" -- feature de debug
+explícitamente temporal, no de gameplay final.
+
+`MapExplorer.cs` (jugador) y `DogController.cs` (perro, solo
+`Mode.Player` -- no tiene sentido que la IA de `Follow` vuele sola):
+doble-tap de Espacio (dos `wasPressedThisFrame` dentro de
+`doubleTapWindow`=0.3s) prende/apaga `flying`. Volando: sin gravedad,
+Espacio MANTENIDO sube, Ctrl/C MANTENIDO baja (esas teclas ya no agachan
+mientras se vuela, no tiene sentido en el aire), WASD sigue siendo
+horizontal puro a `flySpeed` (8, más rápido que correr) -- mismo
+comportamiento que el vuelo creativo de Minecraft. En el perro, si el
+modo cambia de `Player` a otra cosa con el vuelo prendido, se apaga solo
+(por si se pasa a controlar a la persona sin acordarse de aterrizar).
+
+No toca datos horneados -- no hace falta Regenerar.
+
+---
+
 ## 2026-07-28 (27) — Ajuste: altura de los 5 asesinos igualada a la de los amigos (**necesita regenerar**)
 
 Owner: "los asesinos deben medir lo mismo que los personajes no?". Los 5

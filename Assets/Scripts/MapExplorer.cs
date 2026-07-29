@@ -21,6 +21,20 @@ namespace FolkloreArchives
         public float gravity = 18f;
         public float mouseSensitivity = 0.08f;
 
+        // owner: "que dando doble click con el espacio pueda volar como modo
+        // creativo de minecraft... esto es solo por ahora para recorrer mientras
+        // pruebo el mapa" -- feature de debug, no de gameplay final. Doble-tap de
+        // Espacio prende/apaga; volando, Espacio mantenido = subir, Ctrl/C = bajar
+        // (mismas teclas que agachar, que no tiene sentido en el aire), WASD sigue
+        // siendo horizontal puro (transform.forward/right ya son solo yaw, la
+        // inclinación de cámara no los afecta -- mismo comportamiento que el vuelo
+        // creativo de Minecraft sin tocar nada del movimiento existente).
+        [Header("Vuelo (debug, doble Espacio)")]
+        public float flySpeed = 8f;
+        public float doubleTapWindow = 0.3f;
+        bool flying;
+        float lastSpaceTapTime = -10f;
+
         // Stamina: owner: "que la estamina siga estando pero infinita... que no este
         // mas la barra" -- se sigue llevando la cuenta (drena corriendo, se regenera
         // caminando) pero YA NO bloquea correr ni se muestra en pantalla; queda como
@@ -148,8 +162,23 @@ namespace FolkloreArchives
                 if (cam != null) cam.localEulerAngles = new Vector3(pitch, 0f, 0f);
             }
 
+            // Doble-tap de Espacio: prende/apaga el vuelo de debug. wasPressedThisFrame
+            // ya dispara una sola vez por toque (no por mantenido), así que compararlo
+            // contra el toque anterior alcanza para detectar el doble click.
+            if (kb.spaceKey.wasPressedThisFrame)
+            {
+                if (Time.time - lastSpaceTapTime < doubleTapWindow)
+                {
+                    flying = !flying;
+                    verticalVelocity = 0f;
+                }
+                lastSpaceTapTime = Time.time;
+            }
+
             // Crouch (hold Ctrl or C). Can't stand up if there's something overhead.
-            bool wantCrouch = kb.leftCtrlKey.isPressed || kb.cKey.isPressed;
+            // Volando, Ctrl/C pasan a ser "bajar" (ver más abajo) -- no tiene sentido
+            // agacharse en el aire.
+            bool wantCrouch = !flying && (kb.leftCtrlKey.isPressed || kb.cKey.isPressed);
             if (!wantCrouch && crouching && !CanStandUp()) wantCrouch = true; // blocked by ceiling
             crouching = wantCrouch;
 
@@ -192,7 +221,7 @@ namespace FolkloreArchives
                 if (exhausted && stamina >= exhaustRecover) exhausted = false;
             }
 
-            float speed = crouching ? crouchSpeed : (running ? runSpeed : walkSpeed);
+            float speed = flying ? flySpeed : (crouching ? crouchSpeed : (running ? runSpeed : walkSpeed));
             Vector3 move = (transform.forward * v + transform.right * h).normalized * speed;
 
             // Head bob (camera sway while walking) + crouch height, combined.
@@ -217,8 +246,15 @@ namespace FolkloreArchives
                 cam.localEulerAngles = new Vector3(pitch, 0f, roll);
             }
 
+            if (flying)
+            {
+                // sin gravedad -- Espacio mantenido sube, Ctrl/C mantenido baja (mismo
+                // criterio que el vuelo creativo de Minecraft).
+                float vert = (kb.spaceKey.isPressed ? 1f : 0f) - ((kb.leftCtrlKey.isPressed || kb.cKey.isPressed) ? 1f : 0f);
+                verticalVelocity = vert * flySpeed;
+            }
             // Gravity + jump
-            if (controller.isGrounded)
+            else if (controller.isGrounded)
             {
                 verticalVelocity = -1f;
                 // jump on Space (not while crouched)

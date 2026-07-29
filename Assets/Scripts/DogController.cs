@@ -28,6 +28,15 @@ namespace FolkloreArchives
         public float jumpHeight = 0.9f;   // saltar (Espacio)
         public float crouchRatio = 0.5f;  // agacharse (Ctrl/C): baja a esta fracción del alto
 
+        // owner: "que dando doble click con el espacio pueda volar... tanto en perro
+        // como jugador 1" -- mismo feature de debug que MapExplorer, solo activo en
+        // Mode.Player (no tiene sentido que la IA de Follow vuele sola).
+        [Header("Vuelo (debug, doble Espacio, solo Mode.Player)")]
+        public float flySpeed = 8f;
+        public float doubleTapWindow = 0.3f;
+        bool flying;
+        float lastSpaceTapTime = -10f;
+
         [Header("Follow (IA)")]
         public Transform followTarget;             // la persona
         public float followStopDistance = 3.0f;    // se planta a esta distancia
@@ -81,6 +90,20 @@ namespace FolkloreArchives
 
         void Update()
         {
+            // doble-tap de Espacio prende/apaga el vuelo de debug -- solo tiene
+            // sentido controlado (Mode.Player); si se apaga el modo jugador con el
+            // vuelo prendido, se apaga solo para no dejar la IA de Follow volando.
+            if (mode == Mode.Player)
+            {
+                var kbFly = Keyboard.current;
+                if (kbFly != null && kbFly.spaceKey.wasPressedThisFrame)
+                {
+                    if (Time.time - lastSpaceTapTime < doubleTapWindow) { flying = !flying; verticalVel = 0f; }
+                    lastSpaceTapTime = Time.time;
+                }
+            }
+            else if (flying) flying = false;
+
             Vector3 planar = Vector3.zero;
             switch (mode)
             {
@@ -89,10 +112,16 @@ namespace FolkloreArchives
             }
 
             bool grounded = cc.isGrounded;
-            if (grounded) verticalVel = -1f;
+            if (flying)
+            {
+                var kb = Keyboard.current;
+                float vert = kb == null ? 0f : (kb.spaceKey.isPressed ? 1f : 0f) - ((kb.leftCtrlKey.isPressed || kb.cKey.isPressed) ? 1f : 0f);
+                verticalVel = vert * flySpeed;
+            }
+            else if (grounded) verticalVel = -1f;
             else verticalVel -= gravity * Time.deltaTime;
 
-            if (mode == Mode.Player) Jump(grounded);   // saltar solo cuando lo controlás (el perro no se agacha)
+            if (mode == Mode.Player && !flying) Jump(grounded);   // saltar solo cuando lo controlás (el perro no se agacha)
 
             Vector3 before = transform.position;
             Vector3 move = planar;
