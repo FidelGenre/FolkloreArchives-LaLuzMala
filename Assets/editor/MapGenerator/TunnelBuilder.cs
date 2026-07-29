@@ -526,7 +526,7 @@ namespace FolkloreArchives.MapGen
                 if (BuilderUtils.DistToPolyline(new Vector2(wx, wz), MapLayout.PavedRoute) < 6.5f) continue;
                 float h = terrain.SampleHeight(new Vector3(wx, 0f, wz)) + tY;
                 if (h < MapLayout.LakeLevel + 0.6f) continue;   // skip the lake side
-                Vector3 nrm = terrain.terrainData.GetInterpolatedNormal(wx / MapLayout.MapSizeX, (wz - MapLayout.MapOriginZ) / MapLayout.MapSize);
+                Vector3 nrm = terrain.terrainData.GetInterpolatedNormal(wx / MapLayout.MapSizeX, wz / MapLayout.MapSize);
                 if (Vector3.Angle(nrm, Vector3.up) > 40f) continue;
 
                 Vector3 wp = new Vector3(wx, h, wz);

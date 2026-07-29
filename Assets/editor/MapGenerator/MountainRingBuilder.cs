@@ -38,12 +38,9 @@ namespace FolkloreArchives.MapGen
             int backdropLayer = LayerMask.NameToLayer("Backdrop");
             if (backdropLayer < 0) backdropLayer = 6;
 
-            // owner: "empujar la ruta mas lejos" (extensión de 200m al sur) -- el anillo
-            // de montañas de fondo no necesita seguir la extensión, usa OriginalMapSize
-            // (fijo) para quedarse centrado donde está hoy.
-            float cx = MapLayout.MapSizeX * 0.5f, cz = MapLayout.OriginalMapSize * 0.5f;
+            float cx = MapLayout.MapSizeX * 0.5f, cz = MapLayout.MapSize * 0.5f;
             float rx = MapLayout.MapSizeX * 0.5f + RingMargin;
-            float rz = MapLayout.OriginalMapSize * 0.5f + RingMargin;
+            float rz = MapLayout.MapSize * 0.5f + RingMargin;
 
             float lakeClear = MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore + 140f;
             int placed = 0;

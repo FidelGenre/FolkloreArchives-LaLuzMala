@@ -58,36 +58,29 @@ namespace FolkloreArchives.MapGen
 
             Debug.Log("<color=yellow>[TerrainPaint] Recalculando el terreno puramente procedural para comparar (puede tardar varios minutos, mismo costo que Rebuild Terrain)…</color>");
 
-            // Baseline SOLO para las TEXTURAS (splat): PaintTextures es determinístico,
-            // así que recalcularlo da el mismo resultado y el diff de alpha es correcto.
-            // El PASTO ya NO usa este baseline (SetupGrass es no-determinístico) — usa el
-            // baseline REAL capturado por ForestBuilder/GrassPersistence.
             var baseline = new TerrainData();
             baseline.heightmapResolution = live.heightmapResolution;
             baseline.alphamapResolution  = live.alphamapResolution;
             baseline.size = live.size;
             baseline.SetHeights(0, 0, TerrainBuilder.ComputeProceduralHeights(baseline.heightmapResolution));
             TerrainBuilder.PaintTextures(baseline);
+            ForestBuilder.SetupGrass(baseline);
 
             SaveAlphaDiff(live, baseline);
+            SaveDetailDiff(live, baseline);
+
             Object.DestroyImmediate(baseline);
 
-            // PASTO borrado a mano: diff contra el baseline REAL (capturado al generar).
-            int grassRem = GrassPersistence.SaveRemovals(live);
-            string grassMsg = grassRem == -1
-                ? " (pasto: falta el baseline — hacé Rebuild Forest + Generate una vez, después borrá y guardá)"
-                : grassRem == -2 ? " (pasto: no coincide la resolución — Rebuild Forest + Generate)"
-                : $" + {grassRem} celdas de pasto borradas";
-
-            // ÁRBOLES borrados a mano (pincel Paint Trees + Shift).
+            // Árboles borrados a mano (pincel Paint Trees + Shift). Se guarda como diff
+            // contra el baseline procedural que ForestBuilder cachea en cada Generate.
             int treeRem = TreePersistence.SaveTreeRemovals(live);
             string treeMsg = treeRem < 0
-                ? " (árboles: falta el baseline — regenerá una vez y volvé a guardar)"
+                ? " (árboles: falta el baseline — regenerá el mapa una vez y volvé a guardar)"
                 : $" + {treeRem} árboles borrados";
 
             AssetDatabase.Refresh();
-            Debug.Log("<color=lime>[TerrainPaint] Guardado: texturas" + grassMsg + treeMsg +
-                      ". Sobrevive al Generate de ahora en más.</color>");
+            Debug.Log("<color=lime>[TerrainPaint] Pintado a mano (texturas + pasto" + treeMsg +
+                      ") guardado. Sobrevive a Rebuild Terrain/Rebuild Forest de ahora en más.</color>");
         }
 
         static void SaveAlphaDiff(TerrainData live, TerrainData baseline)
@@ -196,7 +189,7 @@ namespace FolkloreArchives.MapGen
                         var vals = new float[layers];
                         for (int l = 0; l < layers; l++) vals[l] = br.ReadSingle();
                         float wx = x / (float)res * MapLayout.MapSizeX;
-                        float wz = MapLayout.MapOriginZ + z / (float)res * MapLayout.MapSize;
+                        float wz = z / (float)res * MapLayout.MapSize;
                         if (MapLayout.LakeDist(new Vector2(wx, wz)) < lakeExcludeR) { skippedNearLake++; continue; }
                         for (int l = 0; l < layers; l++) map[z, x, l] = vals[l];
                         applied++;
@@ -219,37 +212,26 @@ namespace FolkloreArchives.MapGen
                 {
                     int res = br.ReadInt32();
                     int layers = br.ReadInt32();
-                    int curLayers = td.detailPrototypes.Length;
-                    // La resolución SÍ tiene que coincidir (los índices de celda no
-                    // remapean si cambia). Si no, aviso claro y salgo.
-                    if (res != td.detailResolution)
+                    if (res != td.detailResolution || layers != td.detailPrototypes.Length)
                     {
-                        Debug.LogWarning($"[TerrainPaint] pasto NO aplicado: resolución guardada {res}px ≠ terreno {td.detailResolution}px. " +
-                                         "Hacé Rebuild Forest (forzar) + Generate, o re-guardá con Save Terrain Paint.");
+                        Debug.LogWarning("[TerrainPaint] El guardado de pasto no coincide en resolución/capas con el terreno actual — lo salteo. Volvé a correr Save Terrain Paint.");
                         return;
                     }
-                    // La cantidad de CAPAS puede diferir (el terreno cacheado quizá tiene
-                    // otra config): aplico las que existan en ambos, salteo el resto.
-                    if (layers != curLayers)
-                        Debug.LogWarning($"[TerrainPaint] pasto: capas guardadas {layers} ≠ terreno {curLayers} → aplico las {Mathf.Min(layers, curLayers)} que coinciden.");
-
+                    // ídem ApplyAlphaPaint: ignorar celdas cerca del lago ACTUAL, el
+                    // guardado quedó grabado contra una posición/forma vieja del lago.
                     float lakeExcludeR = MapLayout.CentralLakeRadius + MapLayout.CentralLakeShore + 20f;
                     int totalApplied = 0, totalSkipped = 0;
                     for (int l = 0; l < layers; l++)
                     {
                         int count = br.ReadInt32();
-                        if (l >= curLayers || count == 0)
-                        {
-                            br.BaseStream.Seek(count * 12L, SeekOrigin.Current); // saltar celdas de esta capa
-                            continue;
-                        }
+                        if (count == 0) continue;
                         var layer = td.GetDetailLayer(0, 0, res, res, l);
                         int appliedHere = 0;
                         for (int i = 0; i < count; i++)
                         {
                             int z = br.ReadInt32(), x = br.ReadInt32(), v = br.ReadInt32();
                             float wx = x / (float)res * MapLayout.MapSizeX;
-                            float wz = MapLayout.MapOriginZ + z / (float)res * MapLayout.MapSize;
+                            float wz = z / (float)res * MapLayout.MapSize;
                             if (MapLayout.LakeDist(new Vector2(wx, wz)) < lakeExcludeR) { totalSkipped++; continue; }
                             layer[z, x] = v;
                             appliedHere++;
@@ -257,9 +239,8 @@ namespace FolkloreArchives.MapGen
                         if (appliedHere > 0) td.SetDetailLayer(0, 0, l, layer);
                         totalApplied += appliedHere;
                     }
-                    Debug.Log($"[TerrainPaint] pasto: {totalApplied} celdas reaplicadas" +
-                              (totalSkipped > 0 ? $" ({totalSkipped} cerca del lago ignoradas)" : "") +
-                              $". [guardado {res}px/{layers}c · terreno {td.detailResolution}px/{curLayers}c]");
+                    if (totalApplied > 0 || totalSkipped > 0)
+                        Debug.Log($"[TerrainPaint] Reaplicadas {totalApplied} celdas de pasto pintado a mano ({totalSkipped} cerca del lago actual ignoradas -- base cambió).");
                 }
             }
             catch (System.Exception e) { Debug.LogWarning("[TerrainPaint] No pude leer " + DetailPath + ": " + e.Message); }
@@ -271,8 +252,7 @@ namespace FolkloreArchives.MapGen
             bool any = false;
             if (File.Exists(AlphaPath))  { File.Delete(AlphaPath);  any = true; }
             if (File.Exists(DetailPath)) { File.Delete(DetailPath); any = true; }
-            GrassPersistence.Clear();        // pasto borrado a mano
-            TreePersistence.ClearRemovals(); // árboles borrados a mano
+            TreePersistence.ClearRemovals(); // también el borrado de árboles
             if (any) { AssetDatabase.Refresh(); Debug.Log("[TerrainPaint] Guardado de texturas/pasto/árboles borrado."); }
             else { AssetDatabase.Refresh(); Debug.Log("[TerrainPaint] Guardado limpiado (texturas/pasto/árboles)."); }
         }

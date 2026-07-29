@@ -7,6 +7,31 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (25) — Revertida la extensión del mapa 200m al sur
+
+Owner: "volvelo atras como estaba". Revertida por completo la entrada
+anterior (extensión del mapa hacia el sur para alejar la ruta del
+campamento) -- `MapLayout.cs`, `TerrainBuilder.cs`,
+`TerrainPaintPersistence.cs`, `TerrainEditPersistence.cs`,
+`ForestBuilder.cs`, `TunnelBuilder.cs`, `EnvironmentBuilder.cs`,
+`MountainRingBuilder.cs`, `SilhouetteMountainBuilder.cs` vuelven a su
+estado de antes de esa entrada (`MapSize` de nuevo 413, sin
+`OriginalMapSize`/`MapOriginZ`, `PavedControls` sin el corrimiento de
+-200, Terrain de vuelta en `Vector3.zero`).
+
+Ojo: `MapLayout.cs` tenía además un cambio SIN COMMITEAR hecho aparte
+(`YpfPadHalfX` 14→28, `YpfPadFarZ` 34→58 -- lote de la YPF al doble de
+tamaño) -- revertido a mano solo lo de la extensión del mapa, sin tocar
+ese cambio del lote de la YPF, que sigue en pie.
+
+Si el terreno cacheado ya se había regenerado con la extensión (Rebuild
+Terrain forzado de la entrada anterior), hace falta correr **Tools >
+Folklore Archives > Rebuild Terrain (forzar)** de nuevo + Regenerar para
+que el mapa vuelva a su tamaño/forma original -- este revert de código
+no deshace un heightmap ya cacheado en disco.
+
+---
+
 ## 2026-07-28 (24) — Mapa extendido 200m al sur: la ruta se aleja del campamento (**necesita Rebuild Terrain completo + regenerar**)
 
 Owner: "necesito alargar la distancia desde la ruta hasta el campamento...

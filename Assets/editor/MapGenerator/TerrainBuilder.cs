@@ -57,19 +57,10 @@ namespace FolkloreArchives.MapGen
                 EditorPrefs.SetInt(SplatVersionKey, SplatVersion);
             }
 
-            // Re-aplicar SIEMPRE el pintado a mano de texturas (idempotente), no solo en
-            // el rebuild/SplatVersion — así sobrevive aunque el terreno venga CACHEADO.
-            TerrainPaintPersistence.ApplyAlphaPaint(td);
-
             var go = Terrain.CreateTerrainGameObject(td);
             go.name = "Terrain";
             go.transform.SetParent(parent);
-            // owner: "alargar la distancia... empujar la ruta mas lejos" -- el mapa se
-            // extiende 200m al sur (ver MapLayout.MapOriginZ); el Terrain arranca ahí
-            // en vez de en el mundo Z=0, así que su grilla local [0,MapSize] cubre el
-            // mundo [MapOriginZ, MapOriginZ+MapSize] = [-200, 413] -- el borde norte
-            // (413) queda exactamente donde estaba antes de la extensión.
-            go.transform.position = new Vector3(0f, 0f, MapLayout.MapOriginZ);
+            go.transform.position = Vector3.zero;
             var terrain = go.GetComponent<Terrain>();
             // LOD del terreno: más alto = menos triángulos dibujados (se simplifica con
             // la distancia). 30 rebaja bastante los polígonos; con la niebla no se nota.
@@ -186,7 +177,7 @@ namespace FolkloreArchives.MapGen
             for (int i = 0; i < nproto; i++) layers[i] = td.GetDetailLayer(0, 0, res, res, i);
             for (int zi = 0; zi < res; zi++)
             {
-                float wz = MapLayout.MapOriginZ + zi / (float)(res - 1) * MapLayout.MapSize;
+                float wz = zi / (float)(res - 1) * MapLayout.MapSize;
                 for (int xi = 0; xi < res; xi++)
                 {
                     float wx = xi / (float)(res - 1) * MapLayout.MapSizeX;
@@ -232,7 +223,7 @@ namespace FolkloreArchives.MapGen
                 for (int xi = 0; xi < res; xi++)
                 {
                     float wx = xi / (float)(res - 1) * MapLayout.MapSizeX;
-                    float wz = MapLayout.MapOriginZ + zi / (float)(res - 1) * MapLayout.MapSize;
+                    float wz = zi / (float)(res - 1) * MapLayout.MapSize;
                     h[zi, xi] = Mathf.Clamp01(HeightAt(wx, wz) / MapLayout.MaxHeight);
                 }
             }
@@ -270,16 +261,9 @@ namespace FolkloreArchives.MapGen
             // (skipped near the paved route so the road stays flat)
             // umbrales RELATIVOS a MapSize/MapSizeX → se auto-ajustan si se recorta el mapa
             // (owner recortó el terreno sobrante de los bordes).
-            // owner: "empujar la ruta mas lejos" (extensión de 200m al sur) -- estos dos
-            // umbrales usan OriginalMapSize (fijo, 413) en vez de MapSize (que ahora es
-            // 613, el extent NUEVO) para que la cresta norte y el gate oeste/este NO se
-            // corran -- quedan exactamente donde estaban antes de la extensión. Como
-            // wz ya es mundo real (no relativo a MapOriginZ), esto además sigue
-            // funcionando bien para la ruta reubicada (queda en wz muy negativo, sigue
-            // por debajo del umbral, ridges suprimidos ahí también).
             float wWest = MapLayout.MapSizeX * 0.08f;
-            float ridge = Mathf.Clamp01((wz - MapLayout.OriginalMapSize * 0.9f) / 70f); // north, always
-            if (wz > MapLayout.OriginalMapSize * 0.15f)
+            float ridge = Mathf.Clamp01((wz - MapLayout.MapSize * 0.9f) / 70f); // north, always
+            if (wz > MapLayout.MapSize * 0.15f)
             {
                 ridge = Mathf.Max(ridge, Mathf.Clamp01((wWest - wx) / wWest)); // west
                 ridge = Mathf.Max(ridge, Mathf.Clamp01((wx - (MapLayout.MapSizeX - 60f)) / 60f));  // far east (follows the wider map)
@@ -470,7 +454,7 @@ namespace FolkloreArchives.MapGen
                 for (int xi = 0; xi < res; xi++)
                 {
                     float wx = xi / (float)(res - 1) * MapLayout.MapSizeX;
-                    float wz = MapLayout.MapOriginZ + zi / (float)(res - 1) * MapLayout.MapSize;
+                    float wz = zi / (float)(res - 1) * MapLayout.MapSize;
                     var p = new Vector2(wx, wz);
 
                     float dirt = 0f, dry = 0f, sand = 0f, ash = 0f;
