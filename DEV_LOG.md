@@ -7,6 +7,15 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (23) — Ajuste: crucero a 50 km/h (**necesita regenerar**)
+
+Owner: "pone el auto a 50 kmh". `cruiseSpeedKmh` 40 → 50 en
+`CarAutoDrive.cs` (default) y en `CarBuilder.cs` (valor horneado
+explícito -- ver entrada de "no esta yendo a 40" más arriba sobre por qué
+hace falta tocar los dos). **Requiere Regenerar.**
+
+---
+
 ## 2026-07-28 (22) — La ruta sigue mucho más allá del "mapa" -- spawn en la punta real (**necesita regenerar**)
 
 Owner, mostrando la vista Scene: "queda muchisimo espacio hacia atras

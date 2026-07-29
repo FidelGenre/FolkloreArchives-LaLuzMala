@@ -232,7 +232,7 @@ namespace FolkloreArchives.MapGen
             // guardado -- hace falta volver a Generar. Puesto EXPLÍCITO acá (en vez de
             // depender solo del default en CarAutoDrive.cs) para que quede claro que
             // cambiar este número siempre requiere Regenerar.
-            auto.cruiseSpeedKmh = 40f;
+            auto.cruiseSpeedKmh = 50f; // owner: "pone el auto a 50 kmh"
             // owner: "puse play y no spawnie dentro del auto se fue sin mi" -- si esto
             // arranca activo ACÁ (Generate/bake), el auto empieza a manejar desde el
             // frame 1 de Play, ANTES de que OpeningDriveSequence termine de sentar al

@@ -35,7 +35,7 @@ namespace FolkloreArchives
         // velocidad objetivo: acelera mientras esté por debajo de cruiseSpeedKmh,
         // corta el acelerador al alcanzarlo (mismo patrón que ya usaba la frenada en
         // el lote, ahora aplicado a TODO el trayecto).
-        public float cruiseSpeedKmh = 40f;
+        public float cruiseSpeedKmh = 50f;
         public float steerGain = 1f;
         // owner: "al llegar a la ypf no frena el auto choca" -- el frenado solo miraba
         // la distancia del ÚLTIMO tramo (waypoint a waypoint), pero el giro hacia
