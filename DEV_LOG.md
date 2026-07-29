@@ -7,6 +7,19 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-29 (3) — Ajuste: viento y pisadas más bajos (**necesita regenerar**)
+
+Owner: "bajale al sonido del viento esta fuertisimo y los otros bajalos
+un poico tambien". `WindAmbience.volume` 0.35 → 0.12 (horneado explícito
+en `EnvironmentBuilder.BuildWind()`, no solo el default de C#, mismo
+criterio que `cruiseSpeedKmh`/`flySpeed` -- ver DEV_LOG). Pisadas:
+`WASDFootstepSource.volume` (privado, del pack de terceros) 0.8 → 0.5,
+asignado vía `SerializedObject` en `TestPlayerBuilder.cs`/
+`NetworkBuilder.cs` (no se puede tocar directo, no es un campo público).
+**Requiere Regenerar.**
+
+---
+
 ## 2026-07-29 (2) — Fix crítico: no aparecía el menú Tools (error de compilación) + sistema de sonido (pisadas + viento) (**necesita regenerar**)
 
 Owner: reportó que no aparecía el menú `Tools` en Unity. Causa: error de

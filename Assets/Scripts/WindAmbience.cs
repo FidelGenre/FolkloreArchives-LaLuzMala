@@ -12,7 +12,7 @@ namespace FolkloreArchives
     public class WindAmbience : MonoBehaviour
     {
         public AudioClip[] clips;
-        public float volume = 0.35f;
+        public float volume = 0.12f; // owner: "el viento esta fuertisimo" -- era 0.35
         [Range(0f, 1f)] public float spatialBlend = 0f; // 0 = 2D, envuelve todo el mapa
 
         void Start()

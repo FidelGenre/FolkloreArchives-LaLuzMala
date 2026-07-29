@@ -46,6 +46,10 @@ namespace FolkloreArchives.MapGen
             go.transform.SetParent(parent);
             var wind = go.AddComponent<FolkloreArchives.WindAmbience>();
             wind.clips = clips.ToArray();
+            // owner: "el viento esta fuertisimo" -- horneado explícito (no depender del
+            // default de C#, que no se actualiza solo en un objeto ya generado antes --
+            // mismo caso que CarAutoDrive.cruiseSpeedKmh/MapExplorer.flySpeed, ver DEV_LOG).
+            wind.volume = 0.12f;
         }
 
         // Sistema de partículas de niebla flotando bajo sobre el agua. Muchas partículas

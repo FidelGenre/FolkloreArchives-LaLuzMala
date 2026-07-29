@@ -25,6 +25,10 @@ namespace FolkloreArchives.MapGen
             var src = go.AddComponent<WASDFootstepSource>();
             var so = new SerializedObject(src);
             so.FindProperty("footsteps").objectReferenceValue = mgr;
+            // owner: "los otros bajalos un poco tambien" -- el default del pack (0.8)
+            // sonaba fuerte. "volume" es privado en WASDFootstepSource, no se puede
+            // asignar directo (src.volume = ...) -- de ahí el SerializedObject.
+            so.FindProperty("volume").floatValue = 0.5f;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
