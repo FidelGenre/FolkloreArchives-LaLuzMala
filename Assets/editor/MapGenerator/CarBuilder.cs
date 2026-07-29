@@ -25,28 +25,39 @@ namespace FolkloreArchives.MapGen
 
         public static GameObject Build(Transform parent, Terrain terrain)
         {
-            // owner: "quiero que arranque por el otro lado el auto" -- antes cerca de
-            // la entrada del túnel (oeste, inicio del mapa), ahora cerca del borde
-            // este (mismo criterio de offset, del otro extremo), para no tener que
-            // manejar todo el mapa para probar el cementerio/campamento/cabañas nuevos.
-            float carX = MapLayout.MapSizeX - 30f;
+            // owner: "podes hacer que el auto arranque desde ahi?" -- posición elegida
+            // a mano en la vista Scene, bien al oeste (cerca/antes del túnel, X=-22.5),
+            // MUY lejos del spawn anterior (borde este, X≈570). Uso PavedRouteZAt en
+            // vez del Z literal del Inspector para que quede pegado a la MISMA curva
+            // de ruta que usa el resto del código (mesh de la ruta, waypoints, etc.) --
+            // debería coincidir casi exacto con lo que el owner vio en la vista Scene.
+            // owner: "y lo mismo obvio" -- todo lo demás (jugador/perro/amigos
+            // sentados, el auto manejando solo hasta la YPF) sigue igual: los
+            // personajes se posicionan relativos al auto o se teletransportan al
+            // asiento en Play, así que mover el spawn del auto los mueve a todos.
+            //
+            // CAMBIO DE DIRECCIÓN: la estación YPF (x=449) ahora queda al ESTE de
+            // este spawn (x=-22.5), no al oeste como con el spawn anterior -- el auto
+            // tiene que manejar hacia X CRECIENTE, no decreciente. Esto invierte el
+            // signo del yaw de abajo (ya no hace falta el +180) Y la dirección del
+            // loop de waypoints más abajo (ver "CAMBIA DE DIRECCIÓN" ahí).
+            float carX = -22.5f;
             float carZ = MapLayout.PavedRouteZAt(carX);
             // owner: "esta spwaneado debajo de la tierra" -- RoadSurfaceHeight es la
-            // altura NOMINAL de la ruta pavimentada, pero cerca del borde este del
-            // mapa el terreno real puede quedar más alto que ese valor fijo (mismo
-            // bug que ya se había arreglado en TestPlayerBuilder). Muestreo el
-            // terreno real y uso el mayor de los dos.
+            // altura NOMINAL de la ruta pavimentada, pero el terreno real puede quedar
+            // más alto que ese valor fijo en algunos tramos. Muestreo el terreno real
+            // y uso el mayor de los dos.
             float terrainY = terrain != null
                 ? terrain.SampleHeight(new Vector3(carX, 0f, carZ)) + terrain.transform.position.y
                 : MapLayout.RoadSurfaceHeight;
             float groundY = Mathf.Max(MapLayout.RoadSurfaceHeight, terrainY);
             var pos = new Vector3(carX, groundY, carZ);
             float dz = MapLayout.PavedRouteZAt(carX + 6f) - MapLayout.PavedRouteZAt(carX - 6f);
-            // owner: "el auto esta mirando en direccion contraria" -- la fórmula
-            // original apuntaba siempre hacia +X (tenía sentido cerca del túnel,
-            // "hacia adentro" del mapa); ahora que arranca del lado ESTE, +X es
-            // "hacia afuera" del mapa. +180° para que mire hacia el mapa otra vez.
-            float yaw = Mathf.Atan2(12f, dz) * Mathf.Rad2Deg + 180f;
+            // owner: "el auto esta mirando en direccion contraria" (bug viejo, spawn
+            // ESTE) -- la fórmula sin el +180 apunta hacia +X, que es exactamente lo
+            // que hace falta ahora (spawn OESTE, viaje hacia +X/adentro del mapa,
+            // mismo caso que el túnel que motivó la fórmula original).
+            float yaw = Mathf.Atan2(12f, dz) * Mathf.Rad2Deg;
 
             var car = new GameObject("Renault12");
             car.transform.SetParent(parent);
@@ -202,7 +213,10 @@ namespace FolkloreArchives.MapGen
             // la ruta (ver cruiseSpeedKmh), así que el auto llega mucho más lento a
             // este giro cerrado y sí lo puede completar.
             float turnInX = MapLayout.YpfStation.x - 5f;
-            for (float x = carX; x > turnInX; x -= stepX)
+            // owner: "arranca desde ahi" -- el spawn ahora queda AL OESTE de la
+            // estación (antes al este), así que el auto viaja hacia X CRECIENTE. El
+            // loop tiene que samplear la ruta subiendo (x += stepX) en vez de bajando.
+            for (float x = carX; x < turnInX; x += stepX)
                 waypoints.Add(new Vector2(x, MapLayout.PavedRouteZAt(x)));
             float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
             float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;

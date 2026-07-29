@@ -7,6 +7,43 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-28 (19) — Cambio de spawn del auto: ahora arranca del lado OESTE (**necesita regenerar**)
+
+Owner: "podes hcer que el auto arranque desde ahi?: con todos los
+personajes y lo mismo obvio" -- posición elegida a mano en la vista Scene
+(Transform del auto en el Inspector: X=-22.5, Z=-295.01), muy lejos del
+spawn anterior (borde ESTE del mapa, X≈570, decisión de una sesión
+anterior). Este nuevo punto queda cerca/antes del túnel (oeste), casi al
+otro extremo del mapa respecto a la estación YPF (x=449).
+
+Esto invierte la dirección de todo el viaje: antes la YPF quedaba al
+OESTE del spawn (el auto manejaba hacia X decreciente); ahora queda al
+ESTE (X creciente). Cambios en `CarBuilder.cs`:
+- `carX` fijo en -22.5 (antes `MapSizeX - 30f`); `carZ` sigue viniendo de
+  `PavedRouteZAt(carX)` (no del Z literal del Inspector) para quedar
+  pegado a la MISMA curva de ruta que usa el resto del código.
+- `yaw`: sacado el `+180°` que compensaba el spawn ESTE -- la fórmula sin
+  ese offset ya apunta hacia +X, exactamente lo que hace falta ahora
+  (mismo caso por el que se escribió originalmente, cerca del túnel).
+- Loop de waypoints de la ruta: invertido de `x -= stepX` a `x += stepX`
+  (samplea subiendo en vez de bajando).
+
+`LandmarkBuilder.cs`: `friendsX` (dónde spawnean los 3 amigos decorativos
+antes de sentarse en el auto) actualizado al mismo -22.5, mismo criterio
+que antes ("al lado del auto donde arranca la historia").
+
+"y lo mismo obvio" -- el resto de la secuencia (jugador/perro
+teletransportados a los asientos, auto manejando solo hasta la YPF,
+amigos sentados) no necesitó tocarse: todo eso ya es relativo al auto o
+se dispara en Play, así que sigue el spawn nuevo automáticamente.
+
+**Requiere Regenerar** (carX es dato horneado en el mapa). Nota aparte:
+no verifiqué si la ruta pavimentada (`PavedRouteZAt`) pasa físicamente
+por/cerca de un túnel en ese tramo (`TunnelBuilder.cs`, portal en
+X=16) -- si el auto choca con algo ahí, avisame.
+
+---
+
 ## 2026-07-28 (18) — Ajuste: piernas de FemaleSec atravesaban el auto sentada de adelante (**necesita regenerar, sin confirmar**)
 
 Owner: "a la female cuando va adelanta hay que subirle un poco las
