@@ -53,7 +53,7 @@ namespace FolkloreArchives.MapGen
             // volumen sigue sonando mal, el problema es del CLIP en sí (el "digital
             // crunch" del pack puede sonar a estática más que a viento) -- avisar para
             // sacarlo del todo en vez de seguir bajando el número.
-            wind.volume = 0.03f;
+            wind.volume = 0.02f;
         }
 
         // Sistema de partículas de niebla flotando bajo sobre el agua. Muchas partículas

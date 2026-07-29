@@ -28,7 +28,7 @@ namespace FolkloreArchives.MapGen
             // owner: "los otros bajalos un poco tambien" -- el default del pack (0.8)
             // sonaba fuerte. "volume" es privado en WASDFootstepSource, no se puede
             // asignar directo (src.volume = ...) -- de ahí el SerializedObject.
-            so.FindProperty("volume").floatValue = 0.35f; // owner: "bajales un poco" -- era 0.5
+            so.FindProperty("volume").floatValue = 0.2f; // owner: "se escuchan igual, bajales mas" -- era 0.35
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

@@ -12,7 +12,7 @@ namespace FolkloreArchives
     public class WindAmbience : MonoBehaviour
     {
         public AudioClip[] clips;
-        public float volume = 0.03f; // owner: "muchisimo mas bajo... parece ruido feo no viento" -- era 0.12
+        public float volume = 0.02f; // owner: "bajalo a 0.02" -- era 0.03
         [Range(0f, 1f)] public float spatialBlend = 0f; // 0 = 2D, envuelve todo el mapa
 
         void Start()

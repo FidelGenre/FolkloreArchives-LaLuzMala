@@ -29,7 +29,7 @@ namespace FolkloreArchives.MapGen
             var src = go.AddComponent<WASDFootstepSource>();
             var so = new SerializedObject(src);
             so.FindProperty("footsteps").objectReferenceValue = mgr;
-            so.FindProperty("volume").floatValue = 0.35f; // owner: "bajales un poco" -- era 0.5, default del pack 0.8
+            so.FindProperty("volume").floatValue = 0.2f; // owner: "se escuchan igual, bajales mas" -- era 0.35, default del pack 0.8
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

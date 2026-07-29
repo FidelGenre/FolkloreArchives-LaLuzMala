@@ -7,6 +7,22 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-29 (5) — Ajuste: viento a 0.02 + pisadas a 0.2 -- ojo, capaz falta Regenerar (**necesita regenerar**)
+
+Owner: "bajalo a 0.02 al viento y las pisadas creo que ni las tocaste o
+no se pero se escuchan igual bajales mas". `WindAmbience.volume` 0.03 →
+0.02. Pisadas 0.35 → 0.2.
+
+Sobre "ni las tocaste": SÍ se habían bajado en la entrada anterior
+(0.5→0.35), pero como estos valores se hornean al armar el jugador
+(igual que `cruiseSpeedKmh`/`flySpeed`), si se probó sin Regenerar antes
+el jugador de la escena se quedó con el valor viejo y sonó exactamente
+igual -- no hay otro lugar en el código que toque este volumen ni un
+control global (`AudioListener`) que lo tape, así que si a 0.2 sigue
+sonando igual, casi seguro es por eso. **Requiere Regenerar.**
+
+---
+
 ## 2026-07-29 (4) — Ajuste: viento MUCHO más bajo (posible problema del clip, no solo volumen) + pisadas más bajas (**necesita regenerar**)
 
 Owner: "lo necesito muchisimo mas bajo al viento o tal vez quitarlo pq
