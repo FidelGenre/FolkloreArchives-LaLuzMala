@@ -12,12 +12,26 @@ using Unity.Netcode.Transports.UTP;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using WASDSound;
 
 namespace FolkloreArchives.MapGen
 {
     public static class NetworkBuilder
     {
         const string PersonPrefabPath = "Assets/_FolkloreArchives/Generated/NetPerson.prefab";
+
+        // owner: "sonidos... pisadas" -- mismo pack/criterio que TestPlayerBuilder.
+        const string FootstepBundlePath = "Assets/ExternalAssets/WASDFootstepSFX/Assets/Free Bundle.asset";
+        static void AddFootsteps(GameObject go)
+        {
+            var mgr = AssetDatabase.LoadAssetAtPath<WASDFootstepManager>(FootstepBundlePath);
+            if (mgr == null) { Debug.LogWarning("NetworkBuilder: no encontré " + FootstepBundlePath + " -- ¿falta importar el pack WASD?"); return; }
+            var src = go.AddComponent<WASDFootstepSource>();
+            var so = new SerializedObject(src);
+            so.FindProperty("footsteps").objectReferenceValue = mgr;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         const string DogPrefabPath    = "Assets/_FolkloreArchives/Generated/NetDog.prefab";
         const string DogGlb           = "Assets/ExternalAssets/Dog/PS1_Dog.glb";
 
@@ -82,6 +96,7 @@ namespace FolkloreArchives.MapGen
             // CarAutoDrive.cruiseSpeedKmh, ver DEV_LOG) -- asignado EXPLÍCITO acá para
             // que quede claro que este número se hornea y necesita Regenerar.
             explorer.flySpeed = 30f;
+            AddFootsteps(root);
             // owner: "no me deja interactuar con las cosas... abrir puertas ni las
             // opciones me salen ni nada" -- faltaba este componente entero en el
             // personaje de red (subir/bajar del auto, abrir/cerrar puertas, y el texto

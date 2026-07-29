@@ -29,6 +29,13 @@ Instalar/importar en `Assets/` antes de generar el mapa:
 | **Kajaman's Roads / EasyRoads3D** | Rutas. |
 | **Conifers [BOTD] (Forst)** | Coníferas alternativas (no low-poly). |
 | **klen – HQ Autumn Dry Maple / Dream Tree 2 / ALanTree** | Árboles alternativos. |
+| **[WASD Footstep SFX Free Bundle](https://wasd-sound.itch.io/free-integrated-footstep-sfx-bundle)** (itch.io, gratis) | Pisadas/salto — extraer en `Assets/ExternalAssets/WASDFootstepSFX/` (conservar la carpeta `Assets/` y `Scripts/` de adentro tal cual). |
+| **[Free PSX Wind Ambience](https://hazardpay.itch.io/free-psx-wind-weather-ambience)** (itch.io, gratis) | Viento de fondo — extraer en `Assets/ExternalAssets/PSXWindAmbience/` (los 3 `Wind N.wav` sueltos, sin subcarpeta). |
+
+*Nota: esta tabla lista los packs de Asset Store históricos, no todos los
+packs de itch.io usados a lo largo del proyecto (personajes, autos, etc. en
+`Assets/ExternalAssets/`) -- si el mapa no genera por un asset faltante,
+revisar el nombre de la carpeta en el error de consola.*
 
 ## Cómo generar el mapa
 

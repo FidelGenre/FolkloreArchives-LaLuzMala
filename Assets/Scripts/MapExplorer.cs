@@ -8,12 +8,22 @@
 // ============================================================
 using UnityEngine;
 using UnityEngine.InputSystem;
+using WASDSound;
 
 namespace FolkloreArchives
 {
     [RequireComponent(typeof(CharacterController))]
     public class MapExplorer : MonoBehaviour
     {
+        // owner: "sonidos... pisadas viento etc" -- WASDFootstepSource viene del pack
+        // "WASD Footstep SFX Free Bundle" (Assets/ExternalAssets/WASDFootstepSFX/),
+        // asignado en TestPlayerBuilder.cs/NetworkBuilder.cs al armar el jugador. La
+        // superficie (pasto/barro/asfalto/roca) sale de TerrainSurfaceDetector, que
+        // samplea el splat del Terrain bajo los pies -- no del raycast+Material que
+        // trae el pack (acá el piso es UN SOLO Terrain con capas mezcladas, no
+        // objetos separados por superficie).
+        WASDFootstepSource footstepSource;
+        bool wasGrounded = true;
         public float walkSpeed = 2.6f;   // slower, tense walk (FtF-style)
         public float runSpeed = 4.3f;    // owner: "un poco mas lento el sprint" (era 5)
         public float crouchSpeed = 1.6f;
@@ -95,6 +105,7 @@ namespace FolkloreArchives
         {
             controller = GetComponent<CharacterController>();
             standHeight = controller.height; // respect whatever the builder set
+            footstepSource = GetComponent<WASDFootstepSource>();
             Camera c = GetComponentInChildren<Camera>();
             if (c != null)
             {
@@ -230,12 +241,27 @@ namespace FolkloreArchives
                 float targetBaseY = crouching ? camCrouchY : camStandY;
                 camBaseY = Mathf.Lerp(camBaseY, targetBaseY, crouchLerpSpeed * Time.deltaTime);
 
-                bool moving = (Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f) && controller.isGrounded;
+                bool moving = (Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f) && controller.isGrounded && !flying;
 
                 // Fade the bob AMPLITUDE in/out (never reset the timer - that was the
                 // "jumping"). The phase stays continuous so it's always smooth.
                 bobBlend = Mathf.Lerp(bobBlend, moving ? 1f : 0f, 9f * Time.deltaTime);
-                if (moving) bobTimer += Time.deltaTime * bobSpeed * (speed / walkSpeed);
+                if (moving)
+                {
+                    // owner: "sonidos... pisadas" -- el bob vertical usa sin(bobTimer*2),
+                    // 2 golpes de pie por vuelta completa de bobTimer -- un "paso" pasa
+                    // cada vez que bobTimer cruza un múltiplo de π (medio ciclo). Se
+                    // detecta comparando el "número de medio-ciclo" antes/después de
+                    // avanzar el timer este frame, en vez de re-samplear el seno (que no
+                    // dice de qué LADO viene el cruce).
+                    float prevTimer = bobTimer;
+                    bobTimer += Time.deltaTime * bobSpeed * (speed / walkSpeed);
+                    if (footstepSource != null && Mathf.FloorToInt(bobTimer / Mathf.PI) > Mathf.FloorToInt(prevTimer / Mathf.PI))
+                    {
+                        var action = crouching ? WASDEnumAction.Sneak : (running ? WASDEnumAction.Run : WASDEnumAction.Walk);
+                        footstepSource.PlayFootstepByAction(action, TerrainSurfaceDetector.At(transform.position));
+                    }
+                }
 
                 float amp = (crouching ? 0.6f : 1f) * bobBlend;
                 float bobY = Mathf.Sin(bobTimer * 2f) * bobAmount * amp; // vertical: 2 bounces per stride
@@ -252,17 +278,29 @@ namespace FolkloreArchives
                 // criterio que el vuelo creativo de Minecraft).
                 float vert = (kb.spaceKey.isPressed ? 1f : 0f) - ((kb.leftCtrlKey.isPressed || kb.cKey.isPressed) ? 1f : 0f);
                 verticalVelocity = vert * flySpeed;
+                wasGrounded = controller.isGrounded; // no sonido de aterrizaje al apagar el vuelo cerca del piso
             }
             // Gravity + jump
             else if (controller.isGrounded)
             {
+                // owner: "sonidos... salto" -- aterrizaje: transición de "en el aire" a
+                // "en el piso" en este mismo frame (no lo dispara estar parado quieto).
+                if (!wasGrounded && footstepSource != null)
+                    footstepSource.PlayFootstepByAction(WASDEnumAction.Drop, TerrainSurfaceDetector.At(transform.position));
+                wasGrounded = true;
+
                 verticalVelocity = -1f;
                 // jump on Space (not while crouched)
                 if (kb.spaceKey.wasPressedThisFrame && !crouching)
+                {
                     verticalVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
+                    if (footstepSource != null)
+                        footstepSource.PlayFootstepByAction(WASDEnumAction.Jump, TerrainSurfaceDetector.At(transform.position));
+                }
             }
             else
             {
+                wasGrounded = false;
                 verticalVelocity -= gravity * Time.deltaTime;
             }
             move.y = verticalVelocity;

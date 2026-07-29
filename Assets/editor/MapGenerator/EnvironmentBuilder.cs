@@ -17,11 +17,35 @@ namespace FolkloreArchives.MapGen
         {
             BuildWater(parent);
             SetupNight(parent);
+            BuildWind(parent);
             // niebla del agua DESACTIVADA (owner: quitar la niebla del río y el lago).
             // Para reactivarla, descomentar estas dos líneas.
             // BuildWaterMist(parent, new Vector3(805f, 15f, 500f), new Vector3(70f, 14f, 1080f), 34f);        // río
             // BuildWaterMist(parent, new Vector3(MapLayout.CentralLakeCenter.x, MapLayout.CentralLakeLevel + 6f, MapLayout.CentralLakeCenter.y),
             //                new Vector3(MapLayout.CentralLakeRadius * 2f + 40f, 14f, MapLayout.CentralLakeRadius * 2f + 40f), 30f); // lago central
+        }
+
+        // owner: "sonidos... viento" -- pack "Free PSX Wind Ambience" (gratis,
+        // itch.io, Hazard Pay), 3 loops de viento con crunch estilo PS1. Un
+        // AudioSource 2D en loop, uno de los 3 elegido al azar por partida.
+        const string WindDir = "Assets/ExternalAssets/PSXWindAmbience/";
+        static void BuildWind(Transform parent)
+        {
+            var clips = new System.Collections.Generic.List<AudioClip>();
+            for (int i = 1; i <= 3; i++)
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(WindDir + "Wind " + i + ".wav");
+                if (clip != null) clips.Add(clip);
+            }
+            if (clips.Count == 0)
+            {
+                Debug.LogWarning("EnvironmentBuilder: no encontré los clips de viento en " + WindDir + " -- ¿falta importar el pack PSX Wind Ambience?");
+                return;
+            }
+            var go = new GameObject("WindAmbience");
+            go.transform.SetParent(parent);
+            var wind = go.AddComponent<FolkloreArchives.WindAmbience>();
+            wind.clips = clips.ToArray();
         }
 
         // Sistema de partículas de niebla flotando bajo sobre el agua. Muchas partículas

@@ -7,11 +7,27 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using WASDSound;
 
 namespace FolkloreArchives.MapGen
 {
     public static class TestPlayerBuilder
     {
+        // owner: "sonidos... pisadas" -- pack "WASD Footstep SFX Free Bundle"
+        // (gratis, itch.io). El .asset ya viene armado por el pack (materiales +
+        // acciones + manager, todo referenciado por GUID) -- solo hace falta
+        // colgarle el componente y apuntarlo a ese asset.
+        const string FootstepBundlePath = "Assets/ExternalAssets/WASDFootstepSFX/Assets/Free Bundle.asset";
+        static void AddFootsteps(GameObject go)
+        {
+            var mgr = AssetDatabase.LoadAssetAtPath<WASDFootstepManager>(FootstepBundlePath);
+            if (mgr == null) { Debug.LogWarning("TestPlayerBuilder: no encontré " + FootstepBundlePath + " -- ¿falta importar el pack WASD?"); return; }
+            var src = go.AddComponent<WASDFootstepSource>();
+            var so = new SerializedObject(src);
+            so.FindProperty("footsteps").objectReferenceValue = mgr;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         // XZ del punto de spawn (al lado del auto, sobre la ruta pasando el túnel).
         // Menos offset lateral que antes (2.0 en vez de 3.5) para no salirse del asfalto.
         public static Vector2 SpawnXZ()
@@ -137,6 +153,7 @@ namespace FolkloreArchives.MapGen
             // viejo aunque cambie el default en el código (mismo bug que
             // CarAutoDrive.cruiseSpeedKmh, ver DEV_LOG) -- horneado explícito acá.
             explorer.flySpeed = 30f;
+            AddFootsteps(player);
             player.AddComponent<FolkloreArchives.PlayerVehicleInteractor>(); // subir/bajar del auto con E
             // El menú de opciones (Esc) ahora va en el objeto NET (NetworkBuilder), que
             // NO se desactiva en online — así Esc abre el menú también en co-op.

@@ -143,6 +143,21 @@ namespace FolkloreArchives.MapGen
             MapLayoutPersistence.ApplySavedLayout();
             Lap("Aplicar layout manual guardado");
 
+            // Coser los terrenos VECINOS (el generado + los extra que agregó el owner)
+            // para que no se vea la costura entre ellos. Auto-connect de Unity: terrenos
+            // adyacentes con el mismo groupingID se unen solos. Se re-aplica cada Generate
+            // porque el terreno generado es nuevo cada vez.
+            foreach (var terr in Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
+            {
+                terr.allowAutoConnect = true;
+            }
+            // owner: no aparecía el menú Tools -- error de compilación (Unity 6:
+            // Terrain.SetConnectivityDirty() pasó a ser un método ESTÁTICO, ya no se
+            // puede llamar sobre una instancia como antes). Alcanza con llamarlo una
+            // vez (no por terreno) para que Unity vuelva a coser todos los adyacentes.
+            Terrain.SetConnectivityDirty();
+            Lap("Coser terrenos vecinos");
+
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene()); // salva el .unity para que el Build incluya el mapa
             Lap("Guardar assets+escena");
@@ -154,7 +169,21 @@ namespace FolkloreArchives.MapGen
         public static void DeleteMap()
         {
             var old = GameObject.Find(MapLayout.RootName);
-            if (old != null) Object.DestroyImmediate(old);
+            if (old == null) return;
+
+            // Rescatar terrenos EXTRA agregados a mano por el owner (para extender el
+            // mapa): cualquier Terrain bajo el mapa que NO sea el generado (FolkloreTerrain)
+            // se re-parentea FUERA, así el Generate no lo borra. Sus ediciones viven en su
+            // propio TerrainData → sobreviven al regenerado. Identifico el generado por su
+            // asset (no por nombre, porque Unity llama "Terrain" a los nuevos por defecto).
+            var genData = AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainBuilder.TerrainAssetPath);
+            foreach (var terr in old.GetComponentsInChildren<Terrain>(true))
+            {
+                if (terr.terrainData == genData) continue;   // el generado se rehace solo
+                terr.transform.SetParent(null, true);         // a la raíz de la escena (conserva pos mundo)
+                Debug.Log($"<color=cyan>[Generate] Terreno extra '{terr.name}' rescatado fuera del mapa (no se borra).</color>");
+            }
+            Object.DestroyImmediate(old);
         }
 
         // Switches between DAY (to inspect the map with full light, no fog)

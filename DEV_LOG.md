@@ -7,6 +7,55 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-07-29 (2) — Fix crítico: no aparecía el menú Tools (error de compilación) + sistema de sonido (pisadas + viento) (**necesita regenerar**)
+
+Owner: reportó que no aparecía el menú `Tools` en Unity. Causa: error de
+compilación en `MapGenerator.cs:153` -- `Terrain.SetConnectivityDirty()`
+pasó a ser un método ESTÁTICO en esta versión de Unity (6000.3.18f1);
+llamarlo sobre una instancia (`terr.SetConnectivityDirty()`, como estaba)
+ya no compila. Un error de compilación en CUALQUIER script del editor
+tumba TODOS los `[MenuItem]` del proyecto -- por eso desaparecía el menú
+entero, no solo algo puntual. Arreglado: se llama una sola vez, calificado
+con el nombre del tipo (`Terrain.SetConnectivityDirty();`), no por
+terreno.
+
+**De paso, sistema de sonido** (owner: "sonidos... pisadas viento etc",
+eligió y bajó él mismo dos packs gratis de itch.io):
+- **[WASD Footstep SFX Free Bundle](https://wasd-sound.itch.io/free-integrated-footstep-sfx-bundle)**
+  → `Assets/ExternalAssets/WASDFootstepSFX/` (no versionado, como el
+  resto de `ExternalAssets/` -- agregado a `README.md`). El pack ya trae
+  el grafo de ScriptableObjects armado (materiales+acciones+manager,
+  todo por GUID) -- no hizo falta construirlo a mano.
+- **[Free PSX Wind Ambience](https://hazardpay.itch.io/free-psx-wind-weather-ambience)**
+  (Hazard Pay, mismo estilo PSX horror crunchy que el resto del juego) →
+  `Assets/ExternalAssets/PSXWindAmbience/`.
+
+Nuevo `Assets/Scripts/TerrainSurfaceDetector.cs`: mapea la capa de
+textura del `Terrain` bajo los pies (splat, ver `TerrainBuilder.
+PaintTextures`) a una de las 4 categorías del pack (Grass/Dirt/Stone/
+Wood) -- NO usa el `WASDRaycast` que trae el pack (compara
+`Renderer.sharedMaterial` contra listas explícitas, pensado para pisos
+hechos de objetos separados por superficie; acá el piso es UN SOLO
+Terrain con capas mezcladas). Nieve/ceniza/arena van a Dirt como
+aproximación (el pack no tiene esas categorías).
+
+`MapExplorer.cs`: pisadas disparadas en el mismo timer del head-bob ya
+existente (`bobTimer`, sin sistema de cadencia nuevo) -- un "paso" es
+cada medio-ciclo de ese timer. Acción según estado (Sneak agachado/Run
+corriendo/Walk normal). Salto y aterrizaje (transición aire→piso)
+también disparan sonido (Jump/Drop).
+
+Nuevo `Assets/Scripts/WindAmbience.cs`: `AudioSource` en loop, uno de
+los 3 clips de viento elegido al azar por partida. Colgado desde
+`EnvironmentBuilder.Build()`.
+
+**El perro NO recibió pisadas** -- el pack es de sonidos humanos, no
+patas; queda pendiente si hace falta.
+
+**Requiere Regenerar.**
+
+---
+
 ## 2026-07-29 — Fix real: .gitignore excluía TODA la persistencia de terreno/layout a mano
 
 Owner: "cuando me traigo los cambios de terreno etc de mi companiero no
