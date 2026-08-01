@@ -7,6 +7,30 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (11) — Autopiloto: TraceRoadPath() camina la malla real paso a paso (en vez de línea recta)
+
+Owner: la línea recta (punto anterior) se salía por la curvatura real
+del camino, y pidió que el código mismo lea/calcule la ruta en vez de
+que él la releve a mano manejando o volando.
+
+`TraceRoadPath()` nuevo en `CarBuilder.cs`: parte del spawn confirmado y
+camina la malla real de `PavedRoad_Surface` paso a paso (cada ~10m) --
+en cada paso predice el próximo punto (dirección actual) y promedia
+todos los vértices del mesh cerca de ese punto (cancela el ancho
+izquierda/derecha del camino, mismo truco que ya sirvió para el centro
+de la punta), usando ese promedio como el próximo punto real y
+recalculando la dirección. Si no encuentra vértices cerca agranda el
+radio de búsqueda un par de veces antes de rendirse (fin de la malla o
+se metió en una rama sin continuidad). Corta a una distancia máxima
+(1.5x la distancia en línea recta + margen) para no irse por alguna
+bifurcación lejana del mesh (recordar: este mismo mesh tiene un tramo
+que se va muy al este). Si no logra trazar nada útil, cae a la línea
+recta de antes como red de seguridad.
+
+**Necesita Regenerar.** Buscar en consola "Ruta real trazada desde la
+malla: N puntos" para confirmar que sí encontró y siguió el mesh (si
+sale el warning de respaldo, avisar).
+
 ## 2026-08-01 (10) — Autopiloto: línea recta desde el spawn hasta la YPF (en vez de perseguir el trazado real)
 
 Owner: "porque no pones que vaya directo" -- en vez de seguir intentando

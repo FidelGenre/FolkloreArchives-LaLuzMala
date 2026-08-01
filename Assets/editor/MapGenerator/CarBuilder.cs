@@ -189,21 +189,34 @@ namespace FolkloreArchives.MapGen
             // desde el otro lado: CarAutoDrive frena la velocidad de CRUCERO en toda
             // la ruta (ver cruiseSpeedKmh), así que el auto llega mucho más lento a
             // este giro cerrado y sí lo puede completar.
-            // owner: "porque no pones que vaya directo" -- el spawn ahora está muy
-            // lejos del rango donde tiene sentido MapLayout.PavedRouteZAt (los
-            // puntos de control originales no llegan hasta ahí, ver el mesh real
-            // del compañero), así que seguir esa curva punto a punto ya no sirve.
-            // En vez de perseguir el trazado real (3 intentos fallidos, ver arriba),
-            // línea RECTA desde el spawn hasta donde empieza el tramo viejo
-            // (turnInX) -- ahí el resto de la lógica de abajo (giro + frenada en el
-            // lote de la YPF) sigue siendo válida, no se tocó.
+            // owner: "no podes leer vos la ruta y sacar los cálculos?" -- la línea
+            // recta (intento anterior) se salía por la curvatura real del camino.
+            // En vez de pedirle al owner que maneje/vuele para relevarla a mano,
+            // TraceRoadPath() "camina" la malla real paso a paso: en cada paso
+            // promedia los vértices cercanos al punto esperado (cancela el ancho
+            // izq/der, mismo truco que ya sirvió para el centro de la punta) y usa
+            // ese promedio como próximo punto -- sigue la curva real sin que el
+            // código tenga que adivinar su forma de antemano. Si por lo que sea no
+            // encuentra malla (mesh distinto, muy separada, etc.) cae a la línea
+            // recta como red de seguridad.
             float turnInX = MapLayout.YpfStation.x - 5f;
-            Vector2 straightStart = new Vector2(pos.x, pos.z);
             Vector2 straightEnd = new Vector2(turnInX, MapLayout.PavedRouteZAt(turnInX));
-            float straightDist = Vector2.Distance(straightStart, straightEnd);
-            int straightSteps = Mathf.Max(1, Mathf.CeilToInt(straightDist / stepX));
-            for (int i = 0; i <= straightSteps; i++)
-                waypoints.Add(Vector2.Lerp(straightStart, straightEnd, i / (float)straightSteps));
+            var traced = TraceRoadPath(pos, straightEnd, stepDist: 10f, lookRadius: 10f,
+                                        maxDist: Vector2.Distance(new Vector2(pos.x, pos.z), straightEnd) * 1.5f + 60f);
+            if (traced.Count >= 3)
+            {
+                waypoints.AddRange(traced);
+                Debug.Log($"<color=cyan>[CarBuilder] Ruta real trazada desde la malla: {traced.Count} puntos.</color>");
+            }
+            else
+            {
+                Debug.LogWarning("[CarBuilder] No pude trazar la malla real (muy pocos puntos encontrados) -- uso línea recta como respaldo.");
+                Vector2 straightStart = new Vector2(pos.x, pos.z);
+                float straightDist = Vector2.Distance(straightStart, straightEnd);
+                int straightSteps = Mathf.Max(1, Mathf.CeilToInt(straightDist / stepX));
+                for (int i = 0; i <= straightSteps; i++)
+                    waypoints.Add(Vector2.Lerp(straightStart, straightEnd, i / (float)straightSteps));
+            }
             float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
             float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;
             float padEntryZ = roadZAtStation + MapLayout.YpfPadNearZ + 2f;
@@ -233,6 +246,61 @@ namespace FolkloreArchives.MapGen
             ctrl.autoPilot = false;
 
             return car;
+        }
+
+        // "Camina" sobre la malla real de PavedRoad_Surface, paso a paso, siguiendo
+        // su curva sin asumir su forma de antemano: en cada paso predice el próximo
+        // punto (posición actual + dirección actual * stepDist), junta todos los
+        // vértices del mesh dentro de lookRadius de ese punto predicho y los
+        // promedia (cancela el ancho izquierda/derecha del camino, da el centro
+        // real) -- ese promedio pasa a ser el próximo punto, y la dirección se
+        // actualiza para el paso siguiente. Si no encuentra vértices cerca, agranda
+        // el radio un par de veces (cruces/tramos con vértices más separados) antes
+        // de rendirse (fin de la malla en esa dirección, o se metió en un tramo
+        // desconectado). Corta al llegar a maxDist para no irse por una rama
+        // equivocada si el mesh tiene bifurcaciones lejos del tramo que interesa.
+        static System.Collections.Generic.List<Vector2> TraceRoadPath(Vector3 start, Vector2 towardHint, float stepDist, float lookRadius, float maxDist)
+        {
+            var result = new System.Collections.Generic.List<Vector2>();
+            var roadGo = GameObject.Find("PavedRoad_Surface");
+            var mf = roadGo != null ? roadGo.GetComponent<MeshFilter>() : null;
+            if (mf == null || mf.sharedMesh == null) return result;
+
+            var verts = mf.sharedMesh.vertices;
+            if (verts.Length == 0) return result;
+            var t = roadGo.transform;
+            var world = new Vector3[verts.Length];
+            for (int i = 0; i < verts.Length; i++) world[i] = t.TransformPoint(verts[i]);
+
+            Vector3 current = start;
+            Vector3 dir = new Vector3(towardHint.x - start.x, 0f, towardHint.y - start.z).normalized;
+            result.Add(new Vector2(current.x, current.z));
+
+            float traveled = 0f;
+            while (traveled < maxDist)
+            {
+                Vector3 predicted = current + dir * stepDist;
+                Vector3 next = Vector3.zero;
+                bool found = false;
+                float radius = lookRadius;
+                for (int attempt = 0; attempt < 4 && !found; attempt++)
+                {
+                    Vector3 sum = Vector3.zero; int count = 0;
+                    foreach (var wp in world)
+                        if (Vector3.Distance(wp, predicted) < radius) { sum += wp; count++; }
+                    if (count > 0) { next = sum / count; found = true; }
+                    else radius *= 1.8f;
+                }
+                if (!found) break; // se acabó la malla en esta dirección
+
+                float advance = Vector3.Distance(next, current);
+                if (advance < 0.5f) break; // no avanzó -- evita loop infinito
+                dir = (next - current).normalized;
+                current = next;
+                traveled += advance;
+                result.Add(new Vector2(current.x, current.z));
+            }
+            return result;
         }
 
         // AABB de todos los renderers (en mundo; con el auto en el origen = tamaño real del modelo).
