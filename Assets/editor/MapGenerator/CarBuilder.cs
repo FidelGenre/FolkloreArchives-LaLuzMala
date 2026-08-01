@@ -190,7 +190,7 @@ namespace FolkloreArchives.MapGen
             // la ruta (ver cruiseSpeedKmh), así que el auto llega mucho más lento a
             // este giro cerrado y sí lo puede completar.
             float turnInX = MapLayout.YpfStation.x - 5f;
-            for (float x = carX; x > turnInX; x -= stepX)
+            for (float x = pos.x; x > turnInX; x -= stepX)
                 waypoints.Add(new Vector2(x, MapLayout.PavedRouteZAt(x)));
             float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
             float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;

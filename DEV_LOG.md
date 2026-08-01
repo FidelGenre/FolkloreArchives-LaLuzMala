@@ -7,6 +7,29 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (8) — Fix: error de compilación en el commit anterior (carX ya no existía) tenía a Unity corriendo código viejo
+
+Owner: después de hornear las coordenadas exactas, Generate seguía
+mostrando el warning viejo de "No encontré PavedRoad_Surface" -- mismo
+síntoma que el bug del menú Tools desaparecido de antes en esta sesión
+(un error de compilación en CUALQUIER parte del assembly hace que Unity
+se quede corriendo el último DLL compilado con éxito, silenciosamente,
+sin avisar en Generate). Confirmado en `Editor.log`:
+`CarBuilder.cs(193,28): error CS0103: The name 'carX' does not exist in
+the current context` -- al sacar las variables `carX`/`carZ`/`groundY`
+en el commit anterior (reemplazadas por `pos` directo), quedó una
+referencia suelta a `carX` en el loop que arma los waypoints del
+autopiloto hacia la YPF (línea 193). Cambiada a `pos.x`.
+
+**Pendiente, no tocado:** con el spawn ahora en X=1853.8 (mucho más allá
+del rango donde `MapLayout.PavedRoute`/`PavedRouteZAt` tiene sentido --
+los puntos de control originales llegan hasta X=872), ese mismo loop de
+waypoints hacia la YPF casi seguro genera un camino que no seguirá el
+asfalto real. Falta confirmar si el auto se sale de la ruta durante el
+piloto automático de la secuencia de apertura.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (7) — Spawn del auto horneado a coordenadas exactas (3 intentos de calcularlo desde el mesh fallaron)
 
 Owner: paró el auto a mano en Play, en el lugar exacto donde lo quiere,
