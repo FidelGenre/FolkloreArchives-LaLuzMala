@@ -25,37 +25,46 @@ namespace FolkloreArchives.MapGen
 
         public static GameObject Build(Transform parent, Terrain terrain)
         {
-            // owner: "quiero que arranque por el otro lado el auto" -- antes cerca de
-            // la entrada del túnel (oeste, inicio del mapa), ahora cerca del borde
-            // este (mismo criterio de offset, del otro extremo), para no tener que
-            // manejar todo el mapa para probar el cementerio/campamento/cabañas nuevos.
-            // owner (2da vuelta): "lo necesito donde estaba antes... pero mas para
-            // atras" -- entendido AL REVÉS acá (MapSizeX-80 achica la distancia a la
-            // YPF en vez de agrandarla, porque restar MÁS de MapSizeX da un X más
-            // CHICO, más cerca de la estación). Corregido.
-            // owner (3ra vuelta): "unos 200 metros mas" -- pensé que el límite era el
-            // ancho del terreno (MapSizeX=600), pero el owner mostró en la vista Scene
-            // que la ruta pavimentada sigue mucho más allá -- MapLayout.PavedRoute (la
-            // curva real, con SU PROPIO MeshCollider en RoadsideBuilder, no depende del
-            // terreno) tiene puntos de control hasta X=872, bien pasado el borde del
-            // terreno "decorado". "queda muchisimo espacio... ponelo en la punta" --
-            // la punta real de la ruta, no el borde del terreno.
-            float carX = MapLayout.PavedRoute[MapLayout.PavedRoute.Length - 1].x - 15f; // un pelo antes de la punta misma
-            float carZ = MapLayout.PavedRouteZAt(carX);
+            // owner: "necesito que el auto parta desde aca desde la punta de esta
+            // ruta" -- mostró en captura la ruta REAL que subió el compañero
+            // (PavedRoad_Surface, un mesh propio armado a mano/EasyRoads3D, ya NO
+            // sigue la curva procedural vieja de MapLayout.PavedControls -- ese
+            // sistema quedó obsoleto para lo visual). En vez de adivinar un punto
+            // fijo (se rompería en cuanto el compañero vuelva a tocar el mesh), la
+            // punta se calcula ACÁ, leyendo el mesh real: el vértice de
+            // PavedRoad_Surface más ALEJADO del campamento (MapLayout.Campsite) es
+            // "la punta" -- coincide con el criterio de todo este arco de trabajo
+            // (auto lo más lejos posible del campamento).
+            float carX, carZ;
+            Vector3 tip = FindRoadTip();
+            Vector3 tipDir; // dirección de la ruta justo antes de la punta, para el yaw
+            if (tip != Vector3.positiveInfinity)
+            {
+                carX = tip.x;
+                carZ = tip.z;
+                Vector2 towardCamp = MapLayout.Campsite - new Vector2(carX, carZ);
+                tipDir = new Vector3(towardCamp.x, 0f, towardCamp.y).normalized * -1f; // "hacia afuera", mirando lejos del campamento
+                Vector2 inset = new Vector2(tipDir.x, tipDir.z) * -15f; // un pelo antes de la punta misma
+                carX += inset.x; carZ += inset.y;
+            }
+            else
+            {
+                // Fallback: no encontré PavedRoad_Surface en la escena (ej. si se llama
+                // distinto) -- usa la curva procedural vieja como antes.
+                Debug.LogWarning("[CarBuilder] No encontré 'PavedRoad_Surface' en la escena -- usando la curva procedural vieja de MapLayout como fallback (puede no coincidir con la ruta real).");
+                carX = MapLayout.PavedRoute[MapLayout.PavedRoute.Length - 1].x - 15f;
+                carZ = MapLayout.PavedRouteZAt(carX);
+                float dz0 = MapLayout.PavedRouteZAt(carX + 6f) - MapLayout.PavedRouteZAt(carX - 6f);
+                tipDir = new Vector3(6f, 0f, dz0).normalized;
+            }
             // owner: "esta spwaneado debajo de la tierra" (bug viejo, con X dentro del
-            // terreno) -- acá X ya está bien MÁS ALLÁ del ancho del terreno (600), así
-            // que terrain.SampleHeight ya no es confiable (clampea al borde del
-            // heightmap, no representa nada real ahí). La ruta pavimentada tiene su
-            // propia altura FIJA e independiente del terreno (RoadSurfaceHeight, ver
-            // RoadsideBuilder.BuildPavedRoadMesh) -- uso esa directo, sin muestrear.
+            // terreno) -- la ruta pavimentada tiene su propia altura, no depende del
+            // terreno (terrain.SampleHeight no es confiable lejos del heightmap).
             float groundY = MapLayout.RoadSurfaceHeight;
             var pos = new Vector3(carX, groundY, carZ);
-            float dz = MapLayout.PavedRouteZAt(carX + 6f) - MapLayout.PavedRouteZAt(carX - 6f);
-            // owner: "el auto esta mirando en direccion contraria" -- la fórmula
-            // original apuntaba siempre hacia +X (tenía sentido cerca del túnel,
-            // "hacia adentro" del mapa); ahora que arranca del lado ESTE, +X es
-            // "hacia afuera" del mapa. +180° para que mire hacia el mapa otra vez.
-            float yaw = Mathf.Atan2(12f, dz) * Mathf.Rad2Deg + 180f;
+            // Mira hacia adentro del mapa (opuesto a hacia dónde apunta tipDir, que
+            // señala "hacia afuera" de la punta).
+            float yaw = Mathf.Atan2(-tipDir.x, -tipDir.z) * Mathf.Rad2Deg;
 
             var car = new GameObject("Renault12");
             car.transform.SetParent(parent);
@@ -242,6 +251,29 @@ namespace FolkloreArchives.MapGen
             ctrl.autoPilot = false;
 
             return car;
+        }
+
+        // Busca "PavedRoad_Surface" en la escena (el mesh real de la ruta, subido a
+        // mano por el compañero) y devuelve el vértice más alejado del campamento en
+        // mundo (X,Z) -- esa es "la punta" donde arranca el auto. Vector3.positiveInfinity
+        // si no lo encuentra (el llamador cae al fallback procedural viejo).
+        static Vector3 FindRoadTip()
+        {
+            var roadGo = GameObject.Find("PavedRoad_Surface");
+            var mf = roadGo != null ? roadGo.GetComponent<MeshFilter>() : null;
+            if (mf == null || mf.sharedMesh == null) return Vector3.positiveInfinity;
+
+            var verts = mf.sharedMesh.vertices;
+            var t = roadGo.transform;
+            Vector3 best = Vector3.zero;
+            float bestDist = -1f;
+            foreach (var v in verts)
+            {
+                Vector3 wp = t.TransformPoint(v);
+                float d = (new Vector2(wp.x, wp.z) - MapLayout.Campsite).sqrMagnitude;
+                if (d > bestDist) { bestDist = d; best = wp; }
+            }
+            return best;
         }
 
         // AABB de todos los renderers (en mundo; con el auto en el origen = tamaño real del modelo).

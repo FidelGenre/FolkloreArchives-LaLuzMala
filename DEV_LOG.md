@@ -7,6 +7,32 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (3) — El auto arranca desde la punta de la ruta REAL del compañero (ya no de la curva procedural vieja)
+
+Owner: mostró en captura la ruta que subió el compañero (`PavedRoad_Surface`,
+un mesh propio, ya no coincide con la curva vieja de `MapLayout.PavedControls`
+-- esa curva quedó obsoleta visualmente, ahora la ruta real dobla hacia el sur
+en un tramo que el código no conocía) y pidió que el auto arranque desde la
+punta de ESA ruta.
+
+`CarBuilder.cs`: en vez de hornear un punto fijo (se rompería de nuevo en
+cuanto el compañero vuelva a tocar el mesh), agregado `FindRoadTip()` -- busca
+`PavedRoad_Surface` en la escena, lee sus vértices reales y devuelve el más
+alejado de `MapLayout.Campsite` (mismo criterio de todo este arco: auto lo más
+lejos posible del campamento). El yaw también se calcula desde esa dirección
+real, no desde `PavedRouteZAt`. Si no encuentra el objeto, cae al sistema
+procedural viejo como fallback (con warning en consola).
+
+**Pendiente, no tocado todavía:** la lista de waypoints que sigue el auto
+piloto hasta la YPF (más abajo en `CarBuilder.Build`) TODAVÍA usa
+`MapLayout.PavedRouteZAt(x)` para todo el tramo intermedio -- eso sigue
+describiendo la curva vieja, no el trazado real nuevo (que dobla al sur).
+Puede hacer que el auto se desvíe del asfalto real a mitad de camino. No lo
+toqué en este pase porque hace falta primero confirmar con el owner cómo es
+el trazado completo de la ruta nueva (no solo la punta).
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (2) — Revierte el corrimiento de ruta -143.5 y la herramienta "Remove Duplicate Map Roots" (invenciones mías, ya no hacen falta)
 
 Owner: pidió explícitamente ignorar mis cambios de código y traer solo lo que
