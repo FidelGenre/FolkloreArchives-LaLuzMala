@@ -7,6 +7,26 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (6) — FindRoadTip() v3: promedia franjas de vértices (centro real del camino + dirección real, no un vértice suelto)
+
+Owner: con el fix anterior (Z más negativo) el auto apareció "volando"
+al costado del asfalto, lejos de la ruta visible. Dos bugs a la vez:
+(a) la altura usaba `MapLayout.RoadSurfaceHeight` (constante fija) en vez
+de la altura REAL del mesh en ese punto -- por eso "vuela"; (b) un mesh
+de camino tiene 2 vértices a cada Z (uno por lado del ancho) -- agarrar
+"el" vértice con Z más negativo agarra el de UN borde, no el centro, y
+la dirección se calculaba en línea recta hacia `MapLayout.Campsite`, que
+se desalinea en cualquier tramo curvo.
+
+`FindRoadTip()` reescrito: promedia TODOS los vértices dentro de una
+franja angosta (3m) cerca de la punta (cancela izquierda/derecha → da el
+centro real del camino) y otra franja 20m más atrás, y saca la dirección
+real del camino ahí como la resta entre ambos centros -- ya no asume
+ninguna forma recta ni usa el campamento como referencia. La altura del
+auto ahora sale directo de esa posición (mesh real), no de una constante.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (5) — FindRoadTip(): corrige el criterio de "la punta" (era distancia al campamento, ahora Z más negativo)
 
 Owner: con el fix anterior el auto encontró el mesh real, pero apareció

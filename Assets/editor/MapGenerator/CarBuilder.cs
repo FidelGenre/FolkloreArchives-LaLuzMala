@@ -29,23 +29,24 @@ namespace FolkloreArchives.MapGen
             // ruta" -- mostró en captura la ruta REAL que subió el compañero
             // (PavedRoad_Surface, un mesh propio armado a mano/EasyRoads3D, ya NO
             // sigue la curva procedural vieja de MapLayout.PavedControls -- ese
-            // sistema quedó obsoleto para lo visual). En vez de adivinar un punto
-            // fijo (se rompería en cuanto el compañero vuelva a tocar el mesh), la
-            // punta se calcula ACÁ, leyendo el mesh real: el vértice de
-            // PavedRoad_Surface más ALEJADO del campamento (MapLayout.Campsite) es
-            // "la punta" -- coincide con el criterio de todo este arco de trabajo
-            // (auto lo más lejos posible del campamento).
-            float carX, carZ;
-            Vector3 tip = FindRoadTip();
-            Vector3 tipDir; // dirección de la ruta justo antes de la punta, para el yaw
-            if (tip != Vector3.positiveInfinity)
+            // sistema quedó obsoleto para lo visual). La punta se calcula ACÁ,
+            // leyendo el mesh real -- 2 intentos previos fallaron: "vértice más
+            // lejano del campamento" agarró la punta ESTE por error (el mesh se
+            // extiende mucho también hacia el este); "vértice con Z más negativo" a
+            // secas agarró un vértice de borde (izquierda/derecha del camino, no el
+            // centro) y encima usaba una altura fija, no la real del mesh -- el auto
+            // terminó "volando" al costado del asfalto. FindRoadTip() promedia
+            // TODOS los vértices en una franja angosta cerca de la punta (cancela el
+            // ancho izquierda/derecha) y otra franja un poco más atrás, para sacar
+            // tanto el centro real del camino como su dirección ahí (no una línea
+            // recta al campamento, que se desalinea en cualquier curva).
+            float carX, carZ, groundY;
+            Vector3 tipDir; // dirección real del camino en la punta (hacia ADENTRO del mapa), para el yaw
+            if (FindRoadTip(out Vector3 tipPos, out Vector3 dir))
             {
-                carX = tip.x;
-                carZ = tip.z;
-                Vector2 towardCamp = MapLayout.Campsite - new Vector2(carX, carZ);
-                tipDir = new Vector3(towardCamp.x, 0f, towardCamp.y).normalized * -1f; // "hacia afuera", mirando lejos del campamento
-                Vector2 inset = new Vector2(tipDir.x, tipDir.z) * -15f; // un pelo antes de la punta misma
-                carX += inset.x; carZ += inset.y;
+                tipDir = dir;
+                Vector3 spawn = tipPos + dir * 15f; // un pelo antes de la punta misma, siguiendo el camino real (no en línea recta al campamento)
+                carX = spawn.x; carZ = spawn.z; groundY = spawn.y;
             }
             else
             {
@@ -54,17 +55,17 @@ namespace FolkloreArchives.MapGen
                 Debug.LogWarning("[CarBuilder] No encontré 'PavedRoad_Surface' en la escena -- usando la curva procedural vieja de MapLayout como fallback (puede no coincidir con la ruta real).");
                 carX = MapLayout.PavedRoute[MapLayout.PavedRoute.Length - 1].x - 15f;
                 carZ = MapLayout.PavedRouteZAt(carX);
+                // owner: "esta spwaneado debajo de la tierra" (bug viejo, con X dentro del
+                // terreno) -- la ruta pavimentada tiene su propia altura, no depende del
+                // terreno (terrain.SampleHeight no es confiable lejos del heightmap).
+                groundY = MapLayout.RoadSurfaceHeight;
                 float dz0 = MapLayout.PavedRouteZAt(carX + 6f) - MapLayout.PavedRouteZAt(carX - 6f);
                 tipDir = new Vector3(6f, 0f, dz0).normalized;
             }
-            // owner: "esta spwaneado debajo de la tierra" (bug viejo, con X dentro del
-            // terreno) -- la ruta pavimentada tiene su propia altura, no depende del
-            // terreno (terrain.SampleHeight no es confiable lejos del heightmap).
-            float groundY = MapLayout.RoadSurfaceHeight;
             var pos = new Vector3(carX, groundY, carZ);
-            // Mira hacia adentro del mapa (opuesto a hacia dónde apunta tipDir, que
-            // señala "hacia afuera" de la punta).
-            float yaw = Mathf.Atan2(-tipDir.x, -tipDir.z) * Mathf.Rad2Deg;
+            // Mira hacia adentro del mapa (tipDir ya apunta hacia adentro, desde la
+            // punta hacia la franja más atrás).
+            float yaw = Mathf.Atan2(tipDir.x, tipDir.z) * Mathf.Rad2Deg;
 
             var car = new GameObject("Renault12");
             car.transform.SetParent(parent);
@@ -254,32 +255,49 @@ namespace FolkloreArchives.MapGen
         }
 
         // Busca "PavedRoad_Surface" en la escena (el mesh real de la ruta, subido a
-        // mano por el compañero) y devuelve el vértice con el Z MÁS NEGATIVO (el más
-        // al sur) -- esa es "la punta" donde arranca el auto. owner: probé primero
-        // "el vértice más alejado del campamento" (distancia euclídea) y agarró un
-        // vértice equivocado -- el mesh se extiende bastante también hacia el este,
-        // así que esa punta ganaba por lejos aunque no era la que se ve en la foto.
-        // El owner confirmó que la punta real que quiere queda al SUR (Z muy
-        // negativo), no al este -- coincide con el resto de este arco de trabajo
-        // (Terrain_Merged en Z=-413, el corrimiento -143.5 de antes, etc.).
-        // Vector3.positiveInfinity si no lo encuentra (el llamador cae al fallback
-        // procedural viejo).
-        static Vector3 FindRoadTip()
+        // mano por el compañero) y calcula el CENTRO real de la punta sur + la
+        // dirección del camino ahí. owner: 2 intentos previos fallaron -- "vértice
+        // más lejano del campamento" agarró la punta ESTE por error (el mesh se
+        // extiende mucho también hacia el este); "vértice con Z más negativo" a
+        // secas agarró un vértice de BORDE (izquierda o derecha del camino, no el
+        // centro -- una malla de camino tiene 2 vértices a cada Z, uno por lado del
+        // ancho), y una dirección en línea recta al campamento se desalineaba en
+        // cualquier curva. Ahora: promedia TODOS los vértices dentro de una franja
+        // angosta cerca de la punta (cancela izquierda/derecha → da el centro real)
+        // y otra franja un poco más atrás, para sacar tanto el centro como la
+        // dirección real del camino ahí -- ninguna asume una forma recta.
+        const float TipBand = 3f, TipBackOffset = 20f;
+        static bool FindRoadTip(out Vector3 tipPos, out Vector3 tipDir)
         {
+            tipPos = Vector3.zero;
+            tipDir = Vector3.forward;
             var roadGo = GameObject.Find("PavedRoad_Surface");
             var mf = roadGo != null ? roadGo.GetComponent<MeshFilter>() : null;
-            if (mf == null || mf.sharedMesh == null) return Vector3.positiveInfinity;
+            if (mf == null || mf.sharedMesh == null) return false;
 
             var verts = mf.sharedMesh.vertices;
+            if (verts.Length == 0) return false;
             var t = roadGo.transform;
-            Vector3 best = Vector3.zero;
-            float bestZ = float.PositiveInfinity;
-            foreach (var v in verts)
+            var world = new Vector3[verts.Length];
+            float minZ = float.PositiveInfinity;
+            for (int i = 0; i < verts.Length; i++)
             {
-                Vector3 wp = t.TransformPoint(v);
-                if (wp.z < bestZ) { bestZ = wp.z; best = wp; }
+                world[i] = t.TransformPoint(verts[i]);
+                if (world[i].z < minZ) minZ = world[i].z;
             }
-            return best;
+
+            Vector3 nearSum = Vector3.zero; int nearCount = 0;
+            Vector3 farSum = Vector3.zero; int farCount = 0;
+            foreach (var wp in world)
+            {
+                if (wp.z < minZ + TipBand) { nearSum += wp; nearCount++; }
+                else if (wp.z >= minZ + TipBackOffset - TipBand && wp.z < minZ + TipBackOffset + TipBand) { farSum += wp; farCount++; }
+            }
+            if (nearCount == 0) return false;
+            tipPos = nearSum / nearCount;
+            if (farCount > 0)
+                tipDir = (farSum / farCount - tipPos).normalized; // hacia ADENTRO del mapa (alejándose de la punta)
+            return true;
         }
 
         // AABB de todos los renderers (en mundo; con el auto en el origen = tamaño real del modelo).
