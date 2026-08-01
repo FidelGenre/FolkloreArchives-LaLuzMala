@@ -290,5 +290,18 @@ namespace FolkloreArchives.MapGen
                 : "<color=yellow>Fog OFF — toggle again to restore.</color>");
             SceneView.RepaintAll();
         }
+
+        // owner: "no puedo manejar el auto para probar la ruta nueva, arranca la
+        // secuencia sola" -- toggle de TESTING para saltar OpeningDriveSequence
+        // (auto-sentarse + manejar solo hasta la YPF) y poder subirse/manejar a
+        // mano con WASD, para anotar el trazado real de la ruta nueva.
+        [MenuItem("Tools/Folklore Archives/Debug: Saltar Secuencia Auto (Testing)")]
+        public static void ToggleSkipAutoDriveSequence()
+        {
+            FolkloreArchives.OpeningDriveSequence.SkipForTesting = !FolkloreArchives.OpeningDriveSequence.SkipForTesting;
+            Debug.Log(FolkloreArchives.OpeningDriveSequence.SkipForTesting
+                ? "<color=yellow>[Debug] Secuencia de auto SALTEADA -- al dar Play podés manejar a mano.</color>"
+                : "<color=cyan>[Debug] Secuencia de auto normal restaurada.</color>");
+        }
     }
 }

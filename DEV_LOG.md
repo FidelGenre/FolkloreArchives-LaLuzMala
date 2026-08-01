@@ -7,6 +7,27 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (9) — Toggle de testing para saltar la secuencia de apertura (poder manejar a mano y anotar el trazado real)
+
+Owner: no puede manejar el auto para relevar el trazado real de la ruta
+nueva (necesario para el próximo paso: los waypoints del autopiloto hasta
+la YPF, que hoy usan el sistema procedural viejo, ya sin relación con la
+ruta real) porque al dar Play arranca `OpeningDriveSequence` sola y lo
+sienta/maneja automático.
+
+Nuevo `Tools > Folklore Archives > Debug: Saltar Secuencia Auto
+(Testing)` -- toggle (mismo patrón que "Pasar a Día"/"Toggle Fog"):
+activado, `OpeningDriveSequence.Start()` no arranca la coroutine, el
+jugador spawnea normal y puede subirse/manejar el auto a mano con WASD
+(interacción E ya existente en `PlayerVehicleInteractor`, no tocada).
+Con el fly de doble-Space puede llegar rápido hasta el auto (spawnea
+lejos, en X=1853.8).
+
+**Uso:** activar el toggle ANTES de Play, manejar del spawn a la YPF, y
+pasar la Position en 3-4 curvas del camino real para hornear los
+waypoints del autopiloto. Desactivar el toggle después para volver a la
+secuencia normal.
+
 ## 2026-08-01 (8) — Fix: error de compilación en el commit anterior (carX ya no existía) tenía a Unity corriendo código viejo
 
 Owner: después de hornear las coordenadas exactas, Generate seguía

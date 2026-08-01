@@ -51,8 +51,20 @@ namespace FolkloreArchives
         public Vector3 rearMidLocal   = new Vector3(0f, -0.1883f, -0.75f);
         public Vector3 rearRightLocal = new Vector3(0.609f, -0.1883f, -0.7f);
 
+        // owner: "no puedo manejar el auto para probar la ruta nueva, arranca la
+        // secuencia sola" -- toggle de TESTING (Tools > Folklore Archives > Debug:
+        // Saltar Secuencia Auto), mismo patrón que "Pasar a Día". En true, Play
+        // arranca normal (jugador parado, sin auto-sentarse ni manejar solo) para
+        // poder subirse y manejar a mano con WASD y anotar el trazado real.
+        public static bool SkipForTesting = false;
+
         void Start()
         {
+            if (SkipForTesting)
+            {
+                Debug.Log("<color=yellow>[OpeningDriveSequence] SkipForTesting activo -- secuencia NO arranca, manejá a mano.</color>");
+                return;
+            }
             if (car == null || player == null || dog == null)
             {
                 Debug.LogWarning($"OpeningDriveSequence: referencia sin conectar (car={car != null}, player={player != null}, dog={dog != null}) -- la secuencia no arranca.");
