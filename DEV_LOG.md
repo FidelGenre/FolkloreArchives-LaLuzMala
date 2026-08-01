@@ -7,6 +7,27 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (7) — Spawn del auto horneado a coordenadas exactas (3 intentos de calcularlo desde el mesh fallaron)
+
+Owner: paró el auto a mano en Play, en el lugar exacto donde lo quiere,
+y pasó Position (1853.8, 17.05, 7.87) / Rotation Y=-101.774 tal cual.
+Los 3 intentos anteriores de calcular la punta LEYENDO el mesh real de
+`PavedRoad_Surface` (distancia al campamento, Z más negativo, promedio
+de franjas) fallaron uno tras otro -- el mesh del compañero es más
+complejo/largo de lo que se ve en una sola captura, y cualquier heurística
+sobre sus vértices terminaba agarrando un punto distinto al que el owner
+tenía en mente. `CarBuilder.Build()` ahora usa esas coordenadas
+directamente (sacado `FindRoadTip()`, quedó sin uso) -- mismo criterio ya
+establecido en este archivo para `Seat_RearMid`: un valor confirmado en
+vivo es más confiable que perseguir una fórmula sobre un asset ajeno.
+
+**Nota:** si el compañero vuelve a mover/reemplazar `PavedRoad_Surface`,
+este spawn se va a desalinear de nuevo (es una coordenada fija, no
+recalculada) -- va a hacer falta repetir este mismo paso (parar el auto
+a mano, pasar la Position/Rotation nueva).
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (6) — FindRoadTip() v3: promedia franjas de vértices (centro real del camino + dirección real, no un vértice suelto)
 
 Owner: con el fix anterior (Z más negativo) el auto apareció "volando"
