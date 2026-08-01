@@ -7,6 +7,215 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (2) — Revierte el corrimiento de ruta -143.5 y la herramienta "Remove Duplicate Map Roots" (invenciones mías, ya no hacen falta)
+
+Owner: pidió explícitamente ignorar mis cambios de código y traer solo lo que
+subió el compañero — la ruta no se veía igual a la de él. Causa: yo había
+horneado `RouteZShift = -143.5f` en `MapLayout.cs` (commit `0aede8b`) a partir
+de leer mal una captura de Inspector, ANTES de que el compañero resolviera el
+problema real fusionando los terrenos en `Terrain_Merged`. Ese shift mío ya no
+tiene relación con lo que él terminó haciendo — la ruta procedural (generada
+en código, siempre en Z=0) quedaba desalineada contra el terreno fusionado
+real de la escena.
+
+Revertido en `MapLayout.cs`: `PavedControls` vuelve a sus 7 puntos originales,
+sin `RouteZShift`. También se sacó de `MapGenerator.cs` la herramienta
+`Remove Duplicate Map Roots` que había agregado — el compañero ya solucionó
+el duplicado de raíz (re-parentea el terreno extra dentro de `FOLKLORE_MAP` y
+lo fusiona), la herramienta quedó redundante.
+
+**Necesita Regenerar** para que la ruta procedural se recalcule sin el shift.
+
+## 2026-08-01 — Fix: el compañero veía el terreno TODO BLANCO (deps del terreno versionadas)
+
+El terreno fusionado (`MergedTerrain.asset`, versionado) referenciaba por GUID
+las **capas de textura** (`.terrainlayer`), sus texturas generadas
+(`tex_layer_*`, `tex_pavedroad_*`) y los **prototipos de árboles/arbustos**
+(prefabs + meshes) que vivían en `Generated/` (**ignorada**). Como el terreno
+ahora es permanente, esos assets NUNCA se recrean en la máquina del compañero
+→ terreno/vegetación en blanco.
+
+**Fix:** se MOVIERON esas 40 dependencias (7.4 MB) de `Generated/` a
+**`Assets/_FolkloreArchives/TerrainAssets/`** (versionada), preservando GUIDs
+(se movió cada `.asset/.prefab/.terrainlayer` con su `.meta`). El terreno las
+sigue resolviendo por GUID y ahora el compañero las recibe. Los materiales de
+árboles/arbustos ya estaban versionados (`Assets/Settings/`), las texturas del
+pasto también (`StarkCrafts/`).
+
+`Generated/` sigue ignorada (materiales de edificios/props se regeneran por
+máquina, evita conflictos "evil twin"). El código que crea estas capas/árboles
+apunta a `Generated/` pero SOLO corre en generación fresca del terreno — que ya
+no pasa (terreno permanente) — así que no recrea nada ni pisa lo movido.
+
+**Para el compañero:** bajar el check-in (incluye `TerrainAssets/`) y correr
+**Generate** una vez (para regenerar los materiales de edificios/props, que
+siguen en `Generated/` per-máquina). El terreno ya se ve bien sin regenerar.
+
+---
+
+## 2026-07-30 (5) — Terreno FUSIONADO en uno solo (Fase 2, hecho)
+
+Los 2 terrenos (norte generado z=0..413 + sur extra z=-413..0) se fusionaron
+en UN solo TerrainData de 600×826: **`Assets/_FolkloreArchives/ExtraTerrains/
+MergedTerrain.asset`** (versionado). El GameObject es **`Terrain_Merged`**,
+ubicado en z=-413.
+
+**Cómo se hizo:** herramienta de un solo uso (ya borrada) que copió alturas
+(re-escaladas), pintura (splat), árboles y pasto del norte a su mitad, y dejó
+la mitad sur en pasto. Detalles que costaron:
+- Pasto: necesitaba `SetDetailScatterMode(InstanceCountMode)` (densidades son
+  conteo 0-16, no cobertura) — sin eso el pasto salía casi invisible.
+- Pintura (splat): los datos quedaron perfectos (37% con barro/tierra) pero
+  **URP no renderiza el splat seteado por SCRIPT en un terreno recién creado**
+  (Flush/reimport/re-vincular no alcanzaron). La pintura manual SÍ renderiza.
+  Decisión del owner: se queda con el fusionado y **repinta el barro a mano**
+  (las rutas asfaltadas son mallas aparte, no dependen del splat).
+
+**Re-cableado (`TerrainBuilder.Build`):** si existe `MergedTerrain.asset`, ESE
+es el terreno del mapa (`UseMergedTerrain`): reusa la instancia viva que
+`DeleteMap` rescató fuera del mapa, o la crea del asset. Ya NO se genera el
+terreno procedural viejo (`FolkloreTerrain.asset` queda como fallback si algún
+día no existe el fusionado). Se borraron los 2 terrenos originales de la escena.
+
+**Flujo de edición del terreno (owner + compañero):** editar `Terrain_Merged`
+con las herramientas de Unity (Raise/Lower, Paint Texture, Paint Trees, Paint
+Details) → **Tools ▸ Folklore Archives ▸ Save Terrain** (guarda todo en el
+asset) → check-in de `MergedTerrain.asset` en Plastic. No se regenera nada.
+
+---
+
+## 2026-07-30 (4) — Terreno editable a mano (Fase 1): fin de los diffs frágiles
+
+Owner: los sistemas de persistencia por DIFF del terreno (terrain_edits,
+terrain_paint, tree_removals) se corrompieron 3 veces en un día (aplanado
+del terreno, 25.100 árboles borrados de más). Raíz: guardan un diff contra
+la base procedural recalculada, y cualquier "Save ..." en mal momento hornea
+basura que se aplica en cada Generate. Owner quiere editar el terreno a mano
+y que guarde bien. **Decisión: terreno PERMANENTE, editado a mano, sin diffs.**
+
+**FASE 1 (esta) — sin mover assets todavía:**
+- **Nuevo menú `Save Terrain`** (TerrainBuilder): `SetDirty` + `SaveAssets`
+  de TODOS los Terrain de la escena → guarda altura+pintura+árboles+pasto
+  DIRECTO en el asset. Reemplaza a "Save Terrain Edits" y "Save Terrain Paint".
+- **Eliminados (peligrosos / frágiles):** `Rebuild Terrain (forzar)` y
+  `Rebuild Forest (forzar)` (borraban el terreno/árboles = se perdía lo
+  editado a mano); `Save Terrain Edits`, `Save Terrain Paint`,
+  `Clear Terrain Paint` (diffs que se corrompían); `Repaint Terrain (barro
+  caminos)` (re-pintaba el splat procedural encima, pisando la pintura a mano).
+- **TerrainBuilder.Build:** se quitó el auto-repintado por `SplatVersion`
+  (pisaba la pintura a mano al regenerar). Un terreno ya cacheado ahora se
+  REUSA tal cual. El path FRESCO (procedural + ApplyTerrainEdits/AlphaPaint)
+  solo corre si el asset no existe — que ya no pasa salvo borrado manual.
+- Los `Apply*` de las persistencias quedan (dormidos), por si alguna vez se
+  regenera de cero. Los archivos de diff quedan en su última versión BUENA
+  (terrain_edits restaurado; tree_removals borrado).
+
+Flujo nuevo: editás el terreno con las herramientas de Unity (Raise/Lower,
+Paint Texture, Paint Trees, Paint Details) y apretás **Save Terrain**. Nada
+lo regenera ni lo corrompe.
+
+**Pendiente FASE 2:** fusionar los 2 terrenos (norte generado + sur extra,
+600×826) en UN TerrainData, y sacar el terreno + su cadena de assets
+generados (terrainlayers, meshes de árboles) de la carpeta ignorada
+`Generated/` para que sea versionado y lo vea el compañero. Con backup y
+verificación antes de borrar los originales.
+
+**OJO compañero:** ya no hay Rebuild Terrain/Forest. Si necesitás regenerar
+el terreno procedural de cero, hoy hay que borrar a mano el asset
+`Generated/FolkloreTerrain.asset` (o hablamos y agrego un botón "avanzado").
+
+---
+
+## 2026-07-30 (3) — Limpieza de herramientas one-shot del menú Tools
+
+Owner: "de ahora en mas cuando te pida hacer algo no hagas una función para
+que lo apreté yo, hacelo directamente". Se eliminaron los menús/archivos de
+un-click que quedaban de basura tras usarse:
+
+- **`HouseFurnisher.cs` borrado** (menú "Amueblar Casa de la Vieja"). Era
+  one-shot y NO estaba cableado al Generate (su `FurnishHouse` no lo llamaba
+  nadie), así que los muebles eran efímeros igual. Si en el futuro se quieren
+  muebles permanentes, hornearlos en `HouseBuilder` (no en un menú).
+- **`FenceContinue.cs` borrado** (menús "Continuar Valla (desde selección)"
+  y "Enderezar rotación (solo Y)").
+- **`FixFarmTextures` sacado** de `AbandonedFarmBuilder` (menú "Arreglar
+  Texturas de la Granja"). Las texturas ya estaban extraídas; era one-shot.
+- **`OrphanFenceCleanup.cs` borrado**: ya se usó para eliminar del root de la
+  escena las ~46 `wooden_fence_closed` huérfanas (basura vieja de import,
+  fuera de FOLKLORE_MAP, no generadas por código). Borradas de la escena y
+  guardadas → no reaparecen.
+
+El menú Tools queda solo con acciones recurrentes reales (Generate, Save Map
+Layout, Save/Clear Terrain, Rebuild*, Toggle Fog/Day-Night, etc.).
+
+---
+
+## 2026-07-30 — Unificación: mover/borrar/duplicar objetos ahora TODO en "Save Map Layout" (**necesita regenerar + verificar**)
+
+Owner: "agrupame las funciones que mueven/borran/duplican objetos en una
+sola (en save map layout) y borra el resto, así esta mas limpio". El
+terreno (Save Terrain Paint/Edits) queda APARTE, sin tocar. Se hace por
+etapas con backup: primero se unifica sin borrar los sistemas viejos,
+el owner verifica, y recién ahí se borra lo viejo. **ETAPA 1 (esta).**
+
+Backup previo en `Assets/_FolkloreArchives/_backup_prerefactor/` +
+punto de retorno Plastic **cs:114**.
+
+`MapLayoutPersistence.cs` (el "Save Map Layout" genérico) ahora, además
+de guardar/aplicar posiciones, hace **borrar** y **duplicar**:
+- Nuevo campo `Entry.deleted` (default false → compatible con el JSON
+  viejo, no borra nada de más). Al guardar: `deleted = !activeSelf`, o
+  sea **desmarcar el objeto en el Inspector = borrarlo al regenerar**
+  ("ocultar = borrar", igual que hacía la granja pero para TODO el mapa).
+- Al aplicar: borra los `deleted`, y —SOLO bajo `/AbandonedFarm`— borra
+  lo que "no está en el layout" (así reproduce los ~37 objetos que el
+  owner ya había borrado de la granja + el terreno interno del FBX, sin
+  tener que migrar datos: el layout ya tenía los 441 sobrevivientes).
+  Seguro porque la granja se arma 100% del FBX, nadie le agrega objetos
+  por código y sus 478 nombres son únicos (sin corrimiento de índice).
+- `RecreateClones`: recrea los duplicados hechos a mano (nombre
+  `"X (1)"`) clonando el objeto base `X` del mismo padre (ej. la copia
+  `cosechas (1)` de la granja).
+
+`AbandonedFarmBuilder.cs`: **la granja ahora se construye COMPLETA** (478
+piezas) y su estado (ubicación + borrados + duplicados) lo aplica
+`MapLayoutPersistence` al final de Generate, unificado con el resto. Se
+quitó la llamada a `ApplyFarmLayout` (el método queda como respaldo, sin
+usar). El botón "Guardar Transform de la Granja" y `farm_layout.bytes`
+todavía existen pero ya no se usan — se borran en ETAPA 2, tras verificar.
+
+**ETAPA 1 verificada OK por el owner** ("se guardo todo bien").
+
+## 2026-07-30 (2) — ETAPA 2: limpieza de los sistemas de layout viejos
+
+Tras verificar, se borraron los sistemas/menús redundantes (todo lo que
+mueve/borra/duplica objetos vive ahora en **Save Map Layout**):
+
+- **8 menús Tools eliminados:** Guardar Transform de la Granja, Resetear
+  Layout de la Granja, Save/Clear Area POIs Layout, Save/Clear Landmarks
+  Layout, Save/Clear Criminal Camp Layout.
+- **`AbandonedFarmBuilder.cs`:** se borró TODO el sistema de layout propio
+  de la granja (métodos `ApplyFarmLayout`, `SaveFarmTransform`,
+  `ResetFarmLayout`, `LoadEntries`, struct `Entry`, `FindByNameIn`,
+  `IsTerrainName`, `CloneBase`, `TerrainPrefixes`, helpers de IO binario,
+  consts `LayoutPath`/`LayoutMagic`, `using System.IO`). Quedan Build,
+  ConvertToUrp, AddColliders y "Arreglar Texturas de la Granja".
+- **`farm_layout.bytes` borrado** (ya nadie lo lee; migrado a
+  `layout_FullMap.json`).
+- **POIs / Landmarks / Campamento:** se sacaron SOLO los botones Save/Clear.
+  El motor interno (`ManualLayoutPersistence` / `CriminalCampPersistence`
+  con `Begin`/`Register`/`Apply`) SE MANTIENE — coloca esos objetos en cada
+  Generate y Save Map Layout lo pisa al final. Sacarlo del todo obligaba a
+  desenvolver ~60 llamadas `Reg()` en 4 builders (riesgo innecesario).
+- Archivos de datos `layout_AreaPois.json` / `layout_Landmarks.json` /
+  `criminalcamp_layout.json` se dejan (los sigue leyendo el motor interno;
+  inofensivos, Save Map Layout manda al final).
+
+Backup de todo lo tocado en `_FolkloreArchives/_backup_prerefactor/` +
+punto Plastic cs:114.
+
+---
+
 ## 2026-07-29 (7) — Herramienta para borrar FOLKLORE_MAP duplicado/roto (causa real de "terreno fragmentado, islas flotando")
 
 Owner: reportó que el terreno extra que mandó el compañero (por Unity

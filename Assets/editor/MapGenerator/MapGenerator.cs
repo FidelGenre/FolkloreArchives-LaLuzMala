@@ -4,7 +4,6 @@
 //  Tools > Folklore Archives > Generate Greybox Map
 //  Paste into:  Assets/Editor/MapGenerator/MapGenerator.cs
 // ============================================================
-using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -148,9 +147,15 @@ namespace FolkloreArchives.MapGen
             // para que no se vea la costura entre ellos. Auto-connect de Unity: terrenos
             // adyacentes con el mismo groupingID se unen solos. Se re-aplica cada Generate
             // porque el terreno generado es nuevo cada vez.
+            var genData = AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainBuilder.TerrainAssetPath);
             foreach (var terr in Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
             {
                 terr.allowAutoConnect = true;
+                // Meter los terrenos EXTRA del owner DENTRO de FOLKLORE_MAP (el generado
+                // ya está). El DeleteMap los saca afuera para no borrarlos al regenerar;
+                // acá los vuelvo a colgar del mapa nuevo (conserva su posición de mundo).
+                if (terr.terrainData != genData && terr.transform.parent != root.transform)
+                    terr.transform.SetParent(root.transform, true);
             }
             // owner: no aparecía el menú Tools -- error de compilación (Unity 6:
             // Terrain.SetConnectivityDirty() pasó a ser un método ESTÁTICO, ya no se
@@ -185,57 +190,6 @@ namespace FolkloreArchives.MapGen
                 Debug.Log($"<color=cyan>[Generate] Terreno extra '{terr.name}' rescatado fuera del mapa (no se borra).</color>");
             }
             Object.DestroyImmediate(old);
-        }
-
-        // owner: escena con "terreno fragmentado, islas flotando sobre el vacío" que
-        // NO se parecía a lo que mandó el compañero. Causa real: DeleteMap() usa
-        // GameObject.Find(RootName), que solo encuentra UN "FOLKLORE_MAP" -- si por lo
-        // que sea (un Generate interrumpido, un merge de Plastic SCM) quedaron DOS
-        // objetos con ese nombre en la escena, cada Generate reconstruye siempre el
-        // mismo y el otro queda huérfano para siempre, superpuesto en las mismas
-        // coordenadas. El huérfano tiene un Terrain con terrainData SIN asignar (no
-        // dibuja nada), pero sus casas/árboles/props siguen ahí posicionados como si
-        // hubiera piso -- de ahí las "islas flotando". Esta herramienta busca TODOS los
-        // FOLKLORE_MAP de la escena (no solo el primero) y borra los que no tengan el
-        // Terrain generado real, dejando el bueno intacto. No toca el terreno extra del
-        // compañero (vive fuera de cualquier FOLKLORE_MAP, en la raíz de la escena).
-        [MenuItem("Tools/Folklore Archives/Remove Duplicate Map Roots")]
-        public static void RemoveDuplicateMapRoots()
-        {
-            var genData = AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainBuilder.TerrainAssetPath);
-            var roots = SceneManager.GetActiveScene().GetRootGameObjects()
-                .Where(go => go.name == MapLayout.RootName)
-                .ToList();
-
-            if (roots.Count <= 1)
-            {
-                Debug.Log("<color=lime>[Cleanup] No hay FOLKLORE_MAP duplicados en la escena.</color>");
-                return;
-            }
-
-            int removed = 0;
-            foreach (var root in roots)
-            {
-                bool hasValidTerrain = root.GetComponentsInChildren<Terrain>(true)
-                    .Any(t => t.terrainData == genData);
-                if (hasValidTerrain) continue; // este es el bueno, lo dejo
-
-                Debug.Log($"<color=orange>[Cleanup] Borrando FOLKLORE_MAP duplicado/roto '{root.name}' " +
-                          $"(su Terrain no tiene el TerrainData generado real).</color>");
-                Object.DestroyImmediate(root);
-                removed++;
-            }
-
-            if (removed > 0)
-            {
-                EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
-                Debug.Log($"<color=lime>[Cleanup] {removed} FOLKLORE_MAP duplicado(s) roto(s) eliminado(s) y escena guardada.</color>");
-            }
-            else
-            {
-                Debug.LogWarning("[Cleanup] Había más de un FOLKLORE_MAP pero ninguno se pudo identificar como el " +
-                                  "'roto' con certeza (revisar a mano en la Hierarchy).");
-            }
         }
 
         // Switches between DAY (to inspect the map with full light, no fog)
