@@ -272,28 +272,40 @@ namespace FolkloreArchives.MapGen
             var world = new Vector3[verts.Length];
             for (int i = 0; i < verts.Length; i++) world[i] = t.TransformPoint(verts[i]);
 
-            Vector3 current = start;
-            // owner: "sigue cayendose" -- la dirección inicial en línea recta hacia
-            // towardHint (la YPF, muy lejos) fallaba si el camino real dobla fuerte
-            // apenas arranca: el primer paso predicho caía afuera de la malla y se
-            // rendía enseguida ("muy pocos puntos encontrados"). Ahora la dirección
-            // inicial sale de la malla real cerca de 'start' (el vértice más lejano
-            // dentro de un radio amplio ahí cerca, que en un camino angosto está casi
-            // seguro a lo largo de su eje) -- towardHint solo se usa como
-            // DESEMPATE para elegir el sentido (podría apuntar para cualquiera de
-            // los dos lados del camino en ese punto).
-            Vector3 dir = new Vector3(towardHint.x - start.x, 0f, towardHint.y - start.z).normalized;
+            // owner: "sigue cayendose" -- 2 intentos previos fallaron con "muy pocos
+            // puntos encontrados" incluso agrandando el radio de búsqueda. Causa real
+            // (nueva, recién detectada): 'start' es la posición HORNEADA a mano por
+            // el owner -- se ve bien en pantalla, pero puede estar a más de 25-58m de
+            // cualquier vértice real de la malla (si las secciones del camino están
+            // espaciadas más de eso). Antes de caminar, primero busco el vértice REAL
+            // más cercano a 'start' (sin límite de radio) y empiezo a caminar desde
+            // AHÍ, no desde 'start' -- 'start' se antepone al resultado al final para
+            // que el camino igual arranque en el spawn confirmado.
+            Vector3 nearest = Vector3.zero; float nearestDist = float.PositiveInfinity;
+            foreach (var wp in world)
             {
-                const float seedRadius = 25f;
+                float d = Vector3.Distance(wp, start);
+                if (d < nearestDist) { nearestDist = d; nearest = wp; }
+            }
+            Debug.Log($"<color=cyan>[CarBuilder] TraceRoadPath: vértice más cercano al spawn está a {nearestDist:0.0}m.</color>");
+
+            Vector3 current = nearest;
+            // Dirección inicial: el vértice más lejano dentro de un radio amplio
+            // alrededor del ANCLAJE real (no 'start') -- en un camino angosto cae
+            // casi seguro a lo largo de su eje. towardHint solo desempata el sentido
+            // (podría apuntar para cualquiera de los dos lados del camino ahí).
+            Vector3 dir = new Vector3(towardHint.x - current.x, 0f, towardHint.y - current.z).normalized;
+            {
+                const float seedRadius = 60f;
                 Vector3 farthest = Vector3.zero; float farthestDist = -1f;
                 foreach (var wp in world)
                 {
-                    float d = Vector3.Distance(wp, start);
+                    float d = Vector3.Distance(wp, current);
                     if (d < seedRadius && d > farthestDist) { farthestDist = d; farthest = wp; }
                 }
                 if (farthestDist > 0.5f)
                 {
-                    Vector3 seedDir = (farthest - start).normalized;
+                    Vector3 seedDir = (farthest - current).normalized;
                     if (Vector3.Dot(seedDir, dir) < 0f) seedDir = -seedDir; // mismo sentido que towardHint
                     dir = seedDir;
                 }
@@ -307,13 +319,13 @@ namespace FolkloreArchives.MapGen
                 Vector3 next = Vector3.zero;
                 bool found = false;
                 float radius = lookRadius;
-                for (int attempt = 0; attempt < 4 && !found; attempt++)
+                for (int attempt = 0; attempt < 6 && !found; attempt++)
                 {
                     Vector3 sum = Vector3.zero; int count = 0;
                     foreach (var wp in world)
                         if (Vector3.Distance(wp, predicted) < radius) { sum += wp; count++; }
                     if (count > 0) { next = sum / count; found = true; }
-                    else radius *= 1.8f;
+                    else radius *= 2f;
                 }
                 if (!found) break; // se acabó la malla en esta dirección
 
@@ -324,6 +336,10 @@ namespace FolkloreArchives.MapGen
                 traveled += advance;
                 result.Add(new Vector2(current.x, current.z));
             }
+
+            // Antepongo el spawn confirmado (puede estar un poco lejos del primer
+            // vértice real encontrado -- no importa, es solo el punto de arranque).
+            result.Insert(0, new Vector2(start.x, start.z));
             return result;
         }
 

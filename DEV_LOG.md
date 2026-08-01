@@ -7,6 +7,27 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (14) — TraceRoadPath() v3: ancla en el vértice real más cercano al spawn, no en el spawn horneado
+
+Owner: seguía fallando igual ("muy pocos puntos encontrados") aún con
+el fix de dirección inicial del punto anterior. Nueva hipótesis: 'start'
+es la posición horneada A MANO por el owner -- se ve bien parada sobre
+el asfalto en pantalla, pero puede estar a más de 25-58m del vértice
+real más cercano de la malla, si las secciones del camino real están
+espaciadas más que eso (no hay forma de saberlo sin que Unity lo mida).
+
+`TraceRoadPath()` ahora: primero busca el vértice REAL más cercano a
+'start' (sin límite de radio) y empieza a caminar desde AHÍ -- 'start'
+se antepone al resultado al final, así el camino igual arranca en el
+spawn confirmado. Agregado un log nuevo: `TraceRoadPath: vértice más
+cercano al spawn está a Xm` -- pase lo que pase esta vez, ese número
+dice si el problema real es de distancia (spawn lejos de la malla) o
+de otra cosa. También: radio de búsqueda del caminante más generoso
+(6 intentos duplicando en vez de 4×1.8, radio semilla 60m en vez de 25m).
+
+**Necesita Regenerar.** Mandar el log completo esta vez (incluido el de
+"vértice más cercano"), no solo si trazó o no.
+
 ## 2026-08-01 (13) — Fix: TraceRoadPath() fallaba desde el primer paso (dirección inicial mala)
 
 Owner: confirmó en consola "No pude trazar la malla real (muy pocos
