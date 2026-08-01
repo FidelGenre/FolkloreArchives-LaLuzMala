@@ -7,6 +7,19 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (10) — Autopiloto: línea recta desde el spawn hasta la YPF (en vez de perseguir el trazado real)
+
+Owner: "porque no pones que vaya directo" -- en vez de seguir intentando
+relevar el trazado real de la ruta nueva del compañero (3 intentos
+fallidos con el spawn, el toggle de testing para manejar a mano no
+funcionó), simplificado: el tramo largo del autopiloto (spawn → cerca de
+la YPF) ahora es una línea recta, con `Vector2.Lerp` cada ~8m. La lógica
+de giro + frenada DENTRO del lote de la YPF (ya probada, no relacionada
+con la ruta nueva) no se tocó.
+
+**Necesita Regenerar.** Puede que la línea recta corte campo/terreno en
+algún tramo (compromiso aceptado a cambio de que funcione).
+
 ## 2026-08-01 (9) — Toggle de testing para saltar la secuencia de apertura (poder manejar a mano y anotar el trazado real)
 
 Owner: no puede manejar el auto para relevar el trazado real de la ruta

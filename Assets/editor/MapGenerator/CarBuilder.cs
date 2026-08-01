@@ -189,9 +189,21 @@ namespace FolkloreArchives.MapGen
             // desde el otro lado: CarAutoDrive frena la velocidad de CRUCERO en toda
             // la ruta (ver cruiseSpeedKmh), así que el auto llega mucho más lento a
             // este giro cerrado y sí lo puede completar.
+            // owner: "porque no pones que vaya directo" -- el spawn ahora está muy
+            // lejos del rango donde tiene sentido MapLayout.PavedRouteZAt (los
+            // puntos de control originales no llegan hasta ahí, ver el mesh real
+            // del compañero), así que seguir esa curva punto a punto ya no sirve.
+            // En vez de perseguir el trazado real (3 intentos fallidos, ver arriba),
+            // línea RECTA desde el spawn hasta donde empieza el tramo viejo
+            // (turnInX) -- ahí el resto de la lógica de abajo (giro + frenada en el
+            // lote de la YPF) sigue siendo válida, no se tocó.
             float turnInX = MapLayout.YpfStation.x - 5f;
-            for (float x = pos.x; x > turnInX; x -= stepX)
-                waypoints.Add(new Vector2(x, MapLayout.PavedRouteZAt(x)));
+            Vector2 straightStart = new Vector2(pos.x, pos.z);
+            Vector2 straightEnd = new Vector2(turnInX, MapLayout.PavedRouteZAt(turnInX));
+            float straightDist = Vector2.Distance(straightStart, straightEnd);
+            int straightSteps = Mathf.Max(1, Mathf.CeilToInt(straightDist / stepX));
+            for (int i = 0; i <= straightSteps; i++)
+                waypoints.Add(Vector2.Lerp(straightStart, straightEnd, i / (float)straightSteps));
             float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
             float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;
             float padEntryZ = roadZAtStation + MapLayout.YpfPadNearZ + 2f;
