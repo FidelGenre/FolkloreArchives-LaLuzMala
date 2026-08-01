@@ -7,6 +7,30 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (15) — Fix real: TraceRoadPath() nunca llegaba a ejecutar (GameObject.Find fallaba por el sufijo "(1)")
+
+Owner: mandó el log completo -- seguía sin aparecer ni siquiera el
+diagnóstico nuevo ("vértice más cercano"), y en la Hierarchy aparecen
+MUCHOS objetos `PavedRoad_Surface (1)` (Unity agrega ese sufijo cuando
+hay más de un objeto con el mismo nombre bajo el mismo padre). Causa:
+`GameObject.Find("PavedRoad_Surface")` busca el nombre EXACTO -- con
+cualquier sufijo "(1)"/"(2)" no encontraba NADA, y la función se rendía
+en la primera línea, antes incluso de llegar al log de diagnóstico
+(por eso nunca aparecía, ni con el intento anterior).
+
+Fix: la búsqueda ahora es por PREFIJO ("empieza con PavedRoad_Surface",
+mismo criterio que ya usa el rescate en `DeleteMap()`), sobre TODOS los
+Transforms de la escena, quedándose con el primero que tenga malla real.
+
+**Pendiente, aparte:** por qué hay tantos duplicados `PavedRoad_Surface (1)`
+acumulados en la Hierarchy -- no debería pasar con el rescate actual
+(solo re-parentea, no duplica). Sospecha: quedaron de las rondas de
+merge/conflictos de Unity Version Control de antes en la sesión. Si
+hace falta, puedo agregar una herramienta de limpieza (mismo patrón que
+"Remove Duplicate Map Roots") para dejar solo uno.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (14) — TraceRoadPath() v3: ancla en el vértice real más cercano al spawn, no en el spawn horneado
 
 Owner: seguía fallando igual ("muy pocos puntos encontrados") aún con

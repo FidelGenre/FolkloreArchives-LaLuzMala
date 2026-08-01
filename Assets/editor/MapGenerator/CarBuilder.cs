@@ -262,9 +262,24 @@ namespace FolkloreArchives.MapGen
         static System.Collections.Generic.List<Vector2> TraceRoadPath(Vector3 start, Vector2 towardHint, float stepDist, float lookRadius, float maxDist)
         {
             var result = new System.Collections.Generic.List<Vector2>();
-            var roadGo = GameObject.Find("PavedRoad_Surface");
-            var mf = roadGo != null ? roadGo.GetComponent<MeshFilter>() : null;
-            if (mf == null || mf.sharedMesh == null) return result;
+            // owner: la Hierarchy tiene varios "PavedRoad_Surface (1)", "(2)"...
+            // (Unity le agrega el sufijo cuando hay más de un objeto con ese nombre
+            // bajo el mismo padre) -- GameObject.Find busca el nombre EXACTO, así
+            // que con cualquier sufijo no encontraba nada y esta función se rendía
+            // ANTES de llegar siquiera al log de diagnóstico. Ahora busca cualquier
+            // Transform cuyo nombre EMPIECE con "PavedRoad_Surface" (mismo criterio
+            // que ya usa el rescate en DeleteMap) y se queda con el primero que
+            // tenga malla real.
+            MeshFilter mf = null;
+            foreach (var tr in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
+            {
+                if (!tr.name.StartsWith("PavedRoad_Surface")) continue;
+                var candidate = tr.GetComponent<MeshFilter>();
+                if (candidate != null && candidate.sharedMesh != null && candidate.sharedMesh.vertexCount > 0)
+                { mf = candidate; break; }
+            }
+            if (mf == null) return result;
+            var roadGo = mf.gameObject;
 
             var verts = mf.sharedMesh.vertices;
             if (verts.Length == 0) return result;
