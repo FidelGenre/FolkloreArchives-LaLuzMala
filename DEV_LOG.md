@@ -7,6 +7,30 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (4) — Fix: DeleteMap() borraba para siempre la ruta real del compañero en cada Generate (nunca se rescataba)
+
+Owner: confirmó que el auto arrancó en la posición del sistema VIEJO
+(X≈857, la fórmula de respaldo `872-15`), no en la punta real de
+`PavedRoad_Surface`. Causa: `DeleteMap()` (corre al principio de TODO
+Generate) ya rescataba terrenos extra del compañero antes de borrar
+`FOLKLORE_MAP`, pero esa rescate solo mira componentes `Terrain` -- el
+mesh `PavedRoad_Surface` (y su copia `PavedRoad_Surface (1)`, ambos
+hijos directos de `FOLKLORE_MAP`, confirmado en el .unity) se colaba sin
+rescatar y quedaba DESTRUIDO PARA SIEMPRE en cada Generate, mucho antes
+de que `CarBuilder.FindRoadTip()` (agregado en el punto anterior de este
+log) llegara a buscarlo -- por eso siempre caía al fallback procedural
+viejo, no por un bug en `FindRoadTip()` en sí.
+
+Fix en `MapGenerator.cs`: `DeleteMap()` ahora también rescata (re-parentea
+fuera antes de destruir) cualquier Transform que empiece con
+"PavedRoad_Surface". Al final de `Generate()` se vuelve a meter DENTRO de
+`FOLKLORE_MAP`, mismo criterio que ya usa el compañero para el terreno
+extra (organizado, no en la raíz de la escena).
+
+**Necesita Regenerar** para que el fix tome efecto (con Generate viejo el
+objeto ya estaba destruido en esta sesión -- si eso pasó, hace falta que
+el compañero vuelva a sincronizar `PavedRoad_Surface` una vez más).
+
 ## 2026-08-01 (3) — El auto arranca desde la punta de la ruta REAL del compañero (ya no de la curva procedural vieja)
 
 Owner: mostró en captura la ruta que subió el compañero (`PavedRoad_Surface`,

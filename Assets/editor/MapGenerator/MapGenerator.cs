@@ -82,6 +82,7 @@ namespace FolkloreArchives.MapGen
             ForestBuilder.Build(root.transform, terrain);                      Lap("Forest (arboles+pasto)");
             RoadsideBuilder.Build(root.transform, terrain); // guardrail + lake on the road's south side
             BridgeBuilder.Build(root.transform, terrain);   // steel-girder bridge over the water crossing
+            PedestrianBridgeBuilder.Build(root.transform, terrain); // puente colgante peatonal (cruce del campamento)
             TunnelBuilder.Build(root.transform, terrain);   // west-end drivable tunnel (game start)
             LandmarkBuilder.Build(root.transform, terrain);                    Lap("Roadside+Bridge+Tunnel+Landmark+Campamento");
             // Montañas de fondo: desactivadas por ahora. El método de "cámara de fondo"
@@ -164,6 +165,15 @@ namespace FolkloreArchives.MapGen
             Terrain.SetConnectivityDirty();
             Lap("Coser terrenos vecinos");
 
+            // Mismo criterio que el terreno extra de arriba: la(s) ruta(s) rescatadas
+            // por DeleteMap (PavedRoad_Surface*) quedaron colgadas de la raíz de la
+            // escena -- las vuelvo a meter DENTRO de FOLKLORE_MAP (organizadas).
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
+            {
+                if (t.name.StartsWith("PavedRoad_Surface") && t.parent != root.transform)
+                    t.SetParent(root.transform, true);
+            }
+
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene()); // salva el .unity para que el Build incluya el mapa
             Lap("Guardar assets+escena");
@@ -188,6 +198,20 @@ namespace FolkloreArchives.MapGen
                 if (terr.terrainData == genData) continue;   // el generado se rehace solo
                 terr.transform.SetParent(null, true);         // a la raíz de la escena (conserva pos mundo)
                 Debug.Log($"<color=cyan>[Generate] Terreno extra '{terr.name}' rescatado fuera del mapa (no se borra).</color>");
+            }
+
+            // owner: la ruta pavimentada real (PavedRoad_Surface, y cualquier copia
+            // tipo "PavedRoad_Surface (1)") la coloca el compañero a mano/EasyRoads3D,
+            // sincronizada por Unity Version Control -- ningún Builder de acá la
+            // regenera. El rescate de arriba solo mira componentes Terrain, así que
+            // este mesh se colaba sin rescatar y quedaba DESTRUIDO PARA SIEMPRE en
+            // cada Generate (CarBuilder.FindRoadTip() nunca la encontraba, el auto
+            // caía siempre al sistema procedural viejo). Mismo patrón de rescate.
+            foreach (var t in old.GetComponentsInChildren<Transform>(true))
+            {
+                if (t == null || !t.name.StartsWith("PavedRoad_Surface")) continue;
+                t.SetParent(null, true);
+                Debug.Log($"<color=cyan>[Generate] Ruta real del compañero '{t.name}' rescatada fuera del mapa (no se borra).</color>");
             }
             Object.DestroyImmediate(old);
         }
