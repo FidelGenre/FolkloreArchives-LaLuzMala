@@ -7,6 +7,28 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (13) — Fix: TraceRoadPath() fallaba desde el primer paso (dirección inicial mala)
+
+Owner: confirmó en consola "No pude trazar la malla real (muy pocos
+puntos encontrados)" -- la línea recta de respaldo era la que se estaba
+usando, no el trazado real (explica por qué seguía cayéndose igual que
+antes).
+
+Causa: la dirección INICIAL del caminante se armaba en línea recta
+hacia `towardHint` (cerca de la YPF, a ~1800m) -- si el camino real dobla
+fuerte apenas arranca (como parece ser el caso acá, justo donde cae el
+auto), el primer paso predicho caía afuera de la malla real y el
+algoritmo se rendía en el primer intento.
+
+Fix: la dirección inicial ahora sale de la malla real cerca del spawn
+(el vértice más lejano dentro de un radio de 25m ahí, que en un camino
+angosto cae casi seguro a lo largo de su eje) -- `towardHint` se usa
+solo como desempate para elegir el sentido correcto (adelante vs atrás).
+
+**Necesita Regenerar.** Repetir el mismo chequeo de antes: Generate SIN
+Play, buscar "trazada" en consola, confirmar cuántos puntos encontró
+esta vez antes de probar Play.
+
 ## 2026-08-01 (12) — CarAutoDrive: el boost de giro (antes solo YPF) ahora aplica a CUALQUIER curva cerrada de la ruta
 
 Owner: el auto seguía saliéndose/cayendo justo en una curva del camino

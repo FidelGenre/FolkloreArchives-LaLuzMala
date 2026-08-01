@@ -273,7 +273,31 @@ namespace FolkloreArchives.MapGen
             for (int i = 0; i < verts.Length; i++) world[i] = t.TransformPoint(verts[i]);
 
             Vector3 current = start;
+            // owner: "sigue cayendose" -- la dirección inicial en línea recta hacia
+            // towardHint (la YPF, muy lejos) fallaba si el camino real dobla fuerte
+            // apenas arranca: el primer paso predicho caía afuera de la malla y se
+            // rendía enseguida ("muy pocos puntos encontrados"). Ahora la dirección
+            // inicial sale de la malla real cerca de 'start' (el vértice más lejano
+            // dentro de un radio amplio ahí cerca, que en un camino angosto está casi
+            // seguro a lo largo de su eje) -- towardHint solo se usa como
+            // DESEMPATE para elegir el sentido (podría apuntar para cualquiera de
+            // los dos lados del camino en ese punto).
             Vector3 dir = new Vector3(towardHint.x - start.x, 0f, towardHint.y - start.z).normalized;
+            {
+                const float seedRadius = 25f;
+                Vector3 farthest = Vector3.zero; float farthestDist = -1f;
+                foreach (var wp in world)
+                {
+                    float d = Vector3.Distance(wp, start);
+                    if (d < seedRadius && d > farthestDist) { farthestDist = d; farthest = wp; }
+                }
+                if (farthestDist > 0.5f)
+                {
+                    Vector3 seedDir = (farthest - start).normalized;
+                    if (Vector3.Dot(seedDir, dir) < 0f) seedDir = -seedDir; // mismo sentido que towardHint
+                    dir = seedDir;
+                }
+            }
             result.Add(new Vector2(current.x, current.z));
 
             float traveled = 0f;
