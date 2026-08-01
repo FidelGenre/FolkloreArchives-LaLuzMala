@@ -7,6 +7,26 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (12) — CarAutoDrive: el boost de giro (antes solo YPF) ahora aplica a CUALQUIER curva cerrada de la ruta
+
+Owner: el auto seguía saliéndose/cayendo justo en una curva del camino
+nuevo. Sospecha (no solo un problema de datos/waypoints): el boost de
+`steerGain` (x3) y el tope de velocidad para poder cerrar un giro sin
+perder autoridad de giro (`Mathf.Max(targetSpeed, 4f)`) SOLO se aplicaban
+en `inLotZone` (últimos 3 waypoints, el giro hacia la YPF) -- cualquier
+otra curva de la ruta, incluida esta nueva, usaba la dirección normal,
+que ya se sabía (misma saga, giro de la YPF) que no alcanza a velocidad
+de crucero.
+
+`CarAutoDrive.cs`: nuevo `sharpTurnAhead` -- mira el ángulo entre el
+tramo que termina y el que sigue en cualquier punto de la ruta; si es
+> 35°, aplica el mismo `steerGain x3`, pero con un TOPE de velocidad
+(~14 km/h) en vez de un frenado a fondo (no es el destino, solo hay que
+pasar la curva más despacio y volver a crucero después).
+
+**Necesita Regenerar** (por el cambio en `CarBuilder.cs` de antes) y
+probar de nuevo.
+
 ## 2026-08-01 (11) — Autopiloto: TraceRoadPath() camina la malla real paso a paso (en vez de línea recta)
 
 Owner: la línea recta (punto anterior) se salía por la curvatura real

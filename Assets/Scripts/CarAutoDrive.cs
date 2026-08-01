@@ -117,6 +117,25 @@ namespace FolkloreArchives
             // Calculado ACÁ (antes del steer) porque el siguiente fix también lo usa.
             bool inLotZone = _index >= waypoints.Length - 3;
 
+            // owner: "el auto sigue cayendose/saliendose en la curva" -- con la ruta
+            // ahora trazada desde la malla real (TraceRoadPath en CarBuilder), puede
+            // haber curvas cerradas en CUALQUIER parte del camino, no solo cerca de
+            // la YPF (antes SOLO inLotZone, los últimos 3 waypoints, tenía más fuerza
+            // de giro). Generalizado: mirar el ángulo entre el tramo que estamos
+            // por terminar y el siguiente -- si es cerrado, tratar esta curva con el
+            // mismo criterio que el giro de la YPF (más steerGain), pero con un TOPE
+            // de velocidad en vez de un frenado a fondo (no es el destino final, solo
+            // hay que pasar la curva más despacio y seguir de largo después).
+            Vector2 prevPoint = _index > 0 ? waypoints[_index - 1] : new Vector2(p.x, p.z);
+            bool sharpTurnAhead = false;
+            if (_index + 1 < waypoints.Length)
+            {
+                Vector2 segIn = target - prevPoint;
+                Vector2 segOut = waypoints[_index + 1] - target;
+                if (segIn.sqrMagnitude > 0.01f && segOut.sqrMagnitude > 0.01f)
+                    sharpTurnAhead = Vector2.Angle(segIn, segOut) > 35f;
+            }
+
             // owner (2da vuelta): "se sigue quedando trabado ahora si va a 40" --
             // CarController.FixedUpdate() escala la capacidad de GIRO con la
             // velocidad (`turnRate * Clamp01(speed/maxSpeed)`): a velocidad CERO no
@@ -126,7 +145,7 @@ namespace FolkloreArchives
             // la MISMA perilla, tirando para lados opuestos. Solución: no pelear más
             // con la velocidad, compensar con más steerGain SOLO dentro del lote --
             // así el auto puede cerrar el giro aunque venga más lento.
-            float lotSteerGain = inLotZone ? steerGain * 3f : steerGain;
+            float lotSteerGain = (inLotZone || sharpTurnAhead) ? steerGain * 3f : steerGain;
 
             // owner: "se pone a girar" -- MUY cerca de un waypoint, la dirección hacia
             // ÉSE punto se vuelve ruidosísima (un paso más y el ángulo salta 180°),
@@ -180,6 +199,14 @@ namespace FolkloreArchives
             if (inLotZone && remaining < slowdownDistance)
             {
                 targetSpeed = Mathf.Min(cruiseSpeedMs, car.maxSpeed * Mathf.Clamp01(remaining / slowdownDistance));
+                braking = true;
+            }
+            // Curva cerrada en medio de la ruta (no el destino final): no hay que
+            // frenar a fondo, solo topear la velocidad mientras dura el giro -- vuelve
+            // a crucero normal solo después de pasarla.
+            else if (sharpTurnAhead)
+            {
+                targetSpeed = Mathf.Min(targetSpeed, 14f / 3.6f); // ~14 km/h por la curva
                 braking = true;
             }
             // owner (3ra vuelta): "sigue trabandose" -- el steerGain triplicado (fix
