@@ -254,9 +254,16 @@ namespace FolkloreArchives.MapGen
         }
 
         // Busca "PavedRoad_Surface" en la escena (el mesh real de la ruta, subido a
-        // mano por el compañero) y devuelve el vértice más alejado del campamento en
-        // mundo (X,Z) -- esa es "la punta" donde arranca el auto. Vector3.positiveInfinity
-        // si no lo encuentra (el llamador cae al fallback procedural viejo).
+        // mano por el compañero) y devuelve el vértice con el Z MÁS NEGATIVO (el más
+        // al sur) -- esa es "la punta" donde arranca el auto. owner: probé primero
+        // "el vértice más alejado del campamento" (distancia euclídea) y agarró un
+        // vértice equivocado -- el mesh se extiende bastante también hacia el este,
+        // así que esa punta ganaba por lejos aunque no era la que se ve en la foto.
+        // El owner confirmó que la punta real que quiere queda al SUR (Z muy
+        // negativo), no al este -- coincide con el resto de este arco de trabajo
+        // (Terrain_Merged en Z=-413, el corrimiento -143.5 de antes, etc.).
+        // Vector3.positiveInfinity si no lo encuentra (el llamador cae al fallback
+        // procedural viejo).
         static Vector3 FindRoadTip()
         {
             var roadGo = GameObject.Find("PavedRoad_Surface");
@@ -266,12 +273,11 @@ namespace FolkloreArchives.MapGen
             var verts = mf.sharedMesh.vertices;
             var t = roadGo.transform;
             Vector3 best = Vector3.zero;
-            float bestDist = -1f;
+            float bestZ = float.PositiveInfinity;
             foreach (var v in verts)
             {
                 Vector3 wp = t.TransformPoint(v);
-                float d = (new Vector2(wp.x, wp.z) - MapLayout.Campsite).sqrMagnitude;
-                if (d > bestDist) { bestDist = d; best = wp; }
+                if (wp.z < bestZ) { bestZ = wp.z; best = wp; }
             }
             return best;
         }

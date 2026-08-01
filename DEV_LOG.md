@@ -7,6 +7,23 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (5) — FindRoadTip(): corrige el criterio de "la punta" (era distancia al campamento, ahora Z más negativo)
+
+Owner: con el fix anterior el auto encontró el mesh real, pero apareció
+lejos al ESTE (X=1867), no en la punta sur que mostró en la foto original
+(la ruta bajando desde el parche verde). Causa: el criterio "vértice más
+alejado del campamento" (distancia euclídea) agarraba el extremo que
+gana por lejos en cualquier dirección -- el mesh de `PavedRoad_Surface`
+se extiende bastante también hacia el este, y esa punta quedaba más
+lejos en línea recta que la punta sur real.
+
+Owner confirmó: la punta que quiere queda al SUR (Z muy negativo), no al
+este -- coincide con el resto de este arco (Terrain_Merged en Z=-413, el
+corrimiento -143.5 de antes). `FindRoadTip()` ahora busca directamente el
+vértice con el Z más negativo, no el más lejano del campamento.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (4) — Fix: DeleteMap() borraba para siempre la ruta real del compañero en cada Generate (nunca se rescataba)
 
 Owner: confirmó que el auto arrancó en la posición del sistema VIEJO
