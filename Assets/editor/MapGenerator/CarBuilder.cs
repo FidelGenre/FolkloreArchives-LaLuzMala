@@ -206,6 +206,13 @@ namespace FolkloreArchives.MapGen
             int straightSteps = Mathf.Max(1, Mathf.CeilToInt(straightDist / stepX));
             for (int i = 0; i <= straightSteps; i++)
                 waypoints.Add(Vector2.Lerp(straightStart, straightEnd, i / (float)straightSteps));
+            // owner: "no seria mejor que pongas una barrera invisible alrededor de
+            // toda la ruta? asi no se cae?" -- en vez de seguir persiguiendo que la
+            // altura/trazado sean perfectos, dos paredes invisibles (sin malla, solo
+            // colisión) a los costados de todo el tramo recto, bien altas -- el auto
+            // físicamente no puede desviarse lo suficiente como para caer por un
+            // costado, pase lo que pase con el terreno real debajo.
+            BuildInvisibleGuardrails(parent, straightStart, straightEnd, pos.y);
             float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
             float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;
             float padEntryZ = roadZAtStation + MapLayout.YpfPadNearZ + 2f;
@@ -235,6 +242,38 @@ namespace FolkloreArchives.MapGen
             ctrl.autoPilot = false;
 
             return car;
+        }
+
+        // Dos paredes invisibles (BoxCollider sin MeshRenderer) a los costados del
+        // tramo recto del autopiloto, bien altas (cubren cualquier variación real
+        // de altura del terreno) -- el auto no puede desviarse lo suficiente como
+        // para caerse por un costado del camino, sin depender de que el trazado
+        // sea geométricamente perfecto.
+        static void BuildInvisibleGuardrails(Transform parent, Vector2 from, Vector2 to, float referenceY)
+        {
+            const float corridorHalfWidth = 12f; // cuánto puede desviarse el auto a cada lado antes de chocar la pared
+            const float wallHeight = 100f;
+            const float wallThickness = 2f;
+
+            Vector2 dir2 = to - from;
+            float length = dir2.magnitude;
+            if (length < 1f) return;
+            dir2 /= length;
+            Vector2 perp = new Vector2(-dir2.y, dir2.x);
+            Vector2 mid2 = (from + to) * 0.5f;
+            float yaw = Mathf.Atan2(dir2.x, dir2.y) * Mathf.Rad2Deg;
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Vector2 wallCenter2 = mid2 + perp * (corridorHalfWidth * side);
+                var wall = new GameObject("RoadGuardrail_" + (side < 0 ? "L" : "R"));
+                wall.transform.SetParent(parent);
+                wall.transform.position = new Vector3(wallCenter2.x, referenceY, wallCenter2.y);
+                wall.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                var col = wall.AddComponent<BoxCollider>();
+                col.size = new Vector3(wallThickness, wallHeight, length);
+                wall.isStatic = true;
+            }
         }
 
         // AABB de todos los renderers (en mundo; con el auto en el origen = tamaño real del modelo).

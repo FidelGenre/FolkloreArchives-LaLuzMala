@@ -7,6 +7,23 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (20) — Paredes invisibles a los costados del autopiloto (owner: "una barrera invisible alrededor de la ruta")
+
+Owner propuso la solución directamente: en vez de seguir persiguiendo
+que la altura/trazado del autopiloto sean geométricamente perfectos
+(varios intentos fallidos esta sesión), dos paredes invisibles
+(`BoxCollider` sin `MeshRenderer`, bien altas -- 100m) a los costados
+del tramo recto del spawn a la YPF. El auto físicamente no puede
+desviarse más de ~12m a cada lado del centro del camino sin chocar la
+pared, pase lo que pase con el terreno real debajo -- combinado con el
+fix anterior (raycast que lo pega al piso), ya no debería poder ni
+caerse ni salirse del corredor.
+
+`CarBuilder.BuildInvisibleGuardrails()` nuevo -- se llama después de
+armar los waypoints del tramo recto.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (19) — Fix: el raycast de "pegar al piso" chocaba con el propio auto (por eso volaba hacia arriba)
 
 Owner: con el fix anterior el auto empezó a volar hacia arriba en vez
