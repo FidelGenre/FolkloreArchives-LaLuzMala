@@ -7,6 +7,29 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (23) — TraceRoadByRaycast() v2: grilla ancha en vez de abanico angular (se perdía en curvas cerradas)
+
+Owner: confirmó "Ruta real trazada por asfalto: 6 puntos" -- encontró
+asfalto real por primera vez, pero se rindió a los ~48m (6 pasos de 8m)
+y el auto seguía saliéndose más adelante. Causa: el abanico de rayos v1
+salía en línea recta desde la posición ACTUAL en distintos ángulos -- en
+una curva cerrada, el siguiente tramo de asfalto real puede no caer
+sobre NINGÚN rayo que arranque derecho desde ahí (geometría: un giro
+fuerte no es alcanzable por una recta a distancia fija en ningún ángulo
+razonable).
+
+Reescrito: en cada paso se barre una GRILLA 2D ancha (24m a cada lado,
+cada 4m -- 169 puntos) alrededor de dónde se esperaría el próximo paso,
+no un abanico angular desde el punto actual -- cubre curvas de
+cualquier cerradura. Entre los puntos de asfalto real encontrados en la
+grilla, se prefiere el que quede más adelante (no atrás) y más cerca de
+la distancia de paso normal. Tolerancia a huecos subida de 5 a 20 pasos
+seguidos sin encontrar nada. `IsAsphalt()` también aflojado: usa la capa
+DOMINANTE del terreno en vez de un umbral fijo (0.5), que perdía bordes
+en transición entre capas.
+
+**Necesita Regenerar** (tarda un poco más por la grilla).
+
 ## 2026-08-01 (22) — TraceRoadByRaycast(): sigue el asfalto real por FÍSICA (raycast+material), no por nombre de objeto
 
 Owner: "estas mapeando mal la ruta" -- la línea recta no sigue la curva

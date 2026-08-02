@@ -254,16 +254,17 @@ namespace FolkloreArchives.MapGen
             return car;
         }
 
-        // Camina desde 'start' hacia 'towardHint' buscando asfalto REAL con
-        // física (raycast), no nombres de objeto: en cada paso tira un abanico de
-        // rayos hacia abajo (±70°, cada 5°) delante de la posición actual, cada uno
-        // desde bien arriba (40m) para no perderse detrás de una loma, y se queda
-        // con el que caiga en asfalto MÁS CERCA de "seguir derecho" -- así el
-        // camino se curva solo donde el asfalto real se curva, sin asumir su
-        // forma de antemano. Si un paso puntual no encuentra nada (hueco chico),
-        // avanza igual en línea recta esa vez y sigue probando -- se rinde solo si
-        // pasan 5 pasos seguidos sin encontrar nada (se acabó el asfalto de
-        // verdad, o el auto se perdió).
+        // Camina desde 'start' hacia 'towardHint' buscando asfalto REAL con física
+        // (raycast), no nombres de objeto. owner: la v1 (abanico angosto de rayos
+        // en línea recta desde la posición actual) se perdía en curvas cerradas --
+        // con un giro fuerte, el próximo tramo de asfalto puede no caer sobre
+        // NINGÚN rayo que arranque derecho desde 'current'. Ahora en cada paso se
+        // barre una GRILLA 2D ancha (24m a cada lado, cada 4m) alrededor del punto
+        // esperado (current + dir*stepDist), no solo un abanico angular -- cubre
+        // curvas de cualquier cerradura. Entre todos los puntos de asfalto real
+        // encontrados en la grilla, se prefiere el que esté más ADELANTE (no
+        // detrás) y más cerca de la distancia de un paso normal. Tolera hasta 20
+        // pasos seguidos sin encontrar nada (huecos largos) antes de rendirse.
         static System.Collections.Generic.List<Vector2> TraceRoadByRaycast(Vector3 start, Vector2 towardHint, float stepDist, float maxDist)
         {
             var result = new System.Collections.Generic.List<Vector2> { new Vector2(start.x, start.z) };
@@ -271,17 +272,25 @@ namespace FolkloreArchives.MapGen
             Vector3 dir = new Vector3(towardHint.x - start.x, 0f, towardHint.y - start.z).normalized;
             float traveled = 0f;
             int stall = 0;
-            while (traveled < maxDist && stall < 5)
+            const float gridRadius = 24f, gridStep = 4f;
+            while (traveled < maxDist && stall < 20)
             {
-                Vector3 best = Vector3.zero; float bestAbsAngle = float.MaxValue; bool found = false;
-                for (float a = -70f; a <= 70f; a += 5f)
+                Vector3 predicted = current + dir * stepDist;
+                Vector3 best = Vector3.zero; float bestScore = float.NegativeInfinity; bool found = false;
+                for (float lx = -gridRadius; lx <= gridRadius; lx += gridStep)
                 {
-                    Vector3 testDir = Quaternion.Euler(0f, a, 0f) * dir;
-                    Vector3 origin = current + testDir * stepDist + Vector3.up * 40f;
-                    if (Physics.Raycast(origin, Vector3.down, out var hit, 120f) && IsAsphalt(hit))
+                    for (float lz = -gridRadius; lz <= gridRadius; lz += gridStep)
                     {
-                        float absA = Mathf.Abs(a);
-                        if (absA < bestAbsAngle) { bestAbsAngle = absA; best = hit.point; found = true; }
+                        Vector3 origin = predicted + new Vector3(lx, 0f, lz) + Vector3.up * 60f;
+                        if (!Physics.Raycast(origin, Vector3.down, out var hit, 150f)) continue;
+                        if (!IsAsphalt(hit)) continue;
+                        Vector3 toHit = hit.point - current;
+                        float mag = toHit.magnitude;
+                        if (mag < 0.5f) continue;
+                        float forwardDot = Vector3.Dot(toHit / mag, dir);
+                        if (forwardDot < 0.15f) continue; // descarta lo que queda atrás
+                        float score = forwardDot * 20f - Mathf.Abs(mag - stepDist); // preferir adelante y cerca del paso normal
+                        if (score > bestScore) { bestScore = score; best = hit.point; found = true; }
                     }
                 }
                 if (!found)
@@ -304,8 +313,10 @@ namespace FolkloreArchives.MapGen
 
         // ¿Hay asfalto de verdad en este impacto? Mira el material del renderer
         // (convención del proyecto: "mat_ypf_asphalt", "mat_tunnel_asphalt", etc.,
-        // todos con "asphalt" en el nombre) o, si es Terrain, la capa de asfalto
-        // pintada (índice 2, ver TerrainBuilder.PaintTextures / TerrainSurfaceDetector).
+        // todos con "asphalt" en el nombre) o, si es Terrain, si la capa de
+        // asfalto (índice 2, ver TerrainBuilder.PaintTextures) es la DOMINANTE ahí
+        // -- no un umbral fijo (0.5), que perdía los bordes mezclados/en transición
+        // entre capas.
         static bool IsAsphalt(RaycastHit hit)
         {
             var rend = hit.collider.GetComponent<Renderer>();
@@ -324,7 +335,11 @@ namespace FolkloreArchives.MapGen
                 int mx = Mathf.Clamp(Mathf.RoundToInt(nx * (td.alphamapWidth - 1)), 0, td.alphamapWidth - 1);
                 int mz = Mathf.Clamp(Mathf.RoundToInt(nz * (td.alphamapHeight - 1)), 0, td.alphamapHeight - 1);
                 var map = td.GetAlphamaps(mx, mz, 1, 1);
-                if (map.GetLength(2) > 2 && map[0, 0, 2] > 0.5f) return true; // capa 2 = asfalto
+                int layers = map.GetLength(2);
+                int dominant = 0; float dominantW = -1f;
+                for (int i = 0; i < layers; i++)
+                    if (map[0, 0, i] > dominantW) { dominantW = map[0, 0, i]; dominant = i; }
+                if (dominant == 2) return true; // capa 2 = asfalto, la que más pesa acá
             }
             return false;
         }
