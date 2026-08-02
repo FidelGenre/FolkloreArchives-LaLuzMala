@@ -7,6 +7,23 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (21) — Endurecido del todo: gravedad APAGADA mientras autoPilot está activo (caerse deja de ser posible)
+
+Owner: seguía cayéndose en algún tramo pese al raycast + las paredes.
+En vez de seguir parchando casos puntuales del raycast, se ataca la
+causa de fondo directamente: mientras `autoPilot` está activo,
+`rb.useGravity = false` -- así, aunque el raycast no encuentre piso por
+algún motivo (hueco, tramo raro del terreno nuevo), el auto simplemente
+se queda en su altura actual en vez de caer. Caerse deja de ser posible
+por construcción, no solo "menos probable". Cuando el raycast SÍ
+encuentra piso, lo sigue de cerca (subido a 30 m/s, antes 10, para no
+despegarse en bajadas pronunciadas) y el alcance del rayo subió a 200m
+(antes 40m) por si el suelo real queda más abajo de lo esperado. La
+gravedad se restaura sola apenas `autoPilot` se apaga -- el manejo
+MANUAL del jugador no se toca.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (20) — Paredes invisibles a los costados del autopiloto (owner: "una barrera invisible alrededor de la ruta")
 
 Owner propuso la solución directamente: en vez de seguir persiguiendo

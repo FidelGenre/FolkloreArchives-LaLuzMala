@@ -128,37 +128,28 @@ namespace FolkloreArchives
             Vector3 fwd = transform.forward * speed;
             rb.linearVelocity = new Vector3(fwd.x, rb.linearVelocity.y, fwd.z);
 
-            // owner: "el auto se cae" -- en piloto automático el auto puede cruzar
-            // zonas sin collider continuo (huecos entre el mesh de la ruta nueva y
-            // el terreno, tramos todavía no calzados perfectos) y ahí cae por
-            // gravedad de verdad. En vez de depender de que el camino horneado sea
-            // geométricamente perfecto (varios intentos de trazarlo desde la malla
-            // real fallaron esta sesión), mientras autoPilot está activo el auto se
-            // "pega" a cualquier superficie que haya debajo (raycast hacia abajo)
-            // en vez de caer -- inmune a huecos puntuales del camino. El manejo
-            // MANUAL (jugador) no se toca, sigue 100% física real como siempre.
-            // owner: "ahora se va volando hacia arriba" -- el raycast de arriba
-            // chocaba con el collider DEL PROPIO AUTO (la caja principal, no
-            // trigger, arrancando el rayo desde arriba pasa primero por su propio
-            // techo) en vez de tocar el suelo real -- el auto se "pegaba" contra
-            // su propia carrocería y subía en vez de bajar. RaycastAll + ignorar
-            // cualquier hit que sea hijo de este mismo Transform (o triggers, como
-            // los asientos/puertas) hasta encontrar el primer hit que sea terreno
-            // de verdad.
+            // owner: "se sigue cayendo, dame una solucion distinta" -- 2 intentos
+            // (raycast simple, después RaycastAll ignorando al propio auto) seguían
+            // fallando en algún tramo. Endurecido del todo: mientras autoPilot está
+            // activo, la GRAVEDAD SE APAGA (rb.useGravity=false) -- así, aunque el
+            // raycast no encuentre nada por algún motivo puntual (hueco, tramo raro
+            // del terreno nuevo), el auto simplemente se QUEDA en su altura actual
+            // en vez de caer -- caerse deja de ser posible por construcción, no solo
+            // "menos probable". Cuando SÍ encuentra piso, lo sigue de cerca (rápido,
+            // 30 m/s) para no despegarse en bajadas pronunciadas. Se restaura la
+            // gravedad normal apenas autoPilot se apaga (manejo manual intacto).
+            rb.useGravity = !autoPilot;
             if (autoPilot)
             {
-                var hits = Physics.RaycastAll(rb.position + Vector3.up * 3f, Vector3.down, 40f, ~0, QueryTriggerInteraction.Ignore);
+                var hits = Physics.RaycastAll(rb.position + Vector3.up * 5f, Vector3.down, 200f, ~0, QueryTriggerInteraction.Ignore);
                 System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
                 foreach (var h in hits)
                 {
                     if (h.transform == transform || h.transform.IsChildOf(transform)) continue; // ignora al propio auto
                     Vector3 pos = rb.position;
-                    pos.y = Mathf.MoveTowards(pos.y, h.point.y + 0.05f, 10f * Time.fixedDeltaTime);
+                    pos.y = Mathf.MoveTowards(pos.y, h.point.y + 0.05f, 30f * Time.fixedDeltaTime);
                     rb.position = pos;
-                    if (rb.linearVelocity.y < 0f)
-                    {
-                        var v = rb.linearVelocity; v.y = 0f; rb.linearVelocity = v;
-                    }
+                    var v = rb.linearVelocity; v.y = 0f; rb.linearVelocity = v;
                     break;
                 }
             }
