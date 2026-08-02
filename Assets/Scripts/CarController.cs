@@ -127,6 +127,26 @@ namespace FolkloreArchives
             // velocidad hacia adelante, manteniendo la vertical (gravedad/terreno)
             Vector3 fwd = transform.forward * speed;
             rb.linearVelocity = new Vector3(fwd.x, rb.linearVelocity.y, fwd.z);
+
+            // owner: "el auto se cae" -- en piloto automático el auto puede cruzar
+            // zonas sin collider continuo (huecos entre el mesh de la ruta nueva y
+            // el terreno, tramos todavía no calzados perfectos) y ahí cae por
+            // gravedad de verdad. En vez de depender de que el camino horneado sea
+            // geométricamente perfecto (varios intentos de trazarlo desde la malla
+            // real fallaron esta sesión), mientras autoPilot está activo el auto se
+            // "pega" a cualquier superficie que haya debajo (raycast hacia abajo)
+            // en vez de caer -- inmune a huecos puntuales del camino. El manejo
+            // MANUAL (jugador) no se toca, sigue 100% física real como siempre.
+            if (autoPilot && Physics.Raycast(rb.position + Vector3.up * 3f, Vector3.down, out var groundHit, 40f))
+            {
+                Vector3 pos = rb.position;
+                pos.y = Mathf.MoveTowards(pos.y, groundHit.point.y + 0.05f, 10f * Time.fixedDeltaTime);
+                rb.position = pos;
+                if (rb.linearVelocity.y < 0f)
+                {
+                    var v = rb.linearVelocity; v.y = 0f; rb.linearVelocity = v;
+                }
+            }
         }
 
         public float SpeedKmh => Mathf.Abs(speed) * 3.6f;

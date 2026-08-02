@@ -7,6 +7,32 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (18) — Fix de raíz: el auto ya no se cae en piloto automático (deja de perseguir la malla real)
+
+Owner: harto de las vueltas, pidió arreglarlo directo. Encontrado por
+lectura directa de `SampleScene.unity` (sin depender de que el owner
+corra herramientas y mande logs): los 70+ `PavedRoad_Surface*` caen en
+solo 2 posiciones reales (Z=-143 y X=1011.8/Z=-130.5, el resto son
+copias exactas) -- NINGUNA cerca del spawn nuevo (X≈1853). El camino
+visible ahí no es ese mesh -- probablemente terreno pintado
+(`Terrain_Merged`) u otra cosa, no algo que se pueda "encontrar" por
+nombre.
+
+Cambio de enfoque, directo a la causa real de "se cae": `CarController`
+usa Rigidbody con gravedad real -- sobre cualquier hueco sin collider
+continuo (esperable con un camino nuevo recién armado), el auto cae de
+verdad. `CarController.FixedUpdate()`: mientras `autoPilot` está activo,
+un raycast hacia abajo "pega" el auto a cualquier superficie que
+encuentre debajo en vez de dejarlo caer -- ya no depende de que el
+camino horneado sea geométricamente perfecto. El manejo MANUAL no se
+toca (sigue con física real, como siempre).
+
+`CarBuilder.cs`: sacado `TraceRoadPath()` (4 intentos fallidos, ya sin
+uso) -- vuelto a línea recta simple del spawn a la YPF, ahora sin
+riesgo de "caída" porque eso se resolvió en `CarController`.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (17) — Descubierto: 70+ objetos "PavedRoad_Surface*" duplicados en la escena
 
 Owner: con el fix anterior (comparar TODOS los candidatos) el log dio
