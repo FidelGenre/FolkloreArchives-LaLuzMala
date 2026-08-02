@@ -7,6 +7,31 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (22) — TraceRoadByRaycast(): sigue el asfalto real por FÍSICA (raycast+material), no por nombre de objeto
+
+Owner: "estas mapeando mal la ruta" -- la línea recta no sigue la curva
+real, el auto quedaba fuera del asfalto y las paredes invisibles
+(calzadas a esa misma línea recta) tampoco ayudaban. Cambio de enfoque
+completo: en vez de buscar un objeto por NOMBRE (los 4 intentos
+anteriores con "PavedRoad_Surface" fallaron por los 70+ duplicados
+rotos de la escena), ahora se usa la física real de Unity.
+
+`TraceRoadByRaycast()` nuevo: camina paso a paso (8m) tirando un
+abanico de raycasts hacia abajo (±70°) por delante, y en cada paso se
+queda con el que caiga en asfalto DE VERDAD -- detectado por
+`IsAsphalt()`, que mira el material del renderer (convención del
+proyecto: `mat_ypf_asphalt`, `mat_tunnel_asphalt`, cualquier material
+con "asphalt" en el nombre) o, si es Terrain, la capa de asfalto
+pintada (índice 2). Esto sigue lo que la escena REALMENTE tiene
+render/colisionando, sin importar qué objeto específico sea ni cómo se
+llame -- inmune al quilombo de duplicados.
+
+Las paredes invisibles ahora se arman POR TRAMO siguiendo esta curva
+real (no una sola línea recta), calzadas a la forma real del camino.
+
+**Necesita Regenerar.** Buscar en consola "Ruta real trazada por
+asfalto" (con cuántos puntos) o el warning de respaldo.
+
 ## 2026-08-01 (21) — Endurecido del todo: gravedad APAGADA mientras autoPilot está activo (caerse deja de ser posible)
 
 Owner: seguía cayéndose en algún tramo pese al raycast + las paredes.

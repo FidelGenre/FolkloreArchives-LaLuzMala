@@ -189,30 +189,40 @@ namespace FolkloreArchives.MapGen
             // desde el otro lado: CarAutoDrive frena la velocidad de CRUCERO en toda
             // la ruta (ver cruiseSpeedKmh), así que el auto llega mucho más lento a
             // este giro cerrado y sí lo puede completar.
-            // owner: "arreglalo, dejame de dar vueltas" -- 4 intentos de trazar la
-            // ruta real desde la malla (TraceRoadPath) fallaron uno tras otro: la
-            // escena tiene 70+ objetos "PavedRoad_Surface*" duplicados y rotos
-            // (mesh sin asignar) acumulados de las rondas de merge de Unity Version
-            // Control -- ninguno de los que sí tienen malla real queda cerca del
-            // spawn (~982m de distancia sea cual sea). En vez de seguir
-            // persiguiendo ESA malla, se simplifica a línea recta -- y el problema
-            // real que la línea recta exponía ("se cae" en la curva) se atacó en la
-            // raíz en CarController.FixedUpdate (el auto ya no depende de que el
-            // collider sea perfecto bajo las ruedas mientras autoPilot está activo).
+            // owner: "estas mapeando mal la ruta" -- la línea recta (intento
+            // anterior) no sigue la curva real, así que el auto quedaba fuera del
+            // asfalto apenas la ruta se desviaba. Los intentos previos de leer la
+            // malla por NOMBRE ("PavedRoad_Surface") fallaron porque la escena tiene
+            // 70+ copias rotas de ese objeto. Esta vez, en vez de buscar por
+            // nombre, se usa la FÍSICA real de Unity: un abanico de raycasts hacia
+            // abajo por delante del auto, buscando dónde hay asfalto de verdad
+            // (material "...asphalt..." o la capa de asfalto pintada en el
+            // Terrain) -- sigue lo que la escena REALMENTE tiene, no un nombre de
+            // objeto que puede estar duplicado/roto.
             float turnInX = MapLayout.YpfStation.x - 5f;
             Vector2 straightEnd = new Vector2(turnInX, MapLayout.PavedRouteZAt(turnInX));
             Vector2 straightStart = new Vector2(pos.x, pos.z);
-            float straightDist = Vector2.Distance(straightStart, straightEnd);
-            int straightSteps = Mathf.Max(1, Mathf.CeilToInt(straightDist / stepX));
-            for (int i = 0; i <= straightSteps; i++)
-                waypoints.Add(Vector2.Lerp(straightStart, straightEnd, i / (float)straightSteps));
-            // owner: "no seria mejor que pongas una barrera invisible alrededor de
-            // toda la ruta? asi no se cae?" -- en vez de seguir persiguiendo que la
-            // altura/trazado sean perfectos, dos paredes invisibles (sin malla, solo
-            // colisión) a los costados de todo el tramo recto, bien altas -- el auto
-            // físicamente no puede desviarse lo suficiente como para caer por un
-            // costado, pase lo que pase con el terreno real debajo.
-            BuildInvisibleGuardrails(parent, straightStart, straightEnd, pos.y);
+            var traced = TraceRoadByRaycast(pos, straightEnd, stepDist: 8f,
+                                             maxDist: Vector2.Distance(straightStart, straightEnd) * 1.5f + 60f);
+            if (traced.Count >= 5)
+            {
+                waypoints.AddRange(traced);
+                Debug.Log($"<color=cyan>[CarBuilder] Ruta real trazada por asfalto (raycast+material): {traced.Count} puntos.</color>");
+                // Paredes invisibles POR TRAMO, siguiendo la curva real trazada (no
+                // una sola línea recta) -- mismo criterio que antes, ahora calzado
+                // a la forma real del camino.
+                for (int i = 0; i < traced.Count - 1; i++)
+                    BuildInvisibleGuardrails(parent, traced[i], traced[i + 1], pos.y);
+            }
+            else
+            {
+                Debug.LogWarning("[CarBuilder] No encontré suficiente asfalto real por raycast -- uso línea recta como respaldo.");
+                float straightDist = Vector2.Distance(straightStart, straightEnd);
+                int straightSteps = Mathf.Max(1, Mathf.CeilToInt(straightDist / stepX));
+                for (int i = 0; i <= straightSteps; i++)
+                    waypoints.Add(Vector2.Lerp(straightStart, straightEnd, i / (float)straightSteps));
+                BuildInvisibleGuardrails(parent, straightStart, straightEnd, pos.y);
+            }
             float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
             float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;
             float padEntryZ = roadZAtStation + MapLayout.YpfPadNearZ + 2f;
@@ -242,6 +252,81 @@ namespace FolkloreArchives.MapGen
             ctrl.autoPilot = false;
 
             return car;
+        }
+
+        // Camina desde 'start' hacia 'towardHint' buscando asfalto REAL con
+        // física (raycast), no nombres de objeto: en cada paso tira un abanico de
+        // rayos hacia abajo (±70°, cada 5°) delante de la posición actual, cada uno
+        // desde bien arriba (40m) para no perderse detrás de una loma, y se queda
+        // con el que caiga en asfalto MÁS CERCA de "seguir derecho" -- así el
+        // camino se curva solo donde el asfalto real se curva, sin asumir su
+        // forma de antemano. Si un paso puntual no encuentra nada (hueco chico),
+        // avanza igual en línea recta esa vez y sigue probando -- se rinde solo si
+        // pasan 5 pasos seguidos sin encontrar nada (se acabó el asfalto de
+        // verdad, o el auto se perdió).
+        static System.Collections.Generic.List<Vector2> TraceRoadByRaycast(Vector3 start, Vector2 towardHint, float stepDist, float maxDist)
+        {
+            var result = new System.Collections.Generic.List<Vector2> { new Vector2(start.x, start.z) };
+            Vector3 current = start;
+            Vector3 dir = new Vector3(towardHint.x - start.x, 0f, towardHint.y - start.z).normalized;
+            float traveled = 0f;
+            int stall = 0;
+            while (traveled < maxDist && stall < 5)
+            {
+                Vector3 best = Vector3.zero; float bestAbsAngle = float.MaxValue; bool found = false;
+                for (float a = -70f; a <= 70f; a += 5f)
+                {
+                    Vector3 testDir = Quaternion.Euler(0f, a, 0f) * dir;
+                    Vector3 origin = current + testDir * stepDist + Vector3.up * 40f;
+                    if (Physics.Raycast(origin, Vector3.down, out var hit, 120f) && IsAsphalt(hit))
+                    {
+                        float absA = Mathf.Abs(a);
+                        if (absA < bestAbsAngle) { bestAbsAngle = absA; best = hit.point; found = true; }
+                    }
+                }
+                if (!found)
+                {
+                    stall++;
+                    current += dir * stepDist;
+                }
+                else
+                {
+                    stall = 0;
+                    Vector3 flat = new Vector3(best.x, 0f, best.z) - new Vector3(current.x, 0f, current.z);
+                    if (flat.sqrMagnitude > 0.01f) dir = flat.normalized;
+                    current = best;
+                }
+                traveled += stepDist;
+                result.Add(new Vector2(current.x, current.z));
+            }
+            return result;
+        }
+
+        // ¿Hay asfalto de verdad en este impacto? Mira el material del renderer
+        // (convención del proyecto: "mat_ypf_asphalt", "mat_tunnel_asphalt", etc.,
+        // todos con "asphalt" en el nombre) o, si es Terrain, la capa de asfalto
+        // pintada (índice 2, ver TerrainBuilder.PaintTextures / TerrainSurfaceDetector).
+        static bool IsAsphalt(RaycastHit hit)
+        {
+            var rend = hit.collider.GetComponent<Renderer>();
+            if (rend != null)
+            {
+                foreach (var m in rend.sharedMaterials)
+                    if (m != null && m.name.ToLower().Contains("asphalt")) return true;
+            }
+            var terrain = hit.collider.GetComponent<Terrain>();
+            if (terrain != null)
+            {
+                var td = terrain.terrainData;
+                Vector3 local = hit.point - terrain.transform.position;
+                float nx = Mathf.Clamp01(local.x / td.size.x);
+                float nz = Mathf.Clamp01(local.z / td.size.z);
+                int mx = Mathf.Clamp(Mathf.RoundToInt(nx * (td.alphamapWidth - 1)), 0, td.alphamapWidth - 1);
+                int mz = Mathf.Clamp(Mathf.RoundToInt(nz * (td.alphamapHeight - 1)), 0, td.alphamapHeight - 1);
+                var map = td.GetAlphamaps(mx, mz, 1, 1);
+                if (map.GetLength(2) > 2 && map[0, 0, 2] > 0.5f) return true; // capa 2 = asfalto
+            }
+            return false;
         }
 
         // Dos paredes invisibles (BoxCollider sin MeshRenderer) a los costados del
