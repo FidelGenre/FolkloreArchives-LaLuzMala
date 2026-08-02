@@ -137,14 +137,29 @@ namespace FolkloreArchives
             // "pega" a cualquier superficie que haya debajo (raycast hacia abajo)
             // en vez de caer -- inmune a huecos puntuales del camino. El manejo
             // MANUAL (jugador) no se toca, sigue 100% física real como siempre.
-            if (autoPilot && Physics.Raycast(rb.position + Vector3.up * 3f, Vector3.down, out var groundHit, 40f))
+            // owner: "ahora se va volando hacia arriba" -- el raycast de arriba
+            // chocaba con el collider DEL PROPIO AUTO (la caja principal, no
+            // trigger, arrancando el rayo desde arriba pasa primero por su propio
+            // techo) en vez de tocar el suelo real -- el auto se "pegaba" contra
+            // su propia carrocería y subía en vez de bajar. RaycastAll + ignorar
+            // cualquier hit que sea hijo de este mismo Transform (o triggers, como
+            // los asientos/puertas) hasta encontrar el primer hit que sea terreno
+            // de verdad.
+            if (autoPilot)
             {
-                Vector3 pos = rb.position;
-                pos.y = Mathf.MoveTowards(pos.y, groundHit.point.y + 0.05f, 10f * Time.fixedDeltaTime);
-                rb.position = pos;
-                if (rb.linearVelocity.y < 0f)
+                var hits = Physics.RaycastAll(rb.position + Vector3.up * 3f, Vector3.down, 40f, ~0, QueryTriggerInteraction.Ignore);
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                foreach (var h in hits)
                 {
-                    var v = rb.linearVelocity; v.y = 0f; rb.linearVelocity = v;
+                    if (h.transform == transform || h.transform.IsChildOf(transform)) continue; // ignora al propio auto
+                    Vector3 pos = rb.position;
+                    pos.y = Mathf.MoveTowards(pos.y, h.point.y + 0.05f, 10f * Time.fixedDeltaTime);
+                    rb.position = pos;
+                    if (rb.linearVelocity.y < 0f)
+                    {
+                        var v = rb.linearVelocity; v.y = 0f; rb.linearVelocity = v;
+                    }
+                    break;
                 }
             }
         }

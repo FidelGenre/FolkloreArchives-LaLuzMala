@@ -7,6 +7,22 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (19) — Fix: el raycast de "pegar al piso" chocaba con el propio auto (por eso volaba hacia arriba)
+
+Owner: con el fix anterior el auto empezó a volar hacia arriba en vez
+de caer. Causa: `Physics.Raycast` desde 3m arriba del auto hacia abajo
+pasaba primero por la caja de colisión DEL PROPIO AUTO (`BoxCollider`
+principal, no trigger) antes de llegar al suelo real -- el auto se
+"pegaba" contra su propia carrocería (un punto por ENCIMA de donde
+estaba) y subía en vez de bajar, cada FixedUpdate un poco más.
+
+Cambiado a `Physics.RaycastAll` + ignora cualquier hit que sea el
+propio Transform o hijo suyo (asientos, puertas, la caja principal),
+quedándose con el primer hit real de terreno/ruta. `QueryTriggerInteraction.Ignore`
+de paso salta los colliders trigger (asientos/puertas).
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (18) — Fix de raíz: el auto ya no se cae en piloto automático (deja de perseguir la malla real)
 
 Owner: harto de las vueltas, pidió arreglarlo directo. Encontrado por
