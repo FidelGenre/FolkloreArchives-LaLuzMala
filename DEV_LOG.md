@@ -7,6 +7,26 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (17) — Descubierto: 70+ objetos "PavedRoad_Surface*" duplicados en la escena
+
+Owner: con el fix anterior (comparar TODOS los candidatos) el log dio
+EXACTAMENTE el mismo "981.9m" -- señal de que ningún "PavedRoad_Surface*"
+está cerca de verdad del spawn, no importa cuál se elija. Grep directo
+sobre `SampleScene.unity` confirmó: hay **más de 70 objetos** con ese
+nombre (`PavedRoad_Surface` / `PavedRoad_Surface (1)`) en la escena --
+mucho más que "algunos duplicados", una acumulación seria. Sospecha:
+rondas de merge/conflictos de Unity Version Control de la sesión, donde
+el resolver puede haber conservado AMBAS versiones en vez de reemplazar.
+
+Nueva herramienta `Tools > Folklore Archives > Debug: Listar
+PavedRoad_Surface` -- agrupa esos 70+ por posición (cada 5m) para ver
+cuántos LUGARES distintos hay de verdad (vs. copias apiladas en el
+mismo sitio) y el bounding box combinado de todos, para confirmar de
+una vez si el camino real cerca del spawn (X≈1853) tiene este nombre o
+es otra cosa completamente distinta.
+
+**Pendiente:** correr la herramienta y mandar el resultado.
+
 ## 2026-08-01 (16) — TraceRoadPath() v4: compara TODOS los "PavedRoad_Surface*", no se queda con el primero
 
 Owner: primer dato real del log de diagnóstico -- "vértice más cercano

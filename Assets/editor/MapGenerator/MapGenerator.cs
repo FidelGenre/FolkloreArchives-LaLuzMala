@@ -303,5 +303,45 @@ namespace FolkloreArchives.MapGen
                 ? "<color=yellow>[Debug] Secuencia de auto SALTEADA -- al dar Play podés manejar a mano.</color>"
                 : "<color=cyan>[Debug] Secuencia de auto normal restaurada.</color>");
         }
+
+        // owner: TraceRoadPath (CarBuilder.cs) siempre da "981.9m" al vértice más
+        // cercano al spawn, sin importar el fix -- señal de que NINGÚN
+        // "PavedRoad_Surface*" está cerca de verdad. Encontrado por separado: hay
+        // 70+ objetos con ese nombre en la escena (acumulados, probablemente de las
+        // rondas de merge/conflictos de Unity Version Control de la sesión). Esta
+        // herramienta agrupa esos 70+ por posición (cada 5m) para ver cuántos
+        // LUGARES distintos hay de verdad (vs. copias apiladas en el mismo sitio) y
+        // el bounding box combinado de todos -- para saber de una vez si el camino
+        // real cerca del spawn tiene ESTE nombre o es otra cosa.
+        [MenuItem("Tools/Folklore Archives/Debug: Listar PavedRoad_Surface")]
+        public static void DebugListPavedRoadSurfaces()
+        {
+            var matches = new System.Collections.Generic.List<Transform>();
+            foreach (var tr in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
+                if (tr.name.StartsWith("PavedRoad_Surface")) matches.Add(tr);
+
+            Debug.Log($"<color=yellow>[Debug] {matches.Count} objetos 'PavedRoad_Surface*' encontrados.</color>");
+
+            var clusters = new System.Collections.Generic.Dictionary<Vector3Int, int>();
+            Bounds? totalBounds = null;
+            foreach (var tr in matches)
+            {
+                var key = new Vector3Int(Mathf.RoundToInt(tr.position.x / 5f), Mathf.RoundToInt(tr.position.y / 5f), Mathf.RoundToInt(tr.position.z / 5f));
+                clusters.TryGetValue(key, out int c);
+                clusters[key] = c + 1;
+
+                var rend = tr.GetComponent<MeshRenderer>();
+                if (rend != null)
+                {
+                    if (totalBounds == null) totalBounds = rend.bounds;
+                    else { var tb = totalBounds.Value; tb.Encapsulate(rend.bounds); totalBounds = tb; }
+                }
+            }
+            Debug.Log($"<color=yellow>[Debug] {clusters.Count} posiciones distintas (agrupadas cada 5m) entre esos {matches.Count} objetos.</color>");
+            foreach (var kv in clusters)
+                Debug.Log($"<color=yellow>[Debug]   cluster ~({kv.Key.x * 5}, {kv.Key.y * 5}, {kv.Key.z * 5}) x{kv.Value}</color>");
+            if (totalBounds.HasValue)
+                Debug.Log($"<color=yellow>[Debug] Bounds combinado de TODOS: min={totalBounds.Value.min} max={totalBounds.Value.max}</color>");
+        }
     }
 }
