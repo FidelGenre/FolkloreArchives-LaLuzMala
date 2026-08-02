@@ -7,6 +7,23 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (16) — TraceRoadPath() v4: compara TODOS los "PavedRoad_Surface*", no se queda con el primero
+
+Owner: primer dato real del log de diagnóstico -- "vértice más cercano
+al spawn está a 981.9m". El intento anterior (buscar por prefijo) se
+quedaba con el PRIMER objeto "PavedRoad_Surface*" que tuviera malla,
+sin importar si era el relevante -- con varios duplicados en la
+Hierarchy (`(1)`, `(2)`...), agarró uno que no tiene nada que ver con
+el camino real cerca del spawn (probablemente otro segmento de ruta
+bajo el mismo nombre, a ~1km de distancia).
+
+Fix: ahora evalúa TODOS los objetos que empiezan con "PavedRoad_Surface"
+y se queda con el que tenga el vértice más CERCANO al spawn real -- no
+el primero que aparezca en la escena.
+
+**Necesita Regenerar.** Repetir el mismo chequeo: mandar el log
+("vértice más cercano" + "trazada"/"no pude") antes de probar Play.
+
 ## 2026-08-01 (15) — Fix real: TraceRoadPath() nunca llegaba a ejecutar (GameObject.Find fallaba por el sufijo "(1)")
 
 Owner: mandó el log completo -- seguía sin aparecer ni siquiera el

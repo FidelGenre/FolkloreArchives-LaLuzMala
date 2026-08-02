@@ -264,44 +264,32 @@ namespace FolkloreArchives.MapGen
             var result = new System.Collections.Generic.List<Vector2>();
             // owner: la Hierarchy tiene varios "PavedRoad_Surface (1)", "(2)"...
             // (Unity le agrega el sufijo cuando hay más de un objeto con ese nombre
-            // bajo el mismo padre) -- GameObject.Find busca el nombre EXACTO, así
-            // que con cualquier sufijo no encontraba nada y esta función se rendía
-            // ANTES de llegar siquiera al log de diagnóstico. Ahora busca cualquier
-            // Transform cuyo nombre EMPIECE con "PavedRoad_Surface" (mismo criterio
-            // que ya usa el rescate en DeleteMap) y se queda con el primero que
-            // tenga malla real.
-            MeshFilter mf = null;
+            // bajo el mismo padre). El intento anterior se quedaba con el PRIMERO que
+            // encontrara con malla real -- el log mostró "vértice más cercano a
+            // 981.9m", es decir agarró un duplicado que no tiene nada que ver con el
+            // camino real cerca del spawn (probablemente otro segmento de ruta bajo
+            // el mismo nombre). Ahora evalúa TODOS los objetos "PavedRoad_Surface*" y
+            // se queda con el que tenga el vértice más CERCANO al spawn -- no el
+            // primero que encuentre, el más relevante de verdad.
+            Vector3[] world = null;
+            Vector3 nearest = Vector3.zero;
+            float nearestDist = float.PositiveInfinity;
             foreach (var tr in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
             {
                 if (!tr.name.StartsWith("PavedRoad_Surface")) continue;
                 var candidate = tr.GetComponent<MeshFilter>();
-                if (candidate != null && candidate.sharedMesh != null && candidate.sharedMesh.vertexCount > 0)
-                { mf = candidate; break; }
-            }
-            if (mf == null) return result;
-            var roadGo = mf.gameObject;
+                if (candidate == null || candidate.sharedMesh == null || candidate.sharedMesh.vertexCount == 0) continue;
 
-            var verts = mf.sharedMesh.vertices;
-            if (verts.Length == 0) return result;
-            var t = roadGo.transform;
-            var world = new Vector3[verts.Length];
-            for (int i = 0; i < verts.Length; i++) world[i] = t.TransformPoint(verts[i]);
-
-            // owner: "sigue cayendose" -- 2 intentos previos fallaron con "muy pocos
-            // puntos encontrados" incluso agrandando el radio de búsqueda. Causa real
-            // (nueva, recién detectada): 'start' es la posición HORNEADA a mano por
-            // el owner -- se ve bien en pantalla, pero puede estar a más de 25-58m de
-            // cualquier vértice real de la malla (si las secciones del camino están
-            // espaciadas más de eso). Antes de caminar, primero busco el vértice REAL
-            // más cercano a 'start' (sin límite de radio) y empiezo a caminar desde
-            // AHÍ, no desde 'start' -- 'start' se antepone al resultado al final para
-            // que el camino igual arranque en el spawn confirmado.
-            Vector3 nearest = Vector3.zero; float nearestDist = float.PositiveInfinity;
-            foreach (var wp in world)
-            {
-                float d = Vector3.Distance(wp, start);
-                if (d < nearestDist) { nearestDist = d; nearest = wp; }
+                var cVerts = candidate.sharedMesh.vertices;
+                var cWorld = new Vector3[cVerts.Length];
+                for (int i = 0; i < cVerts.Length; i++)
+                {
+                    cWorld[i] = tr.TransformPoint(cVerts[i]);
+                    float d = Vector3.Distance(cWorld[i], start);
+                    if (d < nearestDist) { nearestDist = d; nearest = cWorld[i]; world = cWorld; }
+                }
             }
+            if (world == null) return result;
             Debug.Log($"<color=cyan>[CarBuilder] TraceRoadPath: vértice más cercano al spawn está a {nearestDist:0.0}m.</color>");
 
             Vector3 current = nearest;
