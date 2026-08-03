@@ -25,27 +25,15 @@ namespace FolkloreArchives.MapGen
 
         public static GameObject Build(Transform parent, Terrain terrain)
         {
-            // owner: "el auto aparece donde estaba la ruta ANTES" -- la posición
-            // horneada (1853.8, 17.05, 7.87) se había calibrado a mano contra una
-            // escena rota (70+ duplicados de PavedRoad_Surface); ahora que la
-            // escena está limpia (sincronizada de nuevo con el compañero, un solo
-            // objeto real) esa punta vieja ya no coincide con el camino real. Con
-            // la escena limpia, calcular la punta desde el mesh real (FindRoadTip)
-            // vuelve a ser confiable -- antes fallaba por los duplicados/basura, no
-            // por la técnica en sí. Cae al valor horneado viejo como último
-            // respaldo si por lo que sea no encuentra el mesh.
-            Vector3 pos; float yaw;
-            if (FindRoadTip(out Vector3 tipPos, out Vector3 tipDir))
-            {
-                pos = tipPos;
-                yaw = Mathf.Atan2(tipDir.x, tipDir.z) * Mathf.Rad2Deg;
-            }
-            else
-            {
-                Debug.LogWarning("[CarBuilder] No encontré 'PavedRoad_Surface' en la escena -- uso la posición horneada vieja como respaldo (puede no coincidir con la ruta real).");
-                pos = new Vector3(1853.8f, 17.05f, 7.87f);
-                yaw = -101.774f;
-            }
+            // owner: FindRoadTip() (calcular la punta leyendo el mesh real) volvió a
+            // fallar incluso con la escena limpia -- ya van 2 veces que esta técnica
+            // agarra un punto que no es el centro real del camino. Vuelto a
+            // horneado directo: el owner voló hasta la punta real (escena ya
+            // sincronizada limpia con el compañero) y pasó Position/Rotation tal
+            // cual -- mismo criterio que Seat_RearMid más abajo, la única forma que
+            // funcionó de verdad en toda esta saga.
+            var pos = new Vector3(1868.026f, 17.04301f, 10.39595f);
+            float yaw = -104.379f;
 
             var car = new GameObject("Renault12");
             car.transform.SetParent(parent);
@@ -273,57 +261,6 @@ namespace FolkloreArchives.MapGen
             ctrl.autoPilot = false;
 
             return car;
-        }
-
-        // Busca "PavedRoad_Surface" (cualquier objeto que empiece así, por si el
-        // compañero deja algún sufijo) y calcula el CENTRO real de la punta sur +
-        // la dirección del camino ahí. Promedia TODOS los vértices dentro de una
-        // franja angosta cerca de la punta (cancela el ancho izquierda/derecha del
-        // camino -- da el centro real, no un borde) y otra franja un poco más
-        // atrás, para sacar tanto el centro como la dirección real del camino ahí
-        // sin asumir ninguna forma recta. owner: esta técnica ya se había probado
-        // antes y parecía fallar -- la causa real era que la escena tenía 70+
-        // copias rotas/duplicadas de este objeto (ver DEV_LOG), no la técnica en
-        // sí. Con la escena limpia debería volver a ser confiable.
-        const float TipBand = 3f, TipBackOffset = 20f;
-        static bool FindRoadTip(out Vector3 tipPos, out Vector3 tipDir)
-        {
-            tipPos = Vector3.zero;
-            tipDir = Vector3.forward;
-
-            Transform roadTr = null;
-            foreach (var tr in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
-            {
-                if (!tr.name.StartsWith("PavedRoad_Surface")) continue;
-                var candidate = tr.GetComponent<MeshFilter>();
-                if (candidate != null && candidate.sharedMesh != null && candidate.sharedMesh.vertexCount > 0)
-                { roadTr = tr; break; }
-            }
-            if (roadTr == null) return false;
-
-            var mf = roadTr.GetComponent<MeshFilter>();
-            var verts = mf.sharedMesh.vertices;
-            if (verts.Length == 0) return false;
-            var world = new Vector3[verts.Length];
-            float minZ = float.PositiveInfinity;
-            for (int i = 0; i < verts.Length; i++)
-            {
-                world[i] = roadTr.TransformPoint(verts[i]);
-                if (world[i].z < minZ) minZ = world[i].z;
-            }
-
-            Vector3 nearSum = Vector3.zero; int nearCount = 0;
-            Vector3 farSum = Vector3.zero; int farCount = 0;
-            foreach (var wp in world)
-            {
-                if (wp.z < minZ + TipBand) { nearSum += wp; nearCount++; }
-                else if (wp.z >= minZ + TipBackOffset - TipBand && wp.z < minZ + TipBackOffset + TipBand) { farSum += wp; farCount++; }
-            }
-            if (nearCount == 0) return false;
-            tipPos = nearSum / nearCount;
-            if (farCount > 0)
-                tipDir = (farSum / farCount - tipPos).normalized; // hacia ADENTRO del mapa (alejándose de la punta)
-            return true;
         }
 
         // Promedio de 3 puntos (el punto + sus 2 vecinos) para sacar zigzag del
