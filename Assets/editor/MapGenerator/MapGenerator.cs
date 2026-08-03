@@ -343,5 +343,50 @@ namespace FolkloreArchives.MapGen
             if (totalBounds.HasValue)
                 Debug.Log($"<color=yellow>[Debug] Bounds combinado de TODOS: min={totalBounds.Value.min} max={totalBounds.Value.max}</color>");
         }
+
+        // owner: "sigue igual yendose para la derecha" -- pese a la corrección en
+        // vivo (CarAutoDrive.IsOnAsphalt/FindNearestAsphalt). Sospecha: entre los
+        // 70+ "PavedRoad_Surface*" acumulados hay restos con collider en lugares
+        // raros (fuera de la ruta real) que pueden estar dando falsos positivos de
+        // "esto es asfalto" a esos raycasts de corrección, o directamente
+        // empujando al auto por colisión. Esta herramienta deja UN SOLO objeto por
+        // cada posición real distinta (agrupada cada 5m, mismo criterio que
+        // "Debug: Listar") -- el que tenga malla+collider de verdad -- y borra
+        // TODOS los demás (duplicados exactos y restos rotos sin malla).
+        [MenuItem("Tools/Folklore Archives/Debug: Limpiar PavedRoad_Surface Duplicados")]
+        public static void DebugCleanupPavedRoadSurfaces()
+        {
+            var matches = new System.Collections.Generic.List<Transform>();
+            foreach (var tr in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
+                if (tr.name.StartsWith("PavedRoad_Surface")) matches.Add(tr);
+
+            var keptPerCluster = new System.Collections.Generic.Dictionary<Vector3Int, Transform>();
+            var toDelete = new System.Collections.Generic.List<Transform>();
+            foreach (var tr in matches)
+            {
+                var key = new Vector3Int(Mathf.RoundToInt(tr.position.x / 5f), Mathf.RoundToInt(tr.position.y / 5f), Mathf.RoundToInt(tr.position.z / 5f));
+                var mf = tr.GetComponent<MeshFilter>();
+                bool hasRealMesh = mf != null && mf.sharedMesh != null && mf.sharedMesh.vertexCount > 0;
+
+                if (!hasRealMesh) { toDelete.Add(tr); continue; }
+
+                if (!keptPerCluster.TryGetValue(key, out var kept))
+                {
+                    keptPerCluster[key] = tr; // primero con malla real en este lugar -- se queda
+                }
+                else
+                {
+                    toDelete.Add(tr); // ya hay uno bueno guardado para este lugar -- de más
+                }
+            }
+
+            foreach (var tr in toDelete)
+                if (tr != null) Object.DestroyImmediate(tr.gameObject);
+
+            Debug.Log($"<color=lime>[Debug] Limpieza PavedRoad_Surface: {matches.Count} encontrados, " +
+                      $"{keptPerCluster.Count} conservados (uno por lugar real), {toDelete.Count} borrados " +
+                      $"(duplicados o sin malla real).</color>");
+            EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
+        }
     }
 }

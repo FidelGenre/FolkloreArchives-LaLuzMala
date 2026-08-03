@@ -7,6 +7,24 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (28) — Herramienta de limpieza: deja UN SOLO PavedRoad_Surface por lugar real, borra el resto
+
+Owner: pese a la corrección en vivo (punto anterior), "sigue igual
+yendose para la derecha". Sospecha: entre los 70+ objetos
+"PavedRoad_Surface*" acumulados en la escena puede haber restos con
+collider en lugares raros -- dando falsos positivos de "esto es
+asfalto" a los raycasts de corrección (`IsOnAsphalt`/`FindNearestAsphalt`),
+o directamente empujando al auto por colisión con geometría rota que
+no debería estar ahí.
+
+Nueva `Tools > Folklore Archives > Debug: Limpiar PavedRoad_Surface
+Duplicados` -- agrupa por posición real (cada 5m, mismo criterio que
+"Debug: Listar"), conserva UN SOLO objeto por lugar (el que tenga malla
+real) y borra todos los demás (duplicados exactos y restos sin malla
+asignada).
+
+**Pendiente:** correr la herramienta, Regenerar, y probar de nuevo.
+
 ## 2026-08-01 (27) — Corrección EN VIVO: si el auto no está sobre asfalto real, vira hacia el más cercano (ya no depende de que el waypoint sea perfecto)
 
 Owner: "NO LO ARREGLASTE SE SIGUE YENDO PARA EL COSTADO" -- después de
