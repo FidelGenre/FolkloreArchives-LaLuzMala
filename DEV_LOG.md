@@ -7,6 +7,25 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (30) — Vuelve FindRoadTip() dinámico: con la escena limpia, calcular la punta desde el mesh real vuelve a ser confiable
+
+Owner: recuperó la sincronización con el compañero (changeset 124 de
+Unity Version Control, escena limpia con UN SOLO `PavedRoad_Surface`
+real -- confirmado por captura, un camino curvo único y claro) pero el
+auto seguía apareciendo en la posición vieja horneada a mano
+(1853.8, 17.05, 7.87), calibrada contra la escena ROTA de antes -- ya
+no coincide con el camino real de la escena limpia.
+
+Vuelve `FindRoadTip()` (la misma técnica de banda-promedio de antes:
+promedia vértices cerca de la punta sur + otra franja más atrás, saca
+centro y dirección real sin asumir forma recta) -- los intentos
+anteriores con esta técnica fallaban por los 70+ duplicados/basura de
+la escena rota, NO por la técnica en sí. Con la escena limpia (recién
+sincronizada) debería volver a funcionar bien. Cae a la posición
+horneada vieja como último respaldo si no encuentra el mesh.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (29) — CAUSA RAÍZ real de los 150 duplicados: layout_FullMap.json tenía 8 entradas viejas de PavedRoad_Surface, recreadas cada Generate
 
 Owner: corrió "Debug: Listar" de nuevo -- 150 objetos ahora (el doble
