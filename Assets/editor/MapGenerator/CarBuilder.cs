@@ -204,15 +204,14 @@ namespace FolkloreArchives.MapGen
             Vector2 straightStart = new Vector2(pos.x, pos.z);
             var traced = TraceRoadByRaycast(pos, straightEnd, stepDist: 8f,
                                              maxDist: Vector2.Distance(straightStart, straightEnd) * 1.5f + 60f);
-            // owner: "se sigue yendo fuera hacia la derecha" -- el trazado real
-            // encuentra bien la primera curva pero se corta antes de llegar a la
-            // YPF (el camino real puede durar más de lo que el rastreo por grilla
-            // alcanza a cubrir en un Generate razonable) -- después de esos puntos
-            // reales, antes se agregaba directo el giro final de la YPF, un salto
-            // enorme en línea recta que se salía del asfalto. Ahora, sea cual sea
-            // el último punto trazado (real o el spawn si no trazó nada), se
-            // completa el RESTO del camino en línea recta hasta ahí -- ya no hay
-            // ningún tramo sin waypoints intermedios.
+            // owner: "sigue yendose para afuera, no vuelve" -- el trazado real
+            // (grilla ancha) encuentra el asfalto real pero paso a paso, cada punto
+            // por separado, tiene ruido -- pequeños zigzags que CarAutoDrive (que
+            // apunta directo al waypoint que sigue) siguen tal cual, en vez de
+            // promediarlos. Suavizado con un promedio de 3 puntos (cada punto pasa
+            // a ser el promedio de sí mismo + sus 2 vecinos) antes de usarlo como
+            // waypoints -- saca el zigzag sin perder la forma real de la curva.
+            traced = SmoothPath(traced);
             Vector2 lastPoint = straightStart;
             if (traced.Count >= 5)
             {
@@ -263,6 +262,19 @@ namespace FolkloreArchives.MapGen
             ctrl.autoPilot = false;
 
             return car;
+        }
+
+        // Promedio de 3 puntos (el punto + sus 2 vecinos) para sacar zigzag del
+        // trazado por raycast, sin perder la forma real de la curva. Los extremos
+        // (primero/último) quedan tal cual -- no tienen 2 vecinos de cada lado.
+        static System.Collections.Generic.List<Vector2> SmoothPath(System.Collections.Generic.List<Vector2> path)
+        {
+            if (path.Count < 3) return path;
+            var smoothed = new System.Collections.Generic.List<Vector2> { path[0] };
+            for (int i = 1; i < path.Count - 1; i++)
+                smoothed.Add((path[i - 1] + path[i] + path[i + 1]) / 3f);
+            smoothed.Add(path[path.Count - 1]);
+            return smoothed;
         }
 
         // Camina desde 'start' hacia 'towardHint' buscando asfalto REAL con física

@@ -7,6 +7,23 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (26) — SmoothPath(): suaviza el trazado por raycast (zigzag punto a punto confundía al autopiloto)
+
+Owner: seguía yéndose para afuera y no volvía al asfalto, ahora quedando
+al borde (mejora sobre "perdido en el vacío" de antes, pero seguía sin
+enderezarse). Sospecha: el trazado por grilla decide cada punto por
+separado (mejor candidato de asfalto en esa grilla puntual), lo que
+mete algo de zigzag punto a punto -- `CarAutoDrive` apunta derecho al
+próximo waypoint sin promediar nada, así que sigue ese zigzag tal cual
+en vez de una curva suave.
+
+`SmoothPath()` nuevo: cada punto (menos los extremos) pasa a ser el
+promedio de sí mismo + sus 2 vecinos -- saca el ruido punto a punto sin
+perder la forma real de la curva. Se aplica al trazado antes de usarlo
+como waypoints.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (25) — Fix: el camino quedaba con un salto gigante después de donde se cortaba el trazado real
 
 Owner: seguía saliéndose hacia la derecha, ahora en un punto distinto
