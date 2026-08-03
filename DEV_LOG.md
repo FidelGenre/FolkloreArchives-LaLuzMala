@@ -7,6 +7,24 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (25) — Fix: el camino quedaba con un salto gigante después de donde se cortaba el trazado real
+
+Owner: seguía saliéndose hacia la derecha, ahora en un punto distinto
+(más adelante). Causa: el trazado real (21 puntos ≈ 160m) encuentra
+bien la primera curva pero se corta antes de llegar a la YPF -- el
+camino real dura más de lo que el rastreo por grilla alcanza a cubrir
+en un Generate razonable. Después de esos puntos reales, el código
+agregaba DIRECTO el giro final de la YPF -- un salto enorme en línea
+recta (cientos de metros) que se salía del asfalto por completo.
+
+Fix: sea cual sea el último punto (real o el spawn si no trazó nada),
+ahora se completa el RESTO del camino con puntos intermedios en línea
+recta hasta el tramo de la YPF -- ya no queda ningún hueco sin
+waypoints, solo tramos reales donde se pudo trazar y línea recta donde
+no.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (24) — Saca las paredes invisibles (quedaban mal alineadas con el trazado real)
 
 Owner: confirmó "21 puntos" trazados (mejora real sobre los 6 de

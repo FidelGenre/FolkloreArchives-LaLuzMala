@@ -204,19 +204,30 @@ namespace FolkloreArchives.MapGen
             Vector2 straightStart = new Vector2(pos.x, pos.z);
             var traced = TraceRoadByRaycast(pos, straightEnd, stepDist: 8f,
                                              maxDist: Vector2.Distance(straightStart, straightEnd) * 1.5f + 60f);
+            // owner: "se sigue yendo fuera hacia la derecha" -- el trazado real
+            // encuentra bien la primera curva pero se corta antes de llegar a la
+            // YPF (el camino real puede durar más de lo que el rastreo por grilla
+            // alcanza a cubrir en un Generate razonable) -- después de esos puntos
+            // reales, antes se agregaba directo el giro final de la YPF, un salto
+            // enorme en línea recta que se salía del asfalto. Ahora, sea cual sea
+            // el último punto trazado (real o el spawn si no trazó nada), se
+            // completa el RESTO del camino en línea recta hasta ahí -- ya no hay
+            // ningún tramo sin waypoints intermedios.
+            Vector2 lastPoint = straightStart;
             if (traced.Count >= 5)
             {
                 waypoints.AddRange(traced);
+                lastPoint = traced[traced.Count - 1];
                 Debug.Log($"<color=cyan>[CarBuilder] Ruta real trazada por asfalto (raycast+material): {traced.Count} puntos.</color>");
             }
             else
             {
-                Debug.LogWarning("[CarBuilder] No encontré suficiente asfalto real por raycast -- uso línea recta como respaldo.");
-                float straightDist = Vector2.Distance(straightStart, straightEnd);
-                int straightSteps = Mathf.Max(1, Mathf.CeilToInt(straightDist / stepX));
-                for (int i = 0; i <= straightSteps; i++)
-                    waypoints.Add(Vector2.Lerp(straightStart, straightEnd, i / (float)straightSteps));
+                Debug.LogWarning("[CarBuilder] No encontré suficiente asfalto real por raycast -- uso línea recta desde el spawn.");
             }
+            float remainingDist = Vector2.Distance(lastPoint, straightEnd);
+            int remainingSteps = Mathf.Max(1, Mathf.CeilToInt(remainingDist / stepX));
+            for (int i = 1; i <= remainingSteps; i++)
+                waypoints.Add(Vector2.Lerp(lastPoint, straightEnd, i / (float)remainingSteps));
             // owner: "las paredes no van con la ruta" -- las paredes por tramo
             // quedaban mal alineadas (el trazado real tiene algo de ruido punto a
             // punto, y eso se nota mucho en paredes rectas entre puntos consecutivos).
