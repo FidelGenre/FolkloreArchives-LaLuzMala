@@ -145,7 +145,13 @@ namespace FolkloreArchives
             // la MISMA perilla, tirando para lados opuestos. Solución: no pelear más
             // con la velocidad, compensar con más steerGain SOLO dentro del lote --
             // así el auto puede cerrar el giro aunque venga más lento.
-            float lotSteerGain = (inLotZone || sharpTurnAhead) ? steerGain * 3f : steerGain;
+            // owner: "se sigue yendo para el costado, no vuelve" -- si el auto ya
+            // no está sobre asfalto de verdad, corrección EN VIVO con prioridad
+            // sobre lo que decía el waypoint horneado (ver más abajo, en el steer):
+            // se busca el asfalto más cercano y se vira fuerte hacia ahí, no importa
+            // qué tan mal esté el dato pre-horneado para este tramo.
+            bool rescuing = !IsOnAsphalt(p);
+            float lotSteerGain = (inLotZone || sharpTurnAhead || rescuing) ? steerGain * 3f : steerGain;
 
             // owner: "se pone a girar" -- MUY cerca de un waypoint, la dirección hacia
             // ÉSE punto se vuelve ruidosísima (un paso más y el ángulo salta 180°),
@@ -183,7 +189,12 @@ namespace FolkloreArchives
             float steer = 0f;
             if (!(nearForStop && isLastWaypoint))
             {
-                Vector3 toTarget = new Vector3(aim.x - p.x, 0f, aim.y - p.z);
+                // Fuera de asfalto de verdad (ver 'rescuing' arriba): en vez del
+                // waypoint horneado, apuntar directo al asfalto real más cercano.
+                Vector3 aimPoint = new Vector3(aim.x, p.y, aim.y);
+                if (rescuing && FindNearestAsphalt(p, transform.forward, out Vector3 rescue))
+                    aimPoint = rescue;
+                Vector3 toTarget = aimPoint - p; toTarget.y = 0f;
                 float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
                 steer = Mathf.Clamp(angle / 45f, -1f, 1f) * lotSteerGain;
             }
@@ -248,6 +259,70 @@ namespace FolkloreArchives
             car.autoPilot = true;
             car.externalThrottle = throttle;
             car.externalSteer = steer;
+        }
+
+        // ¿Hay asfalto de verdad bajo el auto ahora mismo? Un solo raycast hacia
+        // abajo, mismo criterio que CarBuilder.IsAsphalt (Editor-time) pero en
+        // runtime: material con "asphalt" en el nombre, o la capa de asfalto
+        // (índice 2) dominante en el Terrain que sea.
+        static bool IsOnAsphalt(Vector3 worldPos)
+        {
+            if (!Physics.Raycast(worldPos + Vector3.up * 2f, Vector3.down, out var hit, 10f))
+                return false;
+            return HitIsAsphalt(hit);
+        }
+
+        static bool HitIsAsphalt(RaycastHit hit)
+        {
+            var rend = hit.collider.GetComponent<Renderer>();
+            if (rend != null)
+            {
+                foreach (var m in rend.sharedMaterials)
+                    if (m != null && m.name.ToLower().Contains("asphalt")) return true;
+            }
+            var terrain = hit.collider.GetComponent<Terrain>();
+            if (terrain != null)
+            {
+                var td = terrain.terrainData;
+                Vector3 local = hit.point - terrain.transform.position;
+                float nx = Mathf.Clamp01(local.x / td.size.x);
+                float nz = Mathf.Clamp01(local.z / td.size.z);
+                int mx = Mathf.Clamp(Mathf.RoundToInt(nx * (td.alphamapWidth - 1)), 0, td.alphamapWidth - 1);
+                int mz = Mathf.Clamp(Mathf.RoundToInt(nz * (td.alphamapHeight - 1)), 0, td.alphamapHeight - 1);
+                var map = td.GetAlphamaps(mx, mz, 1, 1);
+                int layers = map.GetLength(2);
+                int dominant = 0; float dominantW = -1f;
+                for (int i = 0; i < layers; i++)
+                    if (map[0, 0, i] > dominantW) { dominantW = map[0, 0, i]; dominant = i; }
+                if (dominant == 2) return true;
+            }
+            return false;
+        }
+
+        // Busca el asfalto real más cercano en un anillo de rayos alrededor de
+        // 'from' (16 direcciones, 15m de radio) -- barato (16 raycasts), pensado
+        // para correr todos los frames que el auto esté fuera del asfalto (que
+        // debería ser la excepción, no la regla). Devuelve el punto encontrado
+        // más cercano a 'from', priorizando los que caen hacia 'preferDir' (el
+        // frente actual del auto) para no invertir la marcha de golpe.
+        static bool FindNearestAsphalt(Vector3 from, Vector3 preferDir, out Vector3 result)
+        {
+            result = Vector3.zero;
+            float bestScore = float.NegativeInfinity;
+            bool found = false;
+            const float radius = 15f;
+            for (int i = 0; i < 16; i++)
+            {
+                float ang = i * (360f / 16);
+                Vector3 dir = Quaternion.Euler(0f, ang, 0f) * Vector3.forward;
+                Vector3 testPos = from + dir * radius;
+                if (!Physics.Raycast(testPos + Vector3.up * 30f, Vector3.down, out var hit, 80f)) continue;
+                if (!HitIsAsphalt(hit)) continue;
+                float forwardDot = Vector3.Dot(dir, preferDir.normalized);
+                float score = forwardDot; // entre los que sirven, preferir los que quedan adelante
+                if (score > bestScore) { bestScore = score; result = hit.point; found = true; }
+            }
+            return found;
         }
     }
 }

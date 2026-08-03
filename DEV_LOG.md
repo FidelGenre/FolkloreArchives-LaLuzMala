@@ -7,6 +7,24 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (27) — Corrección EN VIVO: si el auto no está sobre asfalto real, vira hacia el más cercano (ya no depende de que el waypoint sea perfecto)
+
+Owner: "NO LO ARREGLASTE SE SIGUE YENDO PARA EL COSTADO" -- después de
+varios intentos de mejorar el DATO pre-horneado (trazado por grilla,
+suavizado, relleno de huecos), seguía yéndose consistentemente hacia un
+lado. Cambio de estrategia: en vez de seguir puliendo los waypoints por
+adelantado, `CarAutoDrive` ahora se autocorrige EN VIVO, cada frame.
+
+`IsOnAsphalt()` (raycast hacia abajo, mismo criterio que `CarBuilder`)
+chequea si el auto está sobre asfalto de verdad AHORA MISMO. Si no lo
+está, `FindNearestAsphalt()` (anillo de 16 rayos, 15m de radio) busca
+el asfalto real más cercano y el auto vira fuerte hacia ahí --
+ignorando por un instante el waypoint horneado que tocaba seguir, sin
+importar qué tan impreciso sea ese dato. Se autocorrige solo sin
+depender de que el trazado pre-calculado sea perfecto.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (26) — SmoothPath(): suaviza el trazado por raycast (zigzag punto a punto confundía al autopiloto)
 
 Owner: seguía yéndose para afuera y no volvía al asfalto, ahora quedando
