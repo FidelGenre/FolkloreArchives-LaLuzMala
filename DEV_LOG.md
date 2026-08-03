@@ -7,6 +7,35 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (29) — CAUSA RAÍZ real de los 150 duplicados: layout_FullMap.json tenía 8 entradas viejas de PavedRoad_Surface, recreadas cada Generate
+
+Owner: corrió "Debug: Listar" de nuevo -- 150 objetos ahora (el doble
+de la sesión anterior). El log de Generate mostró la pista clave:
+`[MapLayoutPersistence] ... 10 duplicados recreados` -- CADA Generate.
+`MapLayoutPersistence.RecreateClones()` (pensado para clones hechos a
+mano por el owner, tipo "cosechas (1)") lee `layout_FullMap.json`, y si
+una entrada con nombre "X (N)" no existe en la escena recién generada,
+CLONA el objeto base y la recrea con la posición guardada -- sin
+importar cuántas copias ya haya (el chequeo "¿ya existe?" se hace por
+ruta exacta en la jerarquía, que se corre con la acumulación, así que
+nunca "encuentra" las anteriores y sigue clonando de nuevo).
+
+El JSON tenía 8 entradas de `PavedRoad_Surface` (una real, `#0`; el
+resto -- `PavedRoad_Surface (1)#0..#3` y `PavedRoad_Surface#1..#3` --
+basura acumulada de sesiones anteriores) que el sistema recreaba a
+ciegas en cada Generate, para siempre, sin importar cuántas veces se
+limpiaran a mano en el Editor. **Esta es la causa raíz real de por qué
+el auto no se corregía nunca:** con 150 objetos de colisión repartidos
+por lugares raros, cualquier raycast (el trazado real, la corrección en
+vivo) podía toparse con basura en vez de con el camino real.
+
+Fix: las 8 entradas borradas directamente de `layout_FullMap.json`
+(2500 → 2492 entradas, validado que el JSON sigue siendo válido).
+
+**Pendiente que pruebe el owner:** correr `Debug: Limpiar PavedRoad_Surface
+Duplicados` una vez más (ahora sí debería sostenerse, ya no hay nada
+que las vuelva a crear) y Regenerar.
+
 ## 2026-08-01 (28) — Herramienta de limpieza: deja UN SOLO PavedRoad_Surface por lugar real, borra el resto
 
 Owner: pese a la corrección en vivo (punto anterior), "sigue igual
