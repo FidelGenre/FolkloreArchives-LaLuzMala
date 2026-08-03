@@ -208,11 +208,6 @@ namespace FolkloreArchives.MapGen
             {
                 waypoints.AddRange(traced);
                 Debug.Log($"<color=cyan>[CarBuilder] Ruta real trazada por asfalto (raycast+material): {traced.Count} puntos.</color>");
-                // Paredes invisibles POR TRAMO, siguiendo la curva real trazada (no
-                // una sola línea recta) -- mismo criterio que antes, ahora calzado
-                // a la forma real del camino.
-                for (int i = 0; i < traced.Count - 1; i++)
-                    BuildInvisibleGuardrails(parent, traced[i], traced[i + 1], pos.y);
             }
             else
             {
@@ -221,8 +216,13 @@ namespace FolkloreArchives.MapGen
                 int straightSteps = Mathf.Max(1, Mathf.CeilToInt(straightDist / stepX));
                 for (int i = 0; i <= straightSteps; i++)
                     waypoints.Add(Vector2.Lerp(straightStart, straightEnd, i / (float)straightSteps));
-                BuildInvisibleGuardrails(parent, straightStart, straightEnd, pos.y);
             }
+            // owner: "las paredes no van con la ruta" -- las paredes por tramo
+            // quedaban mal alineadas (el trazado real tiene algo de ruido punto a
+            // punto, y eso se nota mucho en paredes rectas entre puntos consecutivos).
+            // Ya no hacen tanta falta: con la gravedad apagada + el auto pegado al
+            // piso (CarController.FixedUpdate) alcanza para que no se caiga aunque
+            // no haya paredes -- sacadas para no meter un problema de colisión nuevo.
             float roadZAtStation = MapLayout.PavedRouteZAt(MapLayout.YpfStation.x);
             float padMidZ = roadZAtStation + (MapLayout.YpfPadNearZ + MapLayout.YpfPadFarZ) * 0.5f;
             float padEntryZ = roadZAtStation + MapLayout.YpfPadNearZ + 2f;
@@ -342,38 +342,6 @@ namespace FolkloreArchives.MapGen
                 if (dominant == 2) return true; // capa 2 = asfalto, la que más pesa acá
             }
             return false;
-        }
-
-        // Dos paredes invisibles (BoxCollider sin MeshRenderer) a los costados del
-        // tramo recto del autopiloto, bien altas (cubren cualquier variación real
-        // de altura del terreno) -- el auto no puede desviarse lo suficiente como
-        // para caerse por un costado del camino, sin depender de que el trazado
-        // sea geométricamente perfecto.
-        static void BuildInvisibleGuardrails(Transform parent, Vector2 from, Vector2 to, float referenceY)
-        {
-            const float corridorHalfWidth = 12f; // cuánto puede desviarse el auto a cada lado antes de chocar la pared
-            const float wallHeight = 100f;
-            const float wallThickness = 2f;
-
-            Vector2 dir2 = to - from;
-            float length = dir2.magnitude;
-            if (length < 1f) return;
-            dir2 /= length;
-            Vector2 perp = new Vector2(-dir2.y, dir2.x);
-            Vector2 mid2 = (from + to) * 0.5f;
-            float yaw = Mathf.Atan2(dir2.x, dir2.y) * Mathf.Rad2Deg;
-
-            for (int side = -1; side <= 1; side += 2)
-            {
-                Vector2 wallCenter2 = mid2 + perp * (corridorHalfWidth * side);
-                var wall = new GameObject("RoadGuardrail_" + (side < 0 ? "L" : "R"));
-                wall.transform.SetParent(parent);
-                wall.transform.position = new Vector3(wallCenter2.x, referenceY, wallCenter2.y);
-                wall.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-                var col = wall.AddComponent<BoxCollider>();
-                col.size = new Vector3(wallThickness, wallHeight, length);
-                wall.isStatic = true;
-            }
         }
 
         // AABB de todos los renderers (en mundo; con el auto en el origen = tamaño real del modelo).

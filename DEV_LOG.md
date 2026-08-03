@@ -7,6 +7,22 @@ See `MAP_README.md` for the static architecture reference.
 
 ---
 
+## 2026-08-01 (24) — Saca las paredes invisibles (quedaban mal alineadas con el trazado real)
+
+Owner: confirmó "21 puntos" trazados (mejora real sobre los 6 de
+antes), pero mostró en Scene view que las paredes invisibles por tramo
+quedaban torcidas/cruzadas -- el trazado real tiene algo de ruido punto
+a punto (normal en un camino curvo relevado por raycast), y eso se nota
+mucho en paredes rectas entre puntos consecutivos.
+
+Sacadas por completo (`BuildInvisibleGuardrails` eliminado, ya sin
+uso) -- ya no hacen tanta falta: la gravedad apagada + el auto pegado
+al piso (fix anterior en `CarController`) alcanza para que no se caiga
+aunque no haya paredes. Mejor no tener protección lateral que tener
+una mal puesta que además podría trabar al auto contra sí misma.
+
+**Necesita Regenerar.**
+
 ## 2026-08-01 (23) — TraceRoadByRaycast() v2: grilla ancha en vez de abanico angular (se perdía en curvas cerradas)
 
 Owner: confirmó "Ruta real trazada por asfalto: 6 puntos" -- encontró
