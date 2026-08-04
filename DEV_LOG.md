@@ -82,6 +82,28 @@ Fix: `HitIsAsphalt` ahora también reconoce la ruta por NOMBRE de objeto
 `MapGenerator`. Es un script runtime (`Assets/Scripts/CarAutoDrive.cs`)
 -- aplica solo con que Unity recompile, no hace falta Generate.
 
+**Quinta causa (LA IMPORTANTE, resuelta):** con lo anterior arreglado,
+el auto seguía sin respetar bien la ruta (iba derecho, muy lento). Se
+probó subir `steerGain` -- diagnóstico EQUIVOCADO, revertido después.
+La causa real: en `MapGenerator.Generate()`, `CarBuilder.
+SnapToRoadExtensionTip()` se llamaba justo después de
+`ApplySavedLayout()`, pero el código que vuelve a colgar las piezas
+`PavedRoad_Surface*` rescatadas por `DeleteMap()` dentro de
+`root.transform` corre MÁS ABAJO todavía. En el momento en que
+`SnapToRoadExtensionTip` buscaba esas piezas como hijas directas del
+mapa, TODAVÍA estaban sueltas en la raíz de la escena -- no encontraba
+ninguna (`pts.Count < 2`), abortaba EN SILENCIO (sin loguear nada), y
+quedaba vigente la ruta de fallback de 21 puntos que arma
+`CarBuilder.Build()` (`"Ruta real trazada por asfalto (raycast+material)"`,
+mucho más tosca que la real). Se detectó comparando qué log aparecía en
+consola: solo salía el de la ruta de 21 puntos, nunca el
+`"[CarBuilder] Opening-drive reconstruido desde la escena..."` de
+`SnapToRoadExtensionTip`. **Fix:** movido el llamado a
+`SnapToRoadExtensionTip` a DESPUÉS del bloque que re-parentea
+`PavedRoad_Surface*` de vuelta a `root.transform`. Es un script Editor
+(`Assets/editor/MapGenerator/MapGenerator.cs`) -- necesita correr
+Generate para tomar efecto.
+
 ---
 
 ## 2026-08-04 — Fix: el auto quedaba trabado entrando a la YPF (2 sistemas de corrección peleándose)
