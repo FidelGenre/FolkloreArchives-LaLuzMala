@@ -144,6 +144,14 @@ namespace FolkloreArchives.MapGen
             MapLayoutPersistence.ApplySavedLayout();
             Lap("Aplicar layout manual guardado");
 
+            // owner (companero): "reconstruimos TODA la ruta del auto desde la
+            // geometría de la escena, sin coordenadas hardcodeadas" -- tiene que
+            // correr ACÁ, después de ApplySavedLayout (con las extensiones de ruta
+            // y la YPF ya en su lugar real). Estaba escrito en CarBuilder.cs pero
+            // nunca se llamaba desde ningún lado -- quedó sin conectar en un merge.
+            CarBuilder.SnapToRoadExtensionTip(root.transform);
+            Lap("Reubicar auto sobre la ruta real (companero)");
+
             // Coser los terrenos VECINOS (el generado + los extra que agregó el owner)
             // para que no se vea la costura entre ellos. Auto-connect de Unity: terrenos
             // adyacentes con el mismo groupingID se unen solos. Se re-aplica cada Generate

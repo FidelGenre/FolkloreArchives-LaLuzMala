@@ -263,6 +263,30 @@ namespace FolkloreArchives.MapGen
             return car;
         }
 
+        // ── Reconstruir el opening-drive desde la geometría REAL de la escena ─────────
+        // owner: "que el auto salga de la punta de la ruta nueva", y después "en el cruce
+        // de las dos rutas se tira para la derecha; que siga hasta la YPF y recién ahí
+        // doble y entre".
+        //
+        // El problema de fondo: el owner arma la ruta A MANO. No solo agregó una extensión
+        // duplicando el asfalto ("PavedRoad_Surface (1)"), sino que también CORRIÓ todo el
+        // corredor: el asfalto original quedó en Z=-143 y la YPF en (449, -71.3, escala 2).
+        // Los waypoints que calcula Build() usan coordenadas de CÓDIGO (MapLayout.PavedRoute
+        // en Z≈40, YpfStation sin mover), así que al pasar de la extensión (bien puesta) al
+        // tramo original (movido) el auto se iba de la ruta.
+        //
+        // Solución robusta: acá, DESPUÉS de ApplySavedLayout (con todo ya en su lugar real),
+        // reconstruimos TODA la ruta del auto desde la geometría de la escena, sin coordenadas
+        // hardcodeadas — se adapta a donde el owner ponga las cosas (y haga Save Map Layout):
+        //   1) Junta la línea central de TODAS las piezas de asfalto vivas (base + extensiones)
+        //      como pieza.TransformPoint(centro de la ruta). El mesh del asfalto tiene sus
+        //      vértices en espacio-mundo de la ruta (RoadsideBuilder), así que esto da la
+        //      línea central exacta, ya movida/rotada.
+        //   2) Ordena esos puntos por X mundo (la punta lejana primero, la YPF al final).
+        //   3) Busca la YPF REAL en la escena y corta el recorrido cerca de ella; el auto
+        //      sigue derecho por la ruta y recién ahí dobla y entra al lote.
+        const float RoadY = 17.05f; // = MapLayout.RoadSurfaceHeight + lift (RoadsideBuilder)
+
         // Promedio de 3 puntos (el punto + sus 2 vecinos) para sacar zigzag del
         // trazado por raycast, sin perder la forma real de la curva. Los extremos
         // (primero/último) quedan tal cual -- no tienen 2 vecinos de cada lado.
@@ -364,6 +388,128 @@ namespace FolkloreArchives.MapGen
                 if (dominant == 2) return true; // capa 2 = asfalto, la que más pesa acá
             }
             return false;
+        }
+        // Dónde entra el auto a la estación, respecto del centro de la YPF (ver nota abajo).
+        static readonly Vector2 YpfEntryOffset = new Vector2(59.65f, -18.13f);
+        const float ParkBesidePumpDist = 3.5f; // a cuántos metros del surtidor frena el auto (al lado, no encima)
+
+        public static void SnapToRoadExtensionTip(Transform mapRoot)
+        {
+            var car = mapRoot.Find("Renault12");
+            if (car == null) return;
+            var route = MapLayout.PavedRoute;
+
+            // 1) Línea central de TODAS las piezas de asfalto (base "PavedRoad_Surface" +
+            //    extensiones "PavedRoad_Surface (N)"), en mundo, con su transform vivo.
+            var rxClone = new System.Text.RegularExpressions.Regex(@"^PavedRoad_Surface( \(\d+\))?$");
+            var pts = new System.Collections.Generic.List<Vector3>();
+            foreach (Transform child in mapRoot)
+            {
+                if (!rxClone.IsMatch(child.name)) continue;
+                for (int i = 0; i < route.Length; i++)
+                    pts.Add(child.TransformPoint(CenterLocal(route[i])));
+            }
+            if (pts.Count < 2) return; // sin asfalto en escena → no toco nada
+
+            // 2) Ordenar de la PUNTA (X alto, lejos del mapa) hacia la YPF (X bajo). Como la
+            //    base (X≤872) y las extensiones (X≳875) casi no se solapan y la ruta es
+            //    x-monótona, ordenar por X da un camino limpio y continuo.
+            pts.Sort((a, b) => b.x.CompareTo(a.x));
+
+            // 3) YPF REAL en la escena (el owner la movió/escaló). Fallback: posición de código.
+            Transform ypf = FindDeep(mapRoot, "ML_009_EstacionYPF") ?? FindDeep(mapRoot, "EstacionYPF");
+            Vector3 ypfPos = ypf != null
+                ? ypf.position
+                : new Vector3(MapLayout.YpfStation.x, RoadY, MapLayout.PavedRouteZAt(MapLayout.YpfStation.x));
+
+            // Spawn ~15m adentro de la punta, mirando hacia la YPF.
+            Vector3 spawn = pts[0];
+            int spawnIdx = 0;
+            float acc = 0f;
+            for (int i = 1; i < pts.Count; i++)
+            {
+                acc += Vector3.Distance(pts[i - 1], pts[i]);
+                spawn = pts[i]; spawnIdx = i;
+                if (acc >= 15f) break;
+            }
+            Vector3 fwd = pts[Mathf.Min(spawnIdx + 1, pts.Count - 1)] - spawn; fwd.y = 0f;
+            float yaw = fwd.sqrMagnitude > 0.0001f ? Mathf.Atan2(fwd.x, fwd.z) * Mathf.Rad2Deg : car.eulerAngles.y;
+            car.position = spawn + Vector3.up * 0.05f;
+            car.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            // Punto de ENTRADA a la estación, RELATIVO al centro de la YPF. El owner lo marcó
+            // una vez con el TEST_PLAYER en (508.65,-89.43), con la YPF en (449,-71.3) →
+            // offset (+59.65,-18.13). Se guarda relativo para que siga a la estación si la
+            // mueve. OJO: NO se lee del TEST_PLAYER vivo (ese objeto es el SPAWN del jugador y
+            // el owner lo mueve por otros motivos — al ponerlo al inicio del mapa el auto se
+            // iba hasta los árboles). Si querés correr dónde entra el auto, tocá este offset.
+            Vector2 entry = new Vector2(ypfPos.x + YpfEntryOffset.x, ypfPos.z + YpfEntryOffset.y);
+
+            // Punto FINAL: al lado de un surtidor. Buscamos surtidores DENTRO de la estación
+            // (cualquier objeto con "pump"/"surtidor"/"dispenser" en el nombre; posición viva
+            // ya movida/escalada), tomamos el más cercano a la entrada y paramos a
+            // ParkBesidePumpDist de él, del lado por el que llega el auto (no encima — la
+            // estación tiene colliders). Si NO encontramos ninguno (o falta el modelo), igual
+            // avanzamos hacia el centro de la estación para no frenar en el borde de la tierra.
+            Vector2 ypfXZ = new Vector2(ypfPos.x, ypfPos.z);
+            Transform searchRoot = ypf != null ? ypf : mapRoot;
+            Vector2 bestPump = Vector2.zero; float bestPumpD = float.MaxValue; int pumpCount = 0;
+            foreach (var t in searchRoot.GetComponentsInChildren<Transform>(true))
+            {
+                string n = t.name.ToLowerInvariant();
+                if (!(n.Contains("pump") || n.Contains("surtidor") || n.Contains("dispenser"))) continue;
+                pumpCount++;
+                Vector2 pxz = new Vector2(t.position.x, t.position.z);
+                float d = (pxz - entry).sqrMagnitude;
+                if (d < bestPumpD) { bestPumpD = d; bestPump = pxz; }
+            }
+            Vector2 park;
+            if (pumpCount > 0)
+            {
+                Vector2 toEntry = entry - bestPump;
+                Vector2 dir = toEntry.sqrMagnitude > 0.01f ? toEntry.normalized : Vector2.zero;
+                park = bestPump + dir * ParkBesidePumpDist; // frena al lado del surtidor
+            }
+            else
+            {
+                // sin surtidores detectados: avanzar hacia el centro de la estación
+                Vector2 toCenter = ypfXZ - entry;
+                park = entry + (toCenter.sqrMagnitude > 1f ? toCenter.normalized : Vector2.zero) * 22f;
+            }
+
+            // Arranca el giro ~15m ANTES (lado este) del punto de entrada, para doblar con
+            // avance y no en seco. pts va con X descendente.
+            int turnIdx = spawnIdx;
+            for (int i = spawnIdx; i < pts.Count; i++)
+                if (pts[i].x >= entry.x + 15f) turnIdx = i;
+
+            // 4) Waypoints: recto por la ruta hasta el giro, dobla en la entrada y sigue un
+            //    poco más hasta quedar al lado del surtidor.
+            var auto = car.GetComponent<FolkloreArchives.CarAutoDrive>();
+            if (auto != null)
+            {
+                var wps = new System.Collections.Generic.List<Vector2>();
+                for (int i = spawnIdx; i <= turnIdx; i++) wps.Add(new Vector2(pts[i].x, pts[i].z));
+                wps.Add(entry);                                            // dobla y entra
+                if ((park - entry).sqrMagnitude > 0.25f) wps.Add(park);    // sigue hasta el surtidor
+                auto.waypoints = wps.ToArray();
+            }
+
+            Debug.Log($"<color=lime>[CarBuilder] Opening-drive reconstruido desde la escena: {pts.Count} puntos de asfalto, " +
+                      $"spawn en la punta (X≈{pts[0].x:0}), entra en ({entry.x:0},{entry.y:0}), " +
+                      $"para en ({park.x:0},{park.y:0}) — {pumpCount} surtidores detectados.</color>");
+        }
+
+        // Centro de la ruta en el espacio LOCAL del mesh del asfalto (= espacio-mundo de la
+        // ruta original): PavedRoute[i] ya es el centro (x, z=PavedRouteZAt(x)).
+        static Vector3 CenterLocal(Vector2 routePt) => new Vector3(routePt.x, RoadY, routePt.y);
+
+        // Búsqueda recursiva por nombre bajo un Transform (incluye inactivos).
+        static Transform FindDeep(Transform root, string name)
+        {
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == name) return t;
+            return null;
         }
 
         // AABB de todos los renderers (en mundo; con el auto en el origen = tamaño real del modelo).
