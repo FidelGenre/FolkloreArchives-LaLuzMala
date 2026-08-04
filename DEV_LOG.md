@@ -28,6 +28,18 @@ dentro de `inLotZone` (el destino ahí es el playón, no la ruta). También
 bajado mucho el volumen de `WindAmbience` (0.35 → 0.015, quedó en el
 default viejo por algún reset de Plastic).
 
+**v2 (mismo día):** seguía trabándose, un poco ANTES de los últimos 3
+waypoints -- `inLotZone` (por ÍNDICE de waypoint) no coincidía con dónde
+el auto realmente cruza de asfalto a playón. Cambiado a distancia REAL
+restante (`remaining < slowdownDistance`, ~45m) en vez de conteo de
+waypoints -- cubre toda la zona final con margen.
+
+**Importante:** ninguno de estos 2 fixes necesita Generate (es lógica
+de C# pura en un script runtime) -- alcanza con que Unity recompile y
+darle Play. Correr Generate reconstruye el terreno con la caché/semilla
+LOCAL y puede romper la escena sincronizada del compañero (ver sección
+de abajo) -- no correrlo solo para probar un fix de código.
+
 ---
 
 ## Cómo está armada la ruta pavimentada y el spawn del auto (estado actual)

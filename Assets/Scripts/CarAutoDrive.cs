@@ -151,16 +151,21 @@ namespace FolkloreArchives
             // se busca el asfalto más cercano y se vira fuerte hacia ahí, no importa
             // qué tan mal esté el dato pre-horneado para este tramo.
             // owner: "al entrar a la gasolinera se queda trabado andando" -- DENTRO
-            // del lote de la YPF (inLotZone) el auto se mete a propósito en el
-            // playón/tierra junto al surtidor (SnapToRoadExtensionTip, en
-            // CarBuilder), que no siempre cuenta como "asfalto" para IsOnAsphalt --
-            // ahí este sistema de rescate lo tironeaba de vuelta hacia la ruta
-            // principal MIENTRAS el sistema de estacionamiento lo llevaba al
-            // surtidor, los dos empujando para lados opuestos sin que ninguno
-            // ganara nunca. Apagado adentro del lote: ahí el destino real es el
-            // playón, no el asfalto de la ruta.
-            bool rescuing = !inLotZone && !IsOnAsphalt(p);
-            float lotSteerGain = (inLotZone || sharpTurnAhead || rescuing) ? steerGain * 3f : steerGain;
+            // del lote de la YPF el auto se mete a propósito en el playón/tierra
+            // junto al surtidor (SnapToRoadExtensionTip, en CarBuilder), que no
+            // siempre cuenta como "asfalto" para IsOnAsphalt -- ahí este sistema de
+            // rescate lo tironeaba de vuelta hacia la ruta principal MIENTRAS el
+            // sistema de estacionamiento lo llevaba al surtidor. El primer intento
+            // apagaba el rescate solo con inLotZone (últimos 3 waypoints por
+            // ÍNDICE) -- owner: "se tranca cuando pasa el asfalto... e ingresa a la
+            // ruta [del lote]", el auto se sale del asfalto un poco ANTES de llegar
+            // a esos waypoints exactos (la transición asfalto→playón no coincide
+            // con el índice del waypoint). Cambiado a distancia REAL restante
+            // (`remaining`, ya calculado arriba) -- cubre toda la zona final con
+            // margen, sin depender de cuántos waypoints exactos falten.
+            bool nearDestination = inLotZone || remaining < slowdownDistance;
+            bool rescuing = !nearDestination && !IsOnAsphalt(p);
+            float lotSteerGain = (nearDestination || sharpTurnAhead || rescuing) ? steerGain * 3f : steerGain;
 
             // owner: "se pone a girar" -- MUY cerca de un waypoint, la dirección hacia
             // ÉSE punto se vuelve ruidosísima (un paso más y el ángulo salta 180°),
