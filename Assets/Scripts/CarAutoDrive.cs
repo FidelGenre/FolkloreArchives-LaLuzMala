@@ -150,7 +150,16 @@ namespace FolkloreArchives
             // sobre lo que decía el waypoint horneado (ver más abajo, en el steer):
             // se busca el asfalto más cercano y se vira fuerte hacia ahí, no importa
             // qué tan mal esté el dato pre-horneado para este tramo.
-            bool rescuing = !IsOnAsphalt(p);
+            // owner: "al entrar a la gasolinera se queda trabado andando" -- DENTRO
+            // del lote de la YPF (inLotZone) el auto se mete a propósito en el
+            // playón/tierra junto al surtidor (SnapToRoadExtensionTip, en
+            // CarBuilder), que no siempre cuenta como "asfalto" para IsOnAsphalt --
+            // ahí este sistema de rescate lo tironeaba de vuelta hacia la ruta
+            // principal MIENTRAS el sistema de estacionamiento lo llevaba al
+            // surtidor, los dos empujando para lados opuestos sin que ninguno
+            // ganara nunca. Apagado adentro del lote: ahí el destino real es el
+            // playón, no el asfalto de la ruta.
+            bool rescuing = !inLotZone && !IsOnAsphalt(p);
             float lotSteerGain = (inLotZone || sharpTurnAhead || rescuing) ? steerGain * 3f : steerGain;
 
             // owner: "se pone a girar" -- MUY cerca de un waypoint, la dirección hacia

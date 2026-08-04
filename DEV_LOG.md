@@ -16,6 +16,20 @@ proyecto, ver más abajo).
 
 ---
 
+## 2026-08-04 — Fix: el auto quedaba trabado entrando a la YPF (2 sistemas de corrección peleándose)
+
+`CarAutoDrive`'s "volver al asfalto si se desvía" (`rescuing`, ver más
+abajo) no reconocía el playón de tierra/pavimento junto al surtidor como
+"asfalto real" — adentro del lote tironeaba al auto de vuelta hacia la
+ruta principal MIENTRAS el sistema de estacionamiento del compañero
+(`SnapToRoadExtensionTip`) lo llevaba al surtidor real. Ninguno ganaba
+nunca → auto trabado, motor andando, sin llegar. Apagado `rescuing`
+dentro de `inLotZone` (el destino ahí es el playón, no la ruta). También
+bajado mucho el volumen de `WindAmbience` (0.35 → 0.015, quedó en el
+default viejo por algún reset de Plastic).
+
+---
+
 ## Cómo está armada la ruta pavimentada y el spawn del auto (estado actual)
 
 - **`PavedRoad_Surface` y `PavedRoad_Surface (1)`, `(2)`... NO son
