@@ -69,6 +69,19 @@ memoria, nunca se guardan como `.mat`) -- pero el caché seguía
 devolviendo la referencia vieja ya rota. **Fix:** `_napMatCache.Clear()`
 al principio de `BuildAlpHouse()`.
 
+**Cuarta causa (resuelta, script runtime, no relacionada a Generate):**
+con el mapa ya bien, el auto arrancaba a girar feo apenas empezaba a
+manejar solo (jugador y perro ya sentados adentro). Causa:
+`CarAutoDrive.HitIsAsphalt()` solo reconocía asfalto real por nombre de
+MATERIAL ("asphalt" en el nombre) -- la ruta real del compañero
+(`PavedRoad_Surface*`) no tiene por qué llamarse así. El auto arrancaba
+parado ENCIMA de esa pieza y el chequeo la rechazaba, activando
+`rescuing` (steering x3 buscando "asfalto real") desde el primer frame.
+Fix: `HitIsAsphalt` ahora también reconoce la ruta por NOMBRE de objeto
+(`PavedRoad_Surface*`), mismo criterio que ya usa `CarBuilder`/
+`MapGenerator`. Es un script runtime (`Assets/Scripts/CarAutoDrive.cs`)
+-- aplica solo con que Unity recompile, no hace falta Generate.
+
 ---
 
 ## 2026-08-04 — Fix: el auto quedaba trabado entrando a la YPF (2 sistemas de corrección peleándose)
