@@ -19,7 +19,16 @@ namespace FolkloreArchives.MapGen
         {
             BuildLake(parent, terrain);
             BuildGuardrail(parent, terrain);
-            BuildPavedRoadMesh(parent, terrain);
+            // BuildPavedRoadMesh(parent, terrain); -- DESACTIVADO 2026-08-04. Esto creaba
+            // un GameObject "PavedRoad_Surface" procedural NUEVO en CADA Generate (mesh
+            // baja de MapLayout.PavedRoute, la ruta VIEJA/estática) mientras que
+            // MapGenerator.DeleteMap() rescata y vuelve a colgar el "PavedRoad_Surface"
+            // REAL del compañero (a mano/EasyRoads3D, con sus extensiones "(N)") -- las
+            // dos ramas comparten nombre y terminaban duplicadas bajo el mismo padre,
+            // una encima de otra, en cada regenerado (la nueva desalineada con el
+            // terreno actual porque usa la ruta vieja, no la que el compañero extendió).
+            // Eso es lo que causaba el mapa fragmentado/con la ruta flotando después de
+            // Generate. La ruta real ya la provee el compañero; este mesh quedó obsoleto.
         }
 
         // ---------------- Paved road surface mesh ----------------

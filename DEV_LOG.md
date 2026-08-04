@@ -16,32 +16,34 @@ proyecto, ver más abajo).
 
 ---
 
-## ⚠️ REGLA ACTUAL: NO correr "Generate Greybox Map" en este workspace
+## 2026-08-04 — RAÍZ encontrada y arreglada: Generate duplicaba "PavedRoad_Surface"
 
-Confirmado varias veces el 2026-08-04: cada vez que se corre Generate acá,
-la ruta pavimentada (`PavedRoad_Surface*`) termina desalineada/flotando
-sobre el terreno fusionado (`Terrain_Merged`), aunque el log no muestre
-ningún error ni warning de terreno. Investigado el mecanismo de caché
-(`TerrainBuilder.UseMergedTerrain`) y parece correcto en el código -- la
-causa exacta de la desalineación no está identificada todavía, pero es
-100% reproducible: Generate → se desalinea; restaurar la escena
-sincronizada (sin Generate) → vuelve a verse bien.
+Causa exacta del mapa fragmentado/ruta flotando después de Generate:
+`RoadsideBuilder.BuildPavedRoadMesh()` creaba, en CADA Generate, un
+`GameObject` procedural nuevo llamado literalmente `"PavedRoad_Surface"`
+(mesh horneada desde `MapLayout.PavedRoute`, la ruta VIEJA/estática) —
+sin chequear si ya existía uno. Al mismo tiempo, `MapGenerator.DeleteMap()`
+rescata (desparentea antes de destruir la raíz vieja) cualquier objeto
+`PavedRoad_Surface*` para no perder la ruta REAL que arma el compañero a
+mano/EasyRoads3D — y ese rescatado se vuelve a colgar de la raíz nueva
+más adelante en `Generate()` (línea ~179). Resultado: dos objetos con el
+mismo nombre bajo el mismo padre en cada regenerado -- el rescatado
+(real, con las extensiones del compañero) y el procedural nuevo
+(desalineado, porque usa la ruta vieja y no el trazado extendido) --
+literalmente la escena queda fragmentada donde el mesh viejo no coincide
+con el terreno actual.
 
-**Mientras esto no esté resuelto: no correr Generate.** Los cambios de
-código en scripts RUNTIME (`Assets/Scripts/*.cs`, ej. `CarAutoDrive`,
-`CarController`) aplican solos con que Unity recompile — no necesitan
-Generate. Si hace falta probar algo que sí requiere Generate (un cambio
-en un Builder de `Assets/editor/MapGenerator/`), avisar ANTES de correrlo
-y tener un plan para poder restaurar la escena después
-(`cm undo "Assets/Scenes/SampleScene.unity"` trae de vuelta el último
-estado sincronizado, descartando lo que Generate haya roto).
+**Fix:** comentada la llamada a `BuildPavedRoadMesh()` en
+`RoadsideBuilder.Build()` (`Assets/editor/MapGenerator/RoadsideBuilder.cs`).
+La ruta real ya la provee el compañero y `CarBuilder.SnapToRoadExtensionTip()`
+la lee en vivo -- este mesh procedural quedó obsoleto y ahora ni se crea.
 
-**Pendiente para diagnosticar de raíz (no bloqueante):** comparar el log
-completo de un Generate contra el código de `DeleteMap()`/`UseMergedTerrain()`/
-`ApplySavedLayout()` paso a paso, con la escena ANTES vs. DESPUÉS
-comparada objeto por objeto (posición de `Terrain_Merged` vs. posición de
-cada `PavedRoad_Surface*`) para encontrar exactamente cuál de los dos se
-mueve.
+**Pendiente de confirmar:** correr Generate una vez más y verificar que
+el mapa carga conectado (sin el patch de terreno separado ni la ruta
+flotando). Si sigue mal, revisar si queda algún `PavedRoad_Surface` viejo
+en la escena de una corrida anterior (usar `Tools > Folklore Archives >
+Debug: Listar PavedRoad_Surface` para contarlos -- debería dar 2-3
+resultados reales, no docenas) y limpiarlos a mano antes de re-generar.
 
 ---
 
