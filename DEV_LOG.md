@@ -38,12 +38,28 @@ con el terreno actual.
 La ruta real ya la provee el compañero y `CarBuilder.SnapToRoadExtensionTip()`
 la lee en vivo -- este mesh procedural quedó obsoleto y ahora ni se crea.
 
-**Pendiente de confirmar:** correr Generate una vez más y verificar que
-el mapa carga conectado (sin el patch de terreno separado ni la ruta
-flotando). Si sigue mal, revisar si queda algún `PavedRoad_Surface` viejo
-en la escena de una corrida anterior (usar `Tools > Folklore Archives >
-Debug: Listar PavedRoad_Surface` para contarlos -- debería dar 2-3
-resultados reales, no docenas) y limpiarlos a mano antes de re-generar.
+**Segunda causa encontrada el mismo día (más importante):** aunque el
+mesh duplicado de la ruta ya no aparecía, Generate seguía dando un mapa
+"partido" (terreno igual, pero árboles/casas/campamento en posiciones
+distintas a las de la escena sincronizada) porque `layout_FullMap.json`
+estaba BORRADO -- sin ese archivo, `MapLayoutPersistence.ApplySavedLayout()`
+no tiene nada que reaplicar después de que los Builders procedurales
+reconstruyen todo desde cero, así que cualquier cosa ajustada a mano
+(fuera de lo que el código calcula por fórmula) se pierde en cada
+regenerado.
+
+**SOLUCIÓN QUE FUNCIONÓ:** con el mapa en el estado bueno (recién
+sincronizado, SIN tocar Generate), correr primero
+`Tools > Folklore Archives > Save Map Layout` (genera `layout_FullMap.json`
+fresco desde el estado actual) y RECIÉN DESPUÉS `Generate Greybox Map`.
+Confirmado por el owner: así el mapa vuelve a salir conectado e igual al
+que tiene el compañero. **Antes de tocar Generate en este workspace,
+correr siempre Save Map Layout primero con el mapa en buen estado.**
+
+**Pendiente:** con esto aplicado quedan un par de objetos en magenta
+(material Standard sin convertir a URP) cerca de la casa de la vieja /
+granja -- probablemente algo en `HouseBuilder.BuildBarn` o una submalla
+del prefab ALP que `NappinUrp()` no está agarrando. En diagnóstico.
 
 ---
 
