@@ -36,7 +36,14 @@ namespace FolkloreArchives
         // corta el acelerador al alcanzarlo (mismo patrón que ya usaba la frenada en
         // el lote, ahora aplicado a TODO el trayecto).
         public float cruiseSpeedKmh = 50f;
-        public float steerGain = 1f;
+        // Antes de hoy, un bug en HitIsAsphalt() (ver más abajo) dejaba 'rescuing'
+        // prendido casi todo el viaje sin querer, así que el auto viajaba SIEMPRE
+        // con steerGain*3 sin que nadie lo supiera -- al arreglar la detección de
+        // asfalto, quedó solo este valor base, que resultó ser muy débil para
+        // seguir las curvas reales (el auto se iba derecho / quedaba atravesado).
+        // Subido de 1 a 2.5 para compensar esa autoridad de giro que antes venía
+        // "gratis" por el bug.
+        public float steerGain = 2.5f;
         // owner: "al llegar a la ypf no frena el auto choca" -- el frenado solo miraba
         // la distancia del ÚLTIMO tramo (waypoint a waypoint), pero el giro hacia
         // adentro del lote de la YPF agrega un tramo final CORTO -- el auto llegaba a
