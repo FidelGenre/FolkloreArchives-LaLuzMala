@@ -36,14 +36,13 @@ namespace FolkloreArchives
         // corta el acelerador al alcanzarlo (mismo patrón que ya usaba la frenada en
         // el lote, ahora aplicado a TODO el trayecto).
         public float cruiseSpeedKmh = 50f;
-        // Antes de hoy, un bug en HitIsAsphalt() (ver más abajo) dejaba 'rescuing'
-        // prendido casi todo el viaje sin querer, así que el auto viajaba SIEMPRE
-        // con steerGain*3 sin que nadie lo supiera -- al arreglar la detección de
-        // asfalto, quedó solo este valor base, que resultó ser muy débil para
-        // seguir las curvas reales (el auto se iba derecho / quedaba atravesado).
-        // Subido de 1 a 2.5 para compensar esa autoridad de giro que antes venía
-        // "gratis" por el bug.
-        public float steerGain = 2.5f;
+        // owner: subido a 2.5 en un intento anterior de arreglar "no sigue la
+        // ruta" -- resultó ser el diagnóstico equivocado (la causa real era que
+        // SnapToRoadExtensionTip corría en el orden incorrecto en MapGenerator.cs
+        // y el auto terminaba usando una ruta de fallback de 21 puntos, mucho más
+        // tosca). Revertido a 1 -- con la ruta real (muchos más puntos, ya
+        // ordenada correctamente) este valor base debería alcanzar.
+        public float steerGain = 1f;
         // owner: "al llegar a la ypf no frena el auto choca" -- el frenado solo miraba
         // la distancia del ÚLTIMO tramo (waypoint a waypoint), pero el giro hacia
         // adentro del lote de la YPF agrega un tramo final CORTO -- el auto llegaba a
