@@ -16,6 +16,35 @@ proyecto, ver más abajo).
 
 ---
 
+## ⚠️ REGLA ACTUAL: NO correr "Generate Greybox Map" en este workspace
+
+Confirmado varias veces el 2026-08-04: cada vez que se corre Generate acá,
+la ruta pavimentada (`PavedRoad_Surface*`) termina desalineada/flotando
+sobre el terreno fusionado (`Terrain_Merged`), aunque el log no muestre
+ningún error ni warning de terreno. Investigado el mecanismo de caché
+(`TerrainBuilder.UseMergedTerrain`) y parece correcto en el código -- la
+causa exacta de la desalineación no está identificada todavía, pero es
+100% reproducible: Generate → se desalinea; restaurar la escena
+sincronizada (sin Generate) → vuelve a verse bien.
+
+**Mientras esto no esté resuelto: no correr Generate.** Los cambios de
+código en scripts RUNTIME (`Assets/Scripts/*.cs`, ej. `CarAutoDrive`,
+`CarController`) aplican solos con que Unity recompile — no necesitan
+Generate. Si hace falta probar algo que sí requiere Generate (un cambio
+en un Builder de `Assets/editor/MapGenerator/`), avisar ANTES de correrlo
+y tener un plan para poder restaurar la escena después
+(`cm undo "Assets/Scenes/SampleScene.unity"` trae de vuelta el último
+estado sincronizado, descartando lo que Generate haya roto).
+
+**Pendiente para diagnosticar de raíz (no bloqueante):** comparar el log
+completo de un Generate contra el código de `DeleteMap()`/`UseMergedTerrain()`/
+`ApplySavedLayout()` paso a paso, con la escena ANTES vs. DESPUÉS
+comparada objeto por objeto (posición de `Terrain_Merged` vs. posición de
+cada `PavedRoad_Surface*`) para encontrar exactamente cuál de los dos se
+mueve.
+
+---
+
 ## 2026-08-04 — Fix: el auto quedaba trabado entrando a la YPF (2 sistemas de corrección peleándose)
 
 `CarAutoDrive`'s "volver al asfalto si se desvía" (`rescuing`, ver más
