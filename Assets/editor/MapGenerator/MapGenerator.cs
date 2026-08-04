@@ -144,14 +144,6 @@ namespace FolkloreArchives.MapGen
             MapLayoutPersistence.ApplySavedLayout();
             Lap("Aplicar layout manual guardado");
 
-            // owner (companero): "reconstruimos TODA la ruta del auto desde la
-            // geometría de la escena, sin coordenadas hardcodeadas" -- tiene que
-            // correr ACÁ, después de ApplySavedLayout (con las extensiones de ruta
-            // y la YPF ya en su lugar real). Estaba escrito en CarBuilder.cs pero
-            // nunca se llamaba desde ningún lado -- quedó sin conectar en un merge.
-            CarBuilder.SnapToRoadExtensionTip(root.transform);
-            Lap("Reubicar auto sobre la ruta real (companero)");
-
             // Coser los terrenos VECINOS (el generado + los extra que agregó el owner)
             // para que no se vea la costura entre ellos. Auto-connect de Unity: terrenos
             // adyacentes con el mismo groupingID se unen solos. Se re-aplica cada Generate
@@ -181,6 +173,19 @@ namespace FolkloreArchives.MapGen
                 if (t.name.StartsWith("PavedRoad_Surface") && t.parent != root.transform)
                     t.SetParent(root.transform, true);
             }
+
+            // owner (companero): "reconstruimos TODA la ruta del auto desde la
+            // geometría de la escena, sin coordenadas hardcodeadas" -- tiene que
+            // correr ACÁ, DESPUÉS de que las piezas reales de la ruta (arriba) ya
+            // estén de vuelta colgadas de root.transform. Antes se llamaba justo
+            // después de ApplySavedLayout, TODAVÍA antes de este re-parenteo -- en
+            // ese momento las piezas rescatadas por DeleteMap seguían sueltas en la
+            // raíz de la escena, así que SnapToRoadExtensionTip no encontraba
+            // ninguna (pts.Count < 2), abortaba en silencio, y quedaba vigente la
+            // ruta vieja de 21 puntos que arma CarBuilder.Build() (raycast+material,
+            // mucho más tosca) -- el auto no seguía bien las curvas reales.
+            CarBuilder.SnapToRoadExtensionTip(root.transform);
+            Lap("Reubicar auto sobre la ruta real (companero)");
 
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene()); // salva el .unity para que el Build incluya el mapa
