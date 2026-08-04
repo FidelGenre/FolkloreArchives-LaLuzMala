@@ -165,6 +165,16 @@ namespace FolkloreArchives.MapGen
         //    terreno. Trae interior + colliders → se puede caminar adentro.
         static void BuildAlpHouse(Transform parent, Terrain terrain)
         {
+            // _napMatCache guarda materiales SOLO EN MEMORIA (nunca se guardan como
+            // .mat) keyeados por el material Standard original. Al ser `static`,
+            // sobrevive entre corridas de Generate dentro de la misma sesión del
+            // Editor -- pero cada Generate destruye TODO el mapa viejo (DeleteMap),
+            // y con eso los materiales que el caché seguía referenciando. La entrada
+            // vieja del diccionario quedaba apuntando a un Material ya inválido →
+            // esa pieza salía magenta/"Missing" en la corrida siguiente. Limpiar acá
+            // fuerza a crear materiales frescos en cada Generate.
+            _napMatCache.Clear();
+
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AlpHousePrefab);
             if (prefab == null)
             {
@@ -320,11 +330,21 @@ namespace FolkloreArchives.MapGen
                 }
         }
 
-        // ── Galpón/granero rústico de madera + chapa, techo a DOS AGUAS (procedural) ──
-        //    Detrás de la casa y mirando para el mismo lado (portón en +Z local).
-        const float BarnYaw = 180f;
+        // ── Galpón de la granja de la vieja ──────────────────────────────────
+        //    Usa el MODELO REAL descargado (BarnShed/ = ruined_house_4.glb, el mismo
+        //    que usaba la Estancia). Si falta, cae al galpón procedural de madera.
+        //    Al lado de la casa (OldLadyBarnCenter). Se hornea en cada Generate → es
+        //    regenerate-safe (no hay que moverlo a mano ni se pierde al regenerar).
+        const float BarnYaw = 90f;   // yaw del galpón (ajustar si el portón mira mal)
+        const string BarnModelDir = "Assets/ExternalAssets/BarnShed";
+        const float BarnTargetSize = 13f;   // lado mayor (X/Z) en metros
+        // GRANJA ABANDONADA (asset PSX de mcpato): reemplaza el galpón por el diorama
+        // entero. Poné false para VOLVER ATRÁS al galpón BarnShed viejo (código intacto).
+        const bool UseAbandonedFarm = true;
         static void BuildBarn(Transform parent, Terrain terrain)
         {
+            if (UseAbandonedFarm) { AbandonedFarmBuilder.Build(parent, terrain); return; }
+
             var g = BuilderUtils.Group(parent, "OldLadyBarn", Vector3.zero);
             Vector2 c = MapLayout.OldLadyBarnCenter;
             float gy = terrain != null
@@ -332,6 +352,37 @@ namespace FolkloreArchives.MapGen
                 : 20f;
             g.position = new Vector3(c.x, gy, c.y);
             g.rotation = Quaternion.Euler(0f, BarnYaw, 0f);
+
+            // ── Galpón REAL (modelo descargado). Si carga, lo uso y salgo. ──
+            var barnModel = FindModelIn(BarnModelDir);
+            if (barnModel != null)
+            {
+                var inst = (GameObject)PrefabUtility.InstantiatePrefab(barnModel);
+                inst.name = "GalponModelo";
+                inst.transform.SetParent(g, false);
+                inst.transform.localPosition = Vector3.zero;
+                inst.transform.localRotation = Quaternion.identity;
+                inst.transform.localScale = Vector3.one;
+
+                var rends = inst.GetComponentsInChildren<Renderer>();
+                if (rends.Length > 0)
+                {
+                    Bounds b = rends[0].bounds;
+                    foreach (var r in rends) b.Encapsulate(r.bounds);
+                    float dim = Mathf.Max(b.size.x, b.size.z);
+                    if (dim > 0.001f) inst.transform.localScale = Vector3.one * (BarnTargetSize / dim);
+                    // re-medir tras escalar y apoyar el fondo en el piso
+                    b = new Bounds(inst.transform.position, Vector3.zero);
+                    var all = inst.GetComponentsInChildren<Renderer>();
+                    b = all[0].bounds; foreach (var r in all) b.Encapsulate(r.bounds);
+                    inst.transform.position += new Vector3(0f, g.position.y - b.min.y, 0f);
+                }
+                BuilderUtils.MarkStaticRecursive(g);
+                Debug.Log("<color=lime>Galpón de la granja: modelo real (BarnShed) al lado de la casa.</color>");
+                return;
+            }
+            Debug.LogWarning("[HouseBuilder] no encontré el galpón en " + BarnModelDir +
+                             " — uso el galpón procedural de madera.");
 
             // MISMA madera que la casa ALP (su propia textura), para que combine.
             const string AlpTex = "Assets/ALP_Assets/country house01/Textures/";
@@ -401,6 +452,18 @@ namespace FolkloreArchives.MapGen
             lg.AddComponent<FolkloreArchives.LightFlicker>();
 
             BuilderUtils.MarkStaticRecursive(g);
+        }
+
+        // Busca el primer GameObject (modelo importado) dentro de una carpeta de assets.
+        static GameObject FindModelIn(string folder)
+        {
+            if (!AssetDatabase.IsValidFolder(folder)) return null;
+            foreach (var gu in AssetDatabase.FindAssets("t:GameObject", new[] { folder }))
+            {
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(gu));
+                if (go != null) return go;
+            }
+            return null;
         }
 
         static GameObject BarnBox(Transform g, Material m, Vector3 localCenter, Vector3 size)
