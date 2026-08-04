@@ -288,6 +288,15 @@ namespace FolkloreArchives
 
         static bool HitIsAsphalt(RaycastHit hit)
         {
+            // La ruta REAL que arma el compañero a mano (PavedRoad_Surface, y sus
+            // extensiones "PavedRoad_Surface (N)") no tiene por qué tener "asphalt"
+            // en el nombre de su material -- mismo criterio de nombre que ya usa el
+            // resto del código (CarBuilder.SnapToRoadExtensionTip, MapGenerator) para
+            // identificarla. Sin esto, el auto arrancaba "rescuing" (steering
+            // agresivo buscando asfalto) apenas empezaba a manejar, parado encima
+            // de la ruta real, porque el chequeo de material no la reconocía.
+            if (hit.collider.transform.name.StartsWith("PavedRoad_Surface")) return true;
+
             var rend = hit.collider.GetComponent<Renderer>();
             if (rend != null)
             {
