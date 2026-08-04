@@ -56,10 +56,18 @@ Confirmado por el owner: así el mapa vuelve a salir conectado e igual al
 que tiene el compañero. **Antes de tocar Generate en este workspace,
 correr siempre Save Map Layout primero con el mapa en buen estado.**
 
-**Pendiente:** con esto aplicado quedan un par de objetos en magenta
-(material Standard sin convertir a URP) cerca de la casa de la vieja /
-granja -- probablemente algo en `HouseBuilder.BuildBarn` o una submalla
-del prefab ALP que `NappinUrp()` no está agarrando. En diagnóstico.
+**Tercera causa (resuelta):** con lo de arriba aplicado, quedaban 1-2
+piezas magenta cerca de la casa de la vieja (ej. `q9:Mesh1`, una submalla
+real del prefab `House_Prefab` de ALP_Assets -- no es nada inventado por
+código nuestro, confirmado leyendo el .prefab). La causa: `NappinUrp()`
+(en `HouseBuilder.cs`) cachea los materiales URP convertidos en
+`_napMatCache`, un `Dictionary` **static** keyeado por el material
+Standard original -- sobrevive entre corridas de Generate en la misma
+sesión del Editor. Cada Generate destruye TODO el mapa viejo
+(`DeleteMap`), lo que puede invalidar esos materiales (viven solo en
+memoria, nunca se guardan como `.mat`) -- pero el caché seguía
+devolviendo la referencia vieja ya rota. **Fix:** `_napMatCache.Clear()`
+al principio de `BuildAlpHouse()`.
 
 ---
 
