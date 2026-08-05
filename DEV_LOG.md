@@ -115,7 +115,24 @@ mezclaban con los reales de la otra pieza justo en la zona de solape
 (la punta, donde arranca el auto) → zigzag. **Fix:** filtrar los puntos
 de cada pieza contra su propio bounding box real (XZ, con 8m de margen)
 antes de sumarlos a la lista combinada. Editor script -- necesita
-Generate.
+Generate. **(Superado por la séptima causa, abajo -- el filtro no
+filtraba nada porque cada pieza usa la malla COMPLETA de la ruta.)**
+
+**Séptima causa (LA REAL del zigzag, resuelta):** los waypoints nuevos
+estaban corridos ~10m hacia la banquina respecto del bake viejo que
+funcionaba (verificado comparando los dos arrays guardados en la escena:
+en X≈1868, el viejo decía z=+10.4 y el nuevo z≈−2). El auto perseguía
+esa línea corrida → chocaba el borde/guardarrail → rebotaba → zigzag.
+Causa de fondo: `SnapToRoadExtensionTip` reconstruía el centro de la
+ruta con `MapLayout.PavedRoute` (el trazado TEÓRICO del código), pero
+ese trazado cambió con la extensión del mapa de 200m y ya no coincide
+con la malla real que el compañero dejó colocada en la escena. **Fix:**
+la línea central ahora se lee DIRECTO de los vértices de la malla real
+de cada pieza (`RoadsideBuilder.BuildPavedRoadMesh` genera 5 vértices
+por sección transversal; el índice `i*5+1` es exactamente el centro),
+en el orden natural del recorrido, sin usar `MapLayout.PavedRoute` ni
+re-ordenar puntos globalmente por X (eso mezclaría piezas que se
+solapan). Editor script -- necesita Generate.
 
 ---
 
