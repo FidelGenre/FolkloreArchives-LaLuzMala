@@ -512,13 +512,17 @@ namespace FolkloreArchives.MapGen
 
             // Punto FINAL: al lado de un surtidor. Buscamos surtidores DENTRO de la estación
             // (cualquier objeto con "pump"/"surtidor"/"dispenser" en el nombre; posición viva
-            // ya movida/escalada), tomamos el más cercano a la entrada y paramos a
-            // ParkBesidePumpDist de él, del lado por el que llega el auto (no encima — la
-            // estación tiene colliders). Si NO encontramos ninguno (o falta el modelo), igual
-            // avanzamos hacia el centro de la estación para no frenar en el borde de la tierra.
+            // ya movida/escalada). Hay varias islas (Fuel_pump, _01, _02, _03 + sub-partes
+            // manguera/dispenser de cada una, ~14 objetos en total) -- "el más cercano a la
+            // entrada" quedaba en la isla de la izquierda. owner: "ponelo más a la derecha,
+            // donde está el otro coso de cargar nafta" -- señaló en el Editor el objeto
+            // exacto: Fuel_pump_03. Se prioriza esa isla por nombre si existe; si el modelo
+            // cambia algún día y no aparece, cae al criterio viejo (la más cercana a la
+            // entrada) en vez de romperse.
             Vector2 ypfXZ = new Vector2(ypfPos.x, ypfPos.z);
             Transform searchRoot = ypf != null ? ypf : mapRoot;
             Vector2 bestPump = Vector2.zero; float bestPumpD = float.MaxValue; int pumpCount = 0;
+            Vector2 preferredPump = Vector2.zero; bool foundPreferred = false;
             foreach (var t in searchRoot.GetComponentsInChildren<Transform>(true))
             {
                 string n = t.name.ToLowerInvariant();
@@ -527,7 +531,9 @@ namespace FolkloreArchives.MapGen
                 Vector2 pxz = new Vector2(t.position.x, t.position.z);
                 float d = (pxz - entry).sqrMagnitude;
                 if (d < bestPumpD) { bestPumpD = d; bestPump = pxz; }
+                if (!foundPreferred && n == "fuel_pump_03") { preferredPump = pxz; foundPreferred = true; }
             }
+            if (foundPreferred) bestPump = preferredPump;
             Vector2 park;
             if (pumpCount > 0)
             {
