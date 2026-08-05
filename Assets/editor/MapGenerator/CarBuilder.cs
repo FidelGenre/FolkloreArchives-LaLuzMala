@@ -392,6 +392,11 @@ namespace FolkloreArchives.MapGen
         // Dónde entra el auto a la estación, respecto del centro de la YPF (ver nota abajo).
         static readonly Vector2 YpfEntryOffset = new Vector2(59.65f, -18.13f);
         const float ParkBesidePumpDist = 3.5f; // a cuántos metros del surtidor frena el auto (al lado, no encima)
+        // owner: "debe frenar más a la derecha y más adelante" -- ajuste fino de dónde
+        // para exactamente, en el espacio local de la orientación final (adelante/
+        // derecha de cómo va a quedar mirando, ver 'parkYaw' en SnapToRoadExtensionTip).
+        const float ParkForwardOffset = 2f;
+        const float ParkRightOffset = 2f;
         // owner: "el auto va por la izquierda, debería ir por la derecha" (Argentina = mano
         // derecha). Corre los waypoints de la ruta esta cantidad hacia la DERECHA de la
         // dirección de viaje. Negativo = izquierda (por si hay que invertir el lado).
@@ -538,12 +543,33 @@ namespace FolkloreArchives.MapGen
                 }
             }
             if (foundPreferred) bestPump = preferredPump;
+
+            // Orientación final (ver más abajo, auto.finalYaw): la de "Car5" (auto de
+            // referencia que señaló el owner) si existe, si no la del surtidor. Se
+            // busca ACÁ (antes de armar 'park') porque también hace falta para el
+            // ajuste de posición de abajo.
+            var refCar = FindDeepAnywhere("Car5");
+            bool hasParkYaw = refCar != null || foundPreferred;
+            float parkYaw = refCar != null ? refCar.eulerAngles.y : preferredPumpYaw;
+
             Vector2 park;
             if (pumpCount > 0)
             {
                 Vector2 toEntry = entry - bestPump;
                 Vector2 dir = toEntry.sqrMagnitude > 0.01f ? toEntry.normalized : Vector2.zero;
                 park = bestPump + dir * ParkBesidePumpDist; // frena al lado del surtidor
+
+                // owner: "debe frenar más a la derecha y más adelante" -- corrido en
+                // el espacio LOCAL de la orientación final (adelante/derecha respecto
+                // de cómo va a quedar mirando el auto, no ejes del mundo) para que el
+                // ajuste tenga sentido sin importar en qué YPF/ángulo se genere.
+                if (hasParkYaw)
+                {
+                    float rad = parkYaw * Mathf.Deg2Rad;
+                    Vector2 fwd = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
+                    Vector2 right = new Vector2(fwd.y, -fwd.x);
+                    park += fwd * ParkForwardOffset + right * ParkRightOffset;
+                }
             }
             else
             {
@@ -584,24 +610,13 @@ namespace FolkloreArchives.MapGen
                 // control de orientación final). Primer intento (rotación del
                 // surtidor Fuel_pump_03) NO coincidía con cómo queda el auto de
                 // referencia -- el modelo de la estación no trae esa convención.
-                // El owner señaló el auto de referencia en el Editor: "Car5", un
-                // decorado FUERA de FOLKLORE_MAP (grupo "car" aparte, no se regenera
-                // con el mapa) -- se busca en TODA la escena (no solo bajo el mapa) y
-                // se lee su rotación Y REAL DEL MUNDO por código (Transform.eulerAngles
-                // ya resuelve toda la cadena de padres -- copiarla a mano desde el
-                // Inspector local hubiera sido un cálculo con margen de error).
-                var refCar = FindDeepAnywhere("Car5");
-                if (refCar != null)
-                {
-                    auto.hasFinalYaw = true;
-                    auto.finalYaw = refCar.eulerAngles.y;
-                }
-                else if (foundPreferred)
-                {
-                    auto.hasFinalYaw = true;
-                    auto.finalYaw = preferredPumpYaw;
-                }
-                else auto.hasFinalYaw = false;
+                // El owner señaló el auto de referencia en el Editor: "Car5" (ver
+                // 'refCar'/'parkYaw' más arriba) -- se lee su rotación Y REAL DEL
+                // MUNDO por código (Transform.eulerAngles ya resuelve toda la cadena
+                // de padres -- copiarla a mano desde el Inspector local hubiera sido
+                // un cálculo con margen de error).
+                auto.hasFinalYaw = hasParkYaw;
+                if (hasParkYaw) auto.finalYaw = parkYaw;
             }
 
             Debug.Log($"<color=lime>[CarBuilder] Opening-drive reconstruido desde la escena: {pts.Count} puntos de asfalto, " +
