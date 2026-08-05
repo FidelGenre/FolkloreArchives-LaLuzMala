@@ -305,15 +305,26 @@ namespace FolkloreArchives
             Debug.Log($"<color=orange>[AUTO] CHOQUE contra '{c.collider.name}' en ({ct.x:0.0},{ct.z:0.0})</color>");
         }
 
-        // ¿Hay asfalto de verdad bajo el auto ahora mismo? Un solo raycast hacia
-        // abajo, mismo criterio que CarBuilder.IsAsphalt (Editor-time) pero en
-        // runtime: material con "asphalt" en el nombre, o la capa de asfalto
-        // (índice 2) dominante en el Terrain que sea.
-        static bool IsOnAsphalt(Vector3 worldPos)
+        // ¿Hay asfalto de verdad bajo el auto ahora mismo? Raycast hacia abajo,
+        // mismo criterio que CarBuilder.IsAsphalt (Editor-time) pero en runtime.
+        // OJO (encontrado con la telemetría, resc=True en TODAS las líneas): el rayo
+        // sale de 2m ARRIBA del auto hacia abajo -- con Physics.Raycast simple lo
+        // primero que tocaba era el TECHO del propio auto, nunca el asfalto, así que
+        // esto devolvía false SIEMPRE y el auto viajaba todo el trayecto en modo
+        // "rescate" (aim por FindNearestAsphalt + steerGain*3) en vez de seguir sus
+        // waypoints -- el zigzag de la punta era ese sistema eligiendo puntos raros.
+        // Igual que CarController.FixedUpdate: RaycastAll + ignorar los colliders
+        // propios (y triggers de historia, que también flotan sobre la ruta).
+        bool IsOnAsphalt(Vector3 worldPos)
         {
-            if (!Physics.Raycast(worldPos + Vector3.up * 2f, Vector3.down, out var hit, 10f))
-                return false;
-            return HitIsAsphalt(hit);
+            var hits = Physics.RaycastAll(worldPos + Vector3.up * 2f, Vector3.down, 10f, ~0, QueryTriggerInteraction.Ignore);
+            bool found = false; float bestD = float.MaxValue; RaycastHit best = default;
+            foreach (var h in hits)
+            {
+                if (h.transform == transform || h.transform.IsChildOf(transform)) continue;
+                if (h.distance < bestD) { bestD = h.distance; best = h; found = true; }
+            }
+            return found && HitIsAsphalt(best);
         }
 
         static bool HitIsAsphalt(RaycastHit hit)
