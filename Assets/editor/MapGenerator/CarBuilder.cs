@@ -395,7 +395,9 @@ namespace FolkloreArchives.MapGen
         // owner: "debe frenar más a la derecha y más adelante" -- ajuste fino de dónde
         // para exactamente, en el espacio local de la orientación final (adelante/
         // derecha de cómo va a quedar mirando, ver 'parkYaw' en SnapToRoadExtensionTip).
-        const float ParkForwardOffset = 2f;
+        // owner (2da vuelta): "lo necesito mucho más adelante" -- 2m no alcanzaba ni
+        // cerca, subido a 7m.
+        const float ParkForwardOffset = 7f;
         const float ParkRightOffset = 2f;
         // owner: "el auto va por la izquierda, debería ir por la derecha" (Argentina = mano
         // derecha). Corre los waypoints de la ruta esta cantidad hacia la DERECHA de la

@@ -273,15 +273,24 @@ namespace FolkloreArchives
                     // derecha" -- se probó una curva horneada (Bézier en CarBuilder)
                     // con puntos intermedios corridos a la derecha, pero chocaba
                     // contra el terreno/borde real (la curva no sabe qué hay ahí
-                    // físicamente). Esto en cambio corre el punto apuntado hacia la
-                    // DERECHA DEL AUTO (transform.right: siempre relativo a su rumbo
-                    // actual, nunca "afuera" de la ruta real) una cantidad que CRECE
-                    // a medida que se acerca a la entrada -- el volante mira cada vez
-                    // más a la derecha de forma progresiva (recalculado cada frame,
-                    // no un salto), sin depender de geometría horneada que pueda
-                    // clavarse en un árbol o una barranca que no conocemos de antemano.
+                    // físicamente). Esto en cambio corre el punto apuntado una
+                    // cantidad que CRECE a medida que se acerca a la entrada.
+                    // owner: "se esta chocando el auto metiendo volantazos todo" --
+                    // el primer intento corría el punto hacia transform.right (la
+                    // derecha DEL AUTO), que cambia cada frame MIENTRAS el auto gira
+                    // en respuesta a ese mismo corrimiento -- lazo de realimentación
+                    // (gira → el punto se corre porque "derecha" cambió → gira más →
+                    // se corre más...), el volantazo en cadena. Ahora la dirección es
+                    // FIJA: la del tramo de ruta (waypoint anterior → entrada), que no
+                    // depende del rumbo del auto -- sigue "abriendo" la curva hacia la
+                    // derecha, pero de forma estable, sin retroalimentarse.
+                    Vector2 prevWp = _index > 0 ? waypoints[_index - 1] : new Vector2(p.x, p.z);
+                    Vector2 segToEntry = target - prevWp;
+                    Vector3 stableRight = segToEntry.sqrMagnitude > 0.01f
+                        ? new Vector3(segToEntry.y, 0f, -segToEntry.x).normalized
+                        : transform.right;
                     float closeness = 1f - Mathf.Clamp01(dist / (arriveRadius * 5f)); // 0 lejos -> 1 cerca
-                    aimPoint += transform.right * (entryRightBias * closeness);
+                    aimPoint += stableRight * (entryRightBias * closeness);
                 }
                 Vector3 toTarget = aimPoint - p; toTarget.y = 0f;
                 float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
