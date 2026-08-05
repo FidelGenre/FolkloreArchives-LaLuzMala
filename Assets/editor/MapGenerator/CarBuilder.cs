@@ -396,13 +396,17 @@ namespace FolkloreArchives.MapGen
         // derecha). Corre los waypoints de la ruta esta cantidad hacia la DERECHA de la
         // dirección de viaje. Negativo = izquierda (por si hay que invertir el lado).
         const float RightLaneOffset = 8f;
-        // Cuántos metros ANTES de la entrada arranca el giro hacia la YPF.
-        // owner: "no está doblando donde tiene que doblar, debería doblar 5 metros
-        // después" -- era 15; con 15 la diagonal cruzaba el borde del asfalto apenas
-        // al ESTE de la rampa calibrada y el auto rozaba/trancaba contra la barranca
-        // (telemetría: APOYADO contra Terrain_Merged en ~(517,-90), a metros de la
-        // entrada). Con 10, el cruce cae sobre la rampa.
-        const float TurnBeforeEntry = 10f;
+        // Cuántos metros ANTES de la entrada arranca el giro hacia la YPF. Este valor
+        // controla dos cosas a la vez: CUÁNDO empieza a doblar (menos metros = dobla
+        // más tarde) Y qué tan CERRADO es el giro (el mismo cambio de rumbo, ruta →
+        // entrada, comprimido en menos distancia = giro más brusco).
+        // Historial: 15 (cruzaba el asfalto muy al este, rozaba la barranca) -> 10
+        // ("debería doblar 5 metros después") -> 0 (owner: "no está entrando derecho,
+        // dobla 10m después y dobla más -- no está doblando tanto, se choca contra un
+        // árbol la punta" -- con 10 el auto seguía derecho de más y el corte hacia la
+        // entrada quedaba muy amplio/lento para el margen real que hay hasta el árbol).
+        // En 0: derecho hasta la línea de la entrada y ahí sí, giro corto y cerrado.
+        const float TurnBeforeEntry = 0f;
 
         public static void SnapToRoadExtensionTip(Transform mapRoot)
         {
