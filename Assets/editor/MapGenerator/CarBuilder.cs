@@ -396,6 +396,13 @@ namespace FolkloreArchives.MapGen
         // derecha). Corre los waypoints de la ruta esta cantidad hacia la DERECHA de la
         // dirección de viaje. Negativo = izquierda (por si hay que invertir el lado).
         const float RightLaneOffset = 8f;
+        // Cuántos metros ANTES de la entrada arranca el giro hacia la YPF.
+        // owner: "no está doblando donde tiene que doblar, debería doblar 5 metros
+        // después" -- era 15; con 15 la diagonal cruzaba el borde del asfalto apenas
+        // al ESTE de la rampa calibrada y el auto rozaba/trancaba contra la barranca
+        // (telemetría: APOYADO contra Terrain_Merged en ~(517,-90), a metros de la
+        // entrada). Con 10, el cruce cae sobre la rampa.
+        const float TurnBeforeEntry = 10f;
 
         public static void SnapToRoadExtensionTip(Transform mapRoot)
         {
@@ -444,7 +451,7 @@ namespace FolkloreArchives.MapGen
             Vector3 ypfPos = ypf != null
                 ? ypf.position
                 : new Vector3(MapLayout.YpfStation.x, RoadY, MapLayout.PavedRouteZAt(MapLayout.YpfStation.x));
-            float turnX = ypfPos.x + YpfEntryOffset.x + 15f; // donde arranca el giro hacia la YPF
+            float turnX = ypfPos.x + YpfEntryOffset.x + TurnBeforeEntry; // donde arranca el giro hacia la YPF
 
             // 2b) MANO DERECHA (Argentina): correr la línea RightLaneOffset metros hacia
             //     la derecha de la dirección de viaje, punto por punto (RightOf respeta
@@ -530,11 +537,11 @@ namespace FolkloreArchives.MapGen
                 park = entry + (toCenter.sqrMagnitude > 1f ? toCenter.normalized : Vector2.zero) * 22f;
             }
 
-            // Arranca el giro ~15m ANTES (lado este) del punto de entrada, para doblar con
-            // avance y no en seco. pts va con X descendente.
+            // Arranca el giro TurnBeforeEntry metros ANTES (lado este) del punto de
+            // entrada, para doblar con avance y no en seco. pts va con X descendente.
             int turnIdx = spawnIdx;
             for (int i = spawnIdx; i < pts.Count; i++)
-                if (pts[i].x >= entry.x + 15f) turnIdx = i;
+                if (pts[i].x >= entry.x + TurnBeforeEntry) turnIdx = i;
 
             // 4) Waypoints: recto por la ruta hasta el giro, dobla en la entrada y sigue un
             //    poco más hasta quedar al lado del surtidor.
