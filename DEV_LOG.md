@@ -151,8 +151,15 @@ historia. **Fix:** `RaycastAll` ignorando los colliders del propio auto
 (mismo patrón que ya usaba `CarController.FixedUpdate`) y también los
 triggers (`QueryTriggerInteraction.Ignore` -- los triggers de historia
 flotan sobre la ruta y también daban falsos negativos). Script runtime
--- recompila y listo, sin Generate. La telemetría quedó puesta hasta
-confirmar que el auto anda bien; sacarla después.
+-- recompila y listo, sin Generate. **Confirmado por el owner: el auto
+ya sigue la ruta correctamente. Telemetría removida.**
+
+**ESTADO FINAL 2026-08-04: Generate funciona.** El flujo que quedó
+andando: con el mapa en buen estado, `Save Map Layout` una vez (ya
+hecho, `layout_FullMap.json` existe) → Generate reproduce el mapa
+correctamente, con el auto spawneando en la punta de la ruta real y
+manejando solo hasta la YPF. La regla vieja de "no correr Generate" ya
+no aplica.
 
 ---
 
