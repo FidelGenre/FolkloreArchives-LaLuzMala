@@ -189,8 +189,15 @@ namespace FolkloreArchives
                             targetY = probeY;
                     }
 
+                    // owner: mismo lugar exacto (x≈520-525) chocando siempre, pase lo
+                    // que pase con los sensores -- probablemente un desnivel fino
+                    // entre el collider de la ruta y el del terreno que a 48km/h los
+                    // sensores puntuales no siempre alcanzan a agarrar a tiempo.
+                    // "hacelo que vaya más alto... no tan pegado al piso" -- en vez de
+                    // seguir afinando la detección, más colchón de altura (0.05 -> 0.35)
+                    // para que ese tipo de desnivel fino deje de importar.
                     Vector3 pos = rb.position;
-                    pos.y = Mathf.MoveTowards(pos.y, targetY + 0.05f, 30f * Time.fixedDeltaTime);
+                    pos.y = Mathf.MoveTowards(pos.y, targetY + 0.35f, 30f * Time.fixedDeltaTime);
                     rb.position = pos;
                     var v = rb.linearVelocity; v.y = 0f; rb.linearVelocity = v;
                 }
