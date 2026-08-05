@@ -108,9 +108,18 @@ namespace FolkloreArchives
             StandPlayerBefore();
             if (carDoors != null && playerDoor != null) carDoors.SetDoor(playerDoor, true);
 
-            yield return new WaitUntil(() =>
-                player.CurrentSeat == car.rearLeft &&
-                (carDoors == null || playerDoor == null || !carDoors.IsOpen(playerDoor)));
+            // owner: "se está sentando arriba del perro... al cerrar la puerta no
+            // está arrancando" -- el banco trasero tiene los 3 asientos pegados
+            // (rearLeft/rearMid/rearRight), y la mira (RaycastTarget en
+            // PlayerVehicleInteractor) no sabe ni le importa qué puerta abrimos --
+            // elige el asiento más cerca del centro de pantalla sin importar la
+            // puerta, así que era fácil terminar sentado en rearMid (el del perro,
+            // justo al lado) en vez de rearLeft. Esperar específicamente
+            // "CurrentSeat == car.rearLeft" nunca se cumplía en ese caso. No importa
+            // en qué asiento trasero termine sentándose: lo que de verdad marca "ya
+            // subió y cerró todo" es estar sentado EN ALGÚN LADO y que no quede
+            // ninguna puerta del auto abierta.
+            yield return new WaitUntil(() => player.CurrentSeat != null && !AnyDoorOpen());
 
             // 2) recién ACÁ arranca el auto solo -- ya con el jugador sentado de
             // verdad y su puerta cerrada.
@@ -165,6 +174,15 @@ namespace FolkloreArchives
             if (carDoors != null && car.doors != null)
                 foreach (var d in car.doors)
                     if (d != null) carDoors.SetDoor(d, false);
+        }
+
+        // ¿queda alguna puerta del auto abierta? -- ver el WaitUntil de arriba.
+        bool AnyDoorOpen()
+        {
+            if (carDoors == null || car.doors == null) return false;
+            foreach (var d in car.doors)
+                if (d != null && carDoors.IsOpen(d)) return true;
+            return false;
         }
 
         // la puerta de car.doors[] más cercana a un punto (ej. un asiento) -- mismo
