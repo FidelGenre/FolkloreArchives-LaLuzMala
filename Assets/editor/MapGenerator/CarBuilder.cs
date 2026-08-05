@@ -523,6 +523,7 @@ namespace FolkloreArchives.MapGen
             Transform searchRoot = ypf != null ? ypf : mapRoot;
             Vector2 bestPump = Vector2.zero; float bestPumpD = float.MaxValue; int pumpCount = 0;
             Vector2 preferredPump = Vector2.zero; bool foundPreferred = false;
+            float preferredPumpYaw = 0f;
             foreach (var t in searchRoot.GetComponentsInChildren<Transform>(true))
             {
                 string n = t.name.ToLowerInvariant();
@@ -531,7 +532,10 @@ namespace FolkloreArchives.MapGen
                 Vector2 pxz = new Vector2(t.position.x, t.position.z);
                 float d = (pxz - entry).sqrMagnitude;
                 if (d < bestPumpD) { bestPumpD = d; bestPump = pxz; }
-                if (!foundPreferred && n == "fuel_pump_03") { preferredPump = pxz; foundPreferred = true; }
+                if (!foundPreferred && n == "fuel_pump_03")
+                {
+                    preferredPump = pxz; preferredPumpYaw = t.eulerAngles.y; foundPreferred = true;
+                }
             }
             if (foundPreferred) bestPump = preferredPump;
             Vector2 park;
@@ -573,6 +577,22 @@ namespace FolkloreArchives.MapGen
                 wps.Add(entry);                                            // dobla y entra
                 if ((park - entry).sqrMagnitude > 0.25f) wps.Add(park);    // sigue hasta el surtidor
                 auto.waypoints = wps.ToArray();
+
+                // owner: "necesito que estacione al lado del pump mirando para
+                // adelante... dejando el tanque para cargar, así como ese otro auto"
+                // -- antes el auto quedaba con el rumbo que le tocara al frenar (sin
+                // control de orientación final). Si encontramos el surtidor preferido
+                // (Fuel_pump_03), usamos SU rotación real en el mundo como referencia
+                // de "para dónde tiene que quedar mirando el auto parado" -- el modelo
+                // de la estación ya trae esa convención (el surtidor apunta hacia
+                // donde se para el auto a cargar). CarAutoDrive gira el auto EN EL
+                // LUGAR hacia ese ángulo recién al llegar (no mientras maneja).
+                if (foundPreferred)
+                {
+                    auto.hasFinalYaw = true;
+                    auto.finalYaw = preferredPumpYaw;
+                }
+                else auto.hasFinalYaw = false;
             }
 
             Debug.Log($"<color=lime>[CarBuilder] Opening-drive reconstruido desde la escena: {pts.Count} puntos de asfalto, " +

@@ -162,10 +162,18 @@ namespace FolkloreArchives
                     // el que tiene justo enfrente.
                     float targetY = hereY;
                     float halfWidth = box != null ? box.size.x * 0.5f : 1.4f;
+                    // owner: seguía rozando en la entrada a la YPF incluso con estos
+                    // sensores -- a 48km/h (~13 m/s) los 2.5m/1.2m fijos son solo
+                    // ~0.2s de anticipación, muy poco para un giro cerrado a esa
+                    // velocidad. Ahora la distancia de los sensores escala con la
+                    // velocidad actual (~0.35s de anticipación), con un piso para
+                    // cuando el auto está lento/parado.
+                    float lookAhead = Mathf.Max(2.5f, Mathf.Abs(speed) * 0.35f);
+                    float sideLookAhead = Mathf.Max(1.2f, Mathf.Abs(speed) * 0.2f);
                     Vector3[] probes = {
-                        rb.position + transform.forward * 2.5f,
-                        rb.position + transform.forward * 1.2f + transform.right * halfWidth,
-                        rb.position + transform.forward * 1.2f - transform.right * halfWidth,
+                        rb.position + transform.forward * lookAhead,
+                        rb.position + transform.forward * sideLookAhead + transform.right * halfWidth,
+                        rb.position + transform.forward * sideLookAhead - transform.right * halfWidth,
                     };
                     foreach (var probe in probes)
                     {

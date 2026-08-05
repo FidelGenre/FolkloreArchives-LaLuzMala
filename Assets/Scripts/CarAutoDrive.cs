@@ -58,6 +58,16 @@ namespace FolkloreArchives
         // entrada de la YPF. Ver 'aimingEntryGate' más abajo.
         public float entryRightBias = 6f;
 
+        // owner: "necesito que estacione al lado del pump mirando para adelante,
+        // dejando el tanque para cargar, así como ese otro auto" -- orientación
+        // final al llegar (grados, mundo). La pone CarBuilder desde la rotación
+        // real del surtidor elegido. Se aplica girando EN EL LUGAR recién al
+        // llegar (mientras maneja no se toca -- el steering normal ya hace su
+        // trabajo, esto es solo el acomodo final).
+        [HideInInspector] public bool hasFinalYaw;
+        [HideInInspector] public float finalYaw;
+        public float finalYawSpeed = 120f; // grados/seg del acomodo final
+
         public bool active;
         public bool HasArrived { get; private set; }
 
@@ -68,7 +78,21 @@ namespace FolkloreArchives
 
         void Update()
         {
-            if (!active || HasArrived || waypoints == null || waypoints.Length == 0 || car == null) return;
+            if (HasArrived)
+            {
+                // Acomodo final: ya frenado, gira EN EL LUGAR hasta la orientación que
+                // marcó CarBuilder (la del surtidor elegido) -- el steering normal no
+                // sirve acá (CarController solo gira con el auto en movimiento, ver
+                // FixedUpdate). Nada que hacer si no hay orientación objetivo.
+                if (hasFinalYaw)
+                {
+                    float cur = transform.eulerAngles.y;
+                    float next = Mathf.MoveTowardsAngle(cur, finalYaw, finalYawSpeed * Time.deltaTime);
+                    transform.rotation = Quaternion.Euler(0f, next, 0f);
+                }
+                return;
+            }
+            if (!active || waypoints == null || waypoints.Length == 0 || car == null) return;
 
             Vector3 p = transform.position;
             Vector2 target = waypoints[_index];
