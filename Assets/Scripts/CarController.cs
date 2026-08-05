@@ -58,12 +58,14 @@ namespace FolkloreArchives
         [HideInInspector] public float externalSteer = 0f;
 
         Rigidbody rb;
+        BoxCollider box;
         float speed;   // velocidad hacia adelante con signo
         float steer;
 
         void Awake()
         {
             rb = GetComponent<Rigidbody>();
+            box = GetComponent<BoxCollider>();
             rb.mass = 1200f;
             rb.linearDamping = 0f;
             rb.angularDamping = 4f;
@@ -146,20 +148,30 @@ namespace FolkloreArchives
                 bool hasHere = GroundYAt(rb.position, out hereY);
                 if (hasHere)
                 {
-                    // ... y también bajo la TROMPA (2.5m adelante). Encontrado con la
-                    // telemetría (entrada a la YPF): el terreno de tierra sube hacia el
-                    // playón, y como la altura solo seguía el piso del CENTRO, la trompa
-                    // chocaba la subida como una PARED (posición congelada, APOYADO
-                    // contra 'Terrain_Merged', ruedas girando). Mirando adelante, el auto
-                    // se eleva ANTES de que el collider muerda la barranca -- sube
-                    // lomadas/rampas de tierra como un auto real. Límite de escalón
-                    // (1.5m): una diferencia mayor es una pared/edificio/surtidor de
-                    // verdad -- ahí NO hay que treparse, que la colisión lo frene.
+                    // ... y también alrededor: adelante, y a los dos COSTADOS (mitad
+                    // del ancho del auto). Encontrado con telemetría (entrada a la
+                    // YPF): mirar solo adelante no alcanzaba -- el auto seguía
+                    // rozando/chocando repetido contra 'Terrain_Merged' en tramos
+                    // donde el desnivel de tierra queda al COSTADO del camino (un
+                    // lomo/cordón que corre en paralelo, no una subida de frente) --
+                    // la trompa pasaba libre pero una de las puertas mordía el
+                    // desnivel. Ahora se toma el punto MÁS ALTO entre el centro,
+                    // adelante y los dos costados (mismo límite de escalón de 1.5m
+                    // para no treparse a paredes/surtidores de verdad) -- el auto se
+                    // eleva para pasar por encima de cualquier lomo cercano, no solo
+                    // el que tiene justo enfrente.
                     float targetY = hereY;
-                    float aheadY;
-                    if (GroundYAt(rb.position + transform.forward * 2.5f, out aheadY)
-                        && aheadY > hereY && aheadY - hereY <= 1.5f)
-                        targetY = aheadY;
+                    float halfWidth = box != null ? box.size.x * 0.5f : 1.4f;
+                    Vector3[] probes = {
+                        rb.position + transform.forward * 2.5f,
+                        rb.position + transform.forward * 1.2f + transform.right * halfWidth,
+                        rb.position + transform.forward * 1.2f - transform.right * halfWidth,
+                    };
+                    foreach (var probe in probes)
+                    {
+                        if (GroundYAt(probe, out float probeY) && probeY > targetY && probeY - hereY <= 1.5f)
+                            targetY = probeY;
+                    }
 
                     Vector3 pos = rb.position;
                     pos.y = Mathf.MoveTowards(pos.y, targetY + 0.05f, 30f * Time.fixedDeltaTime);
