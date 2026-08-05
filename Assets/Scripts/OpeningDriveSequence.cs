@@ -50,9 +50,14 @@ namespace FolkloreArchives
         // lado del auto y la puerta de atrás abierta así está meando y cuando se sube y
         // cierra la puerta arranca el auto" -- offset local al auto, afuera de la
         // puerta trasera del jugador (rearLeft), mirando hacia el costado (no hacia el
-        // auto). Primera estimación, como todo lo demás de esta escena -- ajustar en
-        // vivo.
-        public Vector3 standPlayerBeforeLocal = new Vector3(-2.5f, 0f, -1.2f);
+        // auto). owner: "no está apareciendo el pj al lado del auto" -- el offset
+        // original (-2.5,0,-1.2) cayó AFUERA del asfalto (el auto spawnea en la punta
+        // misma de la ruta, donde el mapa se corta) y el jugador terminó cayendo al
+        // vacío (Y=-43 confirmado en el Inspector). Acercado bien al auto (sin
+        // desplazamiento adelante/atrás, solo al costado) para pisar la misma malla
+        // que el auto. Primera estimación, como todo lo demás de esta escena -- ajustar
+        // en vivo.
+        public Vector3 standPlayerBeforeLocal = new Vector3(-2f, 0f, 0f);
         public float standPlayerBeforeYaw = -90f; // grados locales al auto, hacia dónde mira parado
 
         [Header("Dónde vuelven a sentarse atrás después de la gasolinera (local al auto, mismo criterio que FriendNpcBuilder)")]
@@ -185,10 +190,31 @@ namespace FolkloreArchives
         {
             if (player == null || car == null) return;
             Vector3 pos = car.transform.TransformPoint(standPlayerBeforeLocal);
+            // owner: "no está apareciendo el pj al lado del auto" -- cayó al vacío
+            // (Y=-43 en el Inspector). El auto spawnea en la punta misma de la ruta
+            // (donde el mapa se corta), así que cualquier offset que se pase de la
+            // malla real cae afuera de todo. Red de seguridad: si NINGUNA de las dos
+            // fuentes (terreno, raycast) encuentra algo cerca de la altura del auto
+            // (±3m es más que suficiente para cualquier vereda/cordón real), usar la
+            // altura del propio auto en vez de lo que haya dado el sampleo -- nunca
+            // cae al vacío, en el peor caso aparece a la altura del auto en vez de
+            // pisando el suelo exacto.
+            float carY = car.transform.position.y;
+            float groundY = carY;
+            bool found = false;
             var terrain = Terrain.activeTerrain;
-            if (terrain != null) pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
-            if (Physics.Raycast(pos + Vector3.up * 5f, Vector3.down, out var hit, 10f, ~0, QueryTriggerInteraction.Ignore))
-                pos.y = Mathf.Max(pos.y, hit.point.y);
+            if (terrain != null)
+            {
+                float sampled = terrain.SampleHeight(pos) + terrain.transform.position.y;
+                if (Mathf.Abs(sampled - carY) <= 3f) { groundY = sampled; found = true; }
+            }
+            if (Physics.Raycast(pos + Vector3.up * 5f, Vector3.down, out var hit, 10f, ~0, QueryTriggerInteraction.Ignore)
+                && Mathf.Abs(hit.point.y - carY) <= 3f)
+            {
+                groundY = found ? Mathf.Max(groundY, hit.point.y) : hit.point.y;
+                found = true;
+            }
+            pos.y = found ? groundY : carY;
             var cc = player.GetComponent<CharacterController>();
             if (cc != null) cc.enabled = false; // no reasignar el transform de un CharacterController activo
             player.transform.position = pos;
