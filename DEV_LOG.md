@@ -134,6 +134,26 @@ en el orden natural del recorrido, sin usar `MapLayout.PavedRoute` ni
 re-ordenar puntos globalmente por X (eso mezclaría piezas que se
 solapan). Editor script -- necesita Generate.
 
+**Octava causa (LA REAL del zigzag, confirmada con telemetría):** con
+los waypoints ya verificados sobre el asfalto, el auto seguía igual. Se
+agregó telemetría runtime a `CarAutoDrive` (log 2x/seg de todo el estado
+del controlador + choques con nombre) y una sola corrida mostró el dato:
+`resc=True` en el 100% de las líneas, incluso con el auto andando
+perfecto por el centro de la ruta a 48 km/h. `IsOnAsphalt()` tiraba su
+raycast desde 2m ARRIBA del auto hacia abajo con `Physics.Raycast`
+simple: lo primero que tocaba era el TECHO del propio auto -- nunca
+llegaba al asfalto, devolvía `false` SIEMPRE, y el auto hacía TODO el
+trayecto en modo rescate (aim por `FindNearestAsphalt` + steerGain*3)
+en vez de seguir sus waypoints. El zigzag del arranque era ese sistema
+eligiendo puntos de asfalto laterales en la punta. Este bug estaba
+desde el principio -- explica por qué `rescuing` vivió prendido toda su
+historia. **Fix:** `RaycastAll` ignorando los colliders del propio auto
+(mismo patrón que ya usaba `CarController.FixedUpdate`) y también los
+triggers (`QueryTriggerInteraction.Ignore` -- los triggers de historia
+flotan sobre la ruta y también daban falsos negativos). Script runtime
+-- recompila y listo, sin Generate. La telemetría quedó puesta hasta
+confirmar que el auto anda bien; sacarla después.
+
 ---
 
 ## 2026-08-04 — Fix: el auto quedaba trabado entrando a la YPF (2 sistemas de corrección peleándose)
