@@ -406,8 +406,29 @@ namespace FolkloreArchives.MapGen
             foreach (Transform child in mapRoot)
             {
                 if (!rxClone.IsMatch(child.name)) continue;
+                // route[] es el trazado COMPLETO de MapLayout -- pasarlo entero por el
+                // transform de CADA pieza (incluidas las extensiones, mucho más chicas)
+                // puede EXTRAPOLAR muy por fuera de la malla real de esa pieza (el punto
+                // matemático existe, pero no hay asfalto ahí). Encontrado en vivo: el auto
+                // arrancaba en zigzag (izquierda-derecha) justo en la punta -- ahí es
+                // donde puntos extrapolados de una pieza se mezclaban, al ordenar por X,
+                // con puntos reales de la otra. Filtro: solo puntos que caen dentro del
+                // bounding box real (XZ, con margen) de ESTA pieza.
+                var rend = child.GetComponent<Renderer>();
+                float minX = float.NegativeInfinity, maxX = float.PositiveInfinity;
+                float minZ = float.NegativeInfinity, maxZ = float.PositiveInfinity;
+                if (rend != null)
+                {
+                    const float margin = 8f;
+                    minX = rend.bounds.min.x - margin; maxX = rend.bounds.max.x + margin;
+                    minZ = rend.bounds.min.z - margin; maxZ = rend.bounds.max.z + margin;
+                }
                 for (int i = 0; i < route.Length; i++)
-                    pts.Add(child.TransformPoint(CenterLocal(route[i])));
+                {
+                    Vector3 wp = child.TransformPoint(CenterLocal(route[i]));
+                    if (wp.x < minX || wp.x > maxX || wp.z < minZ || wp.z > maxZ) continue;
+                    pts.Add(wp);
+                }
             }
             if (pts.Count < 2) return; // sin asfalto en escena → no toco nada
 
