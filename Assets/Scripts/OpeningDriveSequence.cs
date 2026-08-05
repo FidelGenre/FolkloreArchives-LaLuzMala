@@ -46,6 +46,15 @@ namespace FolkloreArchives
         public Vector3 standMaleGreenJktLocal = new Vector3(3f, 0f, 2f);
         public Vector3 standFemaleSecLocal    = new Vector3(0f, 0f, 3.5f);
 
+        // owner: "necesito que el personaje principal al tocar play aparezca parado al
+        // lado del auto y la puerta de atrás abierta así está meando y cuando se sube y
+        // cierra la puerta arranca el auto" -- offset local al auto, afuera de la
+        // puerta trasera del jugador (rearLeft), mirando hacia el costado (no hacia el
+        // auto). Primera estimación, como todo lo demás de esta escena -- ajustar en
+        // vivo.
+        public Vector3 standPlayerBeforeLocal = new Vector3(-2.5f, 0f, -1.2f);
+        public float standPlayerBeforeYaw = -90f; // grados locales al auto, hacia dónde mira parado
+
         [Header("Dónde vuelven a sentarse atrás después de la gasolinera (local al auto, mismo criterio que FriendNpcBuilder)")]
         public Vector3 rearLeftLocal  = new Vector3(-0.620f, -0.1883f, -0.8f);
         public Vector3 rearMidLocal   = new Vector3(0f, -0.1883f, -0.75f);
@@ -82,13 +91,24 @@ namespace FolkloreArchives
             // cámara) ya corrió antes de llamar a SitRoutine.
             yield return null;
 
-            // 1) sentar al jugador y al perro reales, sin mira/E.
-            if (car.rearLeft != null) player.StartCoroutine(player.SitRoutine(car, car.rearLeft, null));
+            // 1) al perro lo sentamos directo (sin mira/E, como antes). Al jugador
+            // NO -- owner: "necesito que aparezca parado al lado del auto y la puerta
+            // de atrás abierta así está meando, y cuando se sube y cierra la puerta
+            // arranca el auto". Se lo para afuera, se le abre SU puerta (rearLeft), y
+            // se espera a que él mismo se siente y la cierre con E (misma interacción
+            // manual que cualquier puerta del juego) antes de arrancar.
             if (car.rearMid != null) dog.StartCoroutine(dog.SitRoutine(car, car.rearMid, null));
-            yield return new WaitForSeconds(player.enterDuration + 0.1f);
 
-            // 2) recién ACÁ arranca el auto solo -- ya con jugador y perro sentados
-            // del todo (glide de cámara terminado).
+            Transform playerDoor = NearestDoorTo(car.rearLeft != null ? car.rearLeft.position : car.transform.position);
+            StandPlayerBefore();
+            if (carDoors != null && playerDoor != null) carDoors.SetDoor(playerDoor, true);
+
+            yield return new WaitUntil(() =>
+                player.CurrentSeat == car.rearLeft &&
+                (carDoors == null || playerDoor == null || !carDoors.IsOpen(playerDoor)));
+
+            // 2) recién ACÁ arranca el auto solo -- ya con el jugador sentado de
+            // verdad y su puerta cerrada.
             if (autoDrive != null)
             {
                 car.autoPilot = true;
@@ -140,6 +160,40 @@ namespace FolkloreArchives
             if (carDoors != null && car.doors != null)
                 foreach (var d in car.doors)
                     if (d != null) carDoors.SetDoor(d, false);
+        }
+
+        // la puerta de car.doors[] más cercana a un punto (ej. un asiento) -- mismo
+        // criterio que PlayerVehicleInteractor.NearestDoor, pero acá solo hace falta
+        // encontrarla, no elegir entre "más cercana" y "abierta".
+        Transform NearestDoorTo(Vector3 pos)
+        {
+            if (car == null || car.doors == null) return null;
+            Transform best = null; float bd = float.MaxValue;
+            foreach (var d in car.doors)
+            {
+                if (d == null) continue;
+                float dist = Vector3.Distance(d.position, pos);
+                if (dist < bd) { bd = dist; best = d; }
+            }
+            return best;
+        }
+
+        // Para al jugador REAL afuera del auto, al lado de su puerta (standPlayerBeforeLocal),
+        // antes de que suba solo. Mismo criterio de piso que StandFriend (terreno vs.
+        // cualquier collider real más arriba, ej. una losa de cemento).
+        void StandPlayerBefore()
+        {
+            if (player == null || car == null) return;
+            Vector3 pos = car.transform.TransformPoint(standPlayerBeforeLocal);
+            var terrain = Terrain.activeTerrain;
+            if (terrain != null) pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
+            if (Physics.Raycast(pos + Vector3.up * 5f, Vector3.down, out var hit, 10f, ~0, QueryTriggerInteraction.Ignore))
+                pos.y = Mathf.Max(pos.y, hit.point.y);
+            var cc = player.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false; // no reasignar el transform de un CharacterController activo
+            player.transform.position = pos;
+            player.transform.rotation = car.transform.rotation * Quaternion.Euler(0f, standPlayerBeforeYaw, 0f);
+            if (cc != null) cc.enabled = true;
         }
 
         // desparenta al amigo del auto y lo deja parado (quieto, sin FriendWander --
