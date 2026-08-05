@@ -151,6 +151,15 @@ namespace FolkloreArchives
             Vector3 pos = car.transform.TransformPoint(localOffset);
             var terrain = Terrain.activeTerrain;
             if (terrain != null) pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
+            // owner: "es como si no tuviera colision para los npcs el suelo de la
+            // shell" -- en la YPF el piso real es una LOSA DE CEMENTO por encima del
+            // terreno crudo (mesh aparte, ver AreaPoiBuilder/PlayonAsfalto). Samplear
+            // SOLO el terreno los enterraba hasta los hombros bajo esa losa -- mismo
+            // bug (y mismo fix) que ya tiene FriendNpcBuilder para el spawn inicial
+            // cerca de la ruta pavimentada: quedarse con el piso MÁS ALTO de los dos
+            // (terreno vs. cualquier collider real justo arriba, tipo la losa).
+            if (Physics.Raycast(pos + Vector3.up * 5f, Vector3.down, out var hit, 10f, ~0, QueryTriggerInteraction.Ignore))
+                pos.y = Mathf.Max(pos.y, hit.point.y);
             // owner: "no recuperaron su tamaño inicial" al bajarse. SetParent(null,true)
             // preserva la escala MUNDIAL, que hereda la del auto — si el auto no está en
             // escala 1 el amigo queda chico/grande. Lo desparentamos SIN preservar mundo y
