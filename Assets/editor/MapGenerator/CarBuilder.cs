@@ -437,29 +437,43 @@ namespace FolkloreArchives.MapGen
             foreach (var pc in pieces) pts.AddRange(pc.line);
             if (pts.Count < 2) return; // sin asfalto en escena → no toco nada
 
-            // 2b) MANO DERECHA (Argentina): correr TODA la línea RightLaneOffset metros
-            //     hacia la derecha de la dirección de viaje, punto por punto (RightOf
-            //     respeta las curvas). El spawn, el yaw y los waypoints salen de esta
-            //     línea ya corrida. Los puntos de entrada/estacionamiento de la YPF NO
-            //     se corren (son lugares puntuales relativos a la estación, no carril).
-            //     Los offsets se calculan TODOS antes de aplicar ninguno, para que
-            //     RightOf lea la línea original y no una mezcla corrida/sin correr.
-            if (Mathf.Abs(RightLaneOffset) > 0.001f)
-            {
-                var shifted = new System.Collections.Generic.List<Vector3>(pts.Count);
-                for (int i = 0; i < pts.Count; i++)
-                {
-                    Vector2 r = RightOf(pts, i);
-                    shifted.Add(pts[i] + new Vector3(r.x, 0f, r.y) * RightLaneOffset);
-                }
-                pts = shifted;
-            }
-
             // 3) YPF REAL en la escena (el owner la movió/escaló). Fallback: posición de código.
+            //    (Se busca ANTES del corrimiento de carril de abajo, porque el fade del
+            //    corrimiento necesita saber dónde está el giro de entrada a la estación.)
             Transform ypf = FindDeep(mapRoot, "ML_009_EstacionYPF") ?? FindDeep(mapRoot, "EstacionYPF");
             Vector3 ypfPos = ypf != null
                 ? ypf.position
                 : new Vector3(MapLayout.YpfStation.x, RoadY, MapLayout.PavedRouteZAt(MapLayout.YpfStation.x));
+            float turnX = ypfPos.x + YpfEntryOffset.x + 15f; // donde arranca el giro hacia la YPF
+
+            // 2b) MANO DERECHA (Argentina): correr la línea RightLaneOffset metros hacia
+            //     la derecha de la dirección de viaje, punto por punto (RightOf respeta
+            //     las curvas). El spawn, el yaw y los waypoints salen de esta línea ya
+            //     corrida. Los puntos de entrada/estacionamiento de la YPF NO se corren
+            //     (son lugares puntuales relativos a la estación, no carril).
+            //     FADE cerca del giro: el corrimiento se desvanece en los últimos ~80m
+            //     antes del giro de entrada, para que el auto vuelva al centro y salga
+            //     del asfalto por la MISMA trayectoria diagonal que el owner calibró
+            //     (entry/park). Con el corrimiento a full hasta el final, el auto salía
+            //     del borde norte mucho antes y por otro punto -- ahí no hay rampa y
+            //     quedaba ENCAJADO en la zanja entre el terraplén de la ruta y la
+            //     barranca de tierra (confirmado con telemetría: posición congelada,
+            //     APOYADO contra 'PavedRoad_Surface' y 'Terrain_Merged' a la vez,
+            //     ruedas a 48 km/h).
+            //     Los offsets se calculan TODOS antes de aplicar ninguno, para que
+            //     RightOf lea la línea original y no una mezcla corrida/sin correr.
+            if (Mathf.Abs(RightLaneOffset) > 0.001f)
+            {
+                const float fadeLen = 80f;
+                var shifted = new System.Collections.Generic.List<Vector3>(pts.Count);
+                for (int i = 0; i < pts.Count; i++)
+                {
+                    Vector2 r = RightOf(pts, i);
+                    float k = Mathf.Clamp01((pts[i].x - turnX) / fadeLen); // 1 en ruta abierta, 0 en el giro
+                    shifted.Add(pts[i] + new Vector3(r.x, 0f, r.y) * (RightLaneOffset * k));
+                }
+                pts = shifted;
+            }
 
             // Spawn ~15m adentro de la punta, mirando hacia la YPF.
             Vector3 spawn = pts[0];
