@@ -141,18 +141,47 @@ namespace FolkloreArchives
             rb.useGravity = !autoPilot;
             if (autoPilot)
             {
-                var hits = Physics.RaycastAll(rb.position + Vector3.up * 5f, Vector3.down, 200f, ~0, QueryTriggerInteraction.Ignore);
-                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-                foreach (var h in hits)
+                // Piso bajo el CENTRO del auto (como siempre) ...
+                float hereY;
+                bool hasHere = GroundYAt(rb.position, out hereY);
+                if (hasHere)
                 {
-                    if (h.transform == transform || h.transform.IsChildOf(transform)) continue; // ignora al propio auto
+                    // ... y también bajo la TROMPA (2.5m adelante). Encontrado con la
+                    // telemetría (entrada a la YPF): el terreno de tierra sube hacia el
+                    // playón, y como la altura solo seguía el piso del CENTRO, la trompa
+                    // chocaba la subida como una PARED (posición congelada, APOYADO
+                    // contra 'Terrain_Merged', ruedas girando). Mirando adelante, el auto
+                    // se eleva ANTES de que el collider muerda la barranca -- sube
+                    // lomadas/rampas de tierra como un auto real. Límite de escalón
+                    // (1.5m): una diferencia mayor es una pared/edificio/surtidor de
+                    // verdad -- ahí NO hay que treparse, que la colisión lo frene.
+                    float targetY = hereY;
+                    float aheadY;
+                    if (GroundYAt(rb.position + transform.forward * 2.5f, out aheadY)
+                        && aheadY > hereY && aheadY - hereY <= 1.5f)
+                        targetY = aheadY;
+
                     Vector3 pos = rb.position;
-                    pos.y = Mathf.MoveTowards(pos.y, h.point.y + 0.05f, 30f * Time.fixedDeltaTime);
+                    pos.y = Mathf.MoveTowards(pos.y, targetY + 0.05f, 30f * Time.fixedDeltaTime);
                     rb.position = pos;
                     var v = rb.linearVelocity; v.y = 0f; rb.linearVelocity = v;
-                    break;
                 }
             }
+        }
+
+        // Altura del piso real (ignorando al propio auto y triggers) bajo un punto.
+        bool GroundYAt(Vector3 probe, out float y)
+        {
+            var hits = Physics.RaycastAll(probe + Vector3.up * 5f, Vector3.down, 200f, ~0, QueryTriggerInteraction.Ignore);
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            foreach (var h in hits)
+            {
+                if (h.transform == transform || h.transform.IsChildOf(transform)) continue;
+                y = h.point.y;
+                return true;
+            }
+            y = 0f;
+            return false;
         }
 
         public float SpeedKmh => Mathf.Abs(speed) * 3.6f;
