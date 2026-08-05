@@ -279,6 +279,30 @@ namespace FolkloreArchives
             car.autoPilot = true;
             car.externalThrottle = throttle;
             car.externalSteer = steer;
+
+            // TELEMETRÍA temporal para diagnosticar el zigzag/lentitud en vivo (owner
+            // la prueba, acá no hay acceso visual a Unity): 2 veces por segundo, todo
+            // el estado del controlador en una línea. Sacar cuando el auto ande bien.
+            _dbgTimer += Time.deltaTime;
+            if (_dbgTimer >= 0.5f)
+            {
+                _dbgTimer = 0f;
+                Debug.Log($"[AUTO] pos=({p.x:0.0},{p.z:0.0}) wp={_index}/{waypoints.Length} " +
+                          $"target=({target.x:0.0},{target.y:0.0}) dist={dist:0.0} vel={car.SpeedKmh:0.0}km/h " +
+                          $"steer={steer:0.00} thr={throttle:0.00} sharp={sharpTurnAhead} resc={rescuing} " +
+                          $"nearDest={nearDestination} rem={remaining:0}");
+            }
+        }
+
+        float _dbgTimer;
+
+        // Si el auto CHOCA contra algo mientras maneja solo, saberlo con nombre y
+        // lugar exactos (parte de la telemetría de arriba).
+        void OnCollisionEnter(Collision c)
+        {
+            if (!active || c.contactCount == 0) return;
+            var ct = c.GetContact(0).point;
+            Debug.Log($"<color=orange>[AUTO] CHOQUE contra '{c.collider.name}' en ({ct.x:0.0},{ct.z:0.0})</color>");
         }
 
         // ¿Hay asfalto de verdad bajo el auto ahora mismo? Un solo raycast hacia
