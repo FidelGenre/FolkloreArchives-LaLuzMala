@@ -128,10 +128,12 @@ namespace FolkloreArchives
             if (_model != null) { _modelScale = _model.localScale; _modelBasePos = _model.localPosition; }
             else _modelScale = Vector3.one;
             _net = GetComponent<NetCrouchSync>();
+            _bodyCol = GetComponent<Collider>(); // colisión del cuerpo (la agregan los builders); se apaga sentado
             _lastPos = transform.position;
         }
         Vector3 _modelBasePos;
         float _crouchT;
+        Collider _bodyCol;
 
         // ¿está agachado? Online: lo decide/replica NetCrouchSync (el dueño escribe,
         // todos leen). Solo: teclado local (Ctrl/C).
@@ -152,6 +154,11 @@ namespace FolkloreArchives
             float dt = Mathf.Max(1e-5f, Time.deltaTime);
             float speed = (transform.position - _lastPos).magnitude / dt;
             _lastPos = transform.position;
+
+            // Colisión del cuerpo: encendida cuando el personaje está en el mundo, APAGADA
+            // mientras va sentado en el auto (si no, su collider estático choca contra el
+            // Rigidbody del auto y traba/trepida el manejo).
+            if (_bodyCol != null && _bodyCol.enabled == seated) _bodyCol.enabled = !seated;
 
             if (seated)
             {

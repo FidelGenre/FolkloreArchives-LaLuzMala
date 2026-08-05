@@ -110,6 +110,13 @@ namespace FolkloreArchives.MapGen
             foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
             model.transform.localPosition = new Vector3(0f, -(b2.min.y - go.transform.position.y), 0f);
 
+            // owner: "los personajes no tienen colisión". CapsuleCollider en la raíz (donde
+            // vive HumanWalkAnim). Los criminales nunca se sientan → queda siempre sólido.
+            var col = go.AddComponent<CapsuleCollider>();
+            col.height = f.targetHeight;
+            col.radius = f.targetHeight * 0.16f;
+            col.center = new Vector3(0f, f.targetHeight * 0.5f, 0f);
+
             // material URP propio (si no, el FBX trae Standard = magenta en URP)
             var tex = LoadPointTex(f.tex);
             var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));

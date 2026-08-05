@@ -151,8 +151,15 @@ namespace FolkloreArchives
             Vector3 pos = car.transform.TransformPoint(localOffset);
             var terrain = Terrain.activeTerrain;
             if (terrain != null) pos.y = terrain.SampleHeight(pos) + terrain.transform.position.y;
-            friend.SetParent(null, true);
+            // owner: "no recuperaron su tamaño inicial" al bajarse. SetParent(null,true)
+            // preserva la escala MUNDIAL, que hereda la del auto — si el auto no está en
+            // escala 1 el amigo queda chico/grande. Lo desparentamos SIN preservar mundo y
+            // forzamos escala 1 (el Model conserva su propia escala de altura): así el amigo
+            // vuelve SIEMPRE a su tamaño de parado, sin importar la escala del auto.
+            friend.SetParent(null, false);
+            friend.localScale = Vector3.one;
             friend.position = pos;
+            friend.rotation = Quaternion.Euler(0f, friend.eulerAngles.y, 0f); // parado derecho
             var anim = friend.GetComponent<HumanWalkAnim>();
             if (anim != null) anim.seated = false;
         }

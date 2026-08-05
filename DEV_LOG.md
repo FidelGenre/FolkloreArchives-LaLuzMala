@@ -3,7 +3,9 @@
 Running log of AI-assisted changes to the greybox map generator, kept in this
 folder so any AI session (Claude, etc.) working on this project can catch up
 on recent context without re-deriving it from scratch. Newest entries on top.
-See `MAP_README.md` for the static architecture reference.
+See `MAP_README.md` for the static architecture reference, **`GUIA_MAPA.md` para entender el
+flujo de Regenerar y la persistencia (por qué "al regenerar se cambia todo" y cómo evitarlo)**,
+y `HANDOFF_Auto_YPF.md` para la config del auto/opening-drive + YPF.
 
 **2026-08-03: log reseteado a propósito.** El historial viejo (cientos de
 entradas) quedó lleno de intentos fallidos, diagnósticos equivocados y
@@ -48,6 +50,19 @@ reconstruyen todo desde cero, así que cualquier cosa ajustada a mano
 (fuera de lo que el código calcula por fórmula) se pierde en cada
 regenerado.
 
+**Mano derecha.** owner: "el auto va por la izquierda, debería ir por la derecha" (Argentina).
+El spawn y los waypoints de ruta se corren `RightLaneOffset`=**8m** hacia la DERECHA de la
+dirección de viaje (perpendicular por punto: `RightOf`, right = up×forward de Unity). Negativo
+invierte el lado. **Nota de integración:** la constante y el helper `RightOf` llegaron de la
+máquina de joaquin DEFINIDOS pero sin que nadie los llamara (mismo patrón "escrito pero sin
+conectar" que pasó con `SnapToRoadExtensionTip`) -- conectados en `SnapToRoadExtensionTip`
+(paso 2b): la línea central completa se corre punto por punto ANTES de calcular spawn/yaw/
+waypoints; los puntos de entrada y estacionamiento de la YPF no se corren (son lugares
+puntuales, no carril). Los offsets se calculan todos sobre la línea original antes de aplicar
+ninguno.
+
+---
+---
 **SOLUCIÓN QUE FUNCIONÓ:** con el mapa en el estado bueno (recién
 sincronizado, SIN tocar Generate), correr primero
 `Tools > Folklore Archives > Save Map Layout` (genera `layout_FullMap.json`

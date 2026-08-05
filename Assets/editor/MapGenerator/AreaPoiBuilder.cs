@@ -112,11 +112,9 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.MarkStaticRecursive(root);
         }
 
-        [MenuItem("Tools/Folklore Archives/Save Area POIs Layout")]
-        public static void SaveAreaPoisLayout() => ManualLayoutPersistence.Save("AreaPois", "AreasAndPOIs", PersistCount);
-
-        [MenuItem("Tools/Folklore Archives/Clear Area POIs Layout")]
-        public static void ClearAreaPoisLayout() => ManualLayoutPersistence.Clear("AreaPois");
+        // (Los menús "Save/Clear Area POIs Layout" se eliminaron: mover/guardar POIs ahora
+        //  es parte de "Save Map Layout", unificado con el resto del mapa. El registro
+        //  interno (Begin/Reg) sigue para colocar los POIs; Save Map Layout lo pisa al final.)
 
         // ---------------- ESTEPA + MOLINO ----------------
         static Transform Estepa(Transform parent, Terrain t)
@@ -421,7 +419,19 @@ namespace FolkloreArchives.MapGen
 
             // PLAYÓN de ASFALTO (mesh plano) — garantiza pavimento plano bajo la estación
             // SIN depender del rebuild del terreno. La estación y el Falcon se apoyan encima.
-            var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.55f, 0.55f, 0.57f)); // gris concreto claro (piso de estación)
+            // Piso de CEMENTO: textura de concreto gris liso (512px, seamless) tileada sobre
+            // el playón, con un leve tinte claro. Si falta la textura, queda el gris plano de
+            // antes. (Cambio horneado en el builder — se re-aplica en cada Generate.)
+            var asphalt = BuilderUtils.Mat("ypf_asphalt", new Color(0.72f, 0.72f, 0.73f)); // tinte cemento claro
+            var cementTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ExternalAssets/AbandonedFarm/Textures/concrete.png");
+            if (cementTex != null)
+            {
+                asphalt.mainTexture = cementTex;
+                if (asphalt.HasProperty("_BaseMap")) asphalt.SetTexture("_BaseMap", cementTex);
+                var tiling = new Vector2(MapLayout.YpfPadHalfX * 2f / 6f, (farZ - nearZ) / 6f); // ~1 repetición cada 6m
+                asphalt.mainTextureScale = tiling;
+                if (asphalt.HasProperty("_BaseMap")) asphalt.SetTextureScale("_BaseMap", tiling);
+            }
             if (asphalt.HasProperty("_Smoothness")) asphalt.SetFloat("_Smoothness", 0f);          // mate, no plástico
             if (asphalt.HasProperty("_SpecularHighlights")) asphalt.SetFloat("_SpecularHighlights", 0f);
             // Playón FINO apoyado en la altura del CENTRO del lote (no en los extremos: un
@@ -431,26 +441,33 @@ namespace FolkloreArchives.MapGen
             // TERRENO de verdad una vez: Tools > Rebuild Terrain (forzar) — el código de
             // HeightAt() ya aplana este lote a la altura de la ruta, solo falta ese paso.
             float halfX = MapLayout.YpfPadHalfX - 2f, halfZ = (farZ - nearZ) * 0.5f - 1f;
-            float padTop = p.y + 0.12f;
-            // owner: "sigue frenandose en la entrada... choca/queda trabado contra
-            // algo fisico" -- CreatePrimitive(Cube) deja puesto un BoxCollider por
-            // default, nunca sacado acá (a diferencia de otros props decorativos que sí
-            // llaman DestroyCol). Ese collider cubre TODO el lote (X 437-461, Z
-            // roadZ+11 a roadZ+33) con un borde de ~0.3m de alto justo donde el auto
-            // tiene que cruzar para entrar -- un cordón invisible que lo frenaba en
-            // seco. El terreno de abajo ya está aplanado a esta altura (HeightAt()),
-            // así que este cubo es puramente visual -- no necesita colisión propia.
+            // owner: "añadile colisión al piso de cemento". El playón AHORA es sólido (se
+            // conserva el BoxCollider que trae CreatePrimitive) para que el jugador se pare
+            // ENCIMA del cemento y no se hunda al terreno de abajo.
+            //
+            // Historia del auto trabado: antes este cubo asomaba +0.12m sobre el terreno →
+            // su BoxCollider formaba un cordón de ~12cm justo en la entrada y frenaba al
+            // auto. Ahora bajamos el playón CASI AL RAS del terreno (borde de solo ~0.02m):
+            // sigue tapando el suelo y dando piso sólido, pero el escalón es tan bajo que el
+            // auto lo cruza sin trabarse. El terreno de abajo ya está aplanado a la altura de
+            // la ruta (HeightAt()), así que el cemento queda parejo.
+            float padTop = p.y + 0.02f;
             var playon = BuilderUtils.Prim(PrimitiveType.Cube, "PlayonAsfalto", g,
                 new Vector3(p.x, padTop - 0.15f, p.z),
                 new Vector3(halfX * 2f, 0.3f, halfZ * 2f), asphalt);
-            DestroyCol(playon);
+            // (collider de caja conservado a propósito → piso de cemento sólido)
+            ParkingLines(g, p, padTop);   // líneas de estacionamiento (blancas + amarillas) — el owner las reacomoda
             p.y = padTop;   // todo lo de la estación se apoya sobre el playón
 
             // La estación ENTERA es el modelo descargado: GasStationProps trae TIENDA +
             // TECHO + SURTIDORES + CARTEL, todo junto. Se escala a ~24m (el conjunto es
             // ancho) y mira a la ruta (yaw 180). Si el modelo no está, se arma procedural.
             var st = SpawnModel(DirGasProps, g, p, 24f, 180f, false, "EstacionModelo", new Vector3(-90f, 0f, 0f));
-            if (st != null) HideCatalogClutter(st);   // oculta la fila de cajones/productos sueltos del exhibidor
+            if (st != null)
+            {
+                HideCatalogClutter(st);   // oculta la fila de cajones/productos sueltos del exhibidor
+                AddMeshColliders(st);     // owner: "colisiones a toda la estación" (tienda/techo/columnas/surtidores)
+            }
             if (st == null)
             {
                 // --- fallback procedural (solo si NO está el modelo) ---
@@ -484,6 +501,61 @@ namespace FolkloreArchives.MapGen
             return g;
         }
 
+        // ---------------- LÍNEAS DE ESTACIONAMIENTO (YPF) ----------------
+        // owner: "añadí líneas blancas o amarillas de estacionamiento, yo después las
+        // posiciono". Se hornean sobre el playón (cara superior = padTop), como cubos
+        // finitos apenas levantados (padTop + 0.03) para no pelear el z-fighting con el
+        // asfalto. Cada línea es un objeto suelto bajo el grupo "LineasEstacionamiento"
+        // (hijo de EstacionYPF): mové el grupo entero para trasladar todo, o cada línea
+        // por separado para acomodar las bahías. Sin colisión (puramente visual). Como se
+        // hornea en el builder, se re-crea igual en cada Generate; si querés fijar posiciones
+        // que moviste a mano, después de acomodarlas usá "Save Map Layout".
+        static void ParkingLines(Transform stationGroup, Vector3 padCenter, float padTop)
+        {
+            var group = BuilderUtils.Group(stationGroup, "LineasEstacionamiento",
+                new Vector3(padCenter.x, padTop, padCenter.z));
+
+            var white = BuilderUtils.Mat("ypf_line_white", new Color(0.90f, 0.90f, 0.87f));
+            if (white.HasProperty("_Smoothness")) white.SetFloat("_Smoothness", 0f);
+            if (white.HasProperty("_SpecularHighlights")) white.SetFloat("_SpecularHighlights", 0f);
+            var yellow = BuilderUtils.Mat("ypf_line_yellow", new Color(0.93f, 0.78f, 0.10f));
+            if (yellow.HasProperty("_Smoothness")) yellow.SetFloat("_Smoothness", 0f);
+            if (yellow.HasProperty("_SpecularHighlights")) yellow.SetFloat("_SpecularHighlights", 0f);
+
+            const float lineW = 0.15f;   // ancho de la raya
+            const float lineH = 0.05f;   // espesor (bien finito, apenas sobresale)
+            const float bayDepth = 5f;   // largo de la bahía (profundidad del auto)
+            const float bayWidth = 2.7f; // ancho de cada lugar
+            const int   dividers = 6;    // 6 rayas → 5 lugares
+            float y = padTop + 0.03f;    // apenas por encima del asfalto
+
+            float bankWidth = (dividers - 1) * bayWidth;
+            float x0 = padCenter.x - bankWidth * 0.5f;
+            float zAnchor = padCenter.z - 6f; // banco corrido hacia la ruta (lo reacomodás)
+
+            // BLANCAS: divisorias de bahía (corren en Z, la profundidad del auto)
+            for (int i = 0; i < dividers; i++)
+            {
+                float x = x0 + i * bayWidth;
+                var l = BuilderUtils.Prim(PrimitiveType.Cube, "LineaBahia_" + i, group,
+                    new Vector3(x, y, zAnchor), new Vector3(lineW, lineH, bayDepth), white);
+                DestroyCol(l);
+            }
+            // BLANCA: línea de tope al fondo de las bahías (corre en X)
+            var stop = BuilderUtils.Prim(PrimitiveType.Cube, "LineaTope", group,
+                new Vector3(padCenter.x, y, zAnchor + bayDepth * 0.5f),
+                new Vector3(bankWidth + lineW, lineH, lineW), white);
+            DestroyCol(stop);
+
+            // AMARILLAS de ejemplo (cordón/no estacionar) — el owner elige si las usa
+            var yA = BuilderUtils.Prim(PrimitiveType.Cube, "LineaAmarilla_0", group,
+                new Vector3(x0 - 1.5f, y, zAnchor), new Vector3(lineW, lineH, bayDepth + 2f), yellow);
+            DestroyCol(yA);
+            var yB = BuilderUtils.Prim(PrimitiveType.Cube, "LineaAmarilla_1", group,
+                new Vector3(x0 - 1.8f, y, zAnchor), new Vector3(lineW, lineH, bayDepth + 2f), yellow);
+            DestroyCol(yB);
+        }
+
         // ---------------- ESTANCIA + GALPÓN ----------------
         static Transform Estancia(Transform parent, Terrain t)
         {
@@ -496,26 +568,18 @@ namespace FolkloreArchives.MapGen
             return BuilderUtils.Group(parent, "Estancia", p);
         }
 
-        // ---------------- CAPILLA ANEGADA (modelo descargado) ----------------
+        // ---------------- CAPILLA ANEGADA (ELIMINADA) ----------------
+        // owner: sacar la Capilla Anegada. No alcanzaba con ocultarla + Save Map Layout
+        // porque el prefijo "ML_###" que le pone ManualLayoutPersistence.Register se CORRE
+        // entre generates (depende del orden de los Reg), así que la marca de "borrado"
+        // quedaba atada a un nombre que ya no coincidía → volvía a aparecer. Se VACÍA a un
+        // grupo vacío (mismo criterio que Estepa/Estancia) para NO tocar el conteo de
+        // Reg()/PersistCount y no correr los POIs que vienen después (Cementerio, Lookout).
         static Transform Capilla(Transform parent, Terrain t)
         {
             Vector2 xz = MapLayout.Capilla;
             float groundY = t.SampleHeight(new Vector3(xz.x, 0f, xz.y));
-            var g = BuilderUtils.Group(parent, "CapillaAnegada", new Vector3(xz.x, groundY, xz.y));
-            BuilderUtils.Label(g, "CAPILLA ANEGADA", new Vector3(xz.x, groundY + 9f, xz.y));
-
-            // medio HUNDIDA: apoyo el fondo ~2.5m bajo el nivel del suelo del río → el
-            // campanario/techo asoma del agua.
-            var sunk = new Vector3(xz.x, groundY - 2.5f, xz.y);
-            if (SpawnModel(DirChurch, g, sunk, 11f, Random.Range(0f, 360f), false, "CapillaModelo") == null)
-            {
-                // placeholder procedural: nave + campanario + cruz asomando
-                BuilderUtils.Prim(PrimitiveType.Cube, "Nave", g, new Vector3(xz.x, groundY + 0.5f, xz.y), new Vector3(6f, 4f, 9f), StoneGrey);
-                BuilderUtils.Prim(PrimitiveType.Cube, "Campanario", g, new Vector3(xz.x, groundY + 3f, xz.y - 4f), new Vector3(2.2f, 5f, 2.2f), StoneGrey);
-                BuilderUtils.Prim(PrimitiveType.Cube, "CruzV", g, new Vector3(xz.x, groundY + 6.5f, xz.y - 4f), new Vector3(0.2f, 1.3f, 0.2f), Wood);
-                BuilderUtils.Prim(PrimitiveType.Cube, "CruzH", g, new Vector3(xz.x, groundY + 6.2f, xz.y - 4f), new Vector3(0.8f, 0.2f, 0.2f), Wood);
-            }
-            return g;
+            return BuilderUtils.Group(parent, "CapillaAnegada", new Vector3(xz.x, groundY, xz.y));
         }
 
         // ---------------- CEMENTERIO ----------------
@@ -799,6 +863,24 @@ namespace FolkloreArchives.MapGen
         {
             var c = g.GetComponent<Collider>();
             if (c != null) Object.DestroyImmediate(c);
+        }
+
+        // Colisiones a TODO un modelo: una MeshCollider no-convexa por cada mesh ACTIVO.
+        // Pensado para props estáticos (la estación YPF): el jugador choca contra tienda,
+        // techo, columnas, surtidores y cartel — la geometría real, no una caja. Saltea los
+        // meshes inactivos (los cajones/productos que oculta HideCatalogClutter) y los que
+        // ya tengan collider. Horneado en el builder → se re-aplica en cada Generate.
+        static void AddMeshColliders(GameObject root)
+        {
+            int n = 0;
+            foreach (var mf in root.GetComponentsInChildren<MeshFilter>(false)) // false = solo activos
+            {
+                if (mf.sharedMesh == null || mf.GetComponent<Collider>() != null) continue;
+                var mc = mf.gameObject.AddComponent<MeshCollider>();
+                mc.sharedMesh = mf.sharedMesh;
+                n++;
+            }
+            Debug.Log($"<color=cyan>[YPF] {n} colliders (MeshCollider) agregados al modelo de la estación.</color>");
         }
 
         // Productos/cajones del exhibidor del modelo de la YPF que quedan "tirados" afuera.

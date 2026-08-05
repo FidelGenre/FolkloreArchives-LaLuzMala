@@ -392,6 +392,10 @@ namespace FolkloreArchives.MapGen
         // Dónde entra el auto a la estación, respecto del centro de la YPF (ver nota abajo).
         static readonly Vector2 YpfEntryOffset = new Vector2(59.65f, -18.13f);
         const float ParkBesidePumpDist = 3.5f; // a cuántos metros del surtidor frena el auto (al lado, no encima)
+        // owner: "el auto va por la izquierda, debería ir por la derecha" (Argentina = mano
+        // derecha). Corre los waypoints de la ruta esta cantidad hacia la DERECHA de la
+        // dirección de viaje. Negativo = izquierda (por si hay que invertir el lado).
+        const float RightLaneOffset = 8f;
 
         public static void SnapToRoadExtensionTip(Transform mapRoot)
         {
@@ -432,6 +436,24 @@ namespace FolkloreArchives.MapGen
             pieces.Sort((a, b) => b.tipX.CompareTo(a.tipX));
             foreach (var pc in pieces) pts.AddRange(pc.line);
             if (pts.Count < 2) return; // sin asfalto en escena → no toco nada
+
+            // 2b) MANO DERECHA (Argentina): correr TODA la línea RightLaneOffset metros
+            //     hacia la derecha de la dirección de viaje, punto por punto (RightOf
+            //     respeta las curvas). El spawn, el yaw y los waypoints salen de esta
+            //     línea ya corrida. Los puntos de entrada/estacionamiento de la YPF NO
+            //     se corren (son lugares puntuales relativos a la estación, no carril).
+            //     Los offsets se calculan TODOS antes de aplicar ninguno, para que
+            //     RightOf lea la línea original y no una mezcla corrida/sin correr.
+            if (Mathf.Abs(RightLaneOffset) > 0.001f)
+            {
+                var shifted = new System.Collections.Generic.List<Vector3>(pts.Count);
+                for (int i = 0; i < pts.Count; i++)
+                {
+                    Vector2 r = RightOf(pts, i);
+                    shifted.Add(pts[i] + new Vector3(r.x, 0f, r.y) * RightLaneOffset);
+                }
+                pts = shifted;
+            }
 
             // 3) YPF REAL en la escena (el owner la movió/escaló). Fallback: posición de código.
             Transform ypf = FindDeep(mapRoot, "ML_009_EstacionYPF") ?? FindDeep(mapRoot, "EstacionYPF");
@@ -520,6 +542,19 @@ namespace FolkloreArchives.MapGen
         // Centro de la ruta en el espacio LOCAL del mesh del asfalto (= espacio-mundo de la
         // ruta original): PavedRoute[i] ya es el centro (x, z=PavedRouteZAt(x)).
         static Vector3 CenterLocal(Vector2 routePt) => new Vector3(routePt.x, RoadY, routePt.y);
+
+        // Vector unitario "a la derecha" de la dirección de viaje en el punto i (plano XZ).
+        // Para forward (fx,fz), derecha = (fz,-fx) — regla de la mano derecha de Unity
+        // (right = up × forward), la mano correcta para tránsito por derecha.
+        static Vector2 RightOf(System.Collections.Generic.List<Vector3> pts, int i)
+        {
+            Vector3 a = pts[Mathf.Max(0, i - 1)];
+            Vector3 b = pts[Mathf.Min(pts.Count - 1, i + 1)];
+            Vector2 fwd = new Vector2(b.x - a.x, b.z - a.z);
+            if (fwd.sqrMagnitude < 1e-4f) return Vector2.zero;
+            fwd.Normalize();
+            return new Vector2(fwd.y, -fwd.x);
+        }
 
         // Búsqueda recursiva por nombre bajo un Transform (incluye inactivos).
         static Transform FindDeep(Transform root, string name)

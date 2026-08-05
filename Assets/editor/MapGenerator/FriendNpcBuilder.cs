@@ -262,6 +262,14 @@ namespace FolkloreArchives.MapGen
             foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
             model.transform.localPosition = new Vector3(0f, -(b2.min.y - go.transform.position.y), 0f);
 
+            // owner: "los personajes no tienen colisión". CapsuleCollider en la raíz (donde
+            // vive HumanWalkAnim). Sentado en el auto se APAGA solo (HumanWalkAnim) para no
+            // trabar el manejo; parado/caminando queda sólido.
+            var col = go.AddComponent<CapsuleCollider>();
+            col.height = f.targetHeight;
+            col.radius = f.targetHeight * 0.16f;
+            col.center = new Vector3(0f, f.targetHeight * 0.5f, 0f);
+
             // material(es) URP propio(s) (si no, el FBX trae Standard = magenta en URP)
             if (f.texParts != null)
             {
