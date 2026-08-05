@@ -397,45 +397,41 @@ namespace FolkloreArchives.MapGen
         {
             var car = mapRoot.Find("Renault12");
             if (car == null) return;
-            var route = MapLayout.PavedRoute;
 
             // 1) Línea central de TODAS las piezas de asfalto (base "PavedRoad_Surface" +
-            //    extensiones "PavedRoad_Surface (N)"), en mundo, con su transform vivo.
+            //    extensiones "PavedRoad_Surface (N)"), leída DIRECTO de los vértices de la
+            //    malla real de cada pieza -- no de MapLayout.PavedRoute. Encontrado en
+            //    vivo: reconstruir el centro con PavedRoute daba una línea corrida ~10m
+            //    hacia la banquina (el trazado de MapLayout cambió con la extensión del
+            //    mapa y ya no coincide con la malla que el compañero dejó colocada) -- el
+            //    auto perseguía esa línea corrida, chocaba el borde y zigzagueaba.
+            //    La malla (RoadsideBuilder.BuildPavedRoadMesh) se construye con 5
+            //    vértices por sección transversal, y el índice i*5+1 de cada sección es
+            //    EXACTAMENTE el centro de la ruta -- ese es el dato bueno, ya en el orden
+            //    del recorrido (sin re-ordenar nada dentro de una pieza).
             var rxClone = new System.Text.RegularExpressions.Regex(@"^PavedRoad_Surface( \(\d+\))?$");
-            var pts = new System.Collections.Generic.List<Vector3>();
+            var pieces = new System.Collections.Generic.List<(float tipX, System.Collections.Generic.List<Vector3> line)>();
             foreach (Transform child in mapRoot)
             {
                 if (!rxClone.IsMatch(child.name)) continue;
-                // route[] es el trazado COMPLETO de MapLayout -- pasarlo entero por el
-                // transform de CADA pieza (incluidas las extensiones, mucho más chicas)
-                // puede EXTRAPOLAR muy por fuera de la malla real de esa pieza (el punto
-                // matemático existe, pero no hay asfalto ahí). Encontrado en vivo: el auto
-                // arrancaba en zigzag (izquierda-derecha) justo en la punta -- ahí es
-                // donde puntos extrapolados de una pieza se mezclaban, al ordenar por X,
-                // con puntos reales de la otra. Filtro: solo puntos que caen dentro del
-                // bounding box real (XZ, con margen) de ESTA pieza.
-                var rend = child.GetComponent<Renderer>();
-                float minX = float.NegativeInfinity, maxX = float.PositiveInfinity;
-                float minZ = float.NegativeInfinity, maxZ = float.PositiveInfinity;
-                if (rend != null)
-                {
-                    const float margin = 8f;
-                    minX = rend.bounds.min.x - margin; maxX = rend.bounds.max.x + margin;
-                    minZ = rend.bounds.min.z - margin; maxZ = rend.bounds.max.z + margin;
-                }
-                for (int i = 0; i < route.Length; i++)
-                {
-                    Vector3 wp = child.TransformPoint(CenterLocal(route[i]));
-                    if (wp.x < minX || wp.x > maxX || wp.z < minZ || wp.z > maxZ) continue;
-                    pts.Add(wp);
-                }
+                var mf = child.GetComponent<MeshFilter>();
+                if (mf == null || mf.sharedMesh == null) continue;
+                var verts = mf.sharedMesh.vertices;
+                var line = new System.Collections.Generic.List<Vector3>(verts.Length / 5 + 1);
+                for (int i = 1; i < verts.Length; i += 5) // centro de cada sección
+                    line.Add(child.TransformPoint(verts[i]));
+                if (line.Count < 2) continue;
+                // dentro de la pieza, ir de la PUNTA (X alto) hacia la YPF (X bajo)
+                if (line[0].x < line[line.Count - 1].x) line.Reverse();
+                pieces.Add((line[0].x, line));
             }
+            var pts = new System.Collections.Generic.List<Vector3>();
+            // 2) Piezas ordenadas por su punta (X alto primero: extensión → base); cada
+            //    una ya viene en orden interno. NO se re-ordenan los puntos globalmente:
+            //    un sort por X mezclaría puntos de piezas distintas si se solapan.
+            pieces.Sort((a, b) => b.tipX.CompareTo(a.tipX));
+            foreach (var pc in pieces) pts.AddRange(pc.line);
             if (pts.Count < 2) return; // sin asfalto en escena → no toco nada
-
-            // 2) Ordenar de la PUNTA (X alto, lejos del mapa) hacia la YPF (X bajo). Como la
-            //    base (X≤872) y las extensiones (X≳875) casi no se solapan y la ruta es
-            //    x-monótona, ordenar por X da un camino limpio y continuo.
-            pts.Sort((a, b) => b.x.CompareTo(a.x));
 
             // 3) YPF REAL en la escena (el owner la movió/escaló). Fallback: posición de código.
             Transform ypf = FindDeep(mapRoot, "ML_009_EstacionYPF") ?? FindDeep(mapRoot, "EstacionYPF");
