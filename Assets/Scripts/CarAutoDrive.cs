@@ -182,6 +182,16 @@ namespace FolkloreArchives
             bool nearDestination = inLotZone || remaining < slowdownDistance;
             bool rescuing = !nearDestination && !IsOnAsphalt(p);
             float lotSteerGain = (nearDestination || sharpTurnAhead || rescuing) ? steerGain * 3f : steerGain;
+            // owner: "necesito que doble bastante más a la derecha" en la puerta de
+            // entrada a la YPF -- se probó abrir el camino con una curva de Bézier
+            // (en CarBuilder), pero la telemetría mostró que chocaba contra el
+            // terreno/borde real (la curva no sabe qué hay ahí) y adelantaba el
+            // frenado. Revertida esa curva; el giro extra se resuelve ACÁ en cambio,
+            // con más fuerza de volante -- el steering ya se recalcula cada frame en
+            // base al ángulo actual (proporcional, no un salto), así que aunque el
+            // número sea más alto el movimiento sigue siendo progresivo/suave, no
+            // "del tirón".
+            if (isEntryGate) lotSteerGain = steerGain * 6f;
 
             // owner: "se pone a girar" -- MUY cerca de un waypoint, la dirección hacia
             // ÉSE punto se vuelve ruidosísima (un paso más y el ángulo salta 180°),

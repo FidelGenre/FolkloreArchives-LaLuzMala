@@ -548,38 +548,23 @@ namespace FolkloreArchives.MapGen
             for (int i = spawnIdx; i < pts.Count; i++)
                 if (pts[i].x >= entry.x + TurnBeforeEntry) turnIdx = i;
 
-            // 4) Waypoints: recto por la ruta hasta el giro, CURVA suave hasta la
-            //    entrada (no un salto directo a un solo vértice filoso) y sigue un
+            // 4) Waypoints: recto por la ruta hasta el giro, dobla en la entrada y sigue un
             //    poco más hasta quedar al lado del surtidor.
+            // owner: probada una curva de Bézier acá (varios puntos intermedios hacia
+            // la entrada) para suavizar el giro -- REVERTIDA: la telemetría mostró que
+            // metía choques nuevos contra 'PavedRoad_Surface'/'Terrain_Merged' (la
+            // curva no sabe qué terreno hay realmente ahí, podía abombarse hacia un
+            // borde/árbol) Y adelantaba el frenado ("frena muy antes, hace una mini
+            // pausa") porque `inLotZone` mira el ÍNDICE del waypoint (`Length-3`) y
+            // agregar puntos corría ese índice antes en el trayecto real. Volvió al
+            // waypoint único -- la fuerza de giro extra ahora se resuelve en
+            // CarAutoDrive (steerGain de la puerta de entrada), no en la geometría.
             var auto = car.GetComponent<FolkloreArchives.CarAutoDrive>();
             if (auto != null)
             {
                 var wps = new System.Collections.Generic.List<Vector2>();
                 for (int i = spawnIdx; i <= turnIdx; i++) wps.Add(new Vector2(pts[i].x, pts[i].z));
-
-                // owner: "necesito que doble bastante más a la derecha pero que sea más
-                // suave y procedural, no del tirón" -- antes: un solo waypoint (`entry`)
-                // pegado al final de la ruta, así que el steering tenía que corregir
-                // TODO el ángulo de una sola vez en ese vértice (giro brusco, "del
-                // tirón"). Ahora: curva de Bézier cuadrática desde el último punto de
-                // ruta hasta 'entry', con el punto de control corrido `entryBulge`
-                // metros ADEMÁS hacia la derecha (respecto de la línea recta) -- eso
-                // hace que el camino se abra más a la derecha ANTES de cerrar hacia la
-                // entrada (dobla más) en vez de cortar en diagonal derecho (dobla
-                // "del tirón"). Muestreada en varios puntos: el giro se reparte en
-                // steering progresivo en vez de un cambio de rumbo instantáneo.
-                Vector2 p0 = new Vector2(pts[turnIdx].x, pts[turnIdx].z);
-                Vector2 rightDir = RightOf(pts, turnIdx);
-                const float entryBulge = 6f;
-                const int entrySteps = 6;
-                Vector2 ctrl = (p0 + entry) * 0.5f + rightDir * entryBulge;
-                for (int s = 1; s <= entrySteps; s++)
-                {
-                    float t = s / (float)entrySteps;
-                    Vector2 curvePt = (1f - t) * (1f - t) * p0 + 2f * (1f - t) * t * ctrl + t * t * entry;
-                    wps.Add(curvePt);
-                }
-
+                wps.Add(entry);                                            // dobla y entra
                 if ((park - entry).sqrMagnitude > 0.25f) wps.Add(park);    // sigue hasta el surtidor
                 auto.waypoints = wps.ToArray();
             }
