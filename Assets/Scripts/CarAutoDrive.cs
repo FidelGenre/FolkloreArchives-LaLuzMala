@@ -71,8 +71,15 @@ namespace FolkloreArchives
         public bool active;
         public bool HasArrived { get; private set; }
 
+        // owner: "necesito que sea más suave... metiendo volantazos todo" -- cuánto
+        // puede cambiar externalSteer por segundo (unidades de steer/seg). steer
+        // llega a pedir hasta ±steerGain*3 (zona cerca del destino) -- con este
+        // límite, ir de un extremo al otro toma ~1s en vez de ser instantáneo.
+        public float steerRateLimit = 6f;
+
         CarController car;
         int _index;
+        float _smoothedSteer;
 
         void Awake() => car = GetComponent<CarController>();
 
@@ -356,7 +363,18 @@ namespace FolkloreArchives
 
             car.autoPilot = true;
             car.externalThrottle = throttle;
-            car.externalSteer = steer;
+
+            // owner: "necesito que sea más suave... metiendo volantazos todo" -- el
+            // ángulo objetivo (steer, arriba) puede saltar de golpe frame a frame:
+            // un bache/roce contra el borde del asfalto empuja el auto y el ángulo
+            // hacia el target cambia brusco, o el aim se recalcula distinto al
+            // cruzar de un waypoint a otro. Antes eso iba DIRECTO al volante. Ahora
+            // se limita cuánto puede cambiar el volante por segundo (steerRateLimit)
+            // -- por más que el rumbo "correcto" cambie de un salto, el volante lo
+            // sigue gradual, no de un tirón. Amortigua tanto los golpes físicos como
+            // los recálculos de rumbo, sin importar la causa puntual de cada uno.
+            _smoothedSteer = Mathf.MoveTowards(_smoothedSteer, steer, steerRateLimit * Time.deltaTime);
+            car.externalSteer = _smoothedSteer;
 
             // TELEMETRÍA temporal (2da vez): ahora para diagnosticar el trancazo
             // entrando a la YPF. Mismo formato que la vez del zigzag. Sacar cuando
