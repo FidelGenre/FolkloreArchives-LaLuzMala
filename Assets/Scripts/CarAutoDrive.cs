@@ -279,7 +279,40 @@ namespace FolkloreArchives
             car.autoPilot = true;
             car.externalThrottle = throttle;
             car.externalSteer = steer;
+
+            // TELEMETRÍA temporal (2da vez): ahora para diagnosticar el trancazo
+            // entrando a la YPF. Mismo formato que la vez del zigzag. Sacar cuando
+            // la entrada + estacionamiento anden bien.
+            _dbgTimer += Time.deltaTime;
+            if (_dbgTimer >= 0.5f)
+            {
+                _dbgTimer = 0f;
+                Debug.Log($"[AUTO] pos=({p.x:0.0},{p.z:0.0}) wp={_index}/{waypoints.Length} " +
+                          $"target=({target.x:0.0},{target.y:0.0}) dist={dist:0.0} vel={car.SpeedKmh:0.0}km/h " +
+                          $"steer={steer:0.00} thr={throttle:0.00} sharp={sharpTurnAhead} resc={rescuing} " +
+                          $"nearDest={nearDestination} lot={inLotZone} rem={remaining:0}");
+            }
         }
+
+        float _dbgTimer;
+
+        // Choques con nombre y lugar exactos (parte de la telemetría).
+        void OnCollisionEnter(Collision c)
+        {
+            if (!active || c.contactCount == 0) return;
+            var ct = c.GetContact(0).point;
+            Debug.Log($"<color=orange>[AUTO] CHOQUE contra '{c.collider.name}' en ({ct.x:0.0},{ct.z:0.0})</color>");
+        }
+        void OnCollisionStay(Collision c)
+        {
+            if (!active || c.contactCount == 0) return;
+            _stayTimer += Time.fixedDeltaTime;
+            if (_stayTimer < 1f) return; // loguear solo contacto SOSTENIDO (1x/seg aprox)
+            _stayTimer = 0f;
+            var ct = c.GetContact(0).point;
+            Debug.Log($"<color=red>[AUTO] APOYADO contra '{c.collider.name}' en ({ct.x:0.0},{ct.z:0.0}) vel={car.SpeedKmh:0.0}km/h</color>");
+        }
+        float _stayTimer;
 
         // ¿Hay asfalto de verdad bajo el auto ahora mismo? Raycast hacia abajo,
         // mismo criterio que CarBuilder.IsAsphalt (Editor-time) pero en runtime.
