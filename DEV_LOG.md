@@ -104,6 +104,19 @@ consola: solo salía el de la ruta de 21 puntos, nunca el
 (`Assets/editor/MapGenerator/MapGenerator.cs`) -- necesita correr
 Generate para tomar efecto.
 
+**Sexta causa (resuelta):** con la ruta real ya usada (98 puntos), el
+auto arrancaba en zigzag (izquierda-derecha) justo en la punta. Causa:
+`SnapToRoadExtensionTip` pasa `MapLayout.PavedRoute` COMPLETO por el
+transform de CADA pieza `PavedRoad_Surface*` (base + extensiones) --
+para una pieza mucho más chica que la ruta completa (como la extensión),
+eso genera puntos matemáticamente válidos pero MUY por fuera de su malla
+real (extrapolación). Al ordenar todo por X, esos puntos extrapolados se
+mezclaban con los reales de la otra pieza justo en la zona de solape
+(la punta, donde arranca el auto) → zigzag. **Fix:** filtrar los puntos
+de cada pieza contra su propio bounding box real (XZ, con 8m de margen)
+antes de sumarlos a la lista combinada. Editor script -- necesita
+Generate.
+
 ---
 
 ## 2026-08-04 — Fix: el auto quedaba trabado entrando a la YPF (2 sistemas de corrección peleándose)
