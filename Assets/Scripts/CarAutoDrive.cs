@@ -52,6 +52,11 @@ namespace FolkloreArchives
         // owner: "deberia... frenarse antes" -- más metros de margen para empezar a
         // soltar velocidad antes del giro/estacionamiento.
         public float slowdownDistance = 45f; // frena suave en los últimos metros antes del último waypoint
+        // owner: "mientras más avanza al entrar más vaya mirando para la derecha, así
+        // entra bien en la curva" -- cuántos metros se corre el punto apuntado hacia
+        // LA DERECHA DEL AUTO (no un punto horneado fijo) mientras se acerca a la
+        // entrada de la YPF. Ver 'aimingEntryGate' más abajo.
+        public float entryRightBias = 6f;
 
         public bool active;
         public bool HasArrived { get; private set; }
@@ -238,6 +243,22 @@ namespace FolkloreArchives
                 Vector3 aimPoint = new Vector3(aim.x, p.y, aim.y);
                 if (rescuing && FindNearestAsphalt(p, transform.forward, out Vector3 rescue))
                     aimPoint = rescue;
+                else if (aimingEntryGate)
+                {
+                    // owner: "mientras más avanza al entrar más vaya mirando para la
+                    // derecha" -- se probó una curva horneada (Bézier en CarBuilder)
+                    // con puntos intermedios corridos a la derecha, pero chocaba
+                    // contra el terreno/borde real (la curva no sabe qué hay ahí
+                    // físicamente). Esto en cambio corre el punto apuntado hacia la
+                    // DERECHA DEL AUTO (transform.right: siempre relativo a su rumbo
+                    // actual, nunca "afuera" de la ruta real) una cantidad que CRECE
+                    // a medida que se acerca a la entrada -- el volante mira cada vez
+                    // más a la derecha de forma progresiva (recalculado cada frame,
+                    // no un salto), sin depender de geometría horneada que pueda
+                    // clavarse en un árbol o una barranca que no conocemos de antemano.
+                    float closeness = 1f - Mathf.Clamp01(dist / (arriveRadius * 5f)); // 0 lejos -> 1 cerca
+                    aimPoint += transform.right * (entryRightBias * closeness);
+                }
                 Vector3 toTarget = aimPoint - p; toTarget.y = 0f;
                 float angle = Vector3.SignedAngle(transform.forward, toTarget, Vector3.up);
                 steer = Mathf.Clamp(angle / 45f, -1f, 1f) * lotSteerGain;
