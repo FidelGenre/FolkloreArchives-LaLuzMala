@@ -566,9 +566,9 @@ namespace FolkloreArchives.MapGen
                 if (hasParkYaw)
                 {
                     float rad = parkYaw * Mathf.Deg2Rad;
-                    Vector2 fwd = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
-                    Vector2 right = new Vector2(fwd.y, -fwd.x);
-                    park += fwd * ParkForwardOffset + right * ParkRightOffset;
+                    Vector2 parkFwd = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
+                    Vector2 parkRight = new Vector2(parkFwd.y, -parkFwd.x);
+                    park += parkFwd * ParkForwardOffset + parkRight * ParkRightOffset;
                 }
             }
             else
