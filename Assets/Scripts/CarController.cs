@@ -156,11 +156,19 @@ namespace FolkloreArchives
                     // lomo/cordón que corre en paralelo, no una subida de frente) --
                     // la trompa pasaba libre pero una de las puertas mordía el
                     // desnivel. Ahora se toma el punto MÁS ALTO entre el centro,
-                    // adelante y los dos costados (mismo límite de escalón de 1.5m
+                    // adelante y los dos costados (mismo límite de escalón, ver stepLimit
                     // para no treparse a paredes/surtidores de verdad) -- el auto se
                     // eleva para pasar por encima de cualquier lomo cercano, no solo
                     // el que tiene justo enfrente.
                     float targetY = hereY;
+                    // owner: seguía chocando/trabándose justo en la costura tierra↔
+                    // cemento de la YPF pese a todo lo anterior -- la malla de la ruta
+                    // (RoadsideBuilder.BuildPavedRoadMesh) tiene un "faldón" vertical
+                    // de 2.5m en los bordes A PROPÓSITO (tapa la costura visual con el
+                    // terreno) -- el límite de escalón de 1.5m rechazaba justo ESE
+                    // desnivel conocido (lo trataba como pared de verdad). Subido a
+                    // 2.7m para cubrirlo con margen.
+                    const float stepLimit = 2.7f;
                     float halfWidth = box != null ? box.size.x * 0.5f : 1.4f;
                     // owner: seguía rozando en la entrada a la YPF incluso con estos
                     // sensores -- a 48km/h (~13 m/s) los 2.5m/1.2m fijos son solo
@@ -177,7 +185,7 @@ namespace FolkloreArchives
                     };
                     foreach (var probe in probes)
                     {
-                        if (GroundYAt(probe, out float probeY) && probeY > targetY && probeY - hereY <= 1.5f)
+                        if (GroundYAt(probe, out float probeY) && probeY > targetY && probeY - hereY <= stepLimit)
                             targetY = probeY;
                     }
 
