@@ -134,6 +134,7 @@ namespace FolkloreArchives
         Vector3 _modelBasePos;
         float _crouchT;
         Collider _bodyCol;
+        float _dbgTimer;
 
         // ¿está agachado? Online: lo decide/replica NetCrouchSync (el dueño escribe,
         // todos leen). Solo: teclado local (Ctrl/C).
@@ -159,6 +160,21 @@ namespace FolkloreArchives
             // mientras va sentado en el auto (si no, su collider estático choca contra el
             // Rigidbody del auto y traba/trepida el manejo).
             if (_bodyCol != null && _bodyCol.enabled == seated) _bodyCol.enabled = !seated;
+
+            // TELEMETRÍA temporal: "los 3 amigos quedan enanos y bajo tierra al
+            // bajarse" -- ver qué valores tiene realmente cada uno en el tiempo.
+            if (name.StartsWith("Friend_"))
+            {
+                _dbgTimer += dt;
+                if (_dbgTimer >= 0.5f)
+                {
+                    _dbgTimer = 0f;
+                    Debug.Log($"[NPC] {name} seated={seated} baseScale={_modelScale} basePos={_modelBasePos} " +
+                              $"curScale={(_model != null ? _model.localScale.ToString() : "null")} " +
+                              $"curPos={(_model != null ? _model.localPosition.ToString() : "null")} " +
+                              $"rootPos={transform.position} rootScale={transform.localScale}");
+                }
+            }
 
             if (seated)
             {
