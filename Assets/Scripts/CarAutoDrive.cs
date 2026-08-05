@@ -93,7 +93,17 @@ namespace FolkloreArchives
             Vector3 segDir = new Vector3(target.x - segFrom.x, 0f, target.y - segFrom.y);
             Vector3 toTargetNow = new Vector3(target.x - p.x, 0f, target.y - p.z);
             bool passedWaypoint = segDir.sqrMagnitude > 1f && Vector3.Dot(toTargetNow, segDir) < 0f;
-            if (dist < arriveRadius || passedWaypoint)
+            // La ENTRADA a la YPF (anteúltimo waypoint) es una PUERTA calibrada a mano:
+            // el cruce del borde del asfalto hacia la tierra tiene rampa SOLO ahí. El
+            // corner-cutting normal (llegar "cerca" y ya doblar hacia el siguiente
+            // punto) hacía que el auto saliera del asfalto 12-20m antes del cruce
+            // calibrado y quedara ENCAJADO contra la barranca (telemetría: APOYADO
+            // contra 'PavedRoad_Surface' + 'Terrain_Merged' a la vez, ruedas a 48).
+            // Para ese waypoint: radio de llegada a la mitad y sin pre-apuntar al
+            // siguiente (más abajo) -- hay que pasar por la puerta, no cortar camino.
+            bool isEntryGate = waypoints.Length >= 2 && _index == waypoints.Length - 2;
+            float arrive = isEntryGate ? arriveRadius * 0.5f : arriveRadius;
+            if (dist < arrive || passedWaypoint)
             {
                 _index++;
                 if (_index >= waypoints.Length)
@@ -201,7 +211,11 @@ namespace FolkloreArchives
             // que un giro tan cerrado sea completable ahora es la velocidad de crucero
             // más baja (cruiseSpeedKmh), no un lookahead de runtime agresivo.
             bool isLastWaypoint = _index == waypoints.Length - 1;
-            bool nearForAim = dist < arriveRadius * 2.5f;
+            // Puerta de entrada a la YPF (ver isEntryGate arriba, recalculado acá por
+            // si _index avanzó): NO pre-apuntar al estacionamiento mientras el target
+            // es la entrada -- hay que cruzar el borde por el punto calibrado exacto.
+            bool aimingEntryGate = waypoints.Length >= 2 && _index == waypoints.Length - 2;
+            bool nearForAim = dist < arriveRadius * 2.5f && !aimingEntryGate;
             bool nearForStop = dist < arriveRadius * 1.5f;
             Vector2 aim = target;
             if (nearForAim && !isLastWaypoint) aim = waypoints[_index + 1];
