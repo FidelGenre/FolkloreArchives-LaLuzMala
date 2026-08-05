@@ -581,13 +581,22 @@ namespace FolkloreArchives.MapGen
                 // owner: "necesito que estacione al lado del pump mirando para
                 // adelante... dejando el tanque para cargar, así como ese otro auto"
                 // -- antes el auto quedaba con el rumbo que le tocara al frenar (sin
-                // control de orientación final). Si encontramos el surtidor preferido
-                // (Fuel_pump_03), usamos SU rotación real en el mundo como referencia
-                // de "para dónde tiene que quedar mirando el auto parado" -- el modelo
-                // de la estación ya trae esa convención (el surtidor apunta hacia
-                // donde se para el auto a cargar). CarAutoDrive gira el auto EN EL
-                // LUGAR hacia ese ángulo recién al llegar (no mientras maneja).
-                if (foundPreferred)
+                // control de orientación final). Primer intento (rotación del
+                // surtidor Fuel_pump_03) NO coincidía con cómo queda el auto de
+                // referencia -- el modelo de la estación no trae esa convención.
+                // El owner señaló el auto de referencia en el Editor: "Car5", un
+                // decorado FUERA de FOLKLORE_MAP (grupo "car" aparte, no se regenera
+                // con el mapa) -- se busca en TODA la escena (no solo bajo el mapa) y
+                // se lee su rotación Y REAL DEL MUNDO por código (Transform.eulerAngles
+                // ya resuelve toda la cadena de padres -- copiarla a mano desde el
+                // Inspector local hubiera sido un cálculo con margen de error).
+                var refCar = FindDeepAnywhere("Car5");
+                if (refCar != null)
+                {
+                    auto.hasFinalYaw = true;
+                    auto.finalYaw = refCar.eulerAngles.y;
+                }
+                else if (foundPreferred)
                 {
                     auto.hasFinalYaw = true;
                     auto.finalYaw = preferredPumpYaw;
@@ -621,6 +630,15 @@ namespace FolkloreArchives.MapGen
         static Transform FindDeep(Transform root, string name)
         {
             foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == name) return t;
+            return null;
+        }
+
+        // Igual que FindDeep, pero en TODA la escena -- para objetos de referencia
+        // que no viven dentro del mapa generado (ej. "Car5", un decorado aparte).
+        static Transform FindDeepAnywhere(string name)
+        {
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 if (t.name == name) return t;
             return null;
         }
