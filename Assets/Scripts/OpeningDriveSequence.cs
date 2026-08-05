@@ -123,6 +123,12 @@ namespace FolkloreArchives
 
             // 2) recién ACÁ arranca el auto solo -- ya con el jugador sentado de
             // verdad y su puerta cerrada.
+            // owner: "necesito que no dé opciones a abrir la puerta ni bajar a los
+            // personajes hasta llegar a la gasolinera y frenar" -- nadie (jugador NI
+            // perro) puede tocar puertas o bajarse mientras el auto maneja solo.
+            // Se destraba recién en el paso 3, ya frenado del todo, ANTES de abrir
+            // las puertas para que todos bajen.
+            PlayerVehicleInteractor.DrivingLocked = true;
             if (autoDrive != null)
             {
                 car.autoPilot = true;
@@ -137,6 +143,7 @@ namespace FolkloreArchives
             }
 
             // 3) frenar del todo (por las dudas) y abrir las 5 puertas.
+            PlayerVehicleInteractor.DrivingLocked = false;
             car.externalThrottle = 0f;
             car.externalSteer = 0f;
             car.autoPilot = false;

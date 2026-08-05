@@ -40,6 +40,14 @@ namespace FolkloreArchives
         // del perro más abajo para saber a qué asiento apuntar (rearMid antes, acompañante
         // después). Lo pone OpeningDriveSequence al terminar la secuencia de apertura.
         public static bool PastGasStation = false;
+        // owner: "necesito que no de opciones a abrir la puerta ni bajar a los
+        // personajes hasta llegar a la gasolinera y frenar" -- mientras el auto
+        // maneja SOLO (la secuencia de apertura), nadie debería poder abrir/cerrar
+        // puertas ni bajarse a mitad de camino. OpeningDriveSequence lo prende justo
+        // antes de arrancar el autopiloto y lo apaga recién al frenar del todo en la
+        // YPF (antes de abrir las puertas para que todos bajen). Static: aplica a
+        // TODOS los PlayerVehicleInteractor (jugador Y perro) con un solo flag.
+        public static bool DrivingLocked = false;
         // el asiento donde terminaste sentado (null = no estás sentado) -- lo usa
         // OpeningDriveSequence para detectar "jugador manejando + perro de acompañante"
         // y disparar que los 3 amigos vuelvan a aparecer atrás.
@@ -169,10 +177,18 @@ namespace FolkloreArchives
         {
             var kb = Keyboard.current;
             if (kb == null || SettingsMenu.IsOpen || busy) return;
+            // owner: "no dé opciones a abrir la puerta ni bajar... hasta llegar a la
+            // gasolinera y frenar" -- mientras el auto maneja solo, E no hace nada
+            // (ni abrir/cerrar puertas ni bajarse) para nadie que esté sentado adentro
+            // (jugador o perro, DrivingLocked es static). El mouse-look sigue andando
+            // igual -- solo se bloquea la interacción de E.
+            bool interactionLocked = car != null && DrivingLocked;
+            if (interactionLocked) currentTarget = null;
+            else
 
             currentTarget = RaycastTarget();    // la MIRA (centro de pantalla), una vez por frame
 
-            if (kb.eKey.wasPressedThisFrame)
+            if (kb.eKey.wasPressedThisFrame && !interactionLocked)
             {
                 var target = currentTarget;
                 if (car != null)   // sentado
@@ -661,6 +677,7 @@ namespace FolkloreArchives
         void OnGUI()
         {
             if (busy) return;
+            if (car != null && DrivingLocked) return; // sin cartel de [E] mientras el auto maneja solo
             var target = currentTarget;
             string msg = null;
             if (car != null)
