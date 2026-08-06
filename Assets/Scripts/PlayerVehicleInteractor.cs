@@ -333,19 +333,23 @@ namespace FolkloreArchives
                     (ci.part == ci.car.driverSeat || ci.part == ci.car.frontPassenger ||
                      ci.part == ci.car.rearRight || ci.part == ci.car.rearMid))
                     continue;
+                Vector3 toPart = ci.part.position - cam.position;
                 // owner: "me está dejando abrir las puertas que están del otro lado
                 // del auto yo estando acá" -- SphereCastAll encuentra TODO lo que
                 // toca el barrido en 4.5m, sin importar si el cuerpo del auto lo tapa
-                // en el medio (no hay chequeo de línea de vista). Verificar con un
-                // Raycast derecho -- ignorando triggers (los propios CarInteractable
-                // son triggers) -- que nada SÓLIDO se interponga antes de llegar
-                // cerca del target: si el auto (su collider real) está en el medio,
-                // descartar este candidato.
-                Vector3 toPart = ci.part.position - cam.position;
-                float distToPart = toPart.magnitude;
-                if (distToPart > 0.05f &&
-                    Physics.Raycast(cam.position, toPart.normalized, out var block, distToPart - 0.3f, ~0, QueryTriggerInteraction.Ignore))
-                    continue; // algo sólido (el propio auto, de costado) tapa la vista
+                // en el medio (no hay chequeo de línea de vista). Solo hace falta
+                // parado AFUERA (car==null) -- sentado ADENTRO (owner: "me subí pero
+                // no me está dando la opción de cerrar la puerta") cualquier rayo
+                // hacia tu propia puerta pega contra el collider del auto mismo (estás
+                // literalmente adentro de su volumen), así que este chequeo se
+                // descartaba a sí mismo. Solo corre parado afuera.
+                if (car == null)
+                {
+                    float distToPart = toPart.magnitude;
+                    if (distToPart > 0.05f &&
+                        Physics.Raycast(cam.position, toPart.normalized, out var block, distToPart - 0.3f, ~0, QueryTriggerInteraction.Ignore))
+                        continue; // algo sólido (el propio auto, de costado) tapa la vista
+                }
                 float angle = Vector3.Angle(cam.forward, toPart);
                 if (angle < bestAngle) { bestAngle = angle; best = ci; }
             }
