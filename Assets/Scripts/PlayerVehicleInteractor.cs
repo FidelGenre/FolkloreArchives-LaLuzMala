@@ -320,13 +320,15 @@ namespace FolkloreArchives
                 var ci = h.collider.GetComponentInParent<CarInteractable>();
                 if (ci == null) continue;
                 // owner: "me subí adelante... no debería pasar, debería solo poder
-                // subir atrás" -- los asientos de adelante (conductor/acompañante) ya
-                // los ocupan los amigos decorativos durante la secuencia de apertura;
-                // sin este chequeo, la mira igual los deja elegir (te teletransportás
-                // encima del amigo). Mientras FrontSeatsBlocked esté activo, la mira
-                // directamente IGNORA esos dos asientos -- ni aparecen como opción.
+                // subir atrás" -- 3 de los 5 asientos ya los ocupan los amigos
+                // decorativos durante la secuencia de apertura (FriendNpcBuilder.
+                // SeatInCar: conductor, acompañante Y rearRight -- no solo los dos de
+                // adelante); sin este chequeo, la mira igual los deja elegir (te
+                // teletransportás encima del amigo). Mientras FrontSeatsBlocked esté
+                // activo, la mira IGNORA los 3 asientos ocupados -- solo quedan
+                // seleccionables rearLeft (jugador) y rearMid (perro).
                 if (FrontSeatsBlocked && ci.isSeat && ci.car != null &&
-                    (ci.part == ci.car.driverSeat || ci.part == ci.car.frontPassenger))
+                    (ci.part == ci.car.driverSeat || ci.part == ci.car.frontPassenger || ci.part == ci.car.rearRight))
                     continue;
                 float angle = Vector3.Angle(cam.forward, ci.part.position - cam.position);
                 if (angle < bestAngle) { bestAngle = angle; best = ci; }

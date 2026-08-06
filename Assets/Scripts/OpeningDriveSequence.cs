@@ -96,6 +96,14 @@ namespace FolkloreArchives
             // cámara) ya corrió antes de llamar a SitRoutine.
             yield return null;
 
+            // owner: "el perro no debería poder bajar antes de que se active el
+            // script del auto" -- antes DrivingLocked recién se prendía DESPUÉS de
+            // que el jugador terminara de subir, dejando una ventana (mientras el
+            // jugador todavía camina hacia el auto) donde el perro ya está sentado
+            // pero nada le impide bajarse con E. Prendido ACÁ, antes de sentar a
+            // nadie -- nunca hay ventana sin traba.
+            PlayerVehicleInteractor.DrivingLocked = true;
+
             // 1) al perro lo sentamos directo (sin mira/E, como antes). Al jugador
             // NO -- owner: "necesito que aparezca parado al lado del auto y la puerta
             // de atrás abierta así está meando, y cuando se sube y cierra la puerta
