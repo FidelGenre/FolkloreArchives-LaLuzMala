@@ -320,17 +320,33 @@ namespace FolkloreArchives
                 var ci = h.collider.GetComponentInParent<CarInteractable>();
                 if (ci == null) continue;
                 // owner: "me subí adelante... no debería pasar, debería solo poder
-                // subir atrás" -- 3 de los 5 asientos ya los ocupan los amigos
-                // decorativos durante la secuencia de apertura (FriendNpcBuilder.
-                // SeatInCar: conductor, acompañante Y rearRight -- no solo los dos de
-                // adelante); sin este chequeo, la mira igual los deja elegir (te
-                // teletransportás encima del amigo). Mientras FrontSeatsBlocked esté
-                // activo, la mira IGNORA los 3 asientos ocupados -- solo quedan
-                // seleccionables rearLeft (jugador) y rearMid (perro).
+                // subir atrás" / "al poner subir estando atrás me sienta en el
+                // asiento del perro" -- 4 de los 5 asientos ya están ocupados durante
+                // la secuencia de apertura: 3 por los amigos decorativos
+                // (FriendNpcBuilder.SeatInCar: conductor, acompañante, rearRight) y
+                // uno por el PERRO REAL (rearMid, ya sentado desde el arranque de
+                // Run() -- ver OpeningDriveSequence). Sin este chequeo la mira los
+                // sigue ofreciendo igual. Mientras FrontSeatsBlocked esté activo, se
+                // ignoran los 4 -- solo queda seleccionable rearLeft, el único
+                // realmente libre.
                 if (FrontSeatsBlocked && ci.isSeat && ci.car != null &&
-                    (ci.part == ci.car.driverSeat || ci.part == ci.car.frontPassenger || ci.part == ci.car.rearRight))
+                    (ci.part == ci.car.driverSeat || ci.part == ci.car.frontPassenger ||
+                     ci.part == ci.car.rearRight || ci.part == ci.car.rearMid))
                     continue;
-                float angle = Vector3.Angle(cam.forward, ci.part.position - cam.position);
+                // owner: "me está dejando abrir las puertas que están del otro lado
+                // del auto yo estando acá" -- SphereCastAll encuentra TODO lo que
+                // toca el barrido en 4.5m, sin importar si el cuerpo del auto lo tapa
+                // en el medio (no hay chequeo de línea de vista). Verificar con un
+                // Raycast derecho -- ignorando triggers (los propios CarInteractable
+                // son triggers) -- que nada SÓLIDO se interponga antes de llegar
+                // cerca del target: si el auto (su collider real) está en el medio,
+                // descartar este candidato.
+                Vector3 toPart = ci.part.position - cam.position;
+                float distToPart = toPart.magnitude;
+                if (distToPart > 0.05f &&
+                    Physics.Raycast(cam.position, toPart.normalized, out var block, distToPart - 0.3f, ~0, QueryTriggerInteraction.Ignore))
+                    continue; // algo sólido (el propio auto, de costado) tapa la vista
+                float angle = Vector3.Angle(cam.forward, toPart);
                 if (angle < bestAngle) { bestAngle = angle; best = ci; }
             }
             return best;
