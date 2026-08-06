@@ -212,14 +212,14 @@ namespace FolkloreArchives
                         // criterio es siempre el mismo: mirás tu puerta → la tocás; mirás
                         // para cualquier otro lado → bajás (ExitRoutine ya abre la puerta
                         // sola si hace falta, como parte de bajarte).
-                        // owner: "no dé opciones a abrir la puerta... hasta llegar a la
-                        // gasolinera" -- pero OJO, esto es lo que te deja CERRAR tu
-                        // propia puerta recién al subir (owner: "me subí pero no me
-                        // está dando la opción de cerrar la puerta" -- bloquear ESTA
-                        // rama entera lo rompía). El toggle de la puerta SIEMPRE se
-                        // permite; DrivingLocked solo bloquea poder BAJARSE (más abajo)
-                        // -- abrir/cerrar tu puerta sin bajarte no te saca del auto.
-                        doors?.SetDoor(myDoor, !(doors != null && doors.IsOpen(myDoor)));
+                        // owner: "al subir debería dejar de salirme eso de abrir la
+                        // puerta" -- CERRAR la puerta al subir por primera vez siempre
+                        // se permite (la puerta está abierta en ese momento), pero una
+                        // vez cerrada, mientras DrivingLocked, no se ofrece volver a
+                        // ABRIRLA (ni el cartel ni la acción) hasta llegar a destino.
+                        bool doorOpen = doors != null && doors.IsOpen(myDoor);
+                        if (doorOpen || !DrivingLocked)
+                            doors?.SetDoor(myDoor, !doorOpen);
                     }
                     else if (car.driving && LookingForward(car))
                     {
@@ -722,15 +722,19 @@ namespace FolkloreArchives
             if (car != null)
             {
                 // owner: "no dé opciones... bajar a los personajes hasta llegar a la
-                // gasolinera" -- DrivingLocked tapa el cartel de BAJAR nomás; abrir/
-                // cerrar tu propia puerta y las luces siguen mostrándose normal (eso
-                // no te saca del auto, ver el Update real más arriba).
+                // gasolinera" -- DrivingLocked tapa el cartel de BAJAR; abrir/cerrar tu
+                // propia puerta y las luces siguen mostrándose normal MIENTRAS la
+                // puerta siga abierta (dejarte cerrarla al subir), pero owner: "al
+                // subir debería dejar de salirme eso de abrir la puerta" -- una vez
+                // cerrada, no se vuelve a ofrecer abrirla hasta llegar a destino.
                 if (!canOpenDoors) msg = DrivingLocked ? null : "[ E ] Bajar"; // el perro: nunca abre/cierra
                 else if (LookingAtDoor(myDoor))
                 {
                     // mismo criterio que la acción real de E: mirando TU puerta, alterna.
                     var doors = Doors(car);
-                    msg = (doors != null && doors.IsOpen(myDoor)) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
+                    bool doorOpen = doors != null && doors.IsOpen(myDoor);
+                    if (doorOpen) msg = "[ E ] Cerrar puerta";
+                    else if (!DrivingLocked) msg = "[ E ] Abrir puerta";
                 }
                 else if (car.driving && LookingForward(car))
                     msg = car.headlightsOn ? "[ E ] Apagar luces" : "[ E ] Prender luces";
