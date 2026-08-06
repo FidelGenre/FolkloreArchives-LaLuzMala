@@ -48,6 +48,13 @@ namespace FolkloreArchives
         // YPF (antes de abrir las puertas para que todos bajen). Static: aplica a
         // TODOS los PlayerVehicleInteractor (jugador Y perro) con un solo flag.
         public static bool DrivingLocked = false;
+        // owner: "me subí adelante y cerré la puerta y arrancó, no debería pasar,
+        // debería solo poder subir atrás" -- durante la parte de la secuencia de
+        // apertura en la que el jugador tiene que subir SOLO (los 3 amigos ya están
+        // sentados adelante/acompañante/rearRight), la mira no debe ofrecer esos
+        // asientos ocupados. OpeningDriveSequence lo prende antes de pararlo afuera
+        // del auto y lo apaga apenas confirma que subió atrás de verdad.
+        public static bool FrontSeatsBlocked = false;
         // el asiento donde terminaste sentado (null = no estás sentado) -- lo usa
         // OpeningDriveSequence para detectar "jugador manejando + perro de acompañante"
         // y disparar que los 3 amigos vuelvan a aparecer atrás.
@@ -312,6 +319,15 @@ namespace FolkloreArchives
             {
                 var ci = h.collider.GetComponentInParent<CarInteractable>();
                 if (ci == null) continue;
+                // owner: "me subí adelante... no debería pasar, debería solo poder
+                // subir atrás" -- los asientos de adelante (conductor/acompañante) ya
+                // los ocupan los amigos decorativos durante la secuencia de apertura;
+                // sin este chequeo, la mira igual los deja elegir (te teletransportás
+                // encima del amigo). Mientras FrontSeatsBlocked esté activo, la mira
+                // directamente IGNORA esos dos asientos -- ni aparecen como opción.
+                if (FrontSeatsBlocked && ci.isSeat && ci.car != null &&
+                    (ci.part == ci.car.driverSeat || ci.part == ci.car.frontPassenger))
+                    continue;
                 float angle = Vector3.Angle(cam.forward, ci.part.position - cam.position);
                 if (angle < bestAngle) { bestAngle = angle; best = ci; }
             }

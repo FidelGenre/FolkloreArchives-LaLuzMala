@@ -108,6 +108,12 @@ namespace FolkloreArchives
             StandPlayerBefore();
             if (carDoors != null && playerDoor != null) carDoors.SetDoor(playerDoor, true);
 
+            // owner: "me subí adelante... no debería pasar, debería solo poder subir
+            // atrás" -- los asientos de adelante ya los ocupan los amigos decorativos
+            // (FriendNpcBuilder.SeatInCar, en Generate); sin esto la mira igual los
+            // ofrecía y el jugador se teletransportaba encima de un amigo.
+            PlayerVehicleInteractor.FrontSeatsBlocked = true;
+
             // owner: "se está sentando arriba del perro... al cerrar la puerta no
             // está arrancando" -- el banco trasero tiene los 3 asientos pegados
             // (rearLeft/rearMid/rearRight), y la mira (RaycastTarget en
@@ -120,6 +126,7 @@ namespace FolkloreArchives
             // subió y cerró todo" es estar sentado EN ALGÚN LADO y que no quede
             // ninguna puerta del auto abierta.
             yield return new WaitUntil(() => player.CurrentSeat != null && !AnyDoorOpen());
+            PlayerVehicleInteractor.FrontSeatsBlocked = false; // ya subió atrás -- para el próximo tramo (leg 2) sí puede elegir el volante
 
             // 2) recién ACÁ arranca el auto solo -- ya con el jugador sentado de
             // verdad y su puerta cerrada.
