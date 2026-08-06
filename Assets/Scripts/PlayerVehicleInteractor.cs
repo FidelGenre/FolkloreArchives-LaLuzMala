@@ -184,18 +184,9 @@ namespace FolkloreArchives
         {
             var kb = Keyboard.current;
             if (kb == null || SettingsMenu.IsOpen || busy) return;
-            // owner: "no dé opciones a abrir la puerta ni bajar... hasta llegar a la
-            // gasolinera y frenar" -- mientras el auto maneja solo, E no hace nada
-            // (ni abrir/cerrar puertas ni bajarse) para nadie que esté sentado adentro
-            // (jugador o perro, DrivingLocked es static). El mouse-look sigue andando
-            // igual -- solo se bloquea la interacción de E.
-            bool interactionLocked = car != null && DrivingLocked;
-            if (interactionLocked) currentTarget = null;
-            else
-
             currentTarget = RaycastTarget();    // la MIRA (centro de pantalla), una vez por frame
 
-            if (kb.eKey.wasPressedThisFrame && !interactionLocked)
+            if (kb.eKey.wasPressedThisFrame)
             {
                 var target = currentTarget;
                 if (car != null)   // sentado
@@ -204,8 +195,12 @@ namespace FolkloreArchives
                     if (!canOpenDoors)
                     {
                         // el perro: no toca puertas, E siempre te baja (owner: "necesito
-                        // que el perro pueda subirse pero no abrir las puertas")
-                        StartCoroutine(ExitRoutine());
+                        // que el perro pueda subirse pero no abrir las puertas").
+                        // owner: "no debería poder bajar antes de que se active el
+                        // script del auto hasta la gasolinera" -- bloqueado mientras
+                        // DrivingLocked (nunca puede abrir puertas de todos modos, así
+                        // que el único caso a trabar es este).
+                        if (!DrivingLocked) StartCoroutine(ExitRoutine());
                     }
                     else if (LookingAtDoor(myDoor))
                     {
@@ -217,6 +212,13 @@ namespace FolkloreArchives
                         // criterio es siempre el mismo: mirás tu puerta → la tocás; mirás
                         // para cualquier otro lado → bajás (ExitRoutine ya abre la puerta
                         // sola si hace falta, como parte de bajarte).
+                        // owner: "no dé opciones a abrir la puerta... hasta llegar a la
+                        // gasolinera" -- pero OJO, esto es lo que te deja CERRAR tu
+                        // propia puerta recién al subir (owner: "me subí pero no me
+                        // está dando la opción de cerrar la puerta" -- bloquear ESTA
+                        // rama entera lo rompía). El toggle de la puerta SIEMPRE se
+                        // permite; DrivingLocked solo bloquea poder BAJARSE (más abajo)
+                        // -- abrir/cerrar tu puerta sin bajarte no te saca del auto.
                         doors?.SetDoor(myDoor, !(doors != null && doors.IsOpen(myDoor)));
                     }
                     else if (car.driving && LookingForward(car))
@@ -228,7 +230,7 @@ namespace FolkloreArchives
                         // frente, sin sacarle la tecla F que ya funcionaba).
                         car.SetHeadlights(!car.headlightsOn);
                     }
-                    else
+                    else if (!DrivingLocked)
                     {
                         StartCoroutine(ExitRoutine());
                     }
@@ -715,12 +717,15 @@ namespace FolkloreArchives
         void OnGUI()
         {
             if (busy) return;
-            if (car != null && DrivingLocked) return; // sin cartel de [E] mientras el auto maneja solo
             var target = currentTarget;
             string msg = null;
             if (car != null)
             {
-                if (!canOpenDoors) msg = "[ E ] Bajar"; // el perro: nunca abre/cierra
+                // owner: "no dé opciones... bajar a los personajes hasta llegar a la
+                // gasolinera" -- DrivingLocked tapa el cartel de BAJAR nomás; abrir/
+                // cerrar tu propia puerta y las luces siguen mostrándose normal (eso
+                // no te saca del auto, ver el Update real más arriba).
+                if (!canOpenDoors) msg = DrivingLocked ? null : "[ E ] Bajar"; // el perro: nunca abre/cierra
                 else if (LookingAtDoor(myDoor))
                 {
                     // mismo criterio que la acción real de E: mirando TU puerta, alterna.
@@ -729,7 +734,7 @@ namespace FolkloreArchives
                 }
                 else if (car.driving && LookingForward(car))
                     msg = car.headlightsOn ? "[ E ] Apagar luces" : "[ E ] Prender luces";
-                else msg = "[ E ] Bajar";
+                else msg = DrivingLocked ? null : "[ E ] Bajar";
             }
             else if (!canOpenDoors)
             {
