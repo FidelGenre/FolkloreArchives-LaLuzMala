@@ -1038,24 +1038,20 @@ namespace FolkloreArchives
             return root;
         }
 
-        // contorno amarillo llamativo (casco invertido): copio cada mesh un poco más grande con
-        // culling FRONTAL -> solo se ven las caras traseras en el borde = contorno alrededor.
+        // contorno amarillo llamativo (casco invertido): shader dedicado Custom/RatOutline (expande
+        // por normales + Cull Front) -> solo se ve el borde, no tapa la rata.
         void AddRatOutline(GameObject model)
         {
-            Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
-            if (sh == null) sh = Shader.Find("Unlit/Color");
-            if (sh == null) return;
+            Shader sh = Shader.Find("Custom/RatOutline");
+            if (sh == null) return;   // sin el shader, no dibujo contorno (mejor eso que taparla)
             var mat = new Material(sh);
-            Color oc = new Color(1f, 0.85f, 0.15f);   // amarillo
-            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", oc);
-            if (mat.HasProperty("_Color"))     mat.SetColor("_Color", oc);
-            if (mat.HasProperty("_Cull"))      mat.SetFloat("_Cull", 1f);   // 1 = Front (culla las de adelante)
+            mat.SetColor("_Color", new Color(1f, 0.85f, 0.15f));   // amarillo
+            mat.SetFloat("_Width", 0.03f);
             foreach (var mf in model.GetComponentsInChildren<MeshFilter>())
             {
                 if (mf.sharedMesh == null) continue;
                 var o = new GameObject("Outline");
-                o.transform.SetParent(mf.transform, false);
-                o.transform.localScale = Vector3.one * 1.12f;   // casco un poco más grande
+                o.transform.SetParent(mf.transform, false);   // escala 1: la expansión la hace el shader
                 o.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
                 o.AddComponent<MeshRenderer>().sharedMaterial = mat;
             }
