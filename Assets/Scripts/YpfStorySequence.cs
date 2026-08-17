@@ -128,7 +128,7 @@ namespace FolkloreArchives
             new Vector3(443.2964f, 17.07963f, -35.51123f),
             new Vector3(448.0143f, 17.07963f, -50.78497f),
             new Vector3(450.1569f, 17.07963f, -57.93616f),
-            new Vector3(458.0581f, 17.07963f, -57.93835f), // auto rojo
+            new Vector3(458.0691f, 17.07963f, -56.76144f), // puerta del auto rojo -> acá desaparece
         };
 
         // ── ETAPA 7: se suben al auto y manejan al campamento (owner) ────────
@@ -850,10 +850,11 @@ namespace FolkloreArchives
             // el viejo YA se va -> el baño queda LIBRE para los jugadores (owner).
             if (_bathDoor != null) _bathDoor.locked = false;
 
-            // el viejo se va hasta el AUTO ROJO
+            // el viejo se va hasta el AUTO ROJO y, al llegar a la puerta, DESAPARECE (se subió y se fue).
             if (viejoToCarWaypoints != null)
                 foreach (var wp in viejoToCarWaypoints)
                     yield return WalkTo(viejo, wp, speed: 1.5f, stopDist: 0.4f);
+            if (viejo != null) Destroy(viejo.gameObject);
         }
 
         // chiflido del viejo (placeholder: si hay Resources/whistle lo usa, si no queda mudo).
