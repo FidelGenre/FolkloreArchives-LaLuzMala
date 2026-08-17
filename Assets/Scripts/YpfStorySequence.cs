@@ -995,7 +995,7 @@ namespace FolkloreArchives
         // rata: modelo PS1 real (Resources/Rat/RatModel). La envuelvo en un ROOT a nivel de piso
         // (el correteo mueve el root y le fija la Y al piso), con el modelo adentro auto-escalado a
         // ~0.18 m y apoyado (su base en el origen del root). Si falta el asset, cae a un cilindro.
-        const float RatSizeMeters = 0.55f;   // owner: mucho más grandes
+        const float RatSizeMeters = 0.65f;   // owner: mucho más grandes
         GameObject CreateRat(Vector3 at)
         {
             var root = new GameObject("Rata");
@@ -1024,6 +1024,7 @@ namespace FolkloreArchives
                                                             root.transform.position.y - b.min.y,
                                                             root.transform.position.z - b.center.z);
                 }
+                AddRatOutline(model);
                 return root;
             }
 
@@ -1035,6 +1036,29 @@ namespace FolkloreArchives
             var r = cyl.GetComponent<Renderer>();
             if (r != null) r.material.color = new Color(0.18f, 0.15f, 0.13f);
             return root;
+        }
+
+        // contorno amarillo llamativo (casco invertido): copio cada mesh un poco más grande con
+        // culling FRONTAL -> solo se ven las caras traseras en el borde = contorno alrededor.
+        void AddRatOutline(GameObject model)
+        {
+            Shader sh = Shader.Find("Universal Render Pipeline/Unlit");
+            if (sh == null) sh = Shader.Find("Unlit/Color");
+            if (sh == null) return;
+            var mat = new Material(sh);
+            Color oc = new Color(1f, 0.85f, 0.15f);   // amarillo
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", oc);
+            if (mat.HasProperty("_Color"))     mat.SetColor("_Color", oc);
+            if (mat.HasProperty("_Cull"))      mat.SetFloat("_Cull", 1f);   // 1 = Front (culla las de adelante)
+            foreach (var mf in model.GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf.sharedMesh == null) continue;
+                var o = new GameObject("Outline");
+                o.transform.SetParent(mf.transform, false);
+                o.transform.localScale = Vector3.one * 1.12f;   // casco un poco más grande
+                o.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+                o.AddComponent<MeshRenderer>().sharedMaterial = mat;
+            }
         }
 
         // punto random dentro del área del parking (para el correteo de las ratas), pegado al piso.
