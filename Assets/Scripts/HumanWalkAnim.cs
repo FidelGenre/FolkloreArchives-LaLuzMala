@@ -28,6 +28,7 @@ namespace FolkloreArchives
         };
         public float legSwing = 26f;
         public float armSwing = 16f;
+        public float armSpread = 0.22f;   // cuánto se separan los brazos del cuerpo (0 = pegados, para abajo)
         public float cadence = 6.5f;
         public Vector3 axis = Vector3.right;
         public float moveThreshold = 0.3f;
@@ -80,6 +81,12 @@ namespace FolkloreArchives
         float _phase, _amp;
         Vector3 _lastPos;
         NetCrouchSync _net;   // opcional: solo en el prefab de red
+        // owner: "cuando toco el control se agachan TODOS los personajes, no solo el que
+        // manejo". Solo el humano JUGADOR tiene MapExplorer (los amigos decorativos no), y
+        // PartyController lo deja habilitado únicamente cuando lo estás controlando (al
+        // tomar el perro, se apaga). Se usa como filtro: el agachado por teclado solo
+        // responde si ESTE es el personaje que controlás ahora.
+        MapExplorer _explorer;
 
         void Start()
         {
@@ -98,11 +105,18 @@ namespace FolkloreArchives
                 // pierna) -- de ahí el brazo "extendido" hacia adelante en el auto.
                 bool isArm = limbs[i].bone.ToLowerInvariant().Contains("arm");
                 Transform tip = isArm ? DeepestChild(_t[i]) : null;
+                // dirección de reposo del brazo: para abajo + un poco hacia AFUERA (según el
+                // lado), así no quedan pegados al cuerpo (owner: "separales un poco los brazos").
+                // El lado se detecta por POSICIÓN del hueso (a qué lado del cuerpo está), NO por
+                // el nombre -- el rig de los amigos no usa ".r/.l" y quedaban los dos brazos para
+                // el mismo lado (owner: "brazos torcidos para la izquierda").
+                bool rightArm = Vector3.Dot(_t[i].position - transform.position, transform.right) > 0f;
+                Vector3 armTarget = (Vector3.down + transform.right * (rightArm ? armSpread : -armSpread)).normalized;
                 if (tip != null && tip != _t[i] && _t[i].parent != null)
                 {
-                    // dirección real del brazo (hombro → mano) y la roto para que apunte a -Y
+                    // dirección real del brazo (hombro → mano) y la roto para que apunte a armTarget
                     Vector3 dir = (tip.position - _t[i].position).normalized;
-                    Quaternion worldDelta = Quaternion.FromToRotation(dir, Vector3.down);
+                    Quaternion worldDelta = Quaternion.FromToRotation(dir, armTarget);
                     Quaternion pW = _t[i].parent.rotation;
                     _rest[i] = Quaternion.Inverse(pW) * worldDelta * (pW * baseLocal);
                 }
@@ -120,14 +134,23 @@ namespace FolkloreArchives
                 if (isArm && tip != null && tip != _t[i])
                 {
                     _t[i].localRotation = _rest[i];
-                    StraightenArmChain(_t[i].childCount > 0 ? _t[i].GetChild(0) : null, tip);
+                    StraightenArmChain(_t[i].childCount > 0 ? _t[i].GetChild(0) : null, tip, armTarget);
                 }
             }
             _model = transform.Find("Model");
-            if (_model == null) { var smr = GetComponentInChildren<SkinnedMeshRenderer>(); if (smr != null) _model = smr.transform.parent; }
+            if (_model == null)
+            {
+                var smr = GetComponentInChildren<SkinnedMeshRenderer>();
+                // owner: "Richard se queda parado queriendo moverse pero en el mismo lugar" -- si
+                // el fallback fuese la RAÍZ (personajes sin un hijo "Model", como Richard), el
+                // LateUpdate le resetearía la localPosition cada frame y lo PINEA. En ese caso lo
+                // dejamos null (solo animamos huesos; no manejamos escala/pos del modelo).
+                if (smr != null && smr.transform.parent != transform) _model = smr.transform.parent;
+            }
             if (_model != null) { _modelScale = _model.localScale; _modelBasePos = _model.localPosition; }
             else _modelScale = Vector3.one;
             _net = GetComponent<NetCrouchSync>();
+            _explorer = GetComponent<MapExplorer>();
             _bodyCol = GetComponent<Collider>(); // colisión del cuerpo (la agregan los builders); se apaga sentado
             _lastPos = transform.position;
         }
@@ -140,8 +163,12 @@ namespace FolkloreArchives
         // todos leen). Solo: teclado local (Ctrl/C).
         bool WantCrouch()
         {
+            // solo el personaje que controlás ahora (humano jugador con su MapExplorer
+            // activo) responde al teclado -- los amigos decorativos (sin MapExplorer) y el
+            // humano mientras controlás al perro (MapExplorer apagado) nunca se agachan.
+            bool controllingThis = _explorer != null && _explorer.enabled;
             var kb = Keyboard.current;
-            bool localInput = kb != null && (kb.leftCtrlKey.isPressed || kb.cKey.isPressed);
+            bool localInput = controllingThis && kb != null && (kb.leftCtrlKey.isPressed || kb.cKey.isPressed);
             if (_net != null)
             {
                 if (_net.IsOwnerLocal) _net.SetLocal(localInput);
@@ -222,16 +249,13 @@ namespace FolkloreArchives
                 bool isArm = limbs[i].bone.ToLowerInvariant().Contains("arm");
                 float amt = (isArm ? armSwing : legSwing) * limbs[i].phase * _amp * swingMul;
                 float ang = Mathf.Sin(_phase) * amt;
-                if (isArm && _t[i].parent != null)
+                // Brazos Y piernas giran en el eje "derecha" del PERSONAJE (mundo), no en el eje
+                // LOCAL del hueso -- así el vaivén cae SIEMPRE en el plano adelante-atrás sin
+                // importar cómo esté orientado el hueso en cada rig (owner: "las piernas de
+                // Richard se deslizan de costado" -- su rig tiene el eje local del muslo apuntando
+                // al costado; con el eje del personaje camina bien, igual que los brazos).
+                if (_t[i].parent != null)
                 {
-                    // owner: "necesito que muevan los brazos igual que el personaje
-                    // principal" -- _rest[i] de un brazo ya viene TORCIDO por la
-                    // corrección de T-pose (FromToRotation arbitraria), así que girar
-                    // en el eje LOCAL "axis" de ese hueso ya no cae en un plano
-                    // adelante-atrás predecible (varía según cómo haya quedado
-                    // orientado ese giro en cada rig) -- con las piernas no pasa porque
-                    // su _rest nunca se toca. Se gira en el eje "derecha" del PERSONAJE
-                    // (mundo), no del hueso, así el vaivén queda igual sin importar el rig.
                     Quaternion worldSwing = Quaternion.AngleAxis(ang, transform.right);
                     Quaternion pW = _t[i].parent.rotation;
                     _t[i].localRotation = Quaternion.Inverse(pW) * worldSwing * (pW * _rest[i]);
@@ -260,7 +284,7 @@ namespace FolkloreArchives
         // apunte para abajo. Mismo truco (FromToRotation hacia abajo) repetido hueso por
         // hueso, cada uno viendo ya la posición FINAL de su padre (por eso el hombro se
         // aplica antes de llamar acá).
-        static void StraightenArmChain(Transform from, Transform tip)
+        static void StraightenArmChain(Transform from, Transform tip, Vector3 target)
         {
             var bone = from;
             int guard = 0;
@@ -271,12 +295,69 @@ namespace FolkloreArchives
                 Vector3 dir = child.position - bone.position;
                 if (dir.sqrMagnitude > 0.0001f)
                 {
-                    Quaternion delta = Quaternion.FromToRotation(dir.normalized, Vector3.down);
+                    Quaternion delta = Quaternion.FromToRotation(dir.normalized, target);
                     Quaternion pW = bone.parent.rotation;
                     bone.localRotation = Quaternion.Inverse(pW) * delta * (pW * bone.localRotation);
                 }
                 bone = child;
             }
+        }
+
+        // owner: "el playero sentado en la silla, visible ya en el editor". Pose sentada
+        // ESTÁTICA y robusta (una sola vez, sin componente vivo, sin depender de ejes locales
+        // del rig): apunta cada hueso a una dirección de MUNDO usando FromToRotation.
+        //   · brazos (armUpper, ej "shoulder.L"): hombro→mano hacia ABAJO (a los costados) +
+        //     enderezar la cadena (antebrazo/mano).
+        //   · muslos (thighs): hacia ADELANTE-abajo (sentado).
+        //   · pantorrillas (calves): hacia ABAJO (pies al piso).
+        // Llamalo DESPUÉS de ubicar/rotar al personaje (usa direcciones de mundo).
+        // 'facing' = hacia dónde mira el personaje (horizontal, normalizado).
+        public static void PoseSeatedStatic(Transform root, Vector3 facing,
+                                            string[] armUpper, string[] thighs, string[] calves)
+        {
+            if (root == null) return;
+            facing.y = 0f;
+            facing = facing.sqrMagnitude < 1e-4f ? Vector3.forward : facing.normalized;
+            Vector3 thighTarget = (facing * 0.9f + Vector3.down * 0.35f).normalized; // adelante y un poco abajo
+
+            if (armUpper != null)
+                foreach (var n in armUpper)
+                {
+                    var b = FindDeep(root, n);
+                    if (b == null) continue;
+                    var tip = DeepestChild(b);
+                    if (tip == null || tip == b) continue;
+                    Vector3 dir = (tip.position - b.position).normalized;
+                    b.rotation = Quaternion.FromToRotation(dir, Vector3.down) * b.rotation;
+                    StraightenArmChain(b.childCount > 0 ? b.GetChild(0) : null, tip, Vector3.down);
+                }
+            if (thighs != null)
+                foreach (var n in thighs) PointBone(FindDeep(root, n), thighTarget);
+            if (calves != null)
+                foreach (var n in calves) PointBone(FindDeep(root, n), Vector3.down);
+        }
+
+        // Pose de PARADO estática: brazos colgando (hombro+antebrazo a -Y) y piernas rectas
+        // (muslo+pantorrilla a -Y). Sirve para "levantar" a un NPC que estaba sentado con
+        // PoseSeatedStatic (mismo rig, mano/pie ya reencadenados). Todo por dirección de mundo,
+        // así funciona con cualquier yaw del cuerpo.
+        public static void PoseStandingStatic(Transform root, string[] armUpper, string[] foreArms,
+                                              string[] thighs, string[] calves)
+        {
+            if (root == null) return;
+            if (armUpper != null) foreach (var n in armUpper) PointBone(FindDeep(root, n), Vector3.down);
+            if (foreArms != null) foreach (var n in foreArms) PointBone(FindDeep(root, n), Vector3.down);
+            if (thighs != null)   foreach (var n in thighs)   PointBone(FindDeep(root, n), Vector3.down);
+            if (calves != null)   foreach (var n in calves)   PointBone(FindDeep(root, n), Vector3.down);
+        }
+
+        // rota 'b' para que apunte (b.head→primer hijo) hacia 'worldDir', sin importar sus ejes.
+        static void PointBone(Transform b, Vector3 worldDir)
+        {
+            if (b == null || b.childCount == 0) return;
+            Vector3 dir = (b.GetChild(0).position - b.position).normalized;
+            if (dir.sqrMagnitude < 1e-6f) return;
+            b.rotation = Quaternion.FromToRotation(dir, worldDir.normalized) * b.rotation;
         }
 
         static Transform FindDeep(Transform root, string name)

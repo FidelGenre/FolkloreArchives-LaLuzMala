@@ -196,13 +196,9 @@ namespace FolkloreArchives.MapGen
                 float deckY = Mathf.Max(wy, ey) + 0.15f;
                 var fb = BuilderUtils.Group(poi, "FootBridge", new Vector3(bx, deckY, bz));
                 BuilderUtils.Label(fb, "PUENTE PEATONAL", new Vector3(bx, deckY + 4f, bz));
-                BuilderUtils.Prim(PrimitiveType.Cube, "Deck", fb, new Vector3(bx, deckY, bz),
-                    new Vector3(halfLen * 2f, 0.4f, 4.5f), woodMat);
-                BuilderUtils.Prim(PrimitiveType.Cube, "RailN", fb, new Vector3(bx, deckY + 0.65f, bz + 2.1f),
-                    new Vector3(halfLen * 2f, 1.1f, 0.15f), woodMat);
-                BuilderUtils.Prim(PrimitiveType.Cube, "RailS", fb, new Vector3(bx, deckY + 0.65f, bz - 2.1f),
-                    new Vector3(halfLen * 2f, 1.1f, 0.15f), woodMat);
-                // owner: volver a derecho (el giro de 40° de antes no quedó bien).
+                // El puente en sí lo pone ahora PedestrianBridgeBuilder (puente COLGANTE de
+                // sogas, modelo FBX) en ESTE MISMO cruce — reemplazó al cubo de tablas que
+                // había acá. Queda el grupo vacío + label (ancla del cruce) + Reg (persistencia).
                 Reg(fb.gameObject);
             }
 
@@ -215,11 +211,9 @@ namespace FolkloreArchives.MapGen
             BuilderUtils.MarkStaticRecursive(poi);
         }
 
-        [MenuItem("Tools/Folklore Archives/Save Landmarks Layout")]
-        public static void SaveLandmarksLayout() => ManualLayoutPersistence.Save("Landmarks", "PointsOfInterest", PersistCount);
-
-        [MenuItem("Tools/Folklore Archives/Clear Landmarks Layout")]
-        public static void ClearLandmarksLayout() => ManualLayoutPersistence.Clear("Landmarks");
+        // (Los menús "Save/Clear Landmarks Layout" se eliminaron: mover/guardar landmarks
+        //  ahora es parte de "Save Map Layout", unificado con el resto del mapa. El registro
+        //  interno (Begin/Reg) sigue para colocarlos; Save Map Layout lo pisa al final.)
 
         // A warm point light (campfire / lantern glow) - the FtF "warm light in the
         // dark" focal points. No shadows (cheap; there are several of these).

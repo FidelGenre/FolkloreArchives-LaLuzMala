@@ -98,6 +98,8 @@ namespace FolkloreArchives.MapGen
             // reactivar esto apuntando a los prefabs nuevos.
             // MountainRingBuilder.BuildCentralLakeMountains(root.transform, terrain);
             AreaPoiBuilder.Build(root.transform, terrain);   // zonas/POIs nuevos del MapPlan (estepa, mallín, roquedal, quemado, orilla, Difunta Correa, Gauchito Gil, ahorcado, antena, corrales, YPF, estancia)
+            YpfNpcBuilder.Build(root.transform);             // playero Richard (surtidor) + viejo (baño): 2.4m + movilidad, coords a mano del owner
+            YpfDoorBuilder.Build(root.transform);            // puertas del edificio YPF + baño abribles con E (SwingDoor)
             HouseBuilder.Build(root.transform, terrain);     // casa de la vieja (OldLadyRanch) — Fase 1: cáscara + valla
             OldLadyNpcBuilder.Build(root.transform, terrain); // la vieja cuentacuentos, parada afuera de su casa
             FenceBuilder.Build(root.transform, terrain);      // valla de madera junto al camino de tierra y al sendero a la casa de la vieja
@@ -144,6 +146,40 @@ namespace FolkloreArchives.MapGen
             MapLayoutPersistence.ApplySavedLayout();
             Lap("Aplicar layout manual guardado");
 
+            // owner: "el playero sentado en la silla". Se sienta ACÁ, después del layout, cuando
+            // la silla OfficeChair_YPF ya está en su posición/rotación final (si se hiciera antes,
+            // heredaría la inclinación -90°X del GLB y quedaría tumbado, y el layout la movería
+            // después dejándolo desfasado). Lo emparenta a la silla y lo fuerza derecho.
+            YpfNpcBuilder.SeatYpfPlayero(root.transform);
+
+            // owner: "borrá esta valla que se genera acá" — se remueven paneles del cerco YPF por
+            // posición, DESPUÉS del layout (así agarra tanto el panel del builder como cualquier
+            // duplicado a mano que RecreateClones haya recreado en el mismo lugar).
+            AreaPoiBuilder.RemoveUnwantedFencePanels(root.transform);
+
+            // owner: "que el auto aparezca desde la punta de la nueva ruta". El owner
+            // extendió la ruta a mano duplicando el asfalto (PavedRoad_Surface (1)...),
+            // que el código no conoce. Ese duplicado recién existe DESPUÉS de ApplySavedLayout
+            // (RecreateClones lo recrea acá), así que reubicamos el auto en su punta ahora.
+            CarBuilder.SnapToRoadExtensionTip(root.transform);
+
+            // owner: terreno de Unity chico con bosque a los dos lados de la ruta EXTENDIDA
+            // (para que no flote sobre el vacío). También después de ApplySavedLayout: lee la
+            // posición viva de la extensión.
+            RoadTerrainBuilder.Build(root.transform);
+
+            // Restaurar capas "Missing" en TODOS los terrenos permanentes (principal + extensión
+            // + chunks). Antes las capas vivían en Generated/ (ignorada) → al perderse quedaban
+            // muertas. Ahora se re-crean en carpeta versionada y se reasignan sin tocar el splat.
+            foreach (var terr in Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
+                if (terr != null) TerrainBuilder.HealMissingLayers(terr.terrainData);
+
+            // owner: "que el auto aparezca desde la punta de la nueva ruta". El owner
+            // extendió la ruta a mano duplicando el asfalto (PavedRoad_Surface (1)...),
+            // que el código no conoce. Ese duplicado recién existe DESPUÉS de ApplySavedLayout
+            // (RecreateClones lo recrea acá), así que reubicamos el auto en su punta ahora.
+            CarBuilder.SnapToRoadExtensionTip(root.transform);
+
             // Coser los terrenos VECINOS (el generado + los extra que agregó el owner)
             // para que no se vea la costura entre ellos. Auto-connect de Unity: terrenos
             // adyacentes con el mismo groupingID se unen solos. Se re-aplica cada Generate
@@ -187,6 +223,27 @@ namespace FolkloreArchives.MapGen
             CarBuilder.SnapToRoadExtensionTip(root.transform);
             Lap("Reubicar auto sobre la ruta real (companero)");
 
+            // Postes de luz a lo largo de TODA la ruta. TIENE que correr ACÁ, después de que las
+            // piezas de asfalto (rescatadas por DeleteMap) ya se re-parentearon a FOLKLORE_MAP
+            // (líneas de arriba) — si no, están sueltas en la raíz y no las encuentra (mismo motivo
+            // que SnapToRoadExtensionTip).
+            // Si el grupo "PostesDeLuz" fue rescatado por DeleteMap (ya existía de un Generate
+            // anterior), se re-parentea de vuelta EXACTAMENTE como el owner lo dejó (posiciones a
+            // mano de postes y cables, borrados incluidos) y NO se regenera. Solo se construye desde
+            // cero la PRIMERA vez (o si el owner borró el grupo a propósito para rehacerlo). Esto hace
+            // que lo acomodado a mano sea 100% a prueba de Generate, sin depender del layout por índice.
+            var postes = GameObject.Find("PostesDeLuz");
+            if (postes != null)
+            {
+                if (postes.transform.parent != root.transform) postes.transform.SetParent(root.transform, true);
+                Lap("Postes de luz (conservados tal cual)");
+            }
+            else
+            {
+                ElectricPoleBuilder.Build(root.transform);
+                Lap("Postes de luz (generados)");
+            }
+
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveScene(SceneManager.GetActiveScene()); // salva el .unity para que el Build incluya el mapa
             Lap("Guardar assets+escena");
@@ -226,6 +283,19 @@ namespace FolkloreArchives.MapGen
                 t.SetParent(null, true);
                 Debug.Log($"<color=cyan>[Generate] Ruta real del compañero '{t.name}' rescatada fuera del mapa (no se borra).</color>");
             }
+
+            // Postes de luz + cables: una vez generados, el owner los ACOMODA A MANO (mueve el
+            // grupo entero, postes o cables sueltos, borra los que no quiere). Para que eso NO se
+            // pierda ni se descoloque en cada Generate, el grupo entero se RESCATA (igual que la ruta
+            // y el terreno extra) y se re-parentea de vuelta después, TAL CUAL quedó. NO se regenera
+            // si ya existe (ver Generate). Si el owner quiere volver a generarlos de cero (ej. extendió
+            // la ruta), borra el objeto "PostesDeLuz" a mano y regenera.
+            var postes = old.transform.Find("PostesDeLuz");
+            if (postes != null)
+            {
+                postes.SetParent(null, true);
+                Debug.Log("<color=cyan>[Generate] Postes de luz rescatados fuera del mapa (se conservan tal cual los dejaste).</color>");
+            }
             Object.DestroyImmediate(old);
         }
 
@@ -257,8 +327,8 @@ namespace FolkloreArchives.MapGen
                 RenderSettings.fogStartDistance = MapLayout.DayFogStart;
                 RenderSettings.fogEndDistance   = MapLayout.DayFogEnd;
                 RenderSettings.fogColor         = MapLayout.DayFogColor;
-                var t = Terrain.activeTerrain;
-                if (t != null) { t.detailObjectDistance = MapLayout.DayDetailRenderDistance; t.treeDistance = MapLayout.DayTreeRenderDistance; t.detailObjectDensity = 0.20f; }
+                foreach (var t in Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
+                    if (t != null) { t.detailObjectDistance = MapLayout.DayDetailRenderDistance; t.treeDistance = MapLayout.DayTreeRenderDistance; t.detailObjectDensity = MapLayout.DetailDensity; }
                 ForestBuilder.SetGrassFadeGlobals(MapLayout.DayDetailRenderDistance);
                 Shader.SetGlobalColor("_GrassTintMul", MapLayout.GrassDayTint);
                 var cam = Camera.main;
@@ -278,8 +348,8 @@ namespace FolkloreArchives.MapGen
                 RenderSettings.fogMode = FogMode.ExponentialSquared;
                 RenderSettings.fogDensity = MapLayout.FogDensity;
                 RenderSettings.fogColor = new Color(0.035f, 0.055f, 0.105f);
-                var t = Terrain.activeTerrain;
-                if (t != null) { t.detailObjectDistance = MapLayout.DetailRenderDistance; t.treeDistance = MapLayout.TreeRenderDistance; t.detailObjectDensity = MapLayout.DetailDensity; }
+                foreach (var t in Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
+                    if (t != null) { t.detailObjectDistance = MapLayout.DetailRenderDistance; t.treeDistance = MapLayout.TreeRenderDistance; t.detailObjectDensity = MapLayout.DetailDensity; }
                 ForestBuilder.SetGrassFadeGlobals(MapLayout.DetailRenderDistance);
                 Shader.SetGlobalColor("_GrassTintMul", Color.white); // noche: sin cambio
                 var cam = Camera.main;

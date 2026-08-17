@@ -38,51 +38,12 @@ namespace FolkloreArchives.MapGen
         // 1e-5 * MaxHeight(60m) ≈ 0.6 mm — well below anything visible.
         const float DiffEpsilon = 1e-5f;
 
-        // ── Save (menu) ───────────────────────────────────────────────────────
-        [MenuItem("Tools/Folklore Archives/Save Terrain Edits")]
-        public static void SaveTerrainEdits()
-        {
-            var terrain = Terrain.activeTerrain;
-            if (terrain == null)
-            {
-                var go = GameObject.Find("Terrain");
-                if (go != null) terrain = go.GetComponent<Terrain>();
-            }
-            if (terrain == null || terrain.terrainData == null)
-            {
-                Debug.LogWarning("[TerrainEdits] No active Terrain found. Generate the map first.");
-                return;
-            }
-
-            var td  = terrain.terrainData;
-            int res = td.heightmapResolution;
-
-            float[,] actual = td.GetHeights(0, 0, res, res);       // hand-edited heightmap
-            float[,] proc   = TerrainBuilder.ComputeProceduralHeights(res); // pure procedural base
-
-            int edited = 0;
-            using (var fs = new FileStream(EditsPath, FileMode.Create, FileAccess.Write))
-            using (var bw = new BinaryWriter(fs))
-            {
-                bw.Write(res);
-                for (int z = 0; z < res; z++)
-                {
-                    for (int x = 0; x < res; x++)
-                    {
-                        float d = actual[z, x] - proc[z, x];
-                        if (Mathf.Abs(d) < DiffEpsilon) d = 0f;
-                        else edited++;
-                        bw.Write(d);
-                    }
-                }
-            }
-
-            AssetDatabase.Refresh();
-            float pct = 100f * edited / (res * (float)res);
-            Debug.Log($"<color=lime>[TerrainEdits] Saved {edited} edited cells " +
-                      $"({pct:F2}% of terrain) to {EditsPath}. " +
-                      $"These now survive Generate Greybox Map.</color>");
-        }
+        // ── (eliminado) menú "Save Terrain Edits" ─────────────────────────────
+        //  Guardaba un DIFF de altura contra la base procedural. Frágil: si se guardaba
+        //  con el terreno en mal estado, aplastaba todo al regenerar. Reemplazado por
+        //  Tools ▸ Folklore Archives ▸ "Save Terrain" (guarda el asset directo, sin diff).
+        //  ApplyTerrainEdits queda porque el build FRESCO (si alguna vez se regenera de
+        //  cero) todavía lo usa para restaurar ediciones viejas.
 
         // ── Apply (called from TerrainBuilder.Build) ──────────────────────────
         // Adds the saved diff onto the freshly-computed procedural heightmap,

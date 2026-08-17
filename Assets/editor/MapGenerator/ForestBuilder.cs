@@ -13,19 +13,10 @@ namespace FolkloreArchives.MapGen
 {
     public static class ForestBuilder
     {
-        // Borra los árboles/pasto guardados en el terreno → el próximo Generate los
-        // regenera. Usar tras cambiar árboles, pasto, densidad, o flags PSX.
-        [MenuItem("Tools/Folklore Archives/Rebuild Forest (forzar)")]
-        public static void ForceRebuildForest()
-        {
-            var td = AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainBuilder.TerrainAssetPath);
-            if (td == null) { Debug.LogWarning("No hay terreno cacheado (regenerá primero)."); return; }
-            td.SetTreeInstances(new TreeInstance[0], true);
-            td.detailPrototypes = new DetailPrototype[0];
-            EditorUtility.SetDirty(td);
-            AssetDatabase.SaveAssets();
-            Debug.Log("<color=lime>Bosque borrado del terreno — el próximo Generate lo regenera (~80s).</color>");
-        }
+        // (Se quitó "Rebuild Forest": borraba TODOS los árboles/pasto del terreno para
+        //  regenerarlos, lo que también borraba lo editado a mano. Con el terreno
+        //  permanente los árboles/pasto se editan a mano —pincel Paint Trees/Details— y se
+        //  guardan con Tools ▸ Folklore Archives ▸ Save Terrain.)
 
         public static void Build(Transform parent, Terrain terrain)
         {

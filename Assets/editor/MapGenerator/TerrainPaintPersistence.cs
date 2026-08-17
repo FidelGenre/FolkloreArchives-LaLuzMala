@@ -40,48 +40,13 @@ namespace FolkloreArchives.MapGen
         const string DetailPath = "Assets/_FolkloreArchives/terrain_paint_detail.bytes";
         const float AlphaEpsilon = 1e-4f; // distancia (al cuadrado) mínima para contar una celda como "tocada"
 
-        [MenuItem("Tools/Folklore Archives/Save Terrain Paint")]
-        public static void SaveTerrainPaint()
-        {
-            var terrain = Terrain.activeTerrain;
-            if (terrain == null)
-            {
-                var go = GameObject.Find("Terrain");
-                if (go != null) terrain = go.GetComponent<Terrain>();
-            }
-            if (terrain == null || terrain.terrainData == null)
-            {
-                Debug.LogWarning("[TerrainPaint] No hay Terrain activo. Generá el mapa primero.");
-                return;
-            }
-            var live = terrain.terrainData;
-
-            Debug.Log("<color=yellow>[TerrainPaint] Recalculando el terreno puramente procedural para comparar (puede tardar varios minutos, mismo costo que Rebuild Terrain)…</color>");
-
-            var baseline = new TerrainData();
-            baseline.heightmapResolution = live.heightmapResolution;
-            baseline.alphamapResolution  = live.alphamapResolution;
-            baseline.size = live.size;
-            baseline.SetHeights(0, 0, TerrainBuilder.ComputeProceduralHeights(baseline.heightmapResolution));
-            TerrainBuilder.PaintTextures(baseline);
-            ForestBuilder.SetupGrass(baseline);
-
-            SaveAlphaDiff(live, baseline);
-            SaveDetailDiff(live, baseline);
-
-            Object.DestroyImmediate(baseline);
-
-            // Árboles borrados a mano (pincel Paint Trees + Shift). Se guarda como diff
-            // contra el baseline procedural que ForestBuilder cachea en cada Generate.
-            int treeRem = TreePersistence.SaveTreeRemovals(live);
-            string treeMsg = treeRem < 0
-                ? " (árboles: falta el baseline — regenerá el mapa una vez y volvé a guardar)"
-                : $" + {treeRem} árboles borrados";
-
-            AssetDatabase.Refresh();
-            Debug.Log("<color=lime>[TerrainPaint] Pintado a mano (texturas + pasto" + treeMsg +
-                      ") guardado. Sobrevive a Rebuild Terrain/Rebuild Forest de ahora en más.</color>");
-        }
+        // ── (eliminado) menú "Save Terrain Paint" ─────────────────────────────
+        //  Guardaba un DIFF de pintura/pasto/árboles contra un baseline procedural que
+        //  recalculaba cada vez (lento y frágil): si el bosque estaba a medio generar,
+        //  capturaba "borré miles de árboles" y los borraba en cada Generate (pasó: 25.100).
+        //  Reemplazado por Tools ▸ Folklore Archives ▸ "Save Terrain" (guarda el asset
+        //  directo, sin diff). ApplyAlphaPaint/ApplyDetailPaint quedan por si alguna vez
+        //  se regenera el terreno de cero.
 
         static void SaveAlphaDiff(TerrainData live, TerrainData baseline)
         {
@@ -246,15 +211,8 @@ namespace FolkloreArchives.MapGen
             catch (System.Exception e) { Debug.LogWarning("[TerrainPaint] No pude leer " + DetailPath + ": " + e.Message); }
         }
 
-        [MenuItem("Tools/Folklore Archives/Clear Terrain Paint")]
-        public static void ClearTerrainPaint()
-        {
-            bool any = false;
-            if (File.Exists(AlphaPath))  { File.Delete(AlphaPath);  any = true; }
-            if (File.Exists(DetailPath)) { File.Delete(DetailPath); any = true; }
-            TreePersistence.ClearRemovals(); // también el borrado de árboles
-            if (any) { AssetDatabase.Refresh(); Debug.Log("[TerrainPaint] Guardado de texturas/pasto/árboles borrado."); }
-            else { AssetDatabase.Refresh(); Debug.Log("[TerrainPaint] Guardado limpiado (texturas/pasto/árboles)."); }
-        }
+        // ── (eliminado) menú "Clear Terrain Paint" ────────────────────────────
+        //  Ya no hace falta: con el terreno permanente no hay diffs que limpiar. Para
+        //  descartar cambios de terreno, revertí el asset del terreno en Plastic.
     }
 }

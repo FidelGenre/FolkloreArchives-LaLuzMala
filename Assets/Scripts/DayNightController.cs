@@ -12,7 +12,8 @@ namespace FolkloreArchives
 {
     public class DayNightController : MonoBehaviour
     {
-        // Tres momentos del día. Tab cicla Día → Atardecer → Noche → Día.
+        // owner: se sacó el DÍA. Ahora solo TARDE (Dusk) y NOCHE. Tab alterna tarde ↔ noche.
+        // El enum conserva Day por compatibilidad, pero ya no se usa en el ciclo.
         public enum Phase { Day, Dusk, Night }
 
         [Header("Skyboxes (asignados por TestPlayerBuilder)")]
@@ -24,10 +25,11 @@ namespace FolkloreArchives
         public Light sun;
         public Terrain terrain;
 
-        Phase _phase = Phase.Day;   // el juego arranca de día
+        Phase _phase = Phase.Dusk;   // owner: el juego arranca de TARDE (ya no hay día)
 
-        // Compatibilidad: el resto del código (MapGenerator) sigue pensando en día/noche.
-        public bool IsDay => _phase == Phase.Day;
+        // Compatibilidad: el resto del código sigue pensando en día/noche. owner: la TARDE cuenta
+        // como día -> IsDay es true en tarde (todo lo que no sea noche).
+        public bool IsDay => _phase != Phase.Night;
         public bool IsNight => _phase == Phase.Night;   // lo usa la Luz Mala (solo de noche)
         public Phase CurrentPhase => _phase;
 
@@ -43,10 +45,11 @@ namespace FolkloreArchives
                 Toggle();
         }
 
-        void Toggle() => SetPhase((Phase)(((int)_phase + 1) % 3));
+        // owner: Tab alterna SOLO tarde ↔ noche (sin día).
+        void Toggle() => SetPhase(_phase == Phase.Night ? Phase.Dusk : Phase.Night);
 
-        // Wrapper viejo: SetDay(true) = día, SetDay(false) = noche.
-        public void SetDay(bool day) => SetPhase(day ? Phase.Day : Phase.Night);
+        // Wrapper viejo: SetDay(true) = TARDE (antes era día), SetDay(false) = noche.
+        public void SetDay(bool day) => SetPhase(day ? Phase.Dusk : Phase.Night);
 
         public void SetPhase(Phase phase)
         {
@@ -110,8 +113,6 @@ namespace FolkloreArchives
         // jugador. Lo llama SetDay() y también GameSettings.Apply() (al cambiar opciones).
         public void ApplyGraphics()
         {
-            var cam = GetComponentInChildren<Camera>();
-
             if (_phase == Phase.Day)
             {
                 RenderSettings.fogStartDistance = 30f * GameSettings.FogNearMul;
@@ -128,7 +129,7 @@ namespace FolkloreArchives
                     terrain.detailObjectDensity  = 0.20f * GameSettings.GrassDensityMul;
                     terrain.Flush(); // reconstruye pasto/árboles YA (no de a poco al cambiar preset)
                 }
-                if (cam != null) cam.farClipPlane = 140f * GameSettings.ViewDistanceMul;
+                SetGameplayFarClip(140f * GameSettings.ViewDistanceMul);
                 Shader.SetGlobalFloat("_GrassFadeEnd", grassDist);
                 Shader.SetGlobalFloat("_GrassFadeStart", Mathf.Max(0f, grassDist - 4f));
             }
@@ -151,10 +152,28 @@ namespace FolkloreArchives
                     terrain.detailObjectDensity  = (dusk ? 0.24f : 0.28f) * GameSettings.GrassDensityMul;
                     terrain.Flush(); // reconstruye pasto/árboles YA (no de a poco al cambiar preset)
                 }
-                if (cam != null) cam.farClipPlane = (dusk ? 120f : 85f) * GameSettings.ViewDistanceMul;
+                SetGameplayFarClip((dusk ? 120f : 85f) * GameSettings.ViewDistanceMul);
                 Shader.SetGlobalFloat("_GrassFadeEnd", grassDist);
                 Shader.SetGlobalFloat("_GrassFadeStart", Mathf.Max(0f, grassDist - 4f));
             }
+        }
+
+        // owner: "el perro tiene menos distancia de visión que el humano" -- antes el far
+        // clip se aplicaba a UNA sola cámara (GetComponentInChildren). Ahora se aplica a
+        // las DOS cámaras de juego (persona y perro) para que vean igual de lejos. La
+        // cámara de FONDO (BackdropCamera, far=9000 para el anillo de montañas) queda
+        // intacta.
+        void SetGameplayFarClip(float far)
+        {
+            var party = Object.FindFirstObjectByType<PartyController>(FindObjectsInactive.Include);
+            if (party != null)
+            {
+                if (party.personCam != null) party.personCam.farClipPlane = far;
+                if (party.dogCam != null) party.dogCam.farClipPlane = far;
+                return;
+            }
+            var cam = GetComponentInChildren<Camera>(); // fallback: comportamiento viejo
+            if (cam != null) cam.farClipPlane = far;
         }
     }
 }

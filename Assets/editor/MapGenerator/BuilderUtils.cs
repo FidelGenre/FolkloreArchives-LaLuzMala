@@ -18,6 +18,46 @@ namespace FolkloreArchives.MapGen
                 AssetDatabase.CreateFolder("Assets", "_FolkloreArchives");
             if (!AssetDatabase.IsValidFolder(MapLayout.GeneratedFolder))
                 AssetDatabase.CreateFolder("Assets/_FolkloreArchives", "Generated");
+            // Carpeta VERSIONADA para capas + texturas de terreno (deterministas). Antes
+            // vivían en Generated/ (ignorada) → el terreno versionado las referenciaba por
+            // GUID per-máquina → "Missing" y divergencias. Ver TerrainBuilder.TerrainLayersFolder.
+            if (!AssetDatabase.IsValidFolder("Assets/_FolkloreArchives/TerrainLayers"))
+                AssetDatabase.CreateFolder("Assets/_FolkloreArchives", "TerrainLayers");
+        }
+
+        /// Guarda un material en disco SIN romper su GUID cuando ya existe.
+        ///
+        /// El patrón viejo (DeleteAsset + CreateAsset) le asignaba un GUID NUEVO
+        /// cada vez que se generaba. Con dos personas regenerando y commiteando,
+        /// los mismos .mat de Assets/Settings/ terminaban con GUIDs distintos en
+        /// cada máquina → Plastic los veía como "borrado de un lado / creado del
+        /// otro" → decenas de conflictos en cada intercambio.
+        ///
+        /// Acá, si el .mat YA existe, reusamos ESE asset (GUID estable) y le
+        /// re-copiamos todo lo del material recién construido (shader + props +
+        /// keywords + render queue). Si no existe, lo creamos (única vez). Así el
+        /// GUID no cambia entre regeneraciones ni entre máquinas → sin conflictos.
+        ///
+        /// IMPORTANTE: devuelve el material que quedó en disco (el existente si lo
+        /// había). El llamador DEBE usar el valor devuelto para asignarlo a los
+        /// renderers, no la instancia que venía armando.
+        public static Material SaveMaterialStable(Material built, string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (existing != null)
+            {
+                // reusar el asset (GUID intacto) pero dejarlo idéntico al recién armado
+                if (existing.shader != built.shader) existing.shader = built.shader;
+                existing.CopyPropertiesFromMaterial(built);   // props + keywords
+                existing.renderQueue = built.renderQueue;     // explícito (vidrio transparente del auto)
+                existing.globalIlluminationFlags = built.globalIlluminationFlags; // emisión de faros
+                EditorUtility.SetDirty(existing);
+                // 'built' era una instancia temporal en memoria: ya no se usa
+                if (!AssetDatabase.Contains(built)) Object.DestroyImmediate(built);
+                return existing;
+            }
+            AssetDatabase.CreateAsset(built, path);
+            return built;
         }
 
         /// A loose texture used as a normal map (not part of an FBX's own material
@@ -116,9 +156,9 @@ namespace FolkloreArchives.MapGen
         /// other procedural textures) so tileSize.x lines up with "along the road."
         /// For normal maps, also rotates the encoded tangent-space vector (R/G),
         /// not just the pixel grid, so lighting on the bump detail stays correct.
-        public static Texture2D Rotate90(string assetPath, bool isNormalMap, string cacheName)
+        public static Texture2D Rotate90(string assetPath, bool isNormalMap, string cacheName, string folder = null)
         {
-            string outPath = MapLayout.GeneratedFolder + "/tex_" + cacheName + ".asset";
+            string outPath = (folder ?? MapLayout.GeneratedFolder) + "/tex_" + cacheName + ".asset";
             var cached = AssetDatabase.LoadAssetAtPath<Texture2D>(outPath);
             if (cached != null) return cached;
 
@@ -157,9 +197,9 @@ namespace FolkloreArchives.MapGen
         /// like Rotate90). Used to force the Muddy ground layer to an unmistakable
         /// dirt-brown regardless of the pack texture's native (greenish) tint. `tint`
         /// multiplies each texel; alpha is preserved.
-        public static Texture2D Tint(string assetPath, Color tint, string cacheName)
+        public static Texture2D Tint(string assetPath, Color tint, string cacheName, string folder = null)
         {
-            string outPath = MapLayout.GeneratedFolder + "/tex_" + cacheName + ".asset";
+            string outPath = (folder ?? MapLayout.GeneratedFolder) + "/tex_" + cacheName + ".asset";
             var cached = AssetDatabase.LoadAssetAtPath<Texture2D>(outPath);
             if (cached != null) return cached;
 

@@ -40,6 +40,10 @@ namespace FolkloreArchives.MapGen
         // hito aparte pasando el puente (owner: "quitaste el mirador que puse
         // volvelo a poner pasando el puente").
         const string DirHuntingTower = "Assets/ExternalAssets/HuntingTower";
+        // Cerco de alambre modular (PSX Modular Chain-Link Fence, DanglingBat, itch.io). GLB
+        // convertidos a FBX (Blender). Recto = 2×2 m, pivote en la BASE-CENTRO. Materiales:
+        // "chain_link" (malla con alfa recortado) + "galvanized_steel" (postes/marco, opaco).
+        const string DirChainLinkFence = "Assets/ExternalAssets/ChainLinkFence/Models";
         // CEMENTERIO (owner: "quiero un solo cementerio" -- reemplaza lo que iba a ser
         // el Campo de Caza, mismo punto/trigger de Acto2 sin renombrar por abajo).
         // Referencia: "Stylized Graveyard Model Guide" (Sketchfab) -- reja + capillita +
@@ -466,7 +470,8 @@ namespace FolkloreArchives.MapGen
             if (st != null)
             {
                 HideCatalogClutter(st);   // oculta la fila de cajones/productos sueltos del exhibidor
-                AddMeshColliders(st);     // owner: "colisiones a toda la estación" (tienda/techo/columnas/surtidores)
+                AddMeshColliders(st, "estación YPF");     // owner: "colisiones a toda la estación" (tienda/techo/columnas/surtidores)
+                StyleYpfStation(st);      // re-brand: logo "6twelve" → YPF, banda de colores → azul navy YPF
             }
             if (st == null)
             {
@@ -498,6 +503,15 @@ namespace FolkloreArchives.MapGen
                 car.transform.position = p + new Vector3(6f, 0.4f, -3f);
                 car.transform.rotation = Quaternion.Euler(6f, 55f, 10f); // ladeado/abandonado
             }
+
+            // owner: "poné vallas de alambre alrededor de la YPF". Cerco modular (asset PSX
+            // chain-link de DanglingBat) en 3 lados: NORTE, OESTE y SUR. El lado ESTE queda
+            // ABIERTO a propósito = entrada: el auto de la secuencia ingresa desde el sureste
+            // (CarBuilder) cruzando ese lado; si lo cerráramos, chocaría el cerco.
+            FenceYpf(g, p, MapLayout.YpfPadHalfX - 1f, (farZ - nearZ) * 0.5f, t);
+
+            // owner: "añadí el PC noventoso y la silla, dejalos cerca de la YPF que yo los acomodo".
+            PlaceYpfComputer(g, p, t);
             return g;
         }
 
@@ -702,7 +716,14 @@ namespace FolkloreArchives.MapGen
             // si todavía no está descargada, una torre procedural simple (mismo
             // criterio que el molino de la Estepa: 4 patas + cruces + plataforma).
             var towerInst = SpawnModel(DirHuntingTower, g, p, 7f, Random.Range(0f, 360f), true, "TorreMirador");
-            if (towerInst != null) FixTowerMaterial(towerInst);
+            if (towerInst != null)
+            {
+                FixTowerMaterial(towerInst);
+                // owner: "añadile colisiones a este objeto". MeshCollider no-convexo por cada
+                // mesh (la geometría real: patas, escalera, plataforma, barandas) para poder
+                // caminar/chocar la torre. Horneado en el builder → se re-aplica cada Generate.
+                AddMeshColliders(towerInst, "torre mirador");
+            }
             else
             {
                 float towerH = 6f;
@@ -738,8 +759,7 @@ namespace FolkloreArchives.MapGen
                 if (tex != null && _towerMat.HasProperty("_BaseMap")) _towerMat.SetTexture("_BaseMap", tex);
                 if (_towerMat.HasProperty("_Smoothness")) _towerMat.SetFloat("_Smoothness", 0.1f);
                 string matPath = "Assets/Settings/HuntingTower.mat";
-                AssetDatabase.DeleteAsset(matPath);
-                AssetDatabase.CreateAsset(_towerMat, matPath);
+                _towerMat = BuilderUtils.SaveMaterialStable(_towerMat, matPath); // GUID estable → sin conflictos al regenerar
             }
             foreach (var r in inst.GetComponentsInChildren<Renderer>())
             {
@@ -865,13 +885,265 @@ namespace FolkloreArchives.MapGen
             if (c != null) Object.DestroyImmediate(c);
         }
 
+        // ---------------- CERCO DE ALAMBRE (YPF) ----------------
+        static Material _fenceChainMat, _fenceSteelMat;
+        static (Material chain, Material steel) FenceMaterials()
+        {
+            const string TexDir = "Assets/ExternalAssets/ChainLinkFence/Textures/";
+            if (_fenceChainMat == null)
+            {
+                // MALLA: cutout (alfa) + DOBLE CARA (se ve el tejido de los dos lados).
+                var chainTex = AssetDatabase.LoadAssetAtPath<Texture2D>(TexDir + "chainlink_diffuse_128x128_png_chainlink_alpha_128x128.png");
+                var m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (chainTex != null) m.SetTexture("_BaseMap", chainTex);
+                m.SetColor("_BaseColor", Color.white);
+                m.SetFloat("_Surface", 0f); m.SetFloat("_AlphaClip", 1f); m.SetFloat("_Cutoff", 0.5f);
+                m.EnableKeyword("_ALPHATEST_ON"); m.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+                m.SetOverrideTag("RenderType", "TransparentCutout"); m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+                m.SetFloat("_Smoothness", 0.1f);
+                _fenceChainMat = BuilderUtils.SaveMaterialStable(m, "Assets/Settings/ChainLinkFence_Chain.mat");
+            }
+            if (_fenceSteelMat == null)
+            {
+                var steelTex = AssetDatabase.LoadAssetAtPath<Texture2D>(TexDir + "chain_link_fence_01_diffuse_256x256.png");
+                var s = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (steelTex != null) s.SetTexture("_BaseMap", steelTex);
+                s.SetColor("_BaseColor", Color.white);
+                s.SetFloat("_Smoothness", 0.2f); s.SetFloat("_Metallic", 0.4f);
+                _fenceSteelMat = BuilderUtils.SaveMaterialStable(s, "Assets/Settings/ChainLinkFence_Steel.mat");
+            }
+            return (_fenceChainMat, _fenceSteelMat);
+        }
+
+        // Cerco de alambre alrededor del lote (centro c, medio-ancho halfX en X, medio-fondo halfZ
+        // en Z). Cierra NORTE, OESTE y SUR con paneles rectos de 2 m; deja el ESTE abierto (entrada).
+        static void FenceYpf(Transform parent, Vector3 c, float halfX, float halfZ, Terrain t)
+        {
+            var segModel = AssetDatabase.LoadAssetAtPath<GameObject>(DirChainLinkFence + "/chain_link_fence_01.fbx");
+            if (segModel == null) { Debug.LogWarning("[YPF] falta " + DirChainLinkFence + "/chain_link_fence_01.fbx — no se arma el cerco. Hacé foco en Unity para que importe el FBX y regenerá."); return; }
+            var mats = FenceMaterials();
+            var group = BuilderUtils.Group(parent, "CercoYPF", c);
+            const float seg = 2f;
+            int nx = Mathf.RoundToInt(halfX * 2f / seg); // paneles por lado N/S
+            int nz = Mathf.RoundToInt(halfZ * 2f / seg); // por lado O/E
+
+            // NORTE (z = c.z+halfZ) y SUR (z = c.z-halfZ): paneles a lo largo de X (sin rotar).
+            for (int i = 0; i < nx; i++)
+            {
+                float x = c.x - halfX + (i + 0.5f) * seg;
+                PlaceFenceSeg(group, segModel, mats.chain, mats.steel, t, x, c.z + halfZ, 0f);
+                PlaceFenceSeg(group, segModel, mats.chain, mats.steel, t, x, c.z - halfZ, 0f);
+            }
+            // OESTE (x = c.x-halfX): paneles a lo largo de Z (rotados 90°). ESTE queda abierto.
+            for (int i = 0; i < nz; i++)
+            {
+                float z = c.z - halfZ + (i + 0.5f) * seg;
+                PlaceFenceSeg(group, segModel, mats.chain, mats.steel, t, c.x - halfX, z, 90f);
+            }
+            Debug.Log($"<color=cyan>[YPF] Cerco de alambre: {nx * 2 + nz} paneles (N/O/S). Lado ESTE abierto = entrada del auto.</color>");
+        }
+
+        static void PlaceFenceSeg(Transform parent, GameObject model, Material chain, Material steel, Terrain t, float x, float z, float yaw)
+        {
+            float y = BuilderUtils.Ground(t, x, z).y;
+            var inst = (GameObject)Object.Instantiate(model, parent);
+            inst.name = "Valla";
+            inst.transform.position = new Vector3(x, y, z);
+            inst.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            foreach (var r in inst.GetComponentsInChildren<MeshRenderer>())
+            {
+                var src = r.sharedMaterials;
+                var arr = new Material[src.Length];
+                for (int i = 0; i < src.Length; i++)
+                {
+                    string on = src[i] != null ? src[i].name.ToLowerInvariant() : "";
+                    arr[i] = (on.Contains("steel") || on.Contains("galv")) ? steel : chain; // por nombre, no por posición
+                }
+                r.sharedMaterials = arr;
+            }
+            // Colisión fina del panel para que el jugador no lo atraviese (pivote base-centro → centro y=1).
+            var col = inst.AddComponent<BoxCollider>();
+            col.center = new Vector3(0f, 1f, 0f);
+            col.size = new Vector3(2f, 2f, 0.15f);
+        }
+
+        // PC noventoso ("90s Desktop PC - PSX" by visualdiscette, CC-BY) + silla de oficina (GLB).
+        // Se dejan CERCA de la estación, escalados a tamaño real y apoyados en el piso; el owner los
+        // acomoda a mano (nombres únicos → el layout guarda su posición/escala al mover/Save Map Layout).
+        static void PlaceYpfComputer(Transform parent, Vector3 p, Terrain t)
+        {
+            var pcModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ExternalAssets/DesktopPC/desktop_pc.glb");
+            var chairModel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/ExternalAssets/DesktopPC/office_chair.glb");
+            if (pcModel == null && chairModel == null)
+            {
+                Debug.LogWarning("[YPF] faltan los GLB del PC/silla en Assets/ExternalAssets/DesktopPC/ — hacé foco en Unity para que importen y regenerá.");
+                return;
+            }
+            if (pcModel != null)
+                SpawnModelFrom(pcModel, parent, BuilderUtils.Ground(t, p.x - 6f, p.z + 6f), 0.65f, 0f, false, "DesktopPC_YPF");   // ~0.65 m de ancho
+            if (chairModel != null)
+                // owner: "hay un solo playero y quiero que esté en la silla" -- el playero
+                // Richard va SENTADO en esta silla, pero se sienta DESPUÉS de ApplySavedLayout
+                // (YpfNpcBuilder.SeatYpfPlayero, llamado desde MapGenerator), cuando la silla
+                // ya está en su transform final -- si no, hereda la inclinación del GLB y queda
+                // tumbado, y encima el layout la mueve después dejándolo desfasado.
+                SpawnModelFrom(chairModel, parent, BuilderUtils.Ground(t, p.x - 6f, p.z + 7.5f), 1.15f, 180f, true, "OfficeChair_YPF"); // ~1.15 m de alto
+            Debug.Log("<color=cyan>[YPF] PC noventoso + silla agregados cerca de la estación (acomodalos a mano). Crédito: '90s Desktop PC - PSX' by visualdiscette (CC-BY).</color>");
+        }
+
+        // Paneles del cerco YPF que el owner NO quiere. Posición LOCAL (x,z) respecto de CercoYPF
+        // (la que muestra el Inspector). owner: "borrá esta valla que se genera acá" — destildar no
+        // alcanzaba porque había un panel del builder + un duplicado a mano superpuestos. Esto corre
+        // DESPUÉS del layout (MapGenerator) y borra CUALQUIER panel (builder o clon) en esa posición.
+        // Para sacar más paneles, agregá su (x,z) local a esta lista.
+        static readonly Vector2[] FenceRemoveLocal = { new Vector2(-2f, 24f) };
+        public static void RemoveUnwantedFencePanels(Transform mapRoot)
+        {
+            if (mapRoot == null || FenceRemoveLocal.Length == 0) return;
+            Transform cerco = null;
+            foreach (var tr in mapRoot.GetComponentsInChildren<Transform>(true))
+                if (tr.name == "CercoYPF") { cerco = tr; break; }
+            if (cerco == null) return;
+
+            var kids = new System.Collections.Generic.List<Transform>();
+            foreach (Transform c in cerco) kids.Add(c);
+            int removed = 0;
+            foreach (var k in kids)
+            {
+                if (k == null || !k.name.StartsWith("Valla")) continue;
+                Vector3 lp = k.localPosition;
+                foreach (var s in FenceRemoveLocal)
+                    if (Mathf.Abs(lp.x - s.x) < 1.5f && Mathf.Abs(lp.z - s.y) < 1.5f)
+                    { Object.DestroyImmediate(k.gameObject); removed++; break; }
+            }
+            if (removed > 0) Debug.Log($"<color=cyan>[YPF] {removed} panel(es) de cerco removido(s) por posición (owner).</color>");
+        }
+
+        // ---------------- MARCA YPF (re-brand del modelo de la estación) ----------------
+        // owner: "cambiá el logo '6twelve' por el de YPF y los colores de alrededor por los del
+        // logo, como en la foto". El modelo trae la marca embebida: material "6twelve.001" = el
+        // logo del techo; material "Sign" (Image_1, rayas rosa/cyan) = la banda de la marquesina.
+        // Se sobreescriben tras instanciar: banda → azul navy YPF; logo → textura YPF generada
+        // (ypf_logo.png). El logo va emisivo para que se lea de día y de noche (cartel iluminado).
+        static Material _ypfLogoMat, _ypfBandMat, _ypfTotemMat;
+        static void StyleYpfStation(GameObject st)
+        {
+            if (st == null) return;
+            if (_ypfLogoMat == null)
+            {
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ExternalAssets/GasStationProps/ypf_logo.png");
+                var m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (tex != null) m.SetTexture("_BaseMap", tex);
+                m.SetColor("_BaseColor", Color.white);
+                m.SetFloat("_Smoothness", 0f);   // mate: sin brillo especular del sol
+                // owner: "brilla mucho... tiene un borde blanco" — era la EMISIÓN (bloom = halo blanco
+                // alrededor + tapaba las sombras). Se saca: material lit normal → recibe/proyecta sombras
+                // y no genera halo. (El cartel se ve por la luz de la estación; si de noche queda muy
+                // oscuro, subir una emisión SUAVE acá.)
+                m.DisableKeyword("_EMISSION");
+                m.SetColor("_EmissionColor", Color.black);
+                m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+                // El GLB trae la V invertida → la textura del logo sale AL REVÉS (upside down).
+                // Se da vuelta desde el material (scale.y = -1) para que quede derecha con cualquier
+                // imagen que se ponga en ypf_logo.png (no hay que editar el archivo).
+                m.SetTextureScale("_BaseMap", new Vector2(1f, -1f)); m.SetTextureOffset("_BaseMap", new Vector2(0f, 1f));
+                _ypfLogoMat = BuilderUtils.SaveMaterialStable(m, "Assets/Settings/YPF_Logo.mat");
+            }
+            if (_ypfBandMat == null)
+            {
+                // owner: "los colores no coinciden: son franjas GRISES con una AZUL central" (como la
+                // foto). Textura ypf_band.png = franjas horizontales gris/gris-oscuro/AZUL/.../ (simétrica,
+                // a prueba de flip) mapeada sobre la marquesina (misma UV que la banda "Sign" original).
+                var bandTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ExternalAssets/GasStationProps/ypf_band.png");
+                var b = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (bandTex != null) b.SetTexture("_BaseMap", bandTex);
+                b.SetColor("_BaseColor", Color.white);
+                b.SetFloat("_Smoothness", 0.2f);
+                _ypfBandMat = BuilderUtils.SaveMaterialStable(b, "Assets/Settings/YPF_Band.mat");
+            }
+            if (_ypfTotemMat == null)
+            {
+                // Tótem de precios (material "6twelve_Sign", Image_53 base + Image_54 emisión). Se
+                // reemplaza por ypf_totem_base/emis: logo "6twelve" → caja YPF, labels → SUPER/INFINIA/
+                // DIESEL (pintados sobre las originales, en las mismas posiciones, espejados como la UV).
+                // Emisión enmascarada (el negro del mapa no brilla) → solo el YPF y los precios se iluminan.
+                var baseTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ExternalAssets/GasStationProps/ypf_totem_base.png");
+                var emisTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ExternalAssets/GasStationProps/ypf_totem_emis.png");
+                var s = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                if (baseTex != null) s.SetTexture("_BaseMap", baseTex);
+                s.SetColor("_BaseColor", Color.white);
+                s.SetFloat("_Smoothness", 0.2f);
+                if (emisTex != null)
+                {
+                    s.EnableKeyword("_EMISSION");
+                    s.SetTexture("_EmissionMap", emisTex);
+                    s.SetColor("_EmissionColor", Color.white * 0.6f);
+                    s.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+                }
+                _ypfTotemMat = BuilderUtils.SaveMaterialStable(s, "Assets/Settings/YPF_Totem.mat");
+            }
+
+            int logo = 0, band = 0, totem = 0;
+            foreach (var r in st.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                bool isLogo = r.gameObject.name.ToLowerInvariant().Contains("logo");
+                var src = r.sharedMaterials;
+                var arr = (Material[])src.Clone();
+                bool changed = false;
+                for (int i = 0; i < src.Length; i++)
+                {
+                    string n = src[i] != null ? src[i].name : "";
+                    if (isLogo) { arr[i] = _ypfLogoMat; changed = true; logo++; }
+                    else if (n == "Sign") { arr[i] = _ypfBandMat; changed = true; band++; } // banda a rayas (Image_1)
+                    else if (n == "6twelve_Sign") { arr[i] = _ypfTotemMat; changed = true; totem++; } // tótem de precios
+                }
+                if (changed) r.sharedMaterials = arr;
+                if (isLogo) FixLogoRimUVs(r);
+            }
+            Debug.Log($"<color=cyan>[YPF] Re-brand YPF: {logo} logo + {band} banda + {totem} tótem → YPF.</color>");
+        }
+
+        // El panel del cartel es una CAJA con grosor: sus caras LATERALES (el canto) muestrean la
+        // textura donde caen las letras → se veía un "borde blanco" al costado. Se clona la malla (no
+        // se toca el asset del GLB) y se manda la UV de las caras del canto a una esquina AZUL de la
+        // textura. Así el logo puede ocupar casi todo el frente sin que reaparezca el borde. El canto
+        // se detecta por el eje MÁS FINO del panel (su normal apunta ahí en el frente/atrás; el canto
+        // no), independiente del sistema de ejes del GLB.
+        static void FixLogoRimUVs(MeshRenderer r)
+        {
+            var mf = r.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) return;
+            var src = mf.sharedMesh;
+            if (src.name.EndsWith("_YPFrim")) return; // ya arreglada
+            var mesh = Object.Instantiate(src);
+            mesh.name = src.name + "_YPFrim";
+            var verts = mesh.vertices; var norms = mesh.normals; var uvs = mesh.uv;
+            if (uvs == null || uvs.Length != verts.Length) return;
+            Vector3 sz = mesh.bounds.size;
+            int thin = (sz.x <= sz.y && sz.x <= sz.z) ? 0 : (sz.y <= sz.z ? 1 : 2); // eje del grosor
+            var tris = mesh.triangles;
+            var blue = new Vector2(0.03f, 0.03f); // esquina azul de la textura (margen)
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                int a = tris[t], b = tris[t + 1], c = tris[t + 2];
+                Vector3 fn = (norms != null && norms.Length == verts.Length)
+                    ? (norms[a] + norms[b] + norms[c]).normalized
+                    : Vector3.Cross(verts[b] - verts[a], verts[c] - verts[a]).normalized;
+                float comp = thin == 0 ? fn.x : (thin == 1 ? fn.y : fn.z);
+                if (Mathf.Abs(comp) < 0.6f) { uvs[a] = blue; uvs[b] = blue; uvs[c] = blue; } // canto → azul
+            }
+            mesh.uv = uvs;
+            mf.sharedMesh = mesh;
+        }
+
         // Colisiones a TODO un modelo: una MeshCollider no-convexa por cada mesh ACTIVO.
         // Pensado para props estáticos (la estación YPF): el jugador choca contra tienda,
         // techo, columnas, surtidores y cartel — la geometría real, no una caja. Saltea los
         // meshes inactivos (los cajones/productos que oculta HideCatalogClutter) y los que
         // ya tengan collider. Horneado en el builder → se re-aplica en cada Generate.
-        static void AddMeshColliders(GameObject root)
+        static void AddMeshColliders(GameObject root, string label = "modelo")
         {
+            if (root == null) return;
             int n = 0;
             foreach (var mf in root.GetComponentsInChildren<MeshFilter>(false)) // false = solo activos
             {
@@ -880,7 +1152,7 @@ namespace FolkloreArchives.MapGen
                 mc.sharedMesh = mf.sharedMesh;
                 n++;
             }
-            Debug.Log($"<color=cyan>[YPF] {n} colliders (MeshCollider) agregados al modelo de la estación.</color>");
+            Debug.Log($"<color=cyan>[AreaPoi] {n} colliders (MeshCollider) agregados a {label}.</color>");
         }
 
         // Productos/cajones del exhibidor del modelo de la YPF que quedan "tirados" afuera.
@@ -929,8 +1201,7 @@ namespace FolkloreArchives.MapGen
                     if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
                     if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
                     string matPath = "Assets/Settings/House_" + n + ".mat";
-                    AssetDatabase.DeleteAsset(matPath);
-                    AssetDatabase.CreateAsset(mat, matPath);
+                    mat = BuilderUtils.SaveMaterialStable(mat, matPath); // GUID estable → sin conflictos al regenerar
                     _houseMats[n] = mat;
                 }
             }
@@ -965,8 +1236,7 @@ namespace FolkloreArchives.MapGen
                 if (tex != null && _tombstoneMat.HasProperty("_BaseMap")) _tombstoneMat.SetTexture("_BaseMap", tex);
                 if (_tombstoneMat.HasProperty("_Smoothness")) _tombstoneMat.SetFloat("_Smoothness", 0.1f);
                 string matPath = "Assets/Settings/CemeteryTombstone1.mat";
-                AssetDatabase.DeleteAsset(matPath);
-                AssetDatabase.CreateAsset(_tombstoneMat, matPath);
+                _tombstoneMat = BuilderUtils.SaveMaterialStable(_tombstoneMat, matPath); // GUID estable → sin conflictos al regenerar
             }
             foreach (var r in inst.GetComponentsInChildren<Renderer>())
             {
@@ -991,8 +1261,7 @@ namespace FolkloreArchives.MapGen
                 if (tex != null && _dockMat.HasProperty("_BaseMap")) _dockMat.SetTexture("_BaseMap", tex);
                 if (_dockMat.HasProperty("_Smoothness")) _dockMat.SetFloat("_Smoothness", 0.15f);
                 string matPath = "Assets/Settings/DockWharf.mat";
-                AssetDatabase.DeleteAsset(matPath);
-                AssetDatabase.CreateAsset(_dockMat, matPath);
+                _dockMat = BuilderUtils.SaveMaterialStable(_dockMat, matPath); // GUID estable → sin conflictos al regenerar
             }
             foreach (var r in inst.GetComponentsInChildren<Renderer>())
             {

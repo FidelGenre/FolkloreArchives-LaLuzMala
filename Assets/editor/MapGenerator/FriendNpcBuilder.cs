@@ -11,7 +11,7 @@
 //  al costado de la ruta esperando/charlando cerca del auto.
 //  "y deben medir lo mismo que el personaje principal" -- las 3
 //  alturas eran inconsistentes (2.2/2.2/2.1); ahora las 3 miden
-//  2.3f, igual que NetworkBuilder.BuildPersonVisual (target del
+//  2.4f, igual que NetworkBuilder.BuildPersonVisual (target del
 //  protagonista/red).
 //
 //  Créditos (assets gratuitos bajados por el owner):
@@ -119,7 +119,7 @@ namespace FolkloreArchives.MapGen
             // asiento que nunca tuvo un amigo decorativo antes (sin precedente) -- sin
             // override, cae al fallback de la fórmula (seat - SeatRootOffset). Va a
             // necesitar el mismo ajuste en vivo que todos los demás asientos.
-            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.3f, -4.5f,  3.0f, 100f, MaleCasualLimbs),
+            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.4f, -4.5f,  3.0f, 100f, MaleCasualLimbs),
             // al costado norte de la ruta, mirando hacia el auto (+X)
             // owner: "tiene las piernas alrevez" sentado -- rig Mixamo, eje del muslo
             // orientado al revés que el de Vinrax. Ángulo +55 sigue siendo válido (es
@@ -129,7 +129,7 @@ namespace FolkloreArchives.MapGen
             // de la propia (que era de rearLeft, donde ahora se sienta el jugador real
             // -- de ahí "encima del malegreen"). Sigue siendo una aproximación, no
             // ajustada en vivo para ESTE personaje en ESTE asiento todavía.
-            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.3f, -5.0f, -3.0f,  80f, MixamoLimbs)
+            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.4f, -5.0f, -3.0f,  80f, MixamoLimbs)
                 { seatPosOverride = new Vector3(0.6090f, -0.1883f, -0.7f), seatedThighAngleOverride = 55f, seatedModelDropOverride = -0.5f },
             // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) --
             // owner: "descargue esa chica descomprimila y reemplazala por la que ya
@@ -144,7 +144,7 @@ namespace FolkloreArchives.MapGen
             // CarBuilder: paxBase resta Z para atrás, así que +Z es hacia el
             // tablero/parabrisas). Primer ajuste a ojo -- falta confirmar en vivo como
             // el resto de las poses de esta sesión.
-            new FriendDef("Friend_FemaleSec",    Dir + "GirlRetro/girl_retro.fbx",              null,                                      2.3f, -8.0f,  0.2f,  90f, GirlRetroLimbs, GirlRetroTex)
+            new FriendDef("Friend_FemaleSec",    Dir + "GirlRetro/girl_retro.fbx",              null,                                      2.4f, -8.0f,  0.2f,  90f, GirlRetroLimbs, GirlRetroTex)
                 { seatPosOverride = new Vector3(0.5999f, -0.283f, 0.38f), seatedThighAngleOverride = -72f, seatedModelDropOverride = -0.5f, seatedScaleYOverride = 0.76f },
         };
 
@@ -179,7 +179,7 @@ namespace FolkloreArchives.MapGen
         // alinear la CABEZA a la altura del asiento (raíz = seat - altura completa,
         // como si estuviera parado) — el achicado de HumanWalkAnim se encarga de bajar
         // esa cabeza a una altura de sentado razonable y de no hundir los pies.
-        const float SeatRootOffset = 2.3f; // = targetHeight de los 3 amigos
+        const float SeatRootOffset = 2.4f; // = targetHeight de los 3 amigos
 
         public static void SeatInCar(Transform root, FolkloreArchives.CarController car)
         {
@@ -295,8 +295,7 @@ namespace FolkloreArchives.MapGen
                             if (tex != null && m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", tex);
                             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.05f);
                             string matPath = "Assets/Settings/PSX_" + f.name + "_" + System.IO.Path.GetFileNameWithoutExtension(texPath) + ".mat";
-                            AssetDatabase.DeleteAsset(matPath);
-                            AssetDatabase.CreateAsset(m, matPath);
+                            m = BuilderUtils.SaveMaterialStable(m, matPath); // GUID estable → sin conflictos al regenerar
                             matCache[texPath] = m;
                         }
                         arr[k] = m;
@@ -311,8 +310,7 @@ namespace FolkloreArchives.MapGen
                 if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
                 if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.05f);
                 string matPath = "Assets/Settings/PSX_" + f.name + ".mat";
-                AssetDatabase.DeleteAsset(matPath);
-                AssetDatabase.CreateAsset(mat, matPath);
+                mat = BuilderUtils.SaveMaterialStable(mat, matPath); // GUID estable → sin conflictos al regenerar
                 foreach (var r in rends)
                 {
                     var arr = new Material[r.sharedMaterials.Length];

@@ -23,6 +23,16 @@ namespace FolkloreArchives.MapGen
         const float  HeightBoost  = 1.15f;   // owner: "un poquito mas alto" -- estira solo el alto, no el largo
         const float  ModelYawOffset = 0f;    // giro extra si el modelo mira al lado equivocado
 
+        // owner: "el auto no arranca en la calle, arranca en el pasto al lado y entra a la
+        // carretera al subirse y arrancar". El owner movió el auto a mano al pasto y pasó
+        // estas coords EXACTAS del Inspector ("ahí quiero que esté"). El auto queda
+        // ESTACIONADO acá; los waypoints siguen arrancando en la ruta (ver
+        // SnapToRoadExtensionTip), así que al arrancar el primer waypoint lo mete solo al
+        // asfalto. Fuente ÚNICA: la usan tanto Build() como SnapToRoadExtensionTip (que
+        // antes recalculaba el spawn desde la geometría y lo dejaba sobre el asfalto).
+        static readonly Vector3 GrassSpawnPos = new Vector3(1854.33f, 17.04987f, 22.24f);
+        const float GrassSpawnYaw = -99.384f;
+
         public static GameObject Build(Transform parent, Terrain terrain)
         {
             // owner: FindRoadTip() (calcular la punta leyendo el mesh real) volvió a
@@ -32,8 +42,8 @@ namespace FolkloreArchives.MapGen
             // sincronizada limpia con el compañero) y pasó Position/Rotation tal
             // cual -- mismo criterio que Seat_RearMid más abajo, la única forma que
             // funcionó de verdad en toda esta saga.
+            // punta de la ruta (asfalto): acá EMPIEZA el recorrido del auto (waypoints abajo)
             var pos = new Vector3(1868.026f, 17.04301f, 10.39595f);
-            float yaw = -104.379f;
 
             var car = new GameObject("Renault12");
             car.transform.SetParent(parent);
@@ -156,8 +166,10 @@ namespace FolkloreArchives.MapGen
             // prender/apagar estos). Apagados por defecto (SetHeadlights los prende).
             ctrl.headlights = BuildHeadlights(car.transform, carHeight);
 
-            car.transform.position = pos + Vector3.up * 0.05f;
-            car.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            // Estacionado en el pasto (ver GrassSpawnPos). SnapToRoadExtensionTip lo vuelve
+            // a poner igual después -- acá queda por si algún path genera sin ese snap.
+            car.transform.position = GrassSpawnPos;
+            car.transform.rotation = Quaternion.Euler(0f, GrassSpawnYaw, 0f);
 
             // owner: "vamos todos en el auto desde el inicio de mapa hasta la
             // gasolinera" -- hornea la ruta REAL (sigue la curva de PavedRouteZAt)
@@ -455,6 +467,22 @@ namespace FolkloreArchives.MapGen
             foreach (var pc in pieces) pts.AddRange(pc.line);
             if (pts.Count < 2) return; // sin asfalto en escena → no toco nada
 
+            // 2c) El auto tiene que arrancar al final de la ruta QUE TIENE TERRENO, no en la
+            //     punta absoluta del asfalto. owner: "con el nuevo camino el auto se fue al
+            //     final de ese... dejalo al final de la ruta con terreno". El
+            //     RoadExtensionTerrain es permanente y ya NO se re-extiende, así que las
+            //     piezas de asfalto que agregás MÁS ALLÁ de él quedan flotando sin terreno
+            //     debajo. Recortamos del frente (punta lejana) todos los puntos que caen
+            //     FUERA de cualquier terreno → pts[0] pasa a ser la punta más lejana que sí
+            //     pisa terreno. Si ningún punto estuviera sobre terreno (raro), no recorta
+            //     nada y queda el comportamiento viejo.
+            var terrains = Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None);
+            int firstOnTerrain = -1;
+            for (int i = 0; i < pts.Count; i++)
+                if (IsOverAnyTerrain(pts[i], terrains)) { firstOnTerrain = i; break; }
+            if (firstOnTerrain > 0 && firstOnTerrain < pts.Count - 1)
+                pts.RemoveRange(0, firstOnTerrain);
+
             // 3) YPF REAL en la escena (el owner la movió/escaló). Fallback: posición de código.
             //    (Se busca ANTES del corrimiento de carril de abajo, porque el fade del
             //    corrimiento necesita saber dónde está el giro de entrada a la estación.)
@@ -508,6 +536,12 @@ namespace FolkloreArchives.MapGen
             float yaw = fwd.sqrMagnitude > 0.0001f ? Mathf.Atan2(fwd.x, fwd.z) * Mathf.Rad2Deg : car.eulerAngles.y;
             car.position = spawn + Vector3.up * 0.05f;
             car.rotation = Quaternion.Euler(0f, yaw, 0f);
+            // ...pero el auto NO arranca sobre el asfalto: queda ESTACIONADO en el pasto al
+            // lado (ver GrassSpawnPos). Sobrescribe el spawn calculado arriba desde la
+            // geometría. Los waypoints de abajo siguen arrancando en la ruta (spawnIdx), así
+            // que al subirse y arrancar el primer waypoint mete al auto solo al asfalto.
+            car.position = GrassSpawnPos;
+            car.rotation = Quaternion.Euler(0f, GrassSpawnYaw, 0f);
 
             // Punto de ENTRADA a la estación, RELATIVO al centro de la YPF. El owner lo marcó
             // una vez con el TEST_PLAYER en (508.65,-89.43), con la YPF en (449,-71.3) →
@@ -601,7 +635,26 @@ namespace FolkloreArchives.MapGen
             if (auto != null)
             {
                 var wps = new System.Collections.Generic.List<Vector2>();
-                for (int i = spawnIdx; i <= turnIdx; i++) wps.Add(new Vector2(pts[i].x, pts[i].z));
+                // owner: "como antes pero a partir del borde de la ruta donde está". El auto
+                // arranca en el borde de la ruta (GrassSpawnPos). Elegir el punto de asfalto
+                // MÁS CERCANO a secas fallaba: caía al costado/ATRÁS del auto y el auto giraba
+                // en círculos sin capturarlo nunca (dist se quedaba en ~8.6 > arriveRadius=8).
+                // Ahora arrancamos en el punto más cercano que además esté ADELANTE del auto
+                // (producto punto positivo con su dirección de manejo), así entra derecho a la
+                // ruta y sigue hacia la YPF sin orbitar.
+                Vector2 grassXZ = new Vector2(GrassSpawnPos.x, GrassSpawnPos.z);
+                float spawnYawRad = GrassSpawnYaw * Mathf.Deg2Rad;
+                Vector2 spawnFwd = new Vector2(Mathf.Sin(spawnYawRad), Mathf.Cos(spawnYawRad));
+                int startI = spawnIdx; float bestSpawnD = float.MaxValue; bool foundAhead = false;
+                for (int i = spawnIdx; i <= turnIdx; i++)
+                {
+                    Vector2 w = new Vector2(pts[i].x, pts[i].z);
+                    if (Vector2.Dot(w - grassXZ, spawnFwd) <= 0f) continue; // saltar los que quedaron ATRÁS
+                    float sq = (w - grassXZ).sqrMagnitude;
+                    if (sq < bestSpawnD) { bestSpawnD = sq; startI = i; foundAhead = true; }
+                }
+                if (!foundAhead) startI = spawnIdx; // fallback: no debería pasar
+                for (int i = startI; i <= turnIdx; i++) wps.Add(new Vector2(pts[i].x, pts[i].z));
                 wps.Add(entry);                                            // dobla y entra
                 if ((park - entry).sqrMagnitude > 0.25f) wps.Add(park);    // sigue hasta el surtidor
                 auto.waypoints = wps.ToArray();
@@ -624,6 +677,23 @@ namespace FolkloreArchives.MapGen
             Debug.Log($"<color=lime>[CarBuilder] Opening-drive reconstruido desde la escena: {pts.Count} puntos de asfalto, " +
                       $"spawn en la punta (X≈{pts[0].x:0}), entra en ({entry.x:0},{entry.y:0}), " +
                       $"para en ({park.x:0},{park.y:0}) — {pumpCount} surtidores detectados.</color>");
+        }
+
+        // ¿El punto (XZ) cae dentro de la huella de ALGÚN terreno? Ignora la altura:
+        // solo queremos saber si hay terreno debajo de ese tramo de ruta. Se usa para
+        // no spawnear el auto en piezas de asfalto que flotan más allá del terreno.
+        static bool IsOverAnyTerrain(Vector3 p, Terrain[] terrains)
+        {
+            if (terrains == null) return false;
+            foreach (var t in terrains)
+            {
+                if (t == null || t.terrainData == null) continue;
+                Vector3 tp = t.transform.position;
+                Vector3 sz = t.terrainData.size;
+                if (p.x >= tp.x && p.x <= tp.x + sz.x && p.z >= tp.z && p.z <= tp.z + sz.z)
+                    return true;
+            }
+            return false;
         }
 
         // Centro de la ruta en el espacio LOCAL del mesh del asfalto (= espacio-mundo de la
@@ -695,8 +765,7 @@ namespace FolkloreArchives.MapGen
                     _carMat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
                 }
                 string matPath = "Assets/Settings/RetroCarBlack.mat";
-                AssetDatabase.DeleteAsset(matPath);
-                AssetDatabase.CreateAsset(_carMat, matPath);
+                _carMat = BuilderUtils.SaveMaterialStable(_carMat, matPath); // GUID estable → sin conflictos al regenerar
             }
             var glass = GlassMat();
             foreach (var r in inst.GetComponentsInChildren<Renderer>(true))
@@ -736,8 +805,7 @@ namespace FolkloreArchives.MapGen
             if (_glassMat.HasProperty("_Smoothness")) _glassMat.SetFloat("_Smoothness", 0.8f);
             if (_glassMat.HasProperty("_Metallic")) _glassMat.SetFloat("_Metallic", 0f);
             string matPath = "Assets/Settings/RetroCarGlass.mat";
-            AssetDatabase.DeleteAsset(matPath);
-            AssetDatabase.CreateAsset(_glassMat, matPath);
+            _glassMat = BuilderUtils.SaveMaterialStable(_glassMat, matPath); // GUID estable → sin conflictos al regenerar
             return _glassMat;
         }
 

@@ -33,8 +33,35 @@ namespace FolkloreArchives
             WASDEnumMaterial.Stone, // 8 roca
         };
 
-        public static WASDEnumMaterial At(Vector3 worldPos)
+        public static WASDEnumMaterial At(Vector3 worldPos, Transform ignore = null)
         {
+            // owner: "usá el sonido de asfalto/piedra para la ruta y la gasolinera". La ruta
+            // y el lote de la YPF son MESHES aparte, no pintura del Terrain -- antes se leía
+            // el splatmap del terreno DEBAJO (pasto/tierra) y sonaba mal. Primero un raycast
+            // corto hacia abajo: si estás parado sobre un mesh de asfalto/cemento (ruta,
+            // lote/surtidores YPF) -> Stone. Si es el Terrain (u otra cosa), se sigue como
+            // antes leyendo la capa pintada.
+            var hits = Physics.RaycastAll(worldPos + Vector3.up * 0.6f, Vector3.down, 2.5f, ~0, QueryTriggerInteraction.Ignore);
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            foreach (var h in hits)
+            {
+                if (ignore != null && h.collider.transform.IsChildOf(ignore)) continue; // ignorar al propio jugador
+                if (h.collider is TerrainCollider) break;                                // terreno -> splatmap de abajo
+                var tp = h.collider.transform;
+                string n = (tp.name + " " + (tp.parent != null ? tp.parent.name : "")).ToLowerInvariant();
+                if (n.Contains("pavedroad") || n.Contains("asphalt") || n.Contains("asfalt") ||
+                    n.Contains("estacion")  || n.Contains("ypf")     || n.Contains("pavement") ||
+                    n.Contains("pump")      || n.Contains("surtidor")|| n.Contains("cement") ||
+                    n.Contains("concret")   || n.Contains("playon")  || n.Contains("carpet") ||
+                    n.Contains("lote")      || n.Contains("_pad")    ||
+                    // interior YPF + baño (piso de baldosa = suena a piedra)
+                    n.Contains("floor")     || n.Contains("piso")    || n.Contains("suelo") ||
+                    n.Contains("tile")      || n.Contains("baldosa") || n.Contains("toilet") ||
+                    n.Contains("bath")      || n.Contains("interior"))
+                    return WASDEnumMaterial.Stone;
+                break; // primer mesh (no terreno) no reconocido -> caer al splatmap
+            }
+
             var terrain = Terrain.activeTerrain;
             if (terrain == null) return WASDEnumMaterial.Stone;
             var td = terrain.terrainData;

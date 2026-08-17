@@ -55,6 +55,9 @@ namespace FolkloreArchives
         // asientos ocupados. OpeningDriveSequence lo prende antes de pararlo afuera
         // del auto y lo apaga apenas confirma que subió atrás de verdad.
         public static bool FrontSeatsBlocked = false;
+        // owner: "adentro del auto tiene que dejar de sonar el viento" -- true cuando el
+        // personaje que controlás está SENTADO (WindAmbience lo lee para cortar el viento).
+        public static bool LocalInCar = false;
         // el asiento donde terminaste sentado (null = no estás sentado) -- lo usa
         // OpeningDriveSequence para detectar "jugador manejando + perro de acompañante"
         // y disparar que los 3 amigos vuelvan a aparecer atrás.
@@ -182,6 +185,7 @@ namespace FolkloreArchives
 
         void Update()
         {
+            LocalInCar = mySeat != null; // este componente corre solo en el personaje que controlás
             var kb = Keyboard.current;
             if (kb == null || SettingsMenu.IsOpen || busy) return;
             currentTarget = RaycastTarget();    // la MIRA (centro de pantalla), una vez por frame
@@ -254,7 +258,20 @@ namespace FolkloreArchives
                 else if (target != null)   // a pie, apuntando algo del auto
                 {
                     if (target.isSeat)
-                        StartCoroutine(SitRoutine(target.car, target.part, PreferredDoor(target.car, target.part.position))); // apunto el asiento → subir
+                    {
+                        // owner: "no me deje subirme si la puerta está cerrada" -> chequeo la puerta
+                        // de ESTE asiento (la geométricamente más cercana, no cualquier abierta). Si
+                        // está cerrada, E la ABRE (no sube); ya abierta, E sube.
+                        var sDoor = NearestDoorGeom(target.car, target.part.position);
+                        var sDoors = Doors(target.car);
+                        if (sDoor != null && sDoors != null && !sDoors.IsOpen(sDoor))
+                        {
+                            sDoors.SetDoor(sDoor, true);
+                            _lastDoorOpened = sDoor; _lastDoorOpenedCar = target.car;
+                        }
+                        else
+                            StartCoroutine(SitRoutine(target.car, target.part, PreferredDoor(target.car, target.part.position))); // puerta abierta → subir
+                    }
                     else
                     {
                         var doors = Doors(target.car);
@@ -335,7 +352,21 @@ namespace FolkloreArchives
                     (ci.part == ci.car.driverSeat || ci.part == ci.car.frontPassenger ||
                      ci.part == ci.car.rearRight || ci.part == ci.car.rearMid))
                     continue;
-                Vector3 toPart = ci.part.position - cam.position;
+                // owner: "después de bajarse en la gasolinera, el humano y el perro solo
+                // pueden subirse ADELANTE". Pasada la YPF, los 3 asientos de atrás quedan
+                // reservados para los amigos que se re-sientan ahí -- el humano solo puede
+                // elegir volante/acompañante. (El perro ya va directo a acompañante y no
+                // usa la mira, así que con esto alcanza.)
+                if (PastGasStation && ci.isSeat && ci.car != null &&
+                    (ci.part == ci.car.rearLeft || ci.part == ci.car.rearMid || ci.part == ci.car.rearRight))
+                    continue;
+                // owner: "necesito poder cerrar la puerta antes de subir". Parado afuera, la
+                // mira agarraba el ASIENTO (E te sentaba) y nunca la puerta, porque para las
+                // puertas se medía el ángulo al PIVOTE/bisagra (que queda al costado). Para
+                // PUERTAS se apunta ahora al CENTRO del panel -> mirás la puerta y la
+                // seleccionás a ella (podés cerrarla). Los asientos quedan igual.
+                Vector3 anchor = ci.isSeat ? ci.part.position : DoorCenter(ci.part);
+                Vector3 toPart = anchor - cam.position;
                 // owner: "me está dejando abrir las puertas que están del otro lado
                 // del auto yo estando acá" -- SphereCastAll encuentra TODO lo que
                 // toca el barrido en 4.5m, sin importar si el cuerpo del auto lo tapa
@@ -397,8 +428,20 @@ namespace FolkloreArchives
         // jugador, etc.).
         Transform PreferredDoor(CarController c, Vector3 seatPos)
         {
-            if (_lastDoorOpened != null && _lastDoorOpenedCar == c) return _lastDoorOpened;
-            return NearestDoor(c, seatPos);
+            Transform nearest = NearestDoor(c, seatPos);
+            // owner: preferí la puerta que el jugador REALMENTE abrió para subir (por si la
+            // geometría elige otra), PERO solo si está a la par de la más cercana a ESTE
+            // asiento. Si no, quedaba vieja de OTRO asiento -- BUG del volante: te subís
+            // atrás en un tramo (myDoor=L_Door_Back) y al sentarte después al VOLANTE seguía
+            // apuntando a la trasera, así que "mirar tu puerta" nunca coincidía y no
+            // abrías/cerrabas nada.
+            if (_lastDoorOpened != null && _lastDoorOpenedCar == c && nearest != null)
+            {
+                float dLast = Vector3.Distance(DoorCenter(_lastDoorOpened), seatPos);
+                float dNear = Vector3.Distance(DoorCenter(nearest), seatPos);
+                if (dLast <= dNear * 1.4f) return _lastDoorOpened;
+            }
+            return nearest;
         }
 
         Transform NearestDoor(CarController c, Vector3 to)
@@ -407,20 +450,47 @@ namespace FolkloreArchives
             // owner: "apuntando a la puerta... no me dice cerrar me dice bajar" -- si
             // la puerta que el jugador realmente ABRIÓ para subir no es la geométricamente
             // más cercana al asiento (pasa fácil con auto/asientos reescalados), myDoor
-            // terminaba apuntando a OTRA puerta (cerrada), y por eso E te bajaba en vez
-            // de cerrar la que sí estaba abierta. Preferí una puerta ABIERTA cercana
+            // terminaba apuntando a OTRA puerta (cerrada). Preferí una puerta ABIERTA cercana
             // antes que la más cercana a secas.
+            // owner (BUG del volante): la distancia se medía al PIVOTE de la puerta (la
+            // bisagra, en el pilar), así que la puerta TRASERA quedaba tan cerca del asiento
+            // del conductor como la delantera -> agarraba la equivocada. Ahora se mide al
+            // CENTRO del panel (DoorCenter), que sí cae al lado del asiento que corresponde.
             var doors = Doors(c);
             Transform best = null; float bd = float.MaxValue;
             Transform bestOpen = null; float bdOpen = float.MaxValue;
             foreach (var d in c.doors)
             {
                 if (d == null) continue;
-                float dd = Vector3.Distance(d.position, to);
+                float dd = Vector3.Distance(DoorCenter(d), to);
                 if (dd < bd) { bd = dd; best = d; }
                 if (doors != null && doors.IsOpen(d) && dd < bdOpen) { bdOpen = dd; bestOpen = d; }
             }
             return bestOpen != null ? bestOpen : best;
+        }
+
+        // puerta GEOMÉTRICAMENTE más cercana al asiento (SIN preferir abiertas, a diferencia de
+        // NearestDoor). Para el gate "no subir con la puerta de ESTE asiento cerrada".
+        Transform NearestDoorGeom(CarController c, Vector3 to)
+        {
+            if (c == null || c.doors == null) return null;
+            Transform best = null; float bd = float.MaxValue;
+            foreach (var d in c.doors)
+            {
+                if (d == null) continue;
+                float dd = Vector3.Distance(DoorCenter(d), to);
+                if (dd < bd) { bd = dd; best = d; }
+            }
+            return best;
+        }
+
+        // centro del PANEL de la puerta (bounds del renderer en el mundo), no su pivote/
+        // bisagra -- para mapear bien "qué puerta está al lado de este asiento".
+        static Vector3 DoorCenter(Transform door)
+        {
+            if (door == null) return Vector3.zero;
+            var r = door.GetComponentInChildren<Renderer>();
+            return r != null ? r.bounds.center : door.position;
         }
 
         // asiento PEGADO (dentro de sitRange) cuya puerta esté ABIERTA
@@ -748,7 +818,14 @@ namespace FolkloreArchives
             }
             else if (target != null)
             {
-                if (target.isSeat) msg = "[ E ] Subir";
+                if (target.isSeat)
+                {
+                    // owner: no subir con la puerta cerrada -> "Abrir puerta" si la de ESTE asiento
+                    // (geométrica, no cualquier abierta) está cerrada.
+                    var sDoor = NearestDoorGeom(target.car, target.part.position);
+                    var sDoors = Doors(target.car);
+                    msg = (sDoor != null && sDoors != null && !sDoors.IsOpen(sDoor)) ? "[ E ] Abrir puerta" : "[ E ] Subir";
+                }
                 else
                 {
                     var doors = Doors(target.car);

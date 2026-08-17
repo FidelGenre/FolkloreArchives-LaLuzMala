@@ -25,10 +25,6 @@ namespace FolkloreArchives.MapGen
             var src = go.AddComponent<WASDFootstepSource>();
             var so = new SerializedObject(src);
             so.FindProperty("footsteps").objectReferenceValue = mgr;
-            // owner: "los otros bajalos un poco tambien" -- el default del pack (0.8)
-            // sonaba fuerte. "volume" es privado en WASDFootstepSource, no se puede
-            // asignar directo (src.volume = ...) -- de ahí el SerializedObject.
-            so.FindProperty("volume").floatValue = 0.2f; // owner: "se escuchan igual, bajales mas" -- era 0.35
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -277,6 +273,7 @@ namespace FolkloreArchives.MapGen
             dogCtrl.mode = FolkloreArchives.DogController.Mode.Follow;
             dogCtrl.flySpeed = 30f; // ver nota en MapExplorer más arriba -- horneado explícito
             dog.AddComponent<FolkloreArchives.DogWalkAnim>(); // patas se mueven al caminar (el PS1 no trae clips)
+            AddFootsteps(dog); // owner: pasos del perro reusando el sistema del humano (DogAudio los dispara, más bajo/rápido)
 
             // cámara 1ª persona del perro: en el HOCICO mirando adelante. Como el modelo
             // está girado 180°, la cabeza queda en +Z. "measured" está en espacio CRUDO
@@ -304,6 +301,7 @@ namespace FolkloreArchives.MapGen
             dogCamData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
             dogCamData.antialiasingQuality = AntialiasingQuality.High;
             dogCamGO.AddComponent<FolkloreArchives.VhsPostFx>();
+            dogCamGO.AddComponent<FolkloreArchives.Crosshair>();  // owner: el perro tiene la MISMA mira que el humano
             dogCamGO.SetActive(false); // arranca controlando la persona
 
             // owner: "al cambiar con la g al perro no me da la opcion de subirme siendo

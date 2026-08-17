@@ -46,19 +46,13 @@ namespace FolkloreArchives
         public Vector3 standMaleGreenJktLocal = new Vector3(3f, 0f, 2f);
         public Vector3 standFemaleSecLocal    = new Vector3(0f, 0f, 3.5f);
 
-        // owner: "necesito que el personaje principal al tocar play aparezca parado al
-        // lado del auto y la puerta de atrás abierta así está meando y cuando se sube y
-        // cierra la puerta arranca el auto" -- offset local al auto, afuera de la
-        // puerta trasera del jugador (rearLeft), mirando hacia el costado (no hacia el
-        // auto). owner: "no está apareciendo el pj al lado del auto" -- el offset
-        // original (-2.5,0,-1.2) cayó AFUERA del asfalto (el auto spawnea en la punta
-        // misma de la ruta, donde el mapa se corta) y el jugador terminó cayendo al
-        // vacío (Y=-43 confirmado en el Inspector). Acercado bien al auto (sin
-        // desplazamiento adelante/atrás, solo al costado) para pisar la misma malla
-        // que el auto. Primera estimación, como todo lo demás de esta escena -- ajustar
-        // en vivo.
-        public Vector3 standPlayerBeforeLocal = new Vector3(-2f, 0f, 0f);
-        public float standPlayerBeforeYaw = -90f; // grados locales al auto, hacia dónde mira parado
+        // owner: "necesito que el personaje aparezca parado ahí en esa posición mirando a
+        // ese árbol, ya que estará meándolo". Posición/orientación FIJA EN EL MUNDO: el
+        // owner movió el TEST_PLAYER a mano al pie del árbol y pasó estas coords del
+        // Inspector. (Antes era un offset local al auto; ahora es un punto y una mirada
+        // fijos hacia el árbol, independientes de dónde quede el auto.)
+        public Vector3 standPlayerBeforeWorld = new Vector3(1863.246f, 16.64907f, 24.03101f);
+        public float standPlayerBeforeWorldYaw = -16.712f; // grados MUNDO, mirando el árbol
 
         [Header("Dónde vuelven a sentarse atrás después de la gasolinera (local al auto, mismo criterio que FriendNpcBuilder)")]
         public Vector3 rearLeftLocal  = new Vector3(-0.620f, -0.1883f, -0.8f);
@@ -72,11 +66,31 @@ namespace FolkloreArchives
         // poder subirse y manejar a mano con WASD y anotar el trazado real.
         public static bool SkipForTesting = false;
 
+        // owner: "botones para dar play y aparecer desde cierta escena, así no pruebo toda la
+        // secuencia de 0". Checkpoint de DEBUG (lo setean botones del Scene View, ver
+        // DebugCheckpointButtons.cs), guardado en EditorPrefs para que sobreviva al entrar a Play:
+        //   0 = Meando (normal, todo desde el principio)
+        //   1 = YPF bajada (saltea meado + viaje: aparece con todos bajándose en la gasolinera)
+        //   2 = Tienda (además saltea la dispersión: chica en el baño y amigos ubicados, listo
+        //       para golpear la oficina)
+        public const string CheckpointKey = "FA_DebugCheckpoint";
+        public static int ReadCheckpoint()
+        {
+#if UNITY_EDITOR
+            return UnityEditor.EditorPrefs.GetInt(CheckpointKey, 0);
+#else
+            return 0;
+#endif
+        }
+
         void Start()
         {
-            if (SkipForTesting)
+            // owner: elegí un checkpoint (▶ YPF bajada) pero aparecía al lado del auto -> el
+            // SkipForTesting ("manejar a mano") cortaba la secuencia antes. El checkpoint TIENE
+            // PRIORIDAD: si elegiste uno (>=1), la secuencia corre igual, sin importar SkipForTesting.
+            if (SkipForTesting && ReadCheckpoint() == 0)
             {
-                Debug.Log("<color=yellow>[OpeningDriveSequence] SkipForTesting activo -- secuencia NO arranca, manejá a mano.</color>");
+                Debug.Log("<color=yellow>[OpeningDriveSequence] SkipForTesting activo (y checkpoint 0) -- secuencia NO arranca, manejá a mano.</color>");
                 return;
             }
             if (car == null || player == null || dog == null)
@@ -104,57 +118,66 @@ namespace FolkloreArchives
             // nadie -- nunca hay ventana sin traba.
             PlayerVehicleInteractor.DrivingLocked = true;
 
-            // 1) al perro lo sentamos directo (sin mira/E, como antes). Al jugador
-            // NO -- owner: "necesito que aparezca parado al lado del auto y la puerta
-            // de atrás abierta así está meando, y cuando se sube y cierra la puerta
-            // arranca el auto". Se lo para afuera, se le abre SU puerta (rearLeft), y
-            // se espera a que él mismo se siente y la cierre con E (misma interacción
-            // manual que cualquier puerta del juego) antes de arrancar.
-            if (car.rearMid != null) dog.StartCoroutine(dog.SitRoutine(car, car.rearMid, null));
-
-            Transform playerDoor = NearestDoorTo(car.rearLeft != null ? car.rearLeft.position : car.transform.position);
-            StandPlayerBefore();
-            if (carDoors != null && playerDoor != null) carDoors.SetDoor(playerDoor, true);
-
-            // owner: "me subí adelante... no debería pasar, debería solo poder subir
-            // atrás" -- los asientos de adelante ya los ocupan los amigos decorativos
-            // (FriendNpcBuilder.SeatInCar, en Generate); sin esto la mira igual los
-            // ofrecía y el jugador se teletransportaba encima de un amigo.
-            PlayerVehicleInteractor.FrontSeatsBlocked = true;
-
-            // owner: "se está sentando arriba del perro... al cerrar la puerta no
-            // está arrancando" -- el banco trasero tiene los 3 asientos pegados
-            // (rearLeft/rearMid/rearRight), y la mira (RaycastTarget en
-            // PlayerVehicleInteractor) no sabe ni le importa qué puerta abrimos --
-            // elige el asiento más cerca del centro de pantalla sin importar la
-            // puerta, así que era fácil terminar sentado en rearMid (el del perro,
-            // justo al lado) en vez de rearLeft. Esperar específicamente
-            // "CurrentSeat == car.rearLeft" nunca se cumplía en ese caso. No importa
-            // en qué asiento trasero termine sentándose: lo que de verdad marca "ya
-            // subió y cerró todo" es estar sentado EN ALGÚN LADO y que no quede
-            // ninguna puerta del auto abierta.
-            yield return new WaitUntil(() => player.CurrentSeat != null && !AnyDoorOpen());
-            PlayerVehicleInteractor.FrontSeatsBlocked = false; // ya subió atrás -- para el próximo tramo (leg 2) sí puede elegir el volante
-
-            // 2) recién ACÁ arranca el auto solo -- ya con el jugador sentado de
-            // verdad y su puerta cerrada.
-            // owner: "necesito que no dé opciones a abrir la puerta ni bajar a los
-            // personajes hasta llegar a la gasolinera y frenar" -- nadie (jugador NI
-            // perro) puede tocar puertas o bajarse mientras el auto maneja solo.
-            // Se destraba recién en el paso 3, ya frenado del todo, ANTES de abrir
-            // las puertas para que todos bajen.
-            PlayerVehicleInteractor.DrivingLocked = true;
-            if (autoDrive != null)
+            int cp = ReadCheckpoint();
+            if (cp >= 2)
             {
-                car.autoPilot = true;
-                autoDrive.active = true;
-                yield return new WaitUntil(() => autoDrive.HasArrived);
-                // owner: "antes de frenar ya saltan los personajes del auto" --
-                // HasArrived se prende apenas el auto está CERCA del último punto,
-                // pero todavía puede tener velocidad/inercia (el throttle en 0 no para
-                // en seco). Esperar a que la velocidad real baje antes de abrir puertas
-                // y bajar a todos.
-                yield return new WaitUntil(() => car.SpeedKmh < 2f);
+                // DEBUG (checkpoint 2): saltear TODA la YPF -> SOLO los 3 amigos ya sentados atrás.
+                // Vos + Rufus quedan PARADOS al lado del auto: los subís vos (subir a Rufus y a la
+                // persona al frente) y manejás al campamento. Sin secuencia de tienda.
+                TeleportCarToYpf();
+                yield return new WaitForSeconds(0.2f);
+                ReseatFriend(friendMaleCasual, car.rearLeft, rearLeftLocal);
+                ReseatFriend(friendMaleGreenJkt, car.rearMid, rearMidLocal);
+                ReseatFriend(friendFemaleSec, car.rearRight, rearRightLocal);
+                PlayerVehicleInteractor.PastGasStation = true;   // el perro apunta al asiento de acompañante
+                // TODAS las puertas CERRADAS (los amigos ya están sentados). Vos abrís la de
+                // adelante para subir (el interactor no te deja subir con la puerta cerrada).
+                if (carDoors != null && car.doors != null)
+                    foreach (var d in car.doors) if (d != null) carDoors.SetDoor(d, false);
+                // vos + Rufus parados cerca del auto, mirándolo (los subís vos)
+                PlaceStanding(player != null ? player.transform : null, new Vector3(459.73f, 17.08f, -44.16f), car.transform.position);
+                PlaceStanding(dog    != null ? dog.transform    : null, new Vector3(458.07f, 17.08f, -36.77f), car.transform.position);
+                PlayerVehicleInteractor.DrivingLocked = false;   // podés subir/bajar y manejar
+                yield break;
+            }
+            if (cp >= 1)
+            {
+                // DEBUG (checkpoint YPF+): saltear el meado y el viaje -- sentar al perro y al
+                // jugador directo y teletransportar el auto a la gasolinera. Después cae al
+                // tramo COMÚN de abajo (bajar a todos + secuencia de tienda).
+                if (car.rearMid != null) dog.StartCoroutine(dog.SitRoutine(car, car.rearMid, null));
+                if (car.rearLeft != null) player.StartCoroutine(player.SitRoutine(car, car.rearLeft, null));
+                // espera fija (no WaitUntil: se colgaba si uno no se sentaba, y quedabas en el
+                // spawn). 1s alcanza para que termine el SitRoutine (glide ~0.6s) -- así no te
+                // trabás en la puerta al bajar y el perro baja.
+                yield return new WaitForSeconds(1f);
+                TeleportCarToYpf();
+                yield return new WaitForSeconds(0.35f);
+            }
+            else
+            {
+                // === NORMAL ===
+                // 1) al perro lo sentamos directo (sin mira/E). Al jugador NO: aparece parado
+                // meando, se le abre su puerta, y esperamos a que suba y la cierre con E.
+                if (car.rearMid != null) dog.StartCoroutine(dog.SitRoutine(car, car.rearMid, null));
+
+                Transform playerDoor = NearestDoorTo(car.rearLeft != null ? car.rearLeft.position : car.transform.position);
+                StandPlayerBefore();
+                if (carDoors != null && playerDoor != null) carDoors.SetDoor(playerDoor, true);
+
+                PlayerVehicleInteractor.FrontSeatsBlocked = true;
+                yield return new WaitUntil(() => player.CurrentSeat != null && !AnyDoorOpen());
+                PlayerVehicleInteractor.FrontSeatsBlocked = false;
+
+                // 2) recién ACÁ arranca el auto solo -- ya con el jugador sentado y su puerta cerrada.
+                PlayerVehicleInteractor.DrivingLocked = true;
+                if (autoDrive != null)
+                {
+                    car.autoPilot = true;
+                    autoDrive.active = true;
+                    yield return new WaitUntil(() => autoDrive.HasArrived);
+                    yield return new WaitUntil(() => car.SpeedKmh < 2f);
+                }
             }
 
             // 3) frenar del todo (por las dudas) y abrir las 5 puertas.
@@ -170,10 +193,25 @@ namespace FolkloreArchives
             dog.StartCoroutine(dog.ExitRoutine());
             yield return new WaitForSeconds(player.enterDuration + 0.1f);
 
+            // owner: "ni bien bajan se cierran las puertas, MENOS la del jugador (esa la cierra él)".
+            // El jugador venía en rearLeft -> su puerta = la más cercana a ese asiento; el resto se
+            // cierran solas.
+            Transform playerExitDoor = NearestDoorTo(car.rearLeft != null ? car.rearLeft.position : car.transform.position);
+            if (carDoors != null && car.doors != null)
+                foreach (var d in car.doors)
+                    if (d != null && d != playerExitDoor) carDoors.SetDoor(d, false);
+
             // 4) los 3 amigos decorativos quedan parados cerca del auto.
             StandFriend(friendMaleCasual, standMaleCasualLocal);
             StandFriend(friendMaleGreenJkt, standMaleGreenJktLocal);
             StandFriend(friendFemaleSec, standFemaleSecLocal);
+
+            // ETAPA "tienda YPF": ya bajaron todos en la gasolinera -> arranca la secuencia
+            // del guion (la chica al baño, los 2 amigos quedan al lado del auto, vos + Rufus
+            // van a la oficina, screamer, compras, hielo/ratas, grito del baño). Se construye
+            // por etapas en YpfStorySequence. El re-sentado de abajo (pasos 5-6) queda para el
+            // caso viejo de "seguir manejando"; durante el guion no se dispara (no manejás).
+            gameObject.AddComponent<YpfStorySequence>().Begin(this);
 
             // 5) desde acá el perro apunta al asiento de acompañante, no al medio.
             PlayerVehicleInteractor.PastGasStation = true;
@@ -223,43 +261,76 @@ namespace FolkloreArchives
             return best;
         }
 
-        // Para al jugador REAL afuera del auto, al lado de su puerta (standPlayerBeforeLocal),
-        // antes de que suba solo. Mismo criterio de piso que StandFriend (terreno vs.
-        // cualquier collider real más arriba, ej. una losa de cemento).
+        // DEBUG: teletransporta el auto a la llegada de la YPF (último waypoint de la ruta del
+        // auto-drive), con la orientación del último tramo, y frena. Para el checkpoint que
+        // saltea el viaje. Los amigos/jugador/perro sentados viajan con el auto (van parentados).
+        // owner: dónde estaciona el auto en la YPF (lo sacó del Renault12 tras un viaje normal).
+        // INLINE (no campo público serializado) a propósito: si fuera serializado, la escena
+        // guardaría el valor viejo (0,0,0) y pisaría este -- por eso quedaba en el fallback del
+        // waypoint. Así siempre se usa el del código, sin tener que regenerar.
+        static readonly Vector3 YpfCarParkPos = new Vector3(463.3693f, 16.99993f, -39.24857f);
+        const float YpfCarParkYaw = -90.86f;
+
+        void TeleportCarToYpf()
+        {
+            if (car == null) return;
+
+            Quaternion rot = Quaternion.Euler(0f, YpfCarParkYaw, 0f);
+            var rb = car.GetComponent<Rigidbody>();
+            // solo si NO es kinematic (el auto es kinematic cuando no maneja -> setear velocidad
+            // en un kinematic tira excepción y aborta la secuencia).
+            if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+            car.transform.SetPositionAndRotation(YpfCarParkPos, rot);
+            // CLAVE: sincronizar también la posición del RIGIDBODY. En un rigidbody kinematic,
+            // setear solo el transform se revierte (el rb tiene su posición física cacheada en el
+            // spawn y lo devuelve) -> el auto "volvía" al pasto del spawn.
+            if (rb != null) { rb.position = YpfCarParkPos; rb.rotation = rot; }
+            car.externalThrottle = 0f; car.externalSteer = 0f; car.autoPilot = false;
+        }
+
+        // Para al jugador REAL en un punto FIJO del mundo (standPlayerBeforeWorld),
+        // mirando el árbol (standPlayerBeforeWorldYaw), antes de que suba solo. El owner
+        // ubicó el punto a mano moviendo el TEST_PLAYER en el Editor -- se usa tal cual
+        // (misma técnica que el spawn horneado del auto en CarBuilder).
+        // Para un personaje PARADO en 'pos' mirando 'faceTarget' (maneja el CharacterController,
+        // que no deja reasignar el transform si está activo). Se usa en el checkpoint 2.
+        static void PlaceStanding(Transform t, Vector3 pos, Vector3 faceTarget)
+        {
+            if (t == null) return;
+            var cc = t.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+            t.position = pos;
+            Vector3 look = faceTarget - pos; look.y = 0f;
+            if (look.sqrMagnitude > 1e-4f) t.rotation = Quaternion.LookRotation(look.normalized);
+            if (cc != null) cc.enabled = true;
+        }
+
         void StandPlayerBefore()
         {
-            if (player == null || car == null) return;
-            Vector3 pos = car.transform.TransformPoint(standPlayerBeforeLocal);
-            // owner: "no está apareciendo el pj al lado del auto" -- cayó al vacío
-            // (Y=-43 en el Inspector). El auto spawnea en la punta misma de la ruta
-            // (donde el mapa se corta), así que cualquier offset que se pase de la
-            // malla real cae afuera de todo. Red de seguridad: si NINGUNA de las dos
-            // fuentes (terreno, raycast) encuentra algo cerca de la altura del auto
-            // (±3m es más que suficiente para cualquier vereda/cordón real), usar la
-            // altura del propio auto en vez de lo que haya dado el sampleo -- nunca
-            // cae al vacío, en el peor caso aparece a la altura del auto en vez de
-            // pisando el suelo exacto.
-            float carY = car.transform.position.y;
-            float groundY = carY;
-            bool found = false;
-            var terrain = Terrain.activeTerrain;
-            if (terrain != null)
-            {
-                float sampled = terrain.SampleHeight(pos) + terrain.transform.position.y;
-                if (Mathf.Abs(sampled - carY) <= 3f) { groundY = sampled; found = true; }
-            }
-            if (Physics.Raycast(pos + Vector3.up * 5f, Vector3.down, out var hit, 10f, ~0, QueryTriggerInteraction.Ignore)
-                && Mathf.Abs(hit.point.y - carY) <= 3f)
-            {
-                groundY = found ? Mathf.Max(groundY, hit.point.y) : hit.point.y;
-                found = true;
-            }
-            pos.y = found ? groundY : carY;
+            if (player == null) return;
             var cc = player.GetComponent<CharacterController>();
             if (cc != null) cc.enabled = false; // no reasignar el transform de un CharacterController activo
-            player.transform.position = pos;
-            player.transform.rotation = car.transform.rotation * Quaternion.Euler(0f, standPlayerBeforeYaw, 0f);
+            player.transform.position = standPlayerBeforeWorld;
+            player.transform.rotation = Quaternion.Euler(0f, standPlayerBeforeWorldYaw, 0f);
             if (cc != null) cc.enabled = true;
+
+            // owner: "al darle play no tenga prendida la linterna y esté mirando para abajo
+            // así al chorro". Linterna OFF + cámara apuntada hacia abajo al arrancar (el
+            // jugador después mira libre con el mouse; MapExplorer guarda/reaplica su pitch).
+            var explorer = player.GetComponent<MapExplorer>();
+            if (explorer != null)
+            {
+                explorer.SetFlashlight(false);
+                explorer.SetLookPitch(42f); // grados hacia ABAJO (mirando el chorro)
+                explorer.LockLook(3f, 12f); // 3 seg: solo mover ±12° alrededor del chorro, sin caminar
+            }
+
+            // owner: aparece MEANDO -- chorro procedural (PeeStream, sin assets). Se agrega
+            // en runtime si el jugador no lo tiene, y se apaga solo apenas empieza a caminar
+            // hacia el auto (ver PeeStream.Update).
+            var pee = player.GetComponent<PeeStream>();
+            if (pee == null) pee = player.gameObject.AddComponent<PeeStream>();
+            pee.StartPee();
         }
 
         // desparenta al amigo del auto y lo deja parado (quieto, sin FriendWander --

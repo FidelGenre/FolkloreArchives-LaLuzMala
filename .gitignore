@@ -128,3 +128,7 @@ Thumbs.db
 .idea/
 .vs/
 .vscode/
+
+# Archivo de terreno mergeado: 131MB, supera el limite de GitHub (100MB)
+Assets/_FolkloreArchives/ExtraTerrains/MergedTerrain.asset
+Assets/_FolkloreArchives/ExtraTerrains/MergedTerrain.asset.meta

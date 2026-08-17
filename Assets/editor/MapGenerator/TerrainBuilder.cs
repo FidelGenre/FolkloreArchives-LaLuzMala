@@ -13,6 +13,17 @@ namespace FolkloreArchives.MapGen
     public static class TerrainBuilder
     {
         public const string TerrainAssetPath = "Assets/_FolkloreArchives/Generated/FolkloreTerrain.asset";
+        // Terreno FUSIONADO permanente (Fase 2): si este asset existe, ES el terreno del mapa.
+        public const string MergedTerrainPath = "Assets/_FolkloreArchives/ExtraTerrains/MergedTerrain.asset";
+
+        // Capas de terreno (.terrainlayer) + sus texturas generadas (ruido/rotadas/tintadas):
+        // carpeta VERSIONADA, NO la Generated ignorada. Antes vivían en Generated/ → el terreno
+        // (versionado) las referenciaba por GUID per-máquina → al perderse/regenerarse la
+        // carpeta quedaban "Missing", y entre las dos máquinas los GUIDs divergían. Como el
+        // contenido es 100% determinista (PerlinNoise con coords fijas, rotación/tinte de
+        // texturas versionadas) y se reusa-si-existe, una vez commiteadas las dos máquinas
+        // comparten los MISMOS assets con GUID estable — mismo criterio que SaveMaterialStable.
+        public const string TerrainLayersFolder = "Assets/_FolkloreArchives/TerrainLayers";
 
         // Subí este número cada vez que cambie la lógica del splat (barro/caminos) para
         // que el próximo Generate re-pinte el terreno cacheado una sola vez.
@@ -21,6 +32,12 @@ namespace FolkloreArchives.MapGen
 
         public static Terrain Build(Transform parent)
         {
+            // TERRENO FUSIONADO permanente (Fase 2): si existe, ES el terreno del mapa; no se
+            // regenera. El DeleteMap lo rescata fuera del mapa antes de borrar; acá lo
+            // reencontramos (o lo creamos del asset) y lo colgamos del mapa nuevo.
+            var mergedData = AssetDatabase.LoadAssetAtPath<TerrainData>(MergedTerrainPath);
+            if (mergedData != null) return UseMergedTerrain(parent, mergedData);
+
             // CACHE: el terreno es lo más caro de generar (pintar 2048² celdas con
             // distancias a caminos = ~3.6 min). Como es determinístico (Seed), si ya
             // existe el asset lo REUSAMOS y saltamos toda la generación. Para forzar el
@@ -42,20 +59,10 @@ namespace FolkloreArchives.MapGen
                 AssetDatabase.CreateAsset(td, TerrainAssetPath);
                 EditorPrefs.SetInt(SplatVersionKey, SplatVersion);
             }
-            else if (EditorPrefs.GetInt(SplatVersionKey, 0) != SplatVersion)
-            {
-                // Terreno cacheado pero el CÓDIGO del splat cambió (subí SplatVersion):
-                // re-pinto el barro UNA vez sobre el cache (no en cada Generate, es caro).
-                // Así el owner solo hace Generate y el barro aparece sin acordarse del botón.
-                Debug.Log("<color=yellow>[SPLAT] version nueva → re-pintando el barro + despejando pasto sobre el barro (una vez)…</color>");
-                PaintTextures(td);
-                TerrainPaintPersistence.ApplyAlphaPaint(td); // texturas pintadas a mano (Save Terrain Paint)
-                ClearGrassOnMud(td); // el pasto cacheado también tapa el barro: despejarlo acá
-                ClearTreesOnPad(td); // despejar árboles del playón de la YPF
-                EditorUtility.SetDirty(td);
-                AssetDatabase.SaveAssets();
-                EditorPrefs.SetInt(SplatVersionKey, SplatVersion);
-            }
+            // (Terreno PERMANENTE editable a mano: si ya existe el asset, se REUSA tal cual.
+            //  NO auto-repintamos aunque el código del splat cambie — eso pisaría tu pintura
+            //  a mano. Para re-pintar procedural desde cero: editá a mano y guardá con
+            //  Save Terrain. Se quitó el rebuild automático por SplatVersion.)
 
             var go = Terrain.CreateTerrainGameObject(td);
             go.name = "Terrain";
@@ -70,6 +77,32 @@ namespace FolkloreArchives.MapGen
             // skip it entirely, it's a big chunk of the per-frame shadow pass cost
             terrain.shadowCastingMode = ShadowCastingMode.Off;
             return terrain;
+        }
+
+        // Devuelve el terreno FUSIONADO permanente: reusa la instancia viva (que el
+        // DeleteMap dejó fuera del mapa) o la crea del asset, y la cuelga del mapa nuevo.
+        static Terrain UseMergedTerrain(Transform parent, TerrainData mergedData)
+        {
+            Terrain found = null;
+            foreach (var t in Object.FindObjectsByType<Terrain>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (t.terrainData == mergedData) { found = t; break; }
+            if (found == null)
+            {
+                var go = Terrain.CreateTerrainGameObject(mergedData);
+                go.name = "Terrain_Merged";
+                found = go.GetComponent<Terrain>();
+                found.transform.position = new Vector3(0f, 0f, -MapLayout.MapSize); // borde sur
+            }
+            found.gameObject.SetActive(true);
+            found.transform.SetParent(parent, true);
+            found.heightmapPixelError = 30f;
+            found.shadowCastingMode = ShadowCastingMode.Off;
+            found.allowAutoConnect = false;
+            // El terreno permanente se reusa TAL CUAL (no se re-pinta), así que si sus capas
+            // quedaron "Missing" (referencias muertas a la vieja carpeta Generated) hay que
+            // restaurarlas sin tocar el splat pintado a mano. Ver HealMissingLayers.
+            HealMissingLayers(found.terrainData);
+            return found;
         }
 
         // Lleva la cámara del Scene view justo encima del CAMPAMENTO, mirando de arriba,
@@ -88,45 +121,32 @@ namespace FolkloreArchives.MapGen
             Debug.Log($"<color=lime>Cámara sobre el CAMPAMENTO {MapLayout.Campsite}. Si acá NO ves barro marrón, el barro no se está pintando/despejando en el campamento.</color>");
         }
 
-        // Borra el terreno cacheado → el próximo Generate lo rehace desde cero.
-        // Usar cuando cambiaste altura/caminos/POIs/edits del terreno.
-        [MenuItem("Tools/Folklore Archives/Rebuild Terrain (forzar)")]
-        public static void ForceRebuildTerrain()
+        // Guarda a mano el/los terreno(s) de la escena DIRECTO en su asset: altura +
+        // pintura (splat) + árboles + pasto, todo junto y de una. Reemplaza a los viejos
+        // "Save Terrain Edits" y "Save Terrain Paint", que guardaban un DIFF frágil contra
+        // la base procedural y se corrompían (aplanados, árboles borrados de más).
+        // El terreno ya NO se regenera solo: lo editás con las herramientas de Unity
+        // (Raise/Lower, Paint Texture, Paint Trees, Paint Details) y apretás esto.
+        // (Ya no existe "Rebuild Terrain/Forest": borraban todo lo editado a mano.)
+        [MenuItem("Tools/Folklore Archives/Save Terrain")]
+        public static void SaveTerrain()
         {
-            AssetDatabase.DeleteAsset(TerrainAssetPath);
-            Debug.Log("<color=lime>Terreno cacheado borrado — el próximo Generate lo regenera (~3.6 min esa vez).</color>");
-        }
-
-        // RE-PINTA solo el splatmap (texturas del suelo: bosque verde + barro en
-        // caminos/campamento) sobre el terreno cacheado, SIN borrar árboles/pasto ni
-        // recomputar altura. Es la forma rápida de aplicar cambios de PaintTextures
-        // (el barro de los caminos) sin el rebuild completo de 3.6 min.
-        // La CAUSA de que el barro "nunca aparecía": PaintTextures solo corría al crear
-        // el terreno; un Generate normal reusa el cache y jamás re-pinta.
-        [MenuItem("Tools/Folklore Archives/Repaint Terrain (barro caminos)")]
-        public static void RepaintTerrain()
-        {
-            var td = AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainAssetPath);
-            if (td == null) { Debug.LogWarning("No hay terreno cacheado — hacé Generate primero, después Repaint."); return; }
-            PaintTextures(td);
-            ClearGrassOnMud(td);
-            ClearTreesOnPad(td); // despejar árboles del playón de la YPF
-            EditorUtility.SetDirty(td);
-            AssetDatabase.SaveAssets();
-
-            // REFRESCAR el terreno VIVO de la escena: SetAlphamaps/SetDetailLayer tocan
-            // el asset, pero el Terrain ya instanciado cachea el render del splat y del
-            // pasto y NO se actualiza solo. Flush() lo obliga a re-leer del TerrainData.
-            int flushed = 0;
+            int n = 0;
             foreach (var t in Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
             {
-                if (t.terrainData != td) continue;
-                t.terrainData = td;   // re-asignar por si quedó una copia
-                t.Flush();
-                flushed++;
+                if (t.terrainData == null) continue;
+                EditorUtility.SetDirty(t.terrainData);
+                n++;
             }
-            Debug.Log($"<color=lime>Terreno RE-PINTADO: bosque VERDE + BARRO en caminos/campamento, pasto despejado sobre el barro. Terrenos vivos refrescados: {flushed}. Si sigue igual, hacé Generate Greybox Map.</color>");
+            if (n == 0) { Debug.LogWarning("[SaveTerrain] No encontré ningún Terrain en la escena."); return; }
+            AssetDatabase.SaveAssets();
+            Debug.Log($"<color=lime>[SaveTerrain] {n} terreno(s) guardado(s) directo en el asset " +
+                      "(altura + pintura + árboles + pasto). Sin diffs → no se corrompe.</color>");
         }
+
+        // (Se quitó "Repaint Terrain": re-pintaba el splat PROCEDURAL encima, pisando la
+        //  pintura que hagas a mano. La pintura actual ya está horneada en el asset del
+        //  terreno; se edita a mano con Paint Texture y se guarda con Save Terrain.)
 
         // ¿este punto es zona de BARRO (camino a pie / campamento / rancho / galpón /
         // cabaña)? Mismo criterio que el splat en PaintTextures, para que el pasto se
@@ -416,11 +436,11 @@ namespace FolkloreArchives.MapGen
             return a;
         }
 
-        // public: TerrainPaintPersistence la llama sobre un TerrainData temporal para
-        // calcular el baseline puramente procedural (sin pintado a mano) y compararlo.
-        public static void PaintTextures(TerrainData td)
+        // Arma el array de 9 capas del terreno en ORDEN FIJO (determinista). Separado de
+        // PaintTextures para poder RE-ASIGNARLO sin re-pintar el splat (ver HealMissingLayers).
+        // Como reusa-si-existe (no borra+crea), correrlo de nuevo NO cambia GUIDs.
+        public static TerrainLayer[] BuildLayers()
         {
-            // Real textures from the Terrain Sample Asset Pack, with procedural fallback.
             // Con UsePsxGround, las capas naturales (pasto/tierra/sendero/arena) usan las
             // texturas seamless 128px del pack PSX. La RUTA ASFALTADA y la NIEVE siguen
             // como estaban: el pack PSX no trae asfalto ni nieve.
@@ -445,7 +465,61 @@ namespace FolkloreArchives.MapGen
             layers[6] = CreateLayer("snow", new Color(0.92f, 0.94f, 0.98f)); // nieve de los picos
             layers[7] = AshGroundLayer(); // ceniza del bosque quemado (área nueva)
             layers[8] = RockLayer();      // roca gris de las montañas (arriba de RockLine)
-            td.terrainLayers = layers;
+            return layers;
+        }
+
+        // Restaura las capas "Missing" (referencias muertas) rellenando SOLO los huecos (null)
+        // de las primeras 9 capas con el array procedural, que está en el MISMO orden fijo con
+        // el que se pintó el splat → el mapeo canal→textura sigue alineado y el pintado a mano
+        // NO se toca (el splat es dato aparte del array de capas). Capas EXTRA (índice ≥9,
+        // agregadas a mano) quedan intactas. Antes de tocar, verifica que las capas que SÍ están
+        // (no-null, índices 0..8) coincidan con las procedurales: si alguien reordenó las capas
+        // a mano, no coinciden → avisa y no toca nada (rellenar desalinearía el splat).
+        // Devuelve cuántas capas restauró.
+        public static int HealMissingLayers(TerrainData td)
+        {
+            if (td == null) return 0;
+            var cur = td.terrainLayers;
+            if (cur == null || cur.Length == 0) return 0;
+            bool anyNull = false;
+            foreach (var l in cur) if (l == null) { anyNull = true; break; }
+            if (!anyNull) return 0; // nada roto
+
+            var rebuilt = BuildLayers();
+            if (cur.Length < rebuilt.Length)
+            {
+                Debug.LogWarning($"[HealLayers] '{td.name}' tiene {cur.Length} capas (menos que las {rebuilt.Length} " +
+                    "procedurales) → NO autocuro (no sé cómo alinear el splat). Reasigná las capas 'Missing' a mano.");
+                return 0;
+            }
+            // Verificar alineación por NOMBRE, no por referencia. Al mover las capas a la carpeta
+            // versionada, la MISMA capa lógica es un asset DISTINTO (otro GUID) pero conserva el
+            // MISMO nombre de archivo — comparar referencias daba un falso "reordenaron". El
+            // nombre solo NO coincide si de verdad reordenaron las capas a mano (ahí sí no tocamos).
+            for (int i = 0; i < rebuilt.Length; i++)
+                if (cur[i] != null && rebuilt[i] != null && cur[i].name != rebuilt[i].name)
+                {
+                    Debug.LogWarning($"[HealLayers] '{td.name}': el orden de capas no coincide con el procedural " +
+                        $"(slot {i} = '{cur[i].name}', esperaba '{rebuilt[i].name}'). Alguien las reordenó a mano → " +
+                        "NO autocuro para no romper el splat. Reasigná las capas 'Missing' a mano en el Inspector.");
+                    return 0;
+                }
+            int wasMissing = 0;
+            for (int i = 0; i < rebuilt.Length; i++) if (cur[i] == null) wasMissing++;
+            // Refrescar los 9 slots a las capas VERSIONADAS (mismo orden → splat alineado). Refresca
+            // también las presentes (apuntaban a assets viejos/colgados de Generated). Extras (≥9) intactas.
+            for (int i = 0; i < rebuilt.Length; i++) cur[i] = rebuilt[i];
+            td.terrainLayers = cur;
+            EditorUtility.SetDirty(td);
+            Debug.Log($"<color=lime>[HealLayers] '{td.name}': {wasMissing} capa(s) 'Missing' restauradas + " +
+                "9 refrescadas a versionadas (orden intacto → splat alineado). Guardá con Save Terrain para hornearlo.</color>");
+            return wasMissing;
+        }
+
+        public static void PaintTextures(TerrainData td)
+        {
+            // Real textures from the Terrain Sample Asset Pack, with procedural fallback.
+            td.terrainLayers = BuildLayers();
 
             int res = td.alphamapResolution;
             float[,,] map = new float[res, res, 9];
@@ -679,14 +753,14 @@ namespace FolkloreArchives.MapGen
             {
                 diffuse = BuilderUtils.Tint(
                     "Assets/TerrainSampleAssets/Textures/Terrain/Muddy_BaseColor.tif",
-                    MapLayout.MudTint, "muddy_dirt_tinted");
+                    MapLayout.MudTint, "muddy_dirt_tinted", TerrainLayersFolder);
                 if (diffuse == null)
                     return PackLayer("Muddy_TerrainLayer", "dirt", new Color(0.42f, 0.30f, 0.18f));
                 normal = BuilderUtils.LoadAsNormalMap(
                     "Assets/TerrainSampleAssets/Textures/Terrain/Muddy_Normal.tif");
             }
 
-            string layerPath = MapLayout.GeneratedFolder + "/layer_muddydirt.terrainlayer";
+            string layerPath = TerrainLayersFolder + "/layer_muddydirt.terrainlayer";
             var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
             if (layer == null)
             {
@@ -719,7 +793,7 @@ namespace FolkloreArchives.MapGen
             if (diffuse == null)
                 return CreateLayer("dirt", new Color(0.42f, 0.30f, 0.18f));
 
-            string layerPath = MapLayout.GeneratedFolder + "/layer_traildirt.terrainlayer";
+            string layerPath = TerrainLayersFolder + "/layer_traildirt.terrainlayer";
             var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
             if (layer == null)
             {
@@ -760,7 +834,7 @@ namespace FolkloreArchives.MapGen
                 return PackLayer("Rock_TerrainLayer", "concrete", new Color(0.45f, 0.45f, 0.47f));
             }
 
-            string layerPath = MapLayout.GeneratedFolder + "/layer_pavedroad.terrainlayer";
+            string layerPath = TerrainLayersFolder + "/layer_pavedroad.terrainlayer";
             var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
             if (layer == null)
             {
@@ -772,8 +846,8 @@ namespace FolkloreArchives.MapGen
             // road runs mostly along X, so the raw texture would show markings
             // running ACROSS the road instead of along it. Rotate 90 deg so the
             // dash pattern lines up with tileSize.x (along-road) instead.
-            layer.diffuseTexture = BuilderUtils.Rotate90(diffusePath, false, "pavedroad_diffuse_rot");
-            layer.normalMapTexture = BuilderUtils.Rotate90(normalPath, true, "pavedroad_normal_rot");
+            layer.diffuseTexture = BuilderUtils.Rotate90(diffusePath, false, "pavedroad_diffuse_rot", TerrainLayersFolder);
+            layer.normalMapTexture = BuilderUtils.Rotate90(normalPath, true, "pavedroad_normal_rot", TerrainLayersFolder);
             // Empirically, TerrainLayer.tileSize.x ended up controlling the ACROSS-
             // road repeat and .y the ALONG-road one (opposite of the doc-assumed
             // U->X/V->Z mapping) - owner saw the centre/edge lines duplicated ~2x
@@ -808,7 +882,7 @@ namespace FolkloreArchives.MapGen
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
             if (tex == null) { Debug.LogWarning("PSX ground: falta " + texPath); return null; }
 
-            string path = MapLayout.GeneratedFolder + "/psxlayer_" + texName + ".terrainlayer";
+            string path = TerrainLayersFolder + "/psxlayer_" + texName + ".terrainlayer";
             var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(path);
             if (layer == null)
             {
@@ -856,7 +930,7 @@ namespace FolkloreArchives.MapGen
         static TerrainLayer CreateLayer(string name, Color color)
         {
             var tex = NoisyTexture("layer_" + name, color);
-            string path = MapLayout.GeneratedFolder + "/layer_" + name + ".terrainlayer";
+            string path = TerrainLayersFolder + "/layer_" + name + ".terrainlayer";
             var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(path);
             if (layer == null)
             {
@@ -873,7 +947,7 @@ namespace FolkloreArchives.MapGen
         /// instead of a flat solid color.
         static Texture2D NoisyTexture(string name, Color c)
         {
-            string path = MapLayout.GeneratedFolder + "/tex_" + name + ".asset";
+            string path = TerrainLayersFolder + "/tex_" + name + ".asset";
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             bool isNew = tex == null;
             const int S = 128;

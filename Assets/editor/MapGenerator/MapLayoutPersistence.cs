@@ -78,11 +78,20 @@ namespace FolkloreArchives.MapGen
             var layout = new Layout();
             Walk(root.transform, "", layout.entries);
 
+            // Preservar los BORRADOS históricos. "ocultar = borrar": destildás algo, se guarda
+            // deleted=true y ApplySavedLayout lo DESTRUYE al regenerar. Problema: en el próximo
+            // Save Map Layout, Walk ya no ve ese objeto (fue destruido) → su entrada deleted=true
+            // se perdía y el objeto REAPARECÍA al regenerar. Acá recuperamos del JSON anterior las
+            // entradas deleted=true cuyo path NO volvió a aparecer en la escena (siguen borradas).
+            int kept = MergeOldDeletions(layout.entries);
+
             string dir = Path.GetDirectoryName(SavePath);
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(SavePath, JsonUtility.ToJson(layout, true));
             AssetDatabase.Refresh();
-            Debug.Log($"<color=lime>[MapLayoutPersistence] Guardadas {layout.entries.Count} posiciones en {SavePath}</color>");
+            int del = 0; foreach (var e in layout.entries) if (e.deleted) del++;
+            Debug.Log($"<color=lime>[MapLayoutPersistence] Guardadas {layout.entries.Count} posiciones " +
+                      $"({del} marcadas para borrar, {kept} borrados viejos preservados) en {SavePath}</color>");
         }
 
         // owner: "sigue diminuto el perro" -- el perro (DOG/Model) recalcula su propia
@@ -103,7 +112,12 @@ namespace FolkloreArchives.MapGen
         // y HumanWalkAnim.Awake() la lee como si fuera la altura normal de parado (su
         // "escala base"), así que StandFriend() nunca lograba devolverlos a su tamaño
         // real. "Model" es 100% procedural (animación), nunca se ajusta a mano.
-        static bool SkipSubtree(string name) => name == "DOG" || name == "Model";
+        // "PostesDeLuz" (postes + cables): NO se gobiernan por este layout. El owner los acomoda a mano
+        // (grupo entero, postes/cables sueltos, borrados) y el grupo SOBREVIVE al Generate (lo rescata
+        // DeleteMap y se re-parentea tal cual — ver MapGenerator). El layout por índice era frágil para
+        // esto (al mover el grupo entero no se restauraba su transform, y los índices se corrían). Al
+        // excluirlo acá, ni se guarda ni se le aplica nada encima: queda 100% como el owner lo dejó.
+        static bool SkipSubtree(string name) => name == "DOG" || name == "Model" || name == "PostesDeLuz";
 
         // Igual que DOG pero SOLO el transform del propio objeto (sus HIJOS sí se guardan):
         // el auto (Renault12) lo posiciona 100% el código en cada Generate
@@ -112,6 +126,26 @@ namespace FolkloreArchives.MapGen
         // el auto aparecería DESFASADO hasta el próximo Generate. No guardamos su transform,
         // pero SÍ el de los amigos que van sentados adentro (hijos, con su pose a mano).
         static bool SkipOwnTransform(string name) => name == "Renault12";
+
+        // Vuelve a meter en 'fresh' las entradas deleted=true del JSON anterior cuyo objeto
+        // ya NO existe en la escena (path no presente en 'fresh'). Así un borrado no se "olvida"
+        // nunca, aunque el objeto ya no esté para que Walk lo vea. Devuelve cuántas preservó.
+        static int MergeOldDeletions(List<Entry> fresh)
+        {
+            if (!File.Exists(SavePath)) return 0;
+            Layout old;
+            try { old = JsonUtility.FromJson<Layout>(File.ReadAllText(SavePath)); }
+            catch { return 0; }
+            if (old?.entries == null) return 0;
+
+            var present = new HashSet<string>();
+            foreach (var e in fresh) present.Add(e.path);
+
+            int kept = 0;
+            foreach (var e in old.entries)
+                if (e.deleted && !present.Contains(e.path)) { fresh.Add(e); kept++; }
+            return kept;
+        }
 
         static void Walk(Transform t, string parentPath, List<Entry> entries)
         {
@@ -169,6 +203,43 @@ namespace FolkloreArchives.MapGen
 
             Debug.Log($"<color=lime>[MapLayoutPersistence] Aplicadas {applied} posiciones, " +
                       $"borrados {removed} objetos ocultos, {cloned} duplicados recreados.</color>");
+        }
+
+        // Aplica el layout guardado SOLO a un grupo (hijo directo de RootName). Para objetos que se
+        // crean DESPUÉS de ApplySavedLayout (ej. PostesDeLuz, que necesita las piezas de ruta ya
+        // re-parenteadas) y que igual queremos que respeten la posición/borrado que el owner guardó
+        // con Save Map Layout. Reusa ApplyWalk/RecreateClones (idempotente: no duplica lo ya recreado).
+        public static void ApplySavedToGroup(string groupName)
+        {
+            if (!File.Exists(SavePath)) return;
+            Layout layout;
+            try { layout = JsonUtility.FromJson<Layout>(File.ReadAllText(SavePath)); }
+            catch { return; }
+            if (layout?.entries == null || layout.entries.Count == 0) return;
+
+            var root = GameObject.Find(MapLayout.RootName);
+            if (root == null) return;
+
+            Transform group = null; int occ = 0;
+            var counts = new Dictionary<string, int>();
+            foreach (Transform c in root.transform)
+            {
+                int o = counts.TryGetValue(c.name, out var n) ? n : 0;
+                counts[c.name] = o + 1;
+                if (c.name == groupName) { group = c; occ = o; break; }
+            }
+            if (group == null) return;
+
+            var map = new Dictionary<string, Entry>();
+            foreach (var e in layout.entries) map[e.path] = e;
+
+            int applied = 0; var toDelete = new List<GameObject>();
+            ApplyWalk(group, "/" + groupName + "#" + occ, map, ref applied, toDelete);
+            int removed = 0;
+            foreach (var go in toDelete) if (go != null) { Object.DestroyImmediate(go); removed++; }
+            int cloned = RecreateClones(root.transform, map); // recrea clones cuyo base recién existe (ej. postes duplicados)
+            if (applied > 0 || removed > 0 || cloned > 0)
+                Debug.Log($"<color=lime>[MapLayoutPersistence] Grupo '{groupName}': {applied} posiciones, {removed} borrados, {cloned} clones.</color>");
         }
 
         static void ApplyWalk(Transform t, string parentPath, Dictionary<string, Entry> map,

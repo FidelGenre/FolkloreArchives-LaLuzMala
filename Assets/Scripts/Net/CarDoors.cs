@@ -20,6 +20,18 @@ namespace FolkloreArchives.Net
     {
         public FolkloreArchives.CarController car;   // set por CarBuilder al construir el auto
         public float doorOpenDeg = 72f;
+        public float doorVolume = 0.7f;              // sonido puerta auto (owner: qubodup 147244)
+
+        // owner: "ruido de puerta de auto" -- clips recortados (abrir / portazo) de
+        // Assets/Resources. Se reproducen 3D en la posición de la puerta desde
+        // AnimateDoor, el único punto por donde pasa CUALQUIER apertura/cierre (jugador,
+        // perro o la secuencia de apertura), y que corre en todos los clientes.
+        AudioClip _openClip, _closeClip;
+        void Awake()
+        {
+            _openClip  = Resources.Load<AudioClip>("car_door_open");
+            _closeClip = Resources.Load<AudioClip>("car_door_close");
+        }
 
         readonly HashSet<Transform> _localOpen = new HashSet<Transform>();          // fallback un solo jugador
         readonly Dictionary<Transform, Quaternion> _closedRot = new Dictionary<Transform, Quaternion>();
@@ -118,6 +130,9 @@ namespace FolkloreArchives.Net
         IEnumerator AnimateDoor(Transform door, bool open)
         {
             if (!_closedRot.ContainsKey(door)) _closedRot[door] = door.localRotation;
+            // sonido de puerta de auto (3D, en la puerta) -- abrir vs portazo
+            var clip = open ? _openClip : _closeClip;
+            if (clip != null) AudioSource.PlayClipAtPoint(clip, door.position, doorVolume);
             Quaternion closed = _closedRot[door];
             Quaternion openRot = OpenRotation(door);
             Quaternion from = door.localRotation, to = open ? openRot : closed;

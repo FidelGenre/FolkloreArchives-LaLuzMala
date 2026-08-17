@@ -74,6 +74,24 @@ namespace FolkloreArchives
             // No volcar: solo gira en Y; el resto lo maneja la gravedad + collider.
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
             rb.centerOfMass = new Vector3(0f, -0.4f, 0f); // bajo = estable
+
+            // owner: "no me deja doblar". La fricción del BoxCollider contra el piso CANCELA la
+            // rotación (el avance lo forzamos por velocidad, pero el giro lo come la fricción del
+            // contacto). Collider SIN fricción (truco de auto arcade) -> el giro se aplica libre.
+            if (box != null)
+            {
+                var slick = new PhysicsMaterial("CarSlick")
+                {
+                    dynamicFriction = 0f, staticFriction = 0f, bounciness = 0f,
+                    frictionCombine = PhysicsMaterialCombine.Minimum,
+                    bounceCombine = PhysicsMaterialCombine.Minimum
+                };
+                box.material = slick;
+            }
+
+            // ruido de motor procedural (sin assets) -- se agrega solo si falta, así no
+            // hace falta regenerar el auto para que suene.
+            if (GetComponent<CarEngineSound>() == null) gameObject.AddComponent<CarEngineSound>();
         }
 
         void Update()
@@ -86,7 +104,9 @@ namespace FolkloreArchives
                 throttle = externalThrottle;
                 steer = externalSteer;
             }
-            else if (driving && kb != null && !SettingsMenu.IsOpen)
+            // owner: si estás controlando al PERRO, el auto NO lee WASD (si no, movías al perro y
+            // al auto a la vez). Sin input -> coast: el auto frena solo. Al volver a la persona, manejás.
+            else if (driving && kb != null && !SettingsMenu.IsOpen && !PartyController.DogControlled)
             {
                 throttle = (kb.wKey.isPressed || kb.upArrowKey.isPressed ? 1f : 0f)
                          - (kb.sKey.isPressed || kb.downArrowKey.isPressed ? 1f : 0f);
@@ -119,13 +139,40 @@ namespace FolkloreArchives
 
         void FixedUpdate()
         {
-            // doblar solo con el auto en movimiento (como un auto real)
-            if (Mathf.Abs(speed) > 0.3f)
+            // owner: "los personajes (perro/humano/cualquier NPC) no deberían chocar el
+            // auto y correrlo -- el auto debería ser inmóvil si no se maneja". Cuando no
+            // lo maneja nadie (ni el jugador ni el autopilot), el Rigidbody pasa a
+            // KINEMATIC: los NPCs chocan contra él pero NO lo empujan ni lo hacen girar.
+            // Vuelve a dinámico apenas alguien lo maneja (jugador o secuencia de apertura).
+            bool driven = driving || autoPilot;
+            bool shouldBeKinematic = !driven;
+            if (rb.isKinematic != shouldBeKinematic) rb.isKinematic = shouldBeKinematic;
+            if (!driven)
+            {
+                speed = 0f;
+                // owner: "está flotando el auto antes de subirme, bajalo como estaba" --
+                // al ser kinematic ya no lo asienta la gravedad. Lo apoyamos nosotros:
+                // bajamos el auto hasta que la base de su collider toque el piso (el
+                // fondo del BoxCollider está en el origen del auto, así que la Y del piso
+                // es directo la Y del auto). Mismo raycast que usa el autopilot.
+                if (GroundYAt(rb.position, out float restY))
+                {
+                    Vector3 p = rb.position; p.y = restY; rb.position = p;
+                }
+                return; // inmóvil: no aplicar velocidad ni giro
+            }
+
+            // doblar solo con el auto en movimiento (como un auto real). Uso angularVelocity (no
+            // MoveRotation): en un Rigidbody DINÁMICO, MoveRotation lo pelea la fricción del piso y
+            // el auto no giraba. Con un mínimo de maniobra dobla bien aunque no vaya a full.
+            if (Mathf.Abs(speed) > 0.2f)
             {
                 float dir = Mathf.Sign(speed);
-                float turn = steer * turnRate * Mathf.Clamp01(Mathf.Abs(speed) / maxSpeed) * dir;
-                rb.MoveRotation(rb.rotation * Quaternion.Euler(0f, turn * Time.fixedDeltaTime, 0f));
+                float speedFactor = Mathf.Max(0.35f, Mathf.Clamp01(Mathf.Abs(speed) / maxSpeed));
+                float turnDegPerSec = steer * turnRate * speedFactor * dir;
+                rb.angularVelocity = new Vector3(0f, turnDegPerSec * Mathf.Deg2Rad, 0f);
             }
+            else rb.angularVelocity = Vector3.zero;
             // velocidad hacia adelante, manteniendo la vertical (gravedad/terreno)
             Vector3 fwd = transform.forward * speed;
             rb.linearVelocity = new Vector3(fwd.x, rb.linearVelocity.y, fwd.z);

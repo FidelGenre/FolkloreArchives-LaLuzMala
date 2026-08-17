@@ -31,6 +31,9 @@ namespace FolkloreArchives
         bool controllingDog;
         bool dogStay;   // el perro está esperando quieto (no te sigue)
 
+        // true si estás controlando al perro -> el auto no debe leer WASD (lo mira CarController).
+        public static bool DogControlled;
+
         // owner: "cambie al perro y ahora puede abrir y cerrar puertas... y no se esta
         // podiendo subir" -- Apply() apagaba el MapExplorer de la persona al cambiar al
         // perro, pero NUNCA su PlayerVehicleInteractor: ese componente seguía activo
@@ -44,7 +47,17 @@ namespace FolkloreArchives
         {
             if (person != null) _personInteractor = person.GetComponent<PlayerVehicleInteractor>();
             if (dog != null) _dogInteractor = dog.GetComponent<PlayerVehicleInteractor>();
+            // owner: el perro tiene que tener el MISMO crosshair que el humano. La cámara del perro
+            // se construía sin él -> lo agrego en runtime a las dos (sin duplicar) por si falta.
+            EnsureCrosshair(personCam);
+            EnsureCrosshair(dogCam);
             Apply();
+        }
+
+        static void EnsureCrosshair(Camera cam)
+        {
+            if (cam != null && cam.GetComponent<Crosshair>() == null)
+                cam.gameObject.AddComponent<Crosshair>();
         }
 
         void Update()
@@ -57,16 +70,30 @@ namespace FolkloreArchives
                 controllingDog = !controllingDog;
                 Apply();
             }
-            // E: alterna quedarse/seguir (solo cuando controlás la persona)
-            else if (!controllingDog && kb[stayKey].wasPressedThisFrame)
+            // E: alterna quedarse/seguir -- owner: "solo si tengo al perro cerca y apuntándolo"
+            // (así la E no choca con abrir puertas u otras interacciones).
+            else if (!controllingDog && kb[stayKey].wasPressedThisFrame && LookingAtDog())
             {
                 dogStay = !dogStay;
                 Apply();
             }
         }
 
+        // ¿estoy cerca del perro y apuntándolo? (para que E de "quedate/seguime" no se
+        // dispare desde cualquier lado ni pise otras interacciones con E).
+        bool LookingAtDog()
+        {
+            if (dog == null || personCam == null) return false;
+            Vector3 to = dog.transform.position - personCam.transform.position;
+            if (to.magnitude > 4.5f) return false;                          // cerca
+            return Vector3.Angle(personCam.transform.forward, to) < 35f;    // apuntándolo
+        }
+
         void Apply()
         {
+            // owner: "controlando al perro también se mueve el auto" -> el auto NO debe leer WASD
+            // mientras manejás al perro. Expongo el estado para que CarController lo mire.
+            DogControlled = controllingDog;
             // persona: activa solo si NO controlás al perro
             if (person != null) person.enabled = !controllingDog;
             // mismo criterio para el interactor del auto de cada uno -- solo el que
@@ -89,14 +116,28 @@ namespace FolkloreArchives
             Cursor.lockState = CursorLockMode.Locked;
         }
 
+        // owner: "moviendo al perro en la YPF también se mueve el personaje principal".
+        // Si algo (la secuencia de apertura / ExitRoutine al bajar del auto) reactiva el
+        // control de la PERSONA mientras controlás al perro, acá lo re-apago cada frame
+        // (y viceversa). Así nunca se controlan los dos a la vez.
+        void LateUpdate()
+        {
+            if (person != null && person.enabled == controllingDog) person.enabled = !controllingDog;
+            if (_personInteractor != null && _personInteractor.enabled == controllingDog) _personInteractor.enabled = !controllingDog;
+            if (_dogInteractor != null && _dogInteractor.enabled != controllingDog) _dogInteractor.enabled = controllingDog;
+        }
+
         GUIStyle _hint;
         void OnGUI()
         {
-            if (controllingDog) return;   // el hint del perro solo cuando controlás la persona
             if (_hint == null) _hint = new GUIStyle(GUI.skin.label) { fontSize = 13, richText = true };
-            string s = dogStay ? "<color=orange>Rufus: QUIETO</color>  (E: que te siga)"
-                               : "Rufus: te sigue  (E: quedarse | G: controlarlo)";
-            GUI.Label(new Rect(12f, 44f, 420f, 22f), s, _hint);
+            string s;
+            if (controllingDog)
+                s = "Controlás a Rufus  (<color=yellow>B: ladrar</color> | G: volver a la persona)";
+            else
+                s = dogStay ? "<color=orange>Rufus: QUIETO</color>  (E: que te siga)"
+                            : "Rufus: te sigue  (E: quedarse | G: controlarlo)";
+            GUI.Label(new Rect(12f, 44f, 480f, 22f), s, _hint);
         }
     }
 }

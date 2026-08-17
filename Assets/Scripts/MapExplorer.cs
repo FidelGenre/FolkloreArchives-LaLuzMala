@@ -23,6 +23,11 @@ namespace FolkloreArchives
         // trae el pack (acá el piso es UN SOLO Terrain con capas mezcladas, no
         // objetos separados por superficie).
         WASDFootstepSource footstepSource;
+        [Header("Pisadas")]
+        public float stepInterval = 1.3f; // cada cuántos "pasos" suena una pisada (1 = cada paso; más = más espaciado)
+        public float stoneVolume  = 0.25f; // cemento/asfalto (Stone): el más bajo
+        public float normalVolume = 0.5f;  // resto de superficies (bajado de 0.8, owner: "más bajos")
+        float _startupQuiet;               // no suenan pisadas hasta acá (evita la pisada al spawnear)
         bool wasGrounded = true;
         public float walkSpeed = 2.6f;   // slower, tense walk (FtF-style)
         public float runSpeed = 4.3f;    // owner: "un poco mas lento el sprint" (era 5)
@@ -84,6 +89,20 @@ namespace FolkloreArchives
         // PlayerVehicleInteractor llama esto justo antes de reactivar el script.
         public void SetLookPitch(float p) { pitch = Mathf.Clamp(p, -85f, 85f); }
 
+        // owner: "que no pueda mover la cámara por ~3 seg -- solo muy poquito en el ángulo
+        // que está meando -- y después sí libre (cámara Y caminar)". Bloquea el caminar y
+        // limita la mirada a ±range grados alrededor del ángulo ACTUAL, por 'seconds' seg.
+        float _lockUntil, _lockRange, _lockPitchCenter, _lockYawCenter, _lockedYaw;
+        bool LookLocked => Time.time < _lockUntil;
+        public void LockLook(float seconds, float range)
+        {
+            _lockUntil = Time.time + seconds;
+            _lockRange = range;
+            _lockPitchCenter = pitch;
+            _lockYawCenter = transform.eulerAngles.y;
+            _lockedYaw = _lockYawCenter;
+        }
+
         bool suppressMoveUntilKeysReleased;
         void OnEnable() { suppressMoveUntilKeysReleased = true; }
 
@@ -118,6 +137,7 @@ namespace FolkloreArchives
             }
             Cursor.lockState = CursorLockMode.Locked;
             stamina = maxStamina;
+            _startupQuiet = Time.time + 1f; // owner: al spawnear no debe sonar la pisada
 
             SnapToGround(); // apoyar sobre el suelo real al arrancar (evita spawn enterrado)
         }
@@ -129,6 +149,19 @@ namespace FolkloreArchives
         // depende de que Update() esté corriendo.
         public bool FlashlightOn => flashlight != null && flashlight.enabled;
         public void SetFlashlight(bool on) { if (flashlight != null) flashlight.enabled = on; }
+
+        // Toca una pisada ajustando el VOLUMEN según la superficie: el cemento/asfalto
+        // (Stone) suena más bajito que el resto (owner). PlayOneShot toma el volumen del
+        // AudioSource en el momento del disparo, así que se setea justo antes.
+        void PlayFootstep(WASDEnumAction action)
+        {
+            if (footstepSource == null) return;
+            if (Time.time < _startupQuiet) return; // recién spawneado: no sonar (evita la pisada del spawn)
+            var surface = TerrainSurfaceDetector.At(transform.position, transform);
+            if (footstepSource.audioSource != null)
+                footstepSource.audioSource.volume = surface == WASDEnumMaterial.Stone ? stoneVolume : normalVolume;
+            footstepSource.PlayFootstepByAction(action, surface);
+        }
 
         // Apoya al jugador sobre la superficie real (terreno/ruta/puente) tirando un
         // raycast hacia abajo desde bien arriba de su XZ. Así, aunque la posición
@@ -168,8 +201,18 @@ namespace FolkloreArchives
             if (Cursor.lockState == CursorLockMode.Locked)
             {
                 Vector2 delta = mouse.delta.ReadValue() * mouseSensitivity;
-                transform.Rotate(0f, delta.x, 0f);
-                pitch = Mathf.Clamp(pitch - delta.y, -85f, 85f);
+                if (LookLocked)
+                {
+                    // candado de arranque: solo un anguito alrededor del ángulo del chorro
+                    _lockedYaw = Mathf.Clamp(_lockedYaw + delta.x, _lockYawCenter - _lockRange, _lockYawCenter + _lockRange);
+                    transform.rotation = Quaternion.Euler(0f, _lockedYaw, 0f);
+                    pitch = Mathf.Clamp(pitch - delta.y, _lockPitchCenter - _lockRange, _lockPitchCenter + _lockRange);
+                }
+                else
+                {
+                    transform.Rotate(0f, delta.x, 0f);
+                    pitch = Mathf.Clamp(pitch - delta.y, -85f, 85f);
+                }
                 if (cam != null) cam.localEulerAngles = new Vector3(pitch, 0f, 0f);
             }
 
@@ -201,6 +244,7 @@ namespace FolkloreArchives
             // Move
             float h = (kb.dKey.isPressed ? 1f : 0f) - (kb.aKey.isPressed ? 1f : 0f);
             float v = (kb.wKey.isPressed ? 1f : 0f) - (kb.sKey.isPressed ? 1f : 0f);
+            if (LookLocked) { h = 0f; v = 0f; } // candado de arranque: todavía no se camina
 
             // owner: "se me sigue corriendo la vista luego de bajarme hacia adelante" --
             // W también acelera el auto; si te bajás sin soltarlo, este script se
@@ -256,10 +300,13 @@ namespace FolkloreArchives
                     // dice de qué LADO viene el cruce).
                     float prevTimer = bobTimer;
                     bobTimer += Time.deltaTime * bobSpeed * (speed / walkSpeed);
-                    if (footstepSource != null && Mathf.FloorToInt(bobTimer / Mathf.PI) > Mathf.FloorToInt(prevTimer / Mathf.PI))
+                    // owner: "sonaban muy seguido... ponelo a 1.2" -- una pisada de audio
+                    // cada stepInterval medios-ciclos del bob (período = π*stepInterval).
+                    float stepPeriod = Mathf.PI * Mathf.Max(0.1f, stepInterval);
+                    if (footstepSource != null && Mathf.FloorToInt(bobTimer / stepPeriod) > Mathf.FloorToInt(prevTimer / stepPeriod))
                     {
                         var action = crouching ? WASDEnumAction.Sneak : (running ? WASDEnumAction.Run : WASDEnumAction.Walk);
-                        footstepSource.PlayFootstepByAction(action, TerrainSurfaceDetector.At(transform.position));
+                        PlayFootstep(action);
                     }
                 }
 
@@ -286,7 +333,7 @@ namespace FolkloreArchives
                 // owner: "sonidos... salto" -- aterrizaje: transición de "en el aire" a
                 // "en el piso" en este mismo frame (no lo dispara estar parado quieto).
                 if (!wasGrounded && footstepSource != null)
-                    footstepSource.PlayFootstepByAction(WASDEnumAction.Drop, TerrainSurfaceDetector.At(transform.position));
+                    PlayFootstep(WASDEnumAction.Drop);
                 wasGrounded = true;
 
                 verticalVelocity = -1f;
@@ -295,7 +342,7 @@ namespace FolkloreArchives
                 {
                     verticalVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
                     if (footstepSource != null)
-                        footstepSource.PlayFootstepByAction(WASDEnumAction.Jump, TerrainSurfaceDetector.At(transform.position));
+                        PlayFootstep(WASDEnumAction.Jump);
                 }
             }
             else

@@ -123,8 +123,7 @@ namespace FolkloreArchives.MapGen
             if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
             if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.05f);
             string matPath = "Assets/Settings/PSX_" + f.name + ".mat";
-            AssetDatabase.DeleteAsset(matPath);
-            AssetDatabase.CreateAsset(mat, matPath);
+            mat = BuilderUtils.SaveMaterialStable(mat, matPath); // GUID estable → sin conflictos al regenerar
             foreach (var r in rends)
             {
                 var arr = new Material[r.sharedMaterials.Length];

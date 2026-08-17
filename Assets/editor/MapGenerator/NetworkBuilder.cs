@@ -29,7 +29,6 @@ namespace FolkloreArchives.MapGen
             var src = go.AddComponent<WASDFootstepSource>();
             var so = new SerializedObject(src);
             so.FindProperty("footsteps").objectReferenceValue = mgr;
-            so.FindProperty("volume").floatValue = 0.2f; // owner: "se escuchan igual, bajales mas" -- era 0.35, default del pack 0.8
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -191,8 +190,7 @@ namespace FolkloreArchives.MapGen
                 else if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", new Color(0.82f, 0.68f, 0.55f)); // piel de respaldo
                 if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.05f);
                 string matPath = "Assets/Settings/PSX_Character.mat";
-                AssetDatabase.DeleteAsset(matPath);
-                AssetDatabase.CreateAsset(mat, matPath);
+                mat = BuilderUtils.SaveMaterialStable(mat, matPath); // GUID estable → sin conflictos al regenerar
                 // pinto TODAS las ranuras de material de cada renderer (no solo la 0),
                 // si no las sub-mallas restantes quedan magenta.
                 foreach (var r in rends)

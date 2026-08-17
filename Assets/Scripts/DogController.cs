@@ -26,6 +26,7 @@ namespace FolkloreArchives
         public float mouseSensitivity = 0.08f; // giro con mouse (modo jugador)
         public float gravity   = 18f;
         public float jumpHeight = 0.9f;   // saltar (Espacio)
+        [HideInInspector] public bool IsGrounded; // lo lee DogAudio para no sonar pasos en el aire
         public float crouchRatio = 0.5f;  // agacharse (Ctrl/C): baja a esta fracción del alto
 
         // owner: "que dando doble click con el espacio pueda volar... tanto en perro
@@ -73,6 +74,7 @@ namespace FolkloreArchives
             cc = GetComponent<CharacterController>();
             animator = GetComponentInChildren<Animator>();
             standHeight = cc.height;
+            if (GetComponent<FolkloreArchives.DogAudio>() == null) gameObject.AddComponent<FolkloreArchives.DogAudio>(); // ladridos
             // owner: "sigue spawneando bajo tierra" -- por si Terrain.activeTerrain
             // todavía no estaba resuelto en este momento del orden de Start()
             // (silenciosamente desactivaba TODO el anclaje sin ningún error), ya no se
@@ -101,6 +103,9 @@ namespace FolkloreArchives
                     if (Time.time - lastSpaceTapTime < doubleTapWindow) { flying = !flying; verticalVel = 0f; }
                     lastSpaceTapTime = Time.time;
                 }
+                // owner: el perro ladra SOLO cuando lo controlás y apretás B (no automático)
+                if (kbFly != null && kbFly.bKey.wasPressedThisFrame)
+                    GetComponent<DogAudio>()?.Bark();
             }
             else if (flying) flying = false;
 
@@ -112,6 +117,7 @@ namespace FolkloreArchives
             }
 
             bool grounded = cc.isGrounded;
+            IsGrounded = grounded;
             if (flying)
             {
                 var kb = Keyboard.current;
@@ -166,6 +172,7 @@ namespace FolkloreArchives
                 {
                     verticalVel = Mathf.Sqrt(2f * gravity * jumpHeight);
                     _nextAutoJump = Time.time + 0.6f;   // cooldown para no saltar en loop
+                    GetComponent<DogAudio>()?.PlayJump();
                 }
             }
 
@@ -190,7 +197,10 @@ namespace FolkloreArchives
             var kb = Keyboard.current;
             if (kb == null) return;
             if (grounded && kb.spaceKey.wasPressedThisFrame)
+            {
                 verticalVel = Mathf.Sqrt(2f * gravity * jumpHeight);
+                GetComponent<DogAudio>()?.PlayJump();
+            }
         }
 
         // --- controlado por el jugador (1ª persona: mouse gira, WASD mueve) ---
@@ -235,27 +245,54 @@ namespace FolkloreArchives
         }
 
         // --- IA: seguir a la persona ---
+        // owner: "Rufus tiene que ir por donde voy yo (atrás mío), si no no pasa por las puertas y
+        // choca las paredes". Rastro de MIGAS: guardo las posiciones por donde pasó la persona y el
+        // perro las sigue en orden -> retoma tu CAMINO (cruza puertas, rodea paredes) en vez de ir
+        // derecho contra las cosas.
+        readonly System.Collections.Generic.List<Vector3> _trail = new System.Collections.Generic.List<Vector3>();
+        const float TrailSample = 0.4f;   // deja una miga cada 0.4 m de la persona
+        const float TrailReach  = 0.6f;   // la miga se da por alcanzada a esta distancia
+
+        static float FlatDist(Vector3 a, Vector3 b) { a.y = 0f; b.y = 0f; return Vector3.Distance(a, b); }
+
         Vector3 FollowMove()
         {
             if (followTarget == null) return Vector3.zero;
-            Vector3 to = followTarget.position - transform.position;
-            to.y = 0f;
-            float dist = to.magnitude;
 
-            // atascado/perdido → reaparece detrás de la persona
-            if (dist > followTeleportDistance)
+            // dejar migas por donde va la persona
+            if (_trail.Count == 0 || FlatDist(_trail[_trail.Count - 1], followTarget.position) >= TrailSample)
+                _trail.Add(followTarget.position);
+            if (_trail.Count > 256) _trail.RemoveAt(0);
+
+            float distPlayer = FlatDist(followTarget.position, transform.position);
+
+            // atascado/perdido → reaparece detrás de la persona (y limpio el rastro)
+            if (distPlayer > followTeleportDistance)
             {
                 Vector3 behind = followTarget.position - followTarget.forward * followStopDistance;
                 var cont = GetComponent<CharacterController>();
-                cont.enabled = false;                 // mover un CC directo requiere desactivarlo
+                cont.enabled = false;
                 transform.position = behind;
                 cont.enabled = true;
+                _trail.Clear();
                 return Vector3.zero;
             }
 
+            // consumir las migas ya alcanzadas
+            while (_trail.Count > 0 && FlatDist(transform.position, _trail[0]) <= TrailReach)
+                _trail.RemoveAt(0);
+
+            // owner: "se me mete adentro y escucho sus pisadas todo el tiempo" -> se PLANTA cuando
+            // está cerca tuyo (distancia directa), sin importar las migas, así no se te encima ni
+            // camina sin parar. Limpio el rastro para arrancar de nuevo cuando te alejes.
+            if (distPlayer <= followStopDistance) { _trail.Clear(); return Vector3.zero; }
+
+            // ir hacia la miga más vieja (tu camino); si no hay, directo a la persona
+            Vector3 goal = _trail.Count > 0 ? _trail[0] : followTarget.position;
+            Vector3 to = goal - transform.position; to.y = 0f;
+            if (to.sqrMagnitude < 1e-4f) return Vector3.zero;
             FaceToward(to);
-            if (dist <= followStopDistance) return Vector3.zero;  // llegó: se planta
-            float speed = dist > followRunDistance ? runSpeed : walkSpeed;
+            float speed = distPlayer > followRunDistance ? runSpeed : walkSpeed;
             return to.normalized * speed;
         }
 

@@ -65,8 +65,7 @@ namespace FolkloreArchives.MapGen
             if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
             if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
             string matPath = "Assets/Settings/WoodenFence.mat";
-            AssetDatabase.DeleteAsset(matPath);
-            AssetDatabase.CreateAsset(mat, matPath);
+            mat = BuilderUtils.SaveMaterialStable(mat, matPath); // GUID estable → sin conflictos al regenerar
             foreach (var r in inst.GetComponentsInChildren<Renderer>())
             {
                 var arr = new Material[r.sharedMaterials.Length];
