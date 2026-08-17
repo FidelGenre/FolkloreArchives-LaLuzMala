@@ -1161,11 +1161,12 @@ namespace FolkloreArchives
         // Al acercarte a Richard (sentado en la oscuridad), salta el screamer: arranca NEGRO
         // (silueta) y se va aclarando la textura, con un sting + el jadeo del susto del
         // personaje, mientras la cámara zoomea (FOV) hacia él.
-        // owner: el screamer se DISPARA cuando el jugador (o el perro) cruza una LÍNEA a esta
-        // profundidad -- NO un punto: pases por el medio o por un costado, salta igual. La
-        // línea es el plano en screamTriggerPos perpendicular a screamApproachDir (la dirección
-        // en la que avanzás hacia el playero; por defecto -X, ajustá si entrás por otro eje).
+        // owner: el screamer se DISPARA solo cuando el jugador (o el perro) está ADENTRO de la
+        // oficina, en el punto (radio alrededor de screamTriggerPos). Antes era una LÍNEA/semiplano
+        // -> saltaba aunque te fueras para atrás o estuvieras afuera y te encerraba. Ahora es un
+        // radio: si te retirás, NO salta.
         public Vector3 screamTriggerPos = new Vector3(459.3862f, 17.25814f, -2.415934f);
+        public float screamRadius = 1.4f;   // tenés que estar JUSTO ahí adentro para que salte
         public Vector3 screamApproachDir = new Vector3(-1f, 0f, 0f);
         // owner: el ZOOM a Richard sentado va cuando ya PASASTE la puerta (adentro), no al
         // golpear. Línea (mismo criterio) apenas cruzás la puerta de la oficina. (0,0,0) = sin
@@ -1195,8 +1196,9 @@ namespace FolkloreArchives
                 yield return PeekAtSeatedRichard();
             }
 
-            // 2) al cruzar la línea del screamer (toda la línea, por cualquier lado) -> salta.
-            while (!CrossedLine(screamTriggerPos, screamApproachDir, player, dog))
+            // 2) el screamer salta SOLO si estás ADENTRO en el punto (radio). Si te vas para atrás,
+            // no salta (antes con la línea saltaba igual y te encerraba afuera).
+            while (NearestDist(screamTriggerPos, player, dog) > screamRadius)
                 yield return null;
 
             // owner: "que se frene el jugador un segundo" cuando salta el screamer -- LockLook
