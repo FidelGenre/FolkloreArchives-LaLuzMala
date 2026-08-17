@@ -105,6 +105,7 @@ namespace FolkloreArchives
         // owner: al salir del baño, la CHICA va hasta acá (sale por la puerta y se junta con el grupo).
         public Vector3[] chicaExitWaypoints = new Vector3[]
         {
+            new Vector3(439.1003f, 17.25015f, -2.251966f), // se alinea con la puerta (no atraviesa la pared)
             new Vector3(439.1226f, 17.22934f, -6.878397f), // puerta del baño
             new Vector3(442.8139f, 17.07963f, -11.55511f), // afuera, con el grupo
         };
