@@ -34,6 +34,10 @@ namespace FolkloreArchives
         // true si estás controlando al perro -> el auto no debe leer WASD (lo mira CarController).
         public static bool DogControlled;
 
+        // true durante un diálogo con zoom (FocusSay): persona y perro NO mueven cámara ni caminan
+        // (la cámara la maneja la secuencia, apuntando al que habla).
+        public static bool CinematicLock;
+
         // owner: "cambie al perro y ahora puede abrir y cerrar puertas... y no se esta
         // podiendo subir" -- Apply() apagaba el MapExplorer de la persona al cambiar al
         // perro, pero NUNCA su PlayerVehicleInteractor: ese componente seguía activo

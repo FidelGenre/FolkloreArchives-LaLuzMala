@@ -112,7 +112,8 @@ namespace FolkloreArchives
             Vector3 planar = Vector3.zero;
             switch (mode)
             {
-                case Mode.Player: planar = PlayerMove(); break;
+                // diálogo con zoom: no leer mouse/WASD (la cámara la maneja la secuencia)
+                case Mode.Player: planar = PartyController.CinematicLock ? Vector3.zero : PlayerMove(); break;
                 case Mode.Follow: planar = FollowMove(); break;
             }
 

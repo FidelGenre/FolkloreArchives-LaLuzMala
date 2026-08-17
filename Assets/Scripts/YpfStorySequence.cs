@@ -818,9 +818,10 @@ namespace FolkloreArchives
         // la chica lo putea; MaleCasual se le pone enfrente y lo echa; el viejo se va al auto rojo.
         IEnumerator ViejoExitAndConfront(Transform viejo)
         {
-            // abrir la puerta del baño para que salga (no la atraviesa) y cerrarla detrás.
+            // owner: la puerta del baño se abre cuando el viejo LLEGA (no de una: la corrutina de
+            // la chica la cerraba antes). Abre al acercarse a la puerta y cierra al pasar.
             var bath = FindEntranceDoor();
-            if (bath != null) bath.SetOpen(true);
+            if (bath != null) StartCoroutine(OpenWhenNear(viejo, bath, chicaDoorway, 2.2f));
             if (viejoWaypoints != null)
                 foreach (var wp in viejoWaypoints)
                     yield return WalkTo(viejo, wp, speed: 1.4f, stopDist: 0.3f);
@@ -1643,33 +1644,32 @@ namespace FolkloreArchives
         IEnumerator FocusSay(string text, float seconds, Vector3 target)
         {
             var cam = ActiveCam();
-            var explorer = (op != null && op.player != null) ? op.player.GetComponent<MapExplorer>() : null;
-            bool canAim = cam != null && explorer != null && explorer.enabled;   // solo con la persona
             var uac = cam != null ? cam.GetComponent<Camera>() : null;
             float origFov = uac != null ? uac.fieldOfView : 60f;
-            if (canAim) explorer.enabled = false;
+
+            // BLOQUEO CINEMÁTICO: persona y perro dejan de mover cámara/caminar; la maneja esto.
+            PartyController.CinematicLock = true;
 
             _hint = text;
             float t = 0f;
-            Vector3 look = target + Vector3.up * 1.5f;   // a la cara
+            Vector3 look = target + Vector3.up * 1.5f;   // a la cara del que habla
             while (t < seconds)
             {
-                if (canAim)
+                cam = ActiveCam();  // por si cambió
+                if (cam != null)
                 {
                     Vector3 dir = look - cam.position;
                     if (dir.sqrMagnitude > 1e-4f)
-                        cam.rotation = Quaternion.Slerp(cam.rotation, Quaternion.LookRotation(dir.normalized, Vector3.up), 9f * Time.deltaTime);
-                    if (uac != null) uac.fieldOfView = Mathf.Lerp(uac.fieldOfView, 42f, 6f * Time.deltaTime);
+                        cam.rotation = Quaternion.Slerp(cam.rotation, Quaternion.LookRotation(dir.normalized, Vector3.up), 16f * Time.deltaTime);
+                    var c2 = cam.GetComponent<Camera>();
+                    if (c2 != null) c2.fieldOfView = Mathf.Lerp(c2.fieldOfView, 40f, 10f * Time.deltaTime);   // zoom
                 }
                 t += Time.deltaTime;
                 yield return null;
             }
             _hint = "";
-            if (canAim)
-            {
-                if (uac != null) uac.fieldOfView = origFov;
-                explorer.enabled = true;   // devolver el control
-            }
+            if (uac != null) uac.fieldOfView = origFov;   // restaurar FOV
+            PartyController.CinematicLock = false;         // devolver el control
         }
 
         // cartel del guion (golpear / nadie responde / etc.)
