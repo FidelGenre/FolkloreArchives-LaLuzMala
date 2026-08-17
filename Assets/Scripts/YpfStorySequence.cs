@@ -992,17 +992,49 @@ namespace FolkloreArchives
             return p.y - 1.3f;
         }
 
-        // rata: cápsula chica oscura, sin collider que trabe (se atrapa por cercanía + E).
+        // rata: modelo PS1 real (Resources/Rat/RatModel). La envuelvo en un ROOT a nivel de piso
+        // (el correteo mueve el root y le fija la Y al piso), con el modelo adentro auto-escalado a
+        // ~0.18 m y apoyado (su base en el origen del root). Si falta el asset, cae a un cilindro.
+        const float RatSizeMeters = 0.18f;
         GameObject CreateRat(Vector3 at)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            go.name = "Rata";
-            var col = go.GetComponent<Collider>(); if (col != null) Destroy(col);
-            go.transform.position = at;
-            go.transform.localScale = new Vector3(0.12f, 0.09f, 0.22f); // chatita, alargada
-            var r = go.GetComponent<Renderer>();
-            if (r != null) r.material.color = new Color(0.18f, 0.15f, 0.13f); // gris rata
-            return go;
+            var root = new GameObject("Rata");
+            root.transform.position = at;
+
+            var pf = Resources.Load<GameObject>("Rat/RatModel");
+            if (pf != null)
+            {
+                var model = Object.Instantiate(pf);
+                model.name = "RatModel";
+                foreach (var c in model.GetComponentsInChildren<Collider>()) Destroy(c);
+                model.transform.SetParent(root.transform, false);
+
+                var rends = model.GetComponentsInChildren<Renderer>();
+                if (rends.Length > 0)
+                {
+                    Bounds b = rends[0].bounds;
+                    for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                    float longest = Mathf.Max(b.size.x, Mathf.Max(b.size.y, b.size.z));
+                    if (longest > 1e-4f) model.transform.localScale *= (RatSizeMeters / longest);
+
+                    // recentrar en X/Z sobre el root y apoyar la base en el piso (root.y)
+                    b = rends[0].bounds;
+                    for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                    model.transform.position += new Vector3(root.transform.position.x - b.center.x,
+                                                            root.transform.position.y - b.min.y,
+                                                            root.transform.position.z - b.center.z);
+                }
+                return root;
+            }
+
+            // fallback: cilindro (como antes) dentro del root
+            var cyl = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            var col = cyl.GetComponent<Collider>(); if (col != null) Destroy(col);
+            cyl.transform.SetParent(root.transform, false);
+            cyl.transform.localScale = new Vector3(0.12f, 0.09f, 0.22f);
+            var r = cyl.GetComponent<Renderer>();
+            if (r != null) r.material.color = new Color(0.18f, 0.15f, 0.13f);
+            return root;
         }
 
         // punto random dentro del área del parking (para el correteo de las ratas), pegado al piso.
