@@ -995,7 +995,7 @@ namespace FolkloreArchives
         // rata: modelo PS1 real (Resources/Rat/RatModel). La envuelvo en un ROOT a nivel de piso
         // (el correteo mueve el root y le fija la Y al piso), con el modelo adentro auto-escalado a
         // ~0.18 m y apoyado (su base en el origen del root). Si falta el asset, cae a un cilindro.
-        const float RatSizeMeters = 0.18f;
+        const float RatSizeMeters = 0.55f;   // owner: mucho más grandes
         GameObject CreateRat(Vector3 at)
         {
             var root = new GameObject("Rata");

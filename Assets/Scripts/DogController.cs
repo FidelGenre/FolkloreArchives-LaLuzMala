@@ -291,10 +291,29 @@ namespace FolkloreArchives
             Vector3 goal = _trail.Count > 0 ? _trail[0] : followTarget.position;
             Vector3 to = goal - transform.position; to.y = 0f;
             if (to.sqrMagnitude < 1e-4f) return Vector3.zero;
+
+            // owner: "no pasa por la puerta, se queda contra la pared". RECUPERACIÓN POR ATASCO: si
+            // debería moverse pero su posición casi no cambia (chocando una puerta/pared), tras un
+            // ratito SALTA a la miga (que es un punto por donde SÍ pasó la persona) y sigue.
+            if (FlatDist(transform.position, _lastFollowPos) < 0.03f) _stuckT += Time.deltaTime;
+            else _stuckT = 0f;
+            _lastFollowPos = transform.position;
+            if (_stuckT > 1.2f)
+            {
+                var cont = GetComponent<CharacterController>();
+                if (cont != null) cont.enabled = false;
+                transform.position = new Vector3(goal.x, transform.position.y, goal.z);
+                if (cont != null) cont.enabled = true;
+                if (_trail.Count > 0) _trail.RemoveAt(0);
+                _stuckT = 0f;
+                return Vector3.zero;
+            }
+
             FaceToward(to);
             float speed = distPlayer > followRunDistance ? runSpeed : walkSpeed;
             return to.normalized * speed;
         }
+        Vector3 _lastFollowPos; float _stuckT;   // detección de atasco del follow
 
         void FaceToward(Vector3 dir)
         {
