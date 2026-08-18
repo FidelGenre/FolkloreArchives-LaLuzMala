@@ -1045,15 +1045,19 @@ namespace FolkloreArchives
         {
             Shader sh = Shader.Find("Custom/RatOutline");
             if (sh == null) return;   // sin el shader, no dibujo contorno (mejor eso que taparla)
-            var mat = new Material(sh);
-            mat.SetColor("_Color", new Color(1f, 0.85f, 0.15f));   // amarillo
-            mat.SetFloat("_Width", 0.03f);
+            const float outlineWorldWidth = 0.012f;   // grosor del borde EN MUNDO (~1.2 cm)
             foreach (var mf in model.GetComponentsInChildren<MeshFilter>())
             {
                 if (mf.sharedMesh == null) continue;
                 var o = new GameObject("Outline");
                 o.transform.SetParent(mf.transform, false);   // escala 1: la expansión la hace el shader
                 o.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+                var mat = new Material(sh);
+                mat.SetColor("_Color", new Color(1f, 0.85f, 0.15f));   // amarillo
+                // el shader expande en espacio del MODELO -> compenso por la escala para que el
+                // borde sea fino en MUNDO (la rata está muy escalada; si no, queda un cúmulo gigante).
+                float sc = Mathf.Max(1e-4f, mf.transform.lossyScale.x);
+                mat.SetFloat("_Width", outlineWorldWidth / sc);
                 o.AddComponent<MeshRenderer>().sharedMaterial = mat;
             }
         }
