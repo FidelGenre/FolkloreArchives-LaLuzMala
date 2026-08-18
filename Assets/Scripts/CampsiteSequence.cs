@@ -43,12 +43,15 @@ namespace FolkloreArchives
         {
             if (car == null) { Debug.LogWarning("[Camp] no encontré el auto"); yield break; }
 
-            // 1) manejás vos hasta el TRIGGER (si no está seteado, no espero).
-            if (driveTriggerPos != Vector3.zero)
+            // 1) manejás vos hasta el TRIGGER. Si TODAVÍA no está seteado (falta la coord del owner),
+            // el capítulo NO arranca -> el checkpoint 2 queda en la YPF como antes, y manejás normal.
+            if (driveTriggerPos == Vector3.zero)
             {
-                Debug.Log($"<color=cyan>[Camp] manejá hasta el campamento (trigger en {driveTriggerPos}, r={driveTriggerRadius})</color>");
-                yield return new WaitUntil(() => Flat2(car.transform.position, driveTriggerPos) <= driveTriggerRadius);
+                Debug.LogWarning("[Camp] falta driveTriggerPos -> el capítulo campamento no arranca (seteá el trigger).");
+                yield break;
             }
+            Debug.Log($"<color=cyan>[Camp] manejá hasta el campamento (trigger en {driveTriggerPos}, r={driveTriggerRadius})</color>");
+            yield return new WaitUntil(() => Flat2(car.transform.position, driveTriggerPos) <= driveTriggerRadius);
 
             // 2) el auto se ESTACIONA SOLO: autopilot hasta el punto del campamento.
             Debug.Log("<color=cyan>[Camp] el auto se estaciona solo...</color>");
