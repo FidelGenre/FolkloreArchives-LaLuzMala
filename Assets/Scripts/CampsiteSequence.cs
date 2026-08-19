@@ -57,9 +57,10 @@ namespace FolkloreArchives
         public Vector3 greenTentPos = new Vector3(249.8865f, 23.07505f, 234.3149f); // el negro pone su carpa acá
         public float   greenTentYaw = -120.779f;
         public Vector3 greenSitPos  = new Vector3(248.6f, 23.7f, 231.8f);           // el negro se sienta (tronco este; dame el exacto si es otro)
+        public float   seatYOffset  = -1.0f;   // ajuste de altura al sentarse en el tronco (m). Más negativo = más abajo.
 
         [Header("Cajuela")]
-        public float trunkOpenDeg = -70f;   // se abre girando sobre eje HORIZONTAL (se levanta). Si baja, cambiar el signo.
+        public float trunkOpenDeg = 70f;    // se abre girando sobre eje HORIZONTAL (se levanta). + = arriba, - = abajo.
         Quaternion _trunkClosed; bool _trunkCached;
 
         [Header("Carpa del jugador (la arma con E; los NPCs arman las otras dos)")]
@@ -324,15 +325,14 @@ namespace FolkloreArchives
         // La pose seated SUBE el modelo -seatedModelDrop (0.63m, calibrado para el asiento del auto),
         // así que en el tronco levitaban. Compenso bajando el transform esa misma cantidad para que
         // queden APOYADOS en el tope del tronco (GroundY cae en el collider del tronco).
-        static void PlaceSeated(Transform t, Vector3 pos, float yaw)
+        void PlaceSeated(Transform t, Vector3 pos, float yaw)
         {
             if (t == null) return;
             var anim = t.GetComponent<HumanWalkAnim>();
             var cc = t.GetComponent<CharacterController>();
             bool was = cc != null && cc.enabled;
             if (cc != null) cc.enabled = false;
-            pos.y = GroundY(pos, pos.y, t);
-            if (anim != null) pos.y += anim.seatedModelDrop;   // seatedModelDrop es negativo -> baja el transform
+            pos.y = GroundY(pos, pos.y, t) + seatYOffset;   // bajar para que quede apoyado (no levitando)
             t.position = pos;
             t.rotation = Quaternion.Euler(0f, yaw, 0f);
             if (cc != null) cc.enabled = was;
