@@ -92,31 +92,15 @@ namespace FolkloreArchives
                 // 3) cámara CENITAL mientras estaciona
                 MakeOverheadCam();
 
-                // drive-in corto (para ver que "estaciona"), después ASIENTO EXACTO en el punto:
-                // el autopilot se traba en los árboles y no clava, así que al terminar teletransporto
-                // el auto al punto/yaw que dio el owner (siempre queda ahí).
-                Vector3 parkW = new Vector3(campParkXZ.x, campParkY, campParkXZ.y);
+                // owner: "que vaya manejando hasta ahí SIN teletransportarse". Espera a que el
+                // autopilot LLEGUE de verdad al punto (o corte por seguridad a los 25s). Sin snap.
                 float t = 0f;
-                while (!autoDrive.HasArrived && t < 6f)
-                {
-                    if (t > 1f && Flat2(car.transform.position, parkW) <= 4f) break;
-                    t += Time.deltaTime;
-                    yield return null;
-                }
+                while (!autoDrive.HasArrived && t < 25f) { t += Time.deltaTime; yield return null; }
                 car.autoPilot = false;
                 autoDrive.active = false;
                 car.externalThrottle = 0f; car.externalSteer = 0f;
-
-                // asentar EXACTO en el punto (posición + yaw), frenado del todo.
                 var rb = car.GetComponent<Rigidbody>();
-                Quaternion parkRot = Quaternion.Euler(0f, campParkYaw, 0f);
-                car.transform.position = parkW;
-                car.transform.rotation = parkRot;
-                if (rb != null)
-                {
-                    rb.position = parkW; rb.rotation = parkRot;
-                    if (!rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
-                }
+                if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             }
             else
             {
@@ -171,13 +155,15 @@ namespace FolkloreArchives
             UnseatAndPlace(green,  cp + right * -3.6f + back * 0.2f, cp);
             UnseatAndPlace(chica,  cp + right * -2.6f + back * 2.0f, cp);
 
-            // 2) los 3 NPCs caminan DETRÁS de la cajuela y quedan MIRÁNDOLA. Sacan las carpas.
+            // 2) desde la puerta, el JUGADOR y los 3 NPCs CAMINAN hasta la cajuela y quedan
+            //    MIRÁNDOLA (facing al auto). Sacan las carpas.
             Vector3 trunkBack = cp + back * 5.2f; trunkBack.y = GroundY(trunkBack, cp.y);
             var cc = player.GetComponent<CharacterController>();
             bool dc = false, dg = false, dh = false;
             StartCoroutine(WalkNpcTo(casual, trunkBack + right * -1.7f, cp, () => dc = true));
             StartCoroutine(WalkNpcTo(green,  trunkBack + right *  1.7f, cp, () => dg = true));
             StartCoroutine(WalkNpcTo(chica,  trunkBack + right *  0.0f, cp, () => dh = true));
+            yield return WalkPlayerTo(player, cc, trunkBack + right * 2.7f, cp);   // el jugador (CC apagado)
             float tw = 0f; while (!(dc && dg && dh) && tw < 8f) { tw += Time.deltaTime; yield return null; }
             yield return new WaitForSeconds(1.4f);   // sacan las tiendas de la cajuela
 
@@ -215,6 +201,21 @@ namespace FolkloreArchives
             Vector3 look = faceTarget - npc.position; look.y = 0f;
             if (look.sqrMagnitude > 1e-4f) npc.rotation = Quaternion.LookRotation(look.normalized);
             done?.Invoke();
+        }
+
+        // camina al JUGADOR scripteado hasta 'dest' (CC apagado) y lo deja mirando 'faceTarget'. NO
+        // re-habilita el CC: lo hace el caller cuando toca devolver el control.
+        IEnumerator WalkPlayerTo(Transform player, CharacterController cc, Vector3 dest, Vector3 faceTarget)
+        {
+            if (cc != null) cc.enabled = false;
+            int guard = 0;
+            while (Flat2(player.position, dest) > 0.6f && guard++ < 3000)
+            {
+                StepToward(player, dest, 2.0f);
+                yield return null;
+            }
+            Vector3 look = faceTarget - player.position; look.y = 0f;
+            if (look.sqrMagnitude > 1e-4f) player.rotation = Quaternion.LookRotation(look.normalized);
         }
 
         // saca un NPC del auto (lo desparenta, lo para cerca del auto, lo pone de pie -> camina).
@@ -266,31 +267,37 @@ namespace FolkloreArchives
             return p;
         }
 
-        // abre/cierra la CAJUELA: la puerta del auto más al FONDO (menor Z local). owner: "el auto
-        // trae opcion de que se abra la cajuela". Si el FBX no tiene tapa de baúl, abre la trasera.
+        // abre/cierra la CAJUELA. owner: "el asset dice que se puede abrir la cajuela". El builder
+        // solo mete en car.doors las partes con "door" en el nombre, así que la cajuela (otro nombre)
+        // queda AFUERA -> la busco en TODA la jerarquía del auto. Logueo todas las partes con mesh
+        // para poder identificar el nombre exacto si el auto-detect por nombre falla.
         void OpenTrunk(bool open)
         {
-            if (car == null || car.doors == null) return;
+            if (car == null) return;
             var cd = car.GetComponent<FolkloreArchives.Net.CarDoors>();
             if (cd == null) return;
-            // preferir por NOMBRE (trunk/boot/hatch/tailgate/cajuela); si no, la más al FONDO (min Z).
-            Transform trunk = null; float bestZ = float.MaxValue;
-            foreach (var d in car.doors)
-            {
-                if (d == null) continue;
-                string n = d.name.ToLower();
-                if (n.Contains("trunk") || n.Contains("boot") || n.Contains("hatch") || n.Contains("tailgate") || n.Contains("cajuela"))
-                { trunk = d; break; }
-                float lz = car.transform.InverseTransformPoint(d.position).z;
-                if (lz < bestZ) { bestZ = lz; trunk = d; }
-            }
+
             if (open)
             {
-                string names = "";
-                foreach (var d in car.doors) if (d != null) names += d.name + "; ";
-                Debug.Log($"<color=cyan>[Camp] puertas del auto: {names}-> cajuela elegida: {(trunk != null ? trunk.name : "ninguna")}</color>");
+                string all = "";
+                foreach (var tr in car.GetComponentsInChildren<Transform>(true))
+                    if (tr.GetComponent<MeshFilter>() != null) all += tr.name + "; ";
+                Debug.Log($"<color=cyan>[Camp] partes con mesh del auto: {all}</color>");
+            }
+
+            // buscar una parte tipo baúl por nombre (excluyendo puertas/vidrios).
+            Transform trunk = null;
+            foreach (var tr in car.GetComponentsInChildren<Transform>(true))
+            {
+                string n = tr.name.ToLower();
+                if (n.Contains("door") || n.Contains("wind") || n.Contains("glass")) continue;
+                if (n.Contains("trunk") || n.Contains("boot") || n.Contains("hatch") ||
+                    n.Contains("tailgate") || n.Contains("cajuela") || n.Contains("cargo") ||
+                    n.Contains("lid") || n.Contains("liftgate"))
+                { trunk = tr; break; }
             }
             if (trunk != null) cd.SetDoor(trunk, open);
+            else if (open) Debug.LogWarning("[Camp] no encontré parte de cajuela por nombre -> mirá el log de partes de arriba y decime cuál es.");
         }
 
         // "pop": escala la carpa de casi 0 a su tamaño real ('full') en ~0.6s (armado rápido, estilo PSX).
