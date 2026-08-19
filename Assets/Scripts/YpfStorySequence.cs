@@ -892,8 +892,7 @@ namespace FolkloreArchives
             yield return Say("Amigo: Dale, arrancá. Al campamento.", 2.4f);
             _hint = "Subite al auto (E) y manejá hasta el campamento";
 
-            // arranca el CAPÍTULO CAMPAMENTO: queda esperando que manejes hasta el trigger.
-            gameObject.AddComponent<CampsiteSequence>().Begin(op);
+            // (el CAPÍTULO CAMPAMENTO se re-conecta cuando el owner pase la coord del trigger)
         }
 
         // sienta un NPC en el auto (lo parentea + pose sentada + le apaga el FriendWander).
