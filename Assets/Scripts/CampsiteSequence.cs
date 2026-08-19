@@ -58,6 +58,10 @@ namespace FolkloreArchives
         public float   greenTentYaw = -120.779f;
         public Vector3 greenSitPos  = new Vector3(248.6f, 23.7f, 231.8f);           // el negro se sienta (tronco este; dame el exacto si es otro)
 
+        [Header("Cajuela")]
+        public float trunkOpenDeg = -70f;   // se abre girando sobre eje HORIZONTAL (se levanta). Si baja, cambiar el signo.
+        Quaternion _trunkClosed; bool _trunkCached;
+
         [Header("Carpa del jugador (la arma con E; los NPCs arman las otras dos)")]
         public string playerTentName = "Tents_DarkBlue"; // la "morada" (owner) -- derecha, cerca del auto
 
@@ -420,8 +424,6 @@ namespace FolkloreArchives
         void OpenTrunk(bool open)
         {
             if (car == null) return;
-            var cd = car.GetComponent<FolkloreArchives.Net.CarDoors>();
-            if (cd == null) return;
 
             if (open)
             {
@@ -442,8 +444,29 @@ namespace FolkloreArchives
                     n.Contains("lid") || n.Contains("liftgate"))
                 { trunk = tr; break; }
             }
-            if (trunk != null) cd.SetDoor(trunk, open);
-            else if (open) Debug.LogWarning("[Camp] no encontré parte de cajuela por nombre -> mirá el log de partes de arriba y decime cuál es.");
+            if (trunk == null) { if (open) Debug.LogWarning("[Camp] no encontré la cajuela -> mirá el log de partes."); return; }
+            // NO uso CarDoors (abre girando sobre eje vertical = se corre al costado). La cajuela se
+            // LEVANTA: giro propio sobre el eje HORIZONTAL del auto (su right).
+            if (!_trunkCached) { _trunkClosed = trunk.localRotation; _trunkCached = true; }
+            StartCoroutine(AnimateTrunkUp(trunk, open));
+        }
+
+        // levanta/baja la cajuela girando sobre el eje HORIZONTAL (right del auto) desde su rotación
+        // cerrada cacheada. trunkOpenDeg controla cuánto (signo = arriba/abajo).
+        IEnumerator AnimateTrunkUp(Transform trunk, bool open)
+        {
+            Vector3 axis = trunk.parent != null ? trunk.parent.InverseTransformDirection(car.transform.right)
+                                                : Vector3.right;
+            Quaternion openRot = Quaternion.AngleAxis(trunkOpenDeg, axis) * _trunkClosed;
+            Quaternion from = trunk.localRotation, to = open ? openRot : _trunkClosed;
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / 0.6f;
+                trunk.localRotation = Quaternion.Slerp(from, to, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t)));
+                yield return null;
+            }
+            trunk.localRotation = to;
         }
 
         // "pop": escala la carpa de casi 0 a su tamaño real ('full') en ~0.6s (armado rápido, estilo PSX).
