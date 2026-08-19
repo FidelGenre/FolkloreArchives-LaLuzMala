@@ -39,14 +39,10 @@ namespace FolkloreArchives
         public Vector3 greenWalk       = new Vector3(250.0287f, 23.05577f, 237.5826f); // MaleGreenJkt ("el negro")
         public float   greenYaw        = -155.462f;
 
-        [Header("Carpas (se mueven a cada punto y aparecen con pop al llegar)")]
-        public string playerTentName = "Tents_Orange";   // la tuya (la armás con E, más adelante)
-        public string casualTentName = "Tents_Green";    // MaleCasual + la chica
-        public string greenTentName  = "Tents_DarkBlue"; // MaleGreenJkt
-
         Camera _overhead;   // cámara cenital (se mantiene durante toda la bajada/armado)
         Transform _campsite;
-        readonly Dictionary<string, GameObject> _tents = new Dictionary<string, GameObject>();
+        readonly List<GameObject> _tents = new List<GameObject>(); // carpas ocultas al inicio; se revelan EN SU LUGAR
+        GameObject _playerTent;   // la carpa que queda para el jugador (la arma con E, próximo paso)
 
         public void Begin(OpeningDriveSequence seq)
         {
@@ -138,8 +134,15 @@ namespace FolkloreArchives
                 yield break;
             }
 
-            // bajar: el jugador deja de manejar; todos parados cerca del auto.
+            // bajar al jugador con su rutina REAL (limpia asiento, pose sentada y tamaño). Corre
+            // aunque la cenital esté activa: solo mueve al jugador/su cámara (invisible desde arriba).
             car.driving = false;
+            var pvi = player.GetComponent<PlayerVehicleInteractor>();
+            if (pvi != null && pvi.CurrentSeat != null) yield return pvi.ExitRoutine();
+            ReassertCinematic();   // ExitRoutine reactiva control/cámara de persona -> la cenital manda
+            var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
+
+            // todos parados cerca del auto.
             Vector3 cp = car.transform.position;
             Vector3 right = car.transform.right, back = -car.transform.forward;
             PlaceStanding(player, cp + right * -2.2f + back * 0.5f, playerWalk);
@@ -147,12 +150,12 @@ namespace FolkloreArchives
             UnseatAndPlace(green,  cp + right * -3.6f + back * 0.2f, greenWalk);
             UnseatAndPlace(chica,  cp + right * -2.6f + back * 2.0f, casualChicaWalk);
 
-            // NPCs caminan a su punto; al llegar arman (pop) su carpa. La chica comparte carpa
-            // con MaleCasual (no arma otra), va al mismo punto con un offset para no encimarse.
+            // NPCs caminan a su punto; al llegar arman (pop) la carpa MÁS CERCANA (en su lugar, sin
+            // moverla). La chica comparte carpa con MaleCasual (no arma otra), con offset.
             bool aCasual = false, aGreen = false, aChica = false;
-            StartCoroutine(WalkThenTent(casual, casualChicaWalk + new Vector3(0.9f, 0f, 0f), casualChicaYaw, casualTentName, () => aCasual = true));
-            StartCoroutine(WalkThenTent(green,  greenWalk,                                   greenYaw,       greenTentName,  () => aGreen  = true));
-            StartCoroutine(WalkThenTent(chica,  casualChicaWalk + new Vector3(-0.9f, 0f, 0.4f), casualChicaYaw, null,        () => aChica  = true));
+            StartCoroutine(WalkThenTent(casual, casualChicaWalk + new Vector3(0.9f, 0f, 0f),   casualChicaYaw, true,  () => aCasual = true));
+            StartCoroutine(WalkThenTent(green,  greenWalk,                                     greenYaw,       true,  () => aGreen  = true));
+            StartCoroutine(WalkThenTent(chica,  casualChicaWalk + new Vector3(-0.9f, 0f, 0.4f), casualChicaYaw, false, () => aChica  = true));
 
             // el jugador camina SCRIPTEADO hasta su punto (cámara cenital).
             var cc = player.GetComponent<CharacterController>();
@@ -166,28 +169,32 @@ namespace FolkloreArchives
             FaceYaw(player, playerYaw);
             if (cc != null) cc.enabled = true;
 
-            // tu carpa: la dejo posicionada en tu punto pero OCULTA (la armás con E, próximo paso).
-            MoveTent(playerTentName, playerWalk, playerYaw, false);
-
             // esperar a que los NPCs terminen de llegar/armar (tope 8s por las dudas).
             float tw = 0f;
             while (!(aCasual && aGreen && aChica) && tw < 8f) { tw += Time.deltaTime; yield return null; }
+
+            // la carpa que quedó SIN revelar es la tuya (la armás con E, próximo paso).
+            foreach (var t in _tents) if (t != null && !t.activeSelf) { _playerTent = t; break; }
 
             RestoreControl();   // cámara a 1ª persona + control (armás tu carpa + juntás leña)
         }
 
         // saca un NPC del auto (lo desparenta, lo para cerca del auto, lo pone de pie -> camina).
+        // owner-fix: SetParent(null,FALSE)+scale 1 (como StandFriend). Con SetParent(null,true) el
+        // amigo HEREDA la escala del auto y queda mal (chico/gigante) -> "los NPC no están".
         void UnseatAndPlace(Transform npc, Vector3 pos, Vector3 faceTarget)
         {
             if (npc == null) return;
-            npc.SetParent(null, true);
+            npc.SetParent(null, false);
+            npc.localScale = Vector3.one;
             var fw = npc.GetComponent<FriendWander>(); if (fw != null) fw.enabled = false;
             var anim = npc.GetComponent<HumanWalkAnim>(); if (anim != null) anim.seated = false;
             PlaceStanding(npc, pos, faceTarget);
         }
 
-        // camina un NPC hasta 'dest', lo deja mirando 'finalYaw', y si tiene carpa la arma (pop).
-        IEnumerator WalkThenTent(Transform npc, Vector3 dest, float finalYaw, string tentName, System.Action done)
+        // camina un NPC hasta 'dest', lo deja mirando 'finalYaw', y si 'raiseTent' arma (pop) la
+        // carpa oculta MÁS CERCANA, EN SU LUGAR (no la mueve: el campamento ya está bien dispuesto).
+        IEnumerator WalkThenTent(Transform npc, Vector3 dest, float finalYaw, bool raiseTent, System.Action done)
         {
             if (npc == null) { done?.Invoke(); yield break; }
             int guard = 0;
@@ -197,25 +204,31 @@ namespace FolkloreArchives
                 yield return null;
             }
             FaceYaw(npc, finalYaw);
-            if (!string.IsNullOrEmpty(tentName) && _tents.TryGetValue(tentName, out var tg) && tg != null)
+            if (raiseTent)
             {
-                // arma la carpa en el punto donde quedó, con su misma orientación: aparece con pop.
-                Vector3 full = tg.transform.localScale == Vector3.zero ? Vector3.one : tg.transform.localScale;
-                tg.transform.localScale = full * 0.05f;   // achico ANTES de activar (sin flash)
-                MoveTent(tentName, npc.position, finalYaw, true);
-                yield return PopScale(tg, full);
+                var tent = NearestHiddenTent(npc.position);
+                if (tent != null)
+                {
+                    Vector3 full = tent.transform.localScale == Vector3.zero ? Vector3.one : tent.transform.localScale;
+                    tent.transform.localScale = full * 0.05f;   // achico ANTES de activar (sin flash)
+                    tent.SetActive(true);
+                    yield return PopScale(tent, full);
+                }
             }
             done?.Invoke();
         }
 
-        // reposiciona una carpa (por nombre) en 'pos' pegada al piso, mirando 'yaw', y la activa/oculta.
-        void MoveTent(string name, Vector3 pos, float yaw, bool show)
+        // carpa OCULTA (aún sin armar) más cercana a 'pos'.
+        GameObject NearestHiddenTent(Vector3 pos)
         {
-            if (string.IsNullOrEmpty(name) || !_tents.TryGetValue(name, out var go) || go == null) return;
-            pos.y = GroundY(pos, pos.y);
-            go.transform.position = pos;
-            go.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-            go.SetActive(show);
+            GameObject best = null; float bd = float.MaxValue;
+            foreach (var go in _tents)
+            {
+                if (go == null || go.activeSelf) continue;   // ya armada
+                float d = Flat2(go.transform.position, pos);
+                if (d < bd) { bd = d; best = go; }
+            }
+            return best;
         }
 
         // "pop": escala la carpa de casi 0 a su tamaño real ('full') en ~0.6s (armado rápido, estilo PSX).
@@ -249,8 +262,21 @@ namespace FolkloreArchives
             foreach (Transform child in _campsite)
             {
                 if (!child.name.StartsWith("Tents")) continue;
-                _tents[child.name] = child.gameObject;
+                _tents.Add(child.gameObject);
                 child.gameObject.SetActive(false);
+            }
+        }
+
+        // vuelve a imponer la cinemática (por si ExitRoutine reactivó control/cámara de persona):
+        // apaga las cámaras de persona/perro (la cenital manda) y re-bloquea el control.
+        void ReassertCinematic()
+        {
+            PartyController.CinematicLock = true;
+            var party = Object.FindFirstObjectByType<PartyController>();
+            if (party != null)
+            {
+                if (party.personCam != null) party.personCam.gameObject.SetActive(false);
+                if (party.dogCam != null)    party.dogCam.gameObject.SetActive(false);
             }
         }
 
