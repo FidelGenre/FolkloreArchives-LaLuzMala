@@ -316,21 +316,31 @@ namespace FolkloreArchives
             if (d < 0.02f) return;
             Vector3 dir = to / d;
             Vector3 np = pos + dir * Mathf.Min(speed * Time.deltaTime, d);
-            np.y = GroundY(np, pos.y);
+            np.y = GroundY(np, pos.y, tr);   // <-- pasar 'tr' para que el raycast NO se pegue a su propio collider
             tr.position = np;
             tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(dir), 8f * Time.deltaTime);
         }
 
-        // altura del piso bajo 'p' (raycast). Fallback: 'fallbackY'.
-        static float GroundY(Vector3 p, float fallbackY)
+        // altura del piso bajo 'p' (raycast). Fallback: 'fallbackY'. Si se pasa 'self', se apagan
+        // sus colliders durante el raycast para que NO se pegue a sí mismo (era la causa de que
+        // los personajes "subieran" ~2.4m por paso hasta el cielo).
+        static float GroundY(Vector3 p, float fallbackY, Transform self = null)
         {
-            // cast local (barato); si falla porque p.y viene absurdo (ej. tras ExitRoutine), cast
-            // desde bien arriba para encontrar el piso igual y no dejar al personaje flotando.
-            if (Physics.Raycast(new Vector3(p.x, p.y + 3f, p.z), Vector3.down, out var hit, 12f))
-                return hit.point.y;
-            if (Physics.Raycast(new Vector3(p.x, 400f, p.z), Vector3.down, out var hit2, 2000f))
-                return hit2.point.y;
-            return fallbackY;
+            Collider[] cols = self != null ? self.GetComponentsInChildren<Collider>(true) : null;
+            bool[] were = null;
+            if (cols != null)
+            {
+                were = new bool[cols.Length];
+                for (int i = 0; i < cols.Length; i++) { were[i] = cols[i] != null && cols[i].enabled; if (cols[i] != null) cols[i].enabled = false; }
+            }
+            float y = fallbackY;
+            if (Physics.Raycast(new Vector3(p.x, p.y + 3f, p.z), Vector3.down, out var hit, 40f))
+                y = hit.point.y;
+            else if (Physics.Raycast(new Vector3(p.x, 400f, p.z), Vector3.down, out var hit2, 2000f))
+                y = hit2.point.y;
+            if (cols != null)
+                for (int i = 0; i < cols.Length; i++) if (cols[i] != null) cols[i].enabled = were[i];
+            return y;
         }
 
         // para un personaje PARADO en 'pos' mirando 'faceTarget' (maneja el CharacterController).
@@ -340,7 +350,7 @@ namespace FolkloreArchives
             var cc = t.GetComponent<CharacterController>();
             bool was = cc != null && cc.enabled;
             if (cc != null) cc.enabled = false;
-            pos.y = GroundY(pos, pos.y);
+            pos.y = GroundY(pos, pos.y, t);   // ignora su propio collider
             t.position = pos;
             Vector3 look = faceTarget - pos; look.y = 0f;
             if (look.sqrMagnitude > 1e-4f) t.rotation = Quaternion.LookRotation(look.normalized);
