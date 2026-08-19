@@ -28,8 +28,10 @@ namespace FolkloreArchives
         public float   campParkYaw = -40.427f;           // yaw final del auto al estacionar
 
         [Header("Cámara 3ª persona")]
-        public Vector3 overheadCamPos  = new Vector3(222.8298f, 25.25194f, 216.8119f); // posición de la cámara
-        public Vector3 overheadCamLook = new Vector3(234.1218f, 24.6f, 213.4899f);     // mira al auto/donde bajan
+        // owner: puso el TEST_PLAYER donde/como quiere la cámara. Pos = pies (24.52549) + 2.30 de
+        // altura de ojos (offset de la cámara del jugador). Rot = la del test player (horizontal).
+        public Vector3 overheadCamPos   = new Vector3(219.4251f, 26.82549f, 215.1563f);
+        public Vector3 overheadCamEuler = new Vector3(0f, 77.173f, 0f);
 
         [Header("Bajada (puntos del owner)")]
         public Vector3 playerWalk      = new Vector3(250.1038f, 23.00087f, 224.2696f); // vos + Rufus (tu carpa la armás con E)
@@ -332,9 +334,8 @@ namespace FolkloreArchives
         {
             if (_overhead != null) return;
             var go = new GameObject("CampOverheadCam");
-            go.transform.position = overheadCamPos != Vector3.zero ? overheadCamPos
-                                  : new Vector3(overheadCamLook.x, overheadCamLook.y + 28f, overheadCamLook.z - 14f);
-            go.transform.LookAt(overheadCamLook);
+            go.transform.position = overheadCamPos;
+            go.transform.rotation = Quaternion.Euler(overheadCamEuler);
             _overhead = go.AddComponent<Camera>();
             _overhead.tag = "MainCamera";
             _overhead.farClipPlane = 500f;
