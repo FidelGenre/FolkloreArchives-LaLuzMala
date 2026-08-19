@@ -41,6 +41,12 @@ namespace FolkloreArchives
         public Vector3 greenWalk       = new Vector3(250.0287f, 23.05577f, 237.5826f); // MaleGreenJkt ("el negro")
         public float   greenYaw        = -155.462f;
 
+        [Header("Bajada: puntos exactos jugador/perro (owner)")]
+        public Vector3 playerExitPos = new Vector3(237.3621f, 24.10073f, 209.8857f); // el jugador baja acá
+        public float   playerExitYaw = -45.977f;
+        public Vector3 dogExitPos    = new Vector3(232.31f, 24.03395f, 212.8251f);   // Rufus baja del lado del acompañante
+        public float   dogExitYaw    = 137.143f;
+
         [Header("Carpa del jugador (la arma con E; los NPCs arman las otras dos)")]
         public string playerTentName = "Tents_DarkBlue"; // la "morada" (owner) -- derecha, cerca del auto
 
@@ -139,40 +145,45 @@ namespace FolkloreArchives
                 yield break;
             }
 
-            // 1) BAJAR. Jugador con su rutina real (limpia asiento, pose sentada y tamaño). Después
-            //    un clamp de Y: ExitRoutine a veces deja una Y absurda y el jugador "volaba" a 3500m.
+            // 1) BAJAR. Jugador y perro con su rutina real (limpia asiento/pose/tamaño) + clamp de Y
+            //    (ExitRoutine a veces dejaba una Y absurda y "volaban"). Cada uno baja en SU punto.
             car.driving = false;
-            var pvi = player.GetComponent<PlayerVehicleInteractor>();
-            if (pvi != null && pvi.CurrentSeat != null) yield return pvi.ExitRoutine();
-            ReassertCinematic();   // ExitRoutine reactiva control/cámara de persona -> la cenital manda
-            { Vector3 pp = player.position; pp.y = car.transform.position.y; player.position = pp; }
-            var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
-
-            // todos parados cerca del auto, mirando al auto.
+            OpenTrunk(true);   // cajuela ABIERTA para sacar las carpas (queda abierta)
             Vector3 cp = car.transform.position;
             Vector3 right = car.transform.right, back = -car.transform.forward;
-            PlaceStanding(player, cp + right * -2.2f + back * 0.5f, cp);
+
+            // jugador: baja en su punto (owner)
+            var pvi = player.GetComponent<PlayerVehicleInteractor>();
+            if (pvi != null && pvi.CurrentSeat != null) yield return pvi.ExitRoutine();
+            { Vector3 pp = player.position; pp.y = cp.y; player.position = pp; }
+            var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
+            PlaceStandingYaw(player, playerExitPos, playerExitYaw);
+
+            // Rufus: baja del lado del acompañante (owner)
+            Transform dog = op.dog != null ? op.dog.transform : null;
+            if (op.dog != null && op.dog.CurrentSeat != null) yield return op.dog.ExitRoutine();
+            if (dog != null) PlaceStandingYaw(dog, dogExitPos, dogExitYaw);
+
+            ReassertCinematic();   // ExitRoutine reactiva control/cámaras -> la cenital manda
+
+            // NPCs: bajan y se paran DETRÁS de la cajuela, MIRÁNDOLA (al auto). Se ABRE la cajuela.
             UnseatAndPlace(casual, cp + right * -2.6f + back * -1.2f, cp);
             UnseatAndPlace(green,  cp + right * -3.6f + back * 0.2f, cp);
             UnseatAndPlace(chica,  cp + right * -2.6f + back * 2.0f, cp);
 
-            // 2) TODOS van a la CAJUELA (atrás del auto) a "sacar" las carpas. Se ABRE la cajuela.
-            //    Se paran separados (no encimados) alrededor de la parte de atrás.
-            Vector3 trunk = cp + back * 4.6f; trunk.y = GroundY(trunk, cp.y);
-            OpenTrunk(true);
+            // 2) los 3 NPCs caminan DETRÁS de la cajuela y quedan MIRÁNDOLA. Sacan las carpas.
+            Vector3 trunkBack = cp + back * 5.2f; trunkBack.y = GroundY(trunkBack, cp.y);
             var cc = player.GetComponent<CharacterController>();
             bool dc = false, dg = false, dh = false;
-            StartCoroutine(WalkNpcTo(casual, trunk + right * -1.8f,               () => dc = true));
-            StartCoroutine(WalkNpcTo(green,  trunk + right *  1.8f,               () => dg = true));
-            StartCoroutine(WalkNpcTo(chica,  trunk + right * -0.3f + back * 1.7f, () => dh = true));
-            yield return WalkPlayerTo(player, cc, trunk + right * 0.8f + back * 2.0f);   // el jugador (CC apagado)
+            StartCoroutine(WalkNpcTo(casual, trunkBack + right * -1.7f, cp, () => dc = true));
+            StartCoroutine(WalkNpcTo(green,  trunkBack + right *  1.7f, cp, () => dg = true));
+            StartCoroutine(WalkNpcTo(chica,  trunkBack + right *  0.0f, cp, () => dh = true));
             float tw = 0f; while (!(dc && dg && dh) && tw < 8f) { tw += Time.deltaTime; yield return null; }
             yield return new WaitForSeconds(1.4f);   // sacan las tiendas de la cajuela
 
-            // 3) SE QUITA la cámara de enfoque -> control al jugador (1ª persona). Desde acá ve
-            //    de cerca cómo arman las carpas (no desde el ángulo que enfoca el auto).
+            // 3) SE QUITA la cámara de enfoque -> control al jugador (1ª persona). La cajuela queda
+            //    ABIERTA (owner). Desde acá ve de cerca cómo arman las carpas.
             if (cc != null) cc.enabled = true;
-            OpenTrunk(false);
             RestoreControl();
 
             // 4) cada NPC lleva su carpa y la arma PARADO AL LADO (no encima), LENTO desde la cajuela.
@@ -191,8 +202,8 @@ namespace FolkloreArchives
             StartCoroutine(WalkThenRaise(green,  standGreen,              tentGreen,  center, 1.3f, null));
         }
 
-        // camina un NPC hasta 'dest' (sin armar carpa) y avisa 'done'.
-        IEnumerator WalkNpcTo(Transform npc, Vector3 dest, System.Action done)
+        // camina un NPC hasta 'dest' (sin armar carpa), lo deja mirando 'faceTarget', y avisa 'done'.
+        IEnumerator WalkNpcTo(Transform npc, Vector3 dest, Vector3 faceTarget, System.Action done)
         {
             if (npc == null) { done?.Invoke(); yield break; }
             int guard = 0;
@@ -201,20 +212,9 @@ namespace FolkloreArchives
                 StepToward(npc, dest, 2.2f);
                 yield return null;
             }
+            Vector3 look = faceTarget - npc.position; look.y = 0f;
+            if (look.sqrMagnitude > 1e-4f) npc.rotation = Quaternion.LookRotation(look.normalized);
             done?.Invoke();
-        }
-
-        // camina al JUGADOR scripteado hasta 'dest' (CC apagado). NO re-habilita el CC: lo hace el
-        // caller cuando toca devolver el control.
-        IEnumerator WalkPlayerTo(Transform player, CharacterController cc, Vector3 dest)
-        {
-            if (cc != null) cc.enabled = false;
-            int guard = 0;
-            while (Flat2(player.position, dest) > 0.6f && guard++ < 3000)
-            {
-                StepToward(player, dest, 2.3f);
-                yield return null;
-            }
         }
 
         // saca un NPC del auto (lo desparenta, lo para cerca del auto, lo pone de pie -> camina).
@@ -271,15 +271,26 @@ namespace FolkloreArchives
         void OpenTrunk(bool open)
         {
             if (car == null || car.doors == null) return;
+            var cd = car.GetComponent<FolkloreArchives.Net.CarDoors>();
+            if (cd == null) return;
+            // preferir por NOMBRE (trunk/boot/hatch/tailgate/cajuela); si no, la más al FONDO (min Z).
             Transform trunk = null; float bestZ = float.MaxValue;
             foreach (var d in car.doors)
             {
                 if (d == null) continue;
+                string n = d.name.ToLower();
+                if (n.Contains("trunk") || n.Contains("boot") || n.Contains("hatch") || n.Contains("tailgate") || n.Contains("cajuela"))
+                { trunk = d; break; }
                 float lz = car.transform.InverseTransformPoint(d.position).z;
                 if (lz < bestZ) { bestZ = lz; trunk = d; }
             }
-            var cd = car.GetComponent<FolkloreArchives.Net.CarDoors>();
-            if (cd != null && trunk != null) cd.SetDoor(trunk, open);
+            if (open)
+            {
+                string names = "";
+                foreach (var d in car.doors) if (d != null) names += d.name + "; ";
+                Debug.Log($"<color=cyan>[Camp] puertas del auto: {names}-> cajuela elegida: {(trunk != null ? trunk.name : "ninguna")}</color>");
+            }
+            if (trunk != null) cd.SetDoor(trunk, open);
         }
 
         // "pop": escala la carpa de casi 0 a su tamaño real ('full') en ~0.6s (armado rápido, estilo PSX).
@@ -379,6 +390,20 @@ namespace FolkloreArchives
             t.position = pos;
             Vector3 look = faceTarget - pos; look.y = 0f;
             if (look.sqrMagnitude > 1e-4f) t.rotation = Quaternion.LookRotation(look.normalized);
+            if (cc != null) cc.enabled = was;
+        }
+
+        // igual que PlaceStanding pero con un YAW fijo (no mira a un target) -- para bajar al jugador
+        // y al perro en su orientación exacta.
+        static void PlaceStandingYaw(Transform t, Vector3 pos, float yaw)
+        {
+            if (t == null) return;
+            var cc = t.GetComponent<CharacterController>();
+            bool was = cc != null && cc.enabled;
+            if (cc != null) cc.enabled = false;
+            pos.y = GroundY(pos, pos.y, t);
+            t.position = pos;
+            t.rotation = Quaternion.Euler(0f, yaw, 0f);
             if (cc != null) cc.enabled = was;
         }
 
