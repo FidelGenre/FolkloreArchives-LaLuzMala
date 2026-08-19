@@ -797,24 +797,24 @@ namespace FolkloreArchives
                 // puerta siga abierta (dejarte cerrarla al subir), pero owner: "al
                 // subir debería dejar de salirme eso de abrir la puerta" -- una vez
                 // cerrada, no se vuelve a ofrecer abrirla hasta llegar a destino.
-                if (!canOpenDoors) msg = DrivingLocked ? null : "[ E ] Bajar"; // el perro: nunca abre/cierra
+                if (!canOpenDoors) msg = DrivingLocked ? null : "[E] Bajar"; // el perro: nunca abre/cierra
                 else if (LookingAtDoor(myDoor))
                 {
                     // mismo criterio que la acción real de E: mirando TU puerta, alterna.
                     var doors = Doors(car);
                     bool doorOpen = doors != null && doors.IsOpen(myDoor);
-                    if (doorOpen) msg = "[ E ] Cerrar puerta";
-                    else if (!DrivingLocked) msg = "[ E ] Abrir puerta";
+                    if (doorOpen) msg = "[E] Cerrar puerta";
+                    else if (!DrivingLocked) msg = "[E] Abrir puerta";
                 }
                 else if (car.driving && LookingForward(car))
-                    msg = car.headlightsOn ? "[ E ] Apagar luces" : "[ E ] Prender luces";
-                else msg = DrivingLocked ? null : "[ E ] Bajar";
+                    msg = car.headlightsOn ? "[E] Apagar luces" : "[E] Prender luces";
+                else msg = DrivingLocked ? null : "[E] Bajar";
             }
             else if (!canOpenDoors)
             {
                 // el perro solo puede sentarse en el asiento que le corresponde -- mismo
                 // criterio que la acción real de E, ignora la mira por completo.
-                if (NearestCarInRange(doorRange) != null) msg = "[ E ] Subir";
+                if (NearestCarInRange(doorRange) != null) msg = "[E] Subir";
             }
             else if (target != null)
             {
@@ -824,19 +824,16 @@ namespace FolkloreArchives
                     // (geométrica, no cualquier abierta) está cerrada.
                     var sDoor = NearestDoorGeom(target.car, target.part.position);
                     var sDoors = Doors(target.car);
-                    msg = (sDoor != null && sDoors != null && !sDoors.IsOpen(sDoor)) ? "[ E ] Abrir puerta" : "[ E ] Subir";
+                    msg = (sDoor != null && sDoors != null && !sDoors.IsOpen(sDoor)) ? "[E] Abrir puerta" : "[E] Subir";
                 }
                 else
                 {
                     var doors = Doors(target.car);
-                    msg = (doors != null && doors.IsOpen(target.part)) ? "[ E ] Cerrar puerta" : "[ E ] Abrir puerta";
+                    msg = (doors != null && doors.IsOpen(target.part)) ? "[E] Cerrar puerta" : "[E] Abrir puerta";
                 }
             }
             if (msg == null) return;
-            var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter };
-            style.normal.textColor = Color.white;
-            GUI.Box(new Rect(Screen.width / 2 - 140, Screen.height - 90, 280, 32), GUIContent.none);
-            GUI.Label(new Rect(Screen.width / 2 - 140, Screen.height - 90, 280, 32), msg, style);
+            InteractHint.Draw(msg);
         }
     }
 }

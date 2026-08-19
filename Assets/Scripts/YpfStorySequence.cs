@@ -667,7 +667,7 @@ namespace FolkloreArchives
                         ePressed = false;
                     }
                 }
-                _hint = ratAimed ? "[ E ]  Atrapar la rata" : "";
+                _hint = ratAimed ? "[E] Atrapar la rata" : "";
                 yield return null;
             }
             _hint = "";
@@ -1686,8 +1686,13 @@ namespace FolkloreArchives
         void OnGUI()
         {
             if (string.IsNullOrEmpty(_hint)) return;
-            // como estaba (sin fondo, blanco, centrado). Solo wordWrap + un poco más alto/ancho
-            // para que los textos largos (los del viejo) no se corten.
+            // los carteles de INTERACCIÓN (los que tienen E) van chicos y debajo de la mira, igual
+            // que el resto del juego; el diálogo/guía del guion queda abajo, grande.
+            if (_hint.Contains("(E") || _hint.Contains("[E") || _hint.Contains("[ E"))
+            {
+                InteractHint.Draw(_hint);
+                return;
+            }
             var style = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter, wordWrap = true };
             style.normal.textColor = Color.white;
             GUI.Label(new Rect(Screen.width * 0.5f - 300f, Screen.height - 130f, 600f, 56f), _hint, style);

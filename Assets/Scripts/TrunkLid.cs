@@ -22,7 +22,6 @@ namespace FolkloreArchives
         bool _open;
         Coroutine _anim;
         bool _showHint;
-        GUIStyle _style;
         AudioClip _openClip, _closeClip;   // ruido de cajuela (reuso el de puerta de auto)
         public float volume = 0.7f;
 
@@ -75,9 +74,7 @@ namespace FolkloreArchives
         void OnGUI()
         {
             if (!_showHint) return;
-            if (_style == null) _style = new GUIStyle(GUI.skin.label) { fontSize = 14, alignment = TextAnchor.MiddleCenter, richText = true };
-            GUI.Label(new Rect(Screen.width / 2f - 120f, Screen.height / 2f + 34f, 240f, 24f),
-                      _open ? "[E] Cerrar cajuela" : "[E] Abrir cajuela", _style);
+            InteractHint.Draw(_open ? "[E] Cerrar cajuela" : "[E] Abrir cajuela");
         }
     }
 }

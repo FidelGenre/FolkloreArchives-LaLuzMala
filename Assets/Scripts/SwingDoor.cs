@@ -27,7 +27,6 @@ namespace FolkloreArchives
         bool _open, _canNow;
         Transform _cam;
         Renderer _rend;
-        GUIStyle _style;
         AudioSource _audio;
         AudioClip _openClip, _closeClip;
 
@@ -130,13 +129,8 @@ namespace FolkloreArchives
         void OnGUI()
         {
             if (!_canNow) return;
-            if (_style == null)
-                _style = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-            _style.normal.textColor = Color.white;
-            string txt = (locked && knockToUnlock) ? "[ E ]  Golpear la puerta"
-                       : _open ? "[ E ]  Cerrar puerta" : "[ E ]  Abrir puerta";
-            GUI.Label(new Rect(Screen.width * 0.5f - 130f, Screen.height * 0.5f + 34f, 260f, 26f),
-                      txt, _style);
+            InteractHint.Draw((locked && knockToUnlock) ? "[E] Golpear la puerta"
+                            : _open ? "[E] Cerrar puerta" : "[E] Abrir puerta");
         }
     }
 }
