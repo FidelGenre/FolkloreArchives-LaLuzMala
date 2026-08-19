@@ -22,12 +22,12 @@ namespace FolkloreArchives
         [Header("Llegada (coords del owner)")]
         public Vector3 driveTriggerPos = new Vector3(242.22f, 24.71229f, 199.8321f); // manejás hasta acá -> el auto sigue SOLO
         public float   driveTriggerRadius = 10f;
-        public Vector2 campParkXZ = new Vector2(236.4709f, 213.3375f); // dónde se estaciona el auto (XZ)
+        public Vector2 campParkXZ = new Vector2(234.1218f, 213.4899f); // dónde FRENA/estaciona el auto (XZ, owner)
         public float   campParkYaw = -40.427f;           // yaw final del auto al estacionar
 
         [Header("Cámara 3ª persona")]
         public Vector3 overheadCamPos  = new Vector3(222.8298f, 25.25194f, 216.8119f); // posición de la cámara
-        public Vector3 overheadCamLook = new Vector3(236.4709f, 24.6f, 213.3375f);     // mira al auto/donde bajan
+        public Vector3 overheadCamLook = new Vector3(234.1218f, 24.6f, 213.4899f);     // mira al auto/donde bajan
 
         Camera _overhead;
 
