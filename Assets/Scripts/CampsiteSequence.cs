@@ -30,8 +30,8 @@ namespace FolkloreArchives
         [Header("Cámara 3ª persona")]
         // owner: puso el TEST_PLAYER donde/como quiere la cámara. Pos = pies (24.52549) + 2.30 de
         // altura de ojos (offset de la cámara del jugador). Rot = la del test player (horizontal).
-        public Vector3 overheadCamPos   = new Vector3(219.4251f, 26.82549f, 215.1563f);
-        public Vector3 overheadCamEuler = new Vector3(0f, 77.173f, 0f);
+        public Vector3 overheadCamPos  = new Vector3(219.4251f, 26.82549f, 215.1563f); // pos del test player (altura ojos)
+        public Vector3 overheadCamLook = new Vector3(234.12f, 24.5f, 213.49f);         // MIRA al auto estacionado (no al cielo)
 
         [Header("Bajada (puntos del owner)")]
         public Vector3 playerWalk      = new Vector3(250.309f, 23.01033f, 224.0965f); // vos + Rufus (tu carpa la armás con E)
@@ -139,47 +139,70 @@ namespace FolkloreArchives
                 yield break;
             }
 
-            // bajar al jugador con su rutina REAL (limpia asiento, pose sentada y tamaño). Corre
-            // aunque la cenital esté activa: solo mueve al jugador/su cámara (invisible desde arriba).
+            // 1) BAJAR. Jugador con su rutina real (limpia asiento, pose sentada y tamaño). Después
+            //    un clamp de Y: ExitRoutine a veces deja una Y absurda y el jugador "volaba" a 3500m.
             car.driving = false;
             var pvi = player.GetComponent<PlayerVehicleInteractor>();
             if (pvi != null && pvi.CurrentSeat != null) yield return pvi.ExitRoutine();
             ReassertCinematic();   // ExitRoutine reactiva control/cámara de persona -> la cenital manda
+            { Vector3 pp = player.position; pp.y = car.transform.position.y; player.position = pp; }
             var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
 
-            // todos parados cerca del auto.
+            // todos parados cerca del auto, mirando al auto.
             Vector3 cp = car.transform.position;
             Vector3 right = car.transform.right, back = -car.transform.forward;
-            PlaceStanding(player, cp + right * -2.2f + back * 0.5f, playerWalk);
-            UnseatAndPlace(casual, cp + right * -2.6f + back * -1.2f, casualChicaWalk);
-            UnseatAndPlace(green,  cp + right * -3.6f + back * 0.2f, greenWalk);
-            UnseatAndPlace(chica,  cp + right * -2.6f + back * 2.0f, casualChicaWalk);
+            PlaceStanding(player, cp + right * -2.2f + back * 0.5f, cp);
+            UnseatAndPlace(casual, cp + right * -2.6f + back * -1.2f, cp);
+            UnseatAndPlace(green,  cp + right * -3.6f + back * 0.2f, cp);
+            UnseatAndPlace(chica,  cp + right * -2.6f + back * 2.0f, cp);
 
-            // NPCs caminan a su punto; al llegar arman (pop) la carpa MÁS CERCANA (en su lugar, sin
-            // moverla). La chica comparte carpa con MaleCasual (no arma otra), con offset.
-            bool aCasual = false, aGreen = false, aChica = false;
-            StartCoroutine(WalkThenTent(casual, casualChicaWalk + new Vector3(0.9f, 0f, 0f),   casualChicaYaw, true,  () => aCasual = true));
-            StartCoroutine(WalkThenTent(green,  greenWalk,                                     greenYaw,       true,  () => aGreen  = true));
-            StartCoroutine(WalkThenTent(chica,  casualChicaWalk + new Vector3(-0.9f, 0f, 0.4f), casualChicaYaw, false, () => aChica  = true));
-
-            // el jugador camina SCRIPTEADO hasta su punto (cámara cenital).
+            // 2) TODOS van a la CAJUELA (atrás del auto) a "sacar" las carpas (cámara de enfoque).
+            Vector3 trunk = cp + back * 4.4f; trunk.y = GroundY(trunk, cp.y);
             var cc = player.GetComponent<CharacterController>();
-            if (cc != null) cc.enabled = false;   // mover el transform a mano
+            bool dc = false, dg = false, dh = false;
+            StartCoroutine(WalkNpcTo(casual, trunk + right * -1.0f, () => dc = true));
+            StartCoroutine(WalkNpcTo(green,  trunk + right *  1.0f, () => dg = true));
+            StartCoroutine(WalkNpcTo(chica,  trunk + back  *  1.0f, () => dh = true));
+            yield return WalkPlayerTo(player, cc, trunk + back * 1.4f);   // el jugador también (CC apagado)
+            float tw = 0f; while (!(dc && dg && dh) && tw < 8f) { tw += Time.deltaTime; yield return null; }
+            yield return new WaitForSeconds(1.2f);   // sacan las tiendas de la cajuela
+
+            // 3) SE QUITA la cámara de enfoque -> control al jugador (1ª persona). Desde acá ve
+            //    de cerca cómo arman las carpas (no desde el ángulo que enfoca el auto).
+            if (cc != null) cc.enabled = true;
+            RestoreControl();
+
+            // 4) los NPCs llevan/arman sus carpas EN SU LUGAR. La chica comparte con MaleCasual.
+            //    Tu carpa = _playerTent (la "morada"): queda oculta, la armás con E (próximo paso).
+            StartCoroutine(WalkThenTent(casual, casualChicaWalk + new Vector3(0.9f, 0f, 0f),   casualChicaYaw, true,  null));
+            StartCoroutine(WalkThenTent(green,  greenWalk,                                     greenYaw,       true,  null));
+            StartCoroutine(WalkThenTent(chica,  casualChicaWalk + new Vector3(-0.9f, 0f, 0.4f), casualChicaYaw, false, null));
+        }
+
+        // camina un NPC hasta 'dest' (sin armar carpa) y avisa 'done'.
+        IEnumerator WalkNpcTo(Transform npc, Vector3 dest, System.Action done)
+        {
+            if (npc == null) { done?.Invoke(); yield break; }
             int guard = 0;
-            while (Flat2(player.position, playerWalk) > 0.6f && guard++ < 3000)
+            while (Flat2(npc.position, dest) > 0.5f && guard++ < 3000)
             {
-                StepToward(player, playerWalk, 2.3f);
+                StepToward(npc, dest, 2.2f);
                 yield return null;
             }
-            FaceYaw(player, playerYaw);
-            if (cc != null) cc.enabled = true;
+            done?.Invoke();
+        }
 
-            // esperar a que los NPCs terminen de llegar/armar (tope 8s por las dudas).
-            float tw = 0f;
-            while (!(aCasual && aGreen && aChica) && tw < 8f) { tw += Time.deltaTime; yield return null; }
-
-            // (tu carpa = _playerTent, la "morada": queda oculta, la armás con E en el próximo paso)
-            RestoreControl();   // cámara a 1ª persona + control (armás tu carpa + juntás leña)
+        // camina al JUGADOR scripteado hasta 'dest' (CC apagado). NO re-habilita el CC: lo hace el
+        // caller cuando toca devolver el control.
+        IEnumerator WalkPlayerTo(Transform player, CharacterController cc, Vector3 dest)
+        {
+            if (cc != null) cc.enabled = false;
+            int guard = 0;
+            while (Flat2(player.position, dest) > 0.6f && guard++ < 3000)
+            {
+                StepToward(player, dest, 2.3f);
+                yield return null;
+            }
         }
 
         // saca un NPC del auto (lo desparenta, lo para cerca del auto, lo pone de pie -> camina).
@@ -301,8 +324,12 @@ namespace FolkloreArchives
         // altura del piso bajo 'p' (raycast). Fallback: 'fallbackY'.
         static float GroundY(Vector3 p, float fallbackY)
         {
+            // cast local (barato); si falla porque p.y viene absurdo (ej. tras ExitRoutine), cast
+            // desde bien arriba para encontrar el piso igual y no dejar al personaje flotando.
             if (Physics.Raycast(new Vector3(p.x, p.y + 3f, p.z), Vector3.down, out var hit, 12f))
                 return hit.point.y;
+            if (Physics.Raycast(new Vector3(p.x, 400f, p.z), Vector3.down, out var hit2, 2000f))
+                return hit2.point.y;
             return fallbackY;
         }
 
@@ -337,7 +364,7 @@ namespace FolkloreArchives
             if (_overhead != null) return;
             var go = new GameObject("CampOverheadCam");
             go.transform.position = overheadCamPos;
-            go.transform.rotation = Quaternion.Euler(overheadCamEuler);
+            go.transform.LookAt(overheadCamLook);
             _overhead = go.AddComponent<Camera>();
             _overhead.tag = "MainCamera";
             _overhead.farClipPlane = 500f;
