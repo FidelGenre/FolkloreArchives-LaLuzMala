@@ -54,6 +54,9 @@ namespace FolkloreArchives
         public float   chicaSitYaw = -6.075f;
         public Vector3 woodPos     = new Vector3(240.1889f, 25.14602f, 247.7799f); // el chico busca leña acá
         public float   woodYaw     = -29.675f;
+        public Vector3 greenTentPos = new Vector3(249.8865f, 23.07505f, 234.3149f); // el negro pone su carpa acá
+        public float   greenTentYaw = -120.779f;
+        public Vector3 greenSitPos  = new Vector3(248.6f, 23.7f, 231.8f);           // el negro se sienta (tronco este; dame el exacto si es otro)
 
         [Header("Carpa del jugador (la arma con E; los NPCs arman las otras dos)")]
         public string playerTentName = "Tents_DarkBlue"; // la "morada" (owner) -- derecha, cerca del auto
@@ -206,8 +209,37 @@ namespace FolkloreArchives
             foreach (var t in _tents) if (t != null && t != _playerTent) npcTents.Add(t);
             GameObject tentPair  = npcTents.Count > 0 ? npcTents[0] : null; // carpa chica+chico
             GameObject tentGreen = npcTents.Count > 1 ? npcTents[1] : null; // carpa del negro
-            StartCoroutine(WalkThenRaise(green, BesideTent(tentGreen, center, 1.9f), tentGreen, center, 1.3f, null));
+            StartCoroutine(GreenTentThenSit(green, tentGreen, center));
             StartCoroutine(PairTentThenTasks(casual, chica, tentPair, center));
+        }
+
+        // El negro camina a greenTentPos, arma AHÍ su carpa (pop), y después va al tronco y se
+        // sienta mirando la fogata.
+        IEnumerator GreenTentThenSit(Transform green, GameObject tent, Vector3 fire)
+        {
+            bool a = false;
+            if (green != null) StartCoroutine(WalkNpcTo(green, greenTentPos, greenTentPos + Fwd(greenTentYaw), () => a = true)); else a = true;
+            float t = 0f; while (!a && t < 12f) { t += Time.deltaTime; yield return null; }
+
+            if (tent != null)
+            {
+                Vector3 tp = greenTentPos; tp.y = GroundY(greenTentPos, greenTentPos.y);
+                tent.transform.position = tp;
+                tent.transform.rotation = Quaternion.Euler(0f, greenTentYaw, 0f);
+                Vector3 full = tent.transform.localScale == Vector3.zero ? Vector3.one : tent.transform.localScale;
+                tent.transform.localScale = full * 0.05f;
+                tent.SetActive(true);
+                yield return PopScale(tent, full);
+            }
+
+            if (green != null)
+            {
+                bool b = false;
+                StartCoroutine(WalkNpcTo(green, greenSitPos, fire, () => b = true));
+                t = 0f; while (!b && t < 12f) { t += Time.deltaTime; yield return null; }
+                Vector3 d = fire - greenSitPos; float yaw = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
+                PlaceSeated(green, greenSitPos, yaw);
+            }
         }
 
         // La chica y el chico caminan a tentPairPos y arman AHÍ su carpa. Después: la chica va al
