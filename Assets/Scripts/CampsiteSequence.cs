@@ -30,6 +30,9 @@ namespace FolkloreArchives
         public Vector3 overheadCamPos  = new Vector3(222.8298f, 25.25194f, 216.8119f); // posición de la cámara
         public Vector3 overheadCamLook = new Vector3(234.1218f, 24.6f, 213.4899f);     // mira al auto/donde bajan
 
+        [Header("Bajada")]
+        public Vector3 walkPoint = Vector3.zero;   // <-- punto al que caminan todos al bajar (owner)
+
         Camera _overhead;
 
         public void Begin(OpeningDriveSequence seq)
@@ -99,12 +102,110 @@ namespace FolkloreArchives
                 MakeOverheadCam();
             }
 
-            Debug.Log("<color=cyan>[Camp] llegaron al campamento. (próximo: bajan y arman)</color>");
-            // (próximas etapas: bajar scripteado, armar carpas/fogata, noche, comer, dormir, Rufus)
+            Debug.Log("<color=cyan>[Camp] llegaron al campamento -> bajan y caminan</color>");
+            yield return DisembarkAndWalk();
+            // (próximo: armar carpas/fogata -> noche -> comer -> dormir -> Rufus)
+        }
 
-            // POR AHORA (solo está armada la llegada): devolver el control al jugador para que no
-            // quede trabado. Cuando arme "bajan/arman/noche" se mantiene la cinemática hasta ahí.
-            RestoreControl();
+        // Bajan TODOS del auto y caminan al walkPoint. A MITAD de camino del jugador, la cámara pasa
+        // a 1ª persona y recuperás el control (terminás de caminar vos). Los NPCs siguen solos.
+        IEnumerator DisembarkAndWalk()
+        {
+            Transform player = (op != null && op.player != null) ? op.player.transform : null;
+            Transform casual = op != null ? op.friendMaleCasual  : null;
+            Transform green  = op != null ? op.friendMaleGreenJkt : null;
+            Transform chica  = op != null ? op.friendFemaleSec    : null;
+
+            if (walkPoint == Vector3.zero || player == null)
+            {
+                Debug.LogWarning("[Camp] falta walkPoint o player -> devuelvo control.");
+                RestoreControl();
+                yield break;
+            }
+
+            // bajar: el jugador deja de manejar; todos parados cerca del auto.
+            car.driving = false;
+            Vector3 cp = car.transform.position;
+            Vector3 right = car.transform.right, back = -car.transform.forward;
+            PlaceStanding(player, cp + right * -2.2f + back * 0.5f, walkPoint);
+            UnseatAndPlace(casual, cp + right * -2.6f + back * -1.2f, walkPoint);
+            UnseatAndPlace(green,  cp + right * -3.6f + back * 0.2f, walkPoint);
+            UnseatAndPlace(chica,  cp + right * -2.6f + back * 2.0f, walkPoint);
+
+            // NPCs caminan al punto (offsets para no encimarse), solos.
+            StartCoroutine(WalkNpc(casual, walkPoint + new Vector3(1.4f, 0f, 0.3f)));
+            StartCoroutine(WalkNpc(green,  walkPoint + new Vector3(-1.4f, 0f, -0.3f)));
+            StartCoroutine(WalkNpc(chica,  walkPoint + new Vector3(0.2f, 0f, 1.4f)));
+
+            // el jugador camina SCRIPTEADO hasta la mitad (cámara cenital), después toma el control.
+            float initDist = Flat2(player.position, walkPoint);
+            var cc = player.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;   // mover el transform a mano
+            while (Flat2(player.position, walkPoint) > Mathf.Max(1f, initDist * 0.5f))
+            {
+                StepToward(player, walkPoint, 2.3f);
+                yield return null;
+            }
+            if (cc != null) cc.enabled = true;
+            RestoreControl();   // cámara a 1ª persona + control (terminás de caminar vos)
+        }
+
+        // saca un NPC del auto (lo desparenta, lo para cerca del auto, lo pone de pie -> camina).
+        void UnseatAndPlace(Transform npc, Vector3 pos, Vector3 faceTarget)
+        {
+            if (npc == null) return;
+            npc.SetParent(null, true);
+            var fw = npc.GetComponent<FriendWander>(); if (fw != null) fw.enabled = false;
+            var anim = npc.GetComponent<HumanWalkAnim>(); if (anim != null) anim.seated = false;
+            PlaceStanding(npc, pos, faceTarget);
+        }
+
+        // camina un NPC hasta 'dest' (mueve el transform, pega al piso).
+        IEnumerator WalkNpc(Transform npc, Vector3 dest)
+        {
+            if (npc == null) yield break;
+            int guard = 0;
+            while (Flat2(npc.position, dest) > 0.5f && guard++ < 3000)
+            {
+                StepToward(npc, dest, 2.2f);
+                yield return null;
+            }
+        }
+
+        // mueve 'tr' un paso hacia 'target' (plano), pegado al piso, mirando hacia donde va.
+        void StepToward(Transform tr, Vector3 target, float speed)
+        {
+            Vector3 pos = tr.position;
+            Vector3 to = new Vector3(target.x - pos.x, 0f, target.z - pos.z);
+            float d = to.magnitude;
+            if (d < 0.02f) return;
+            Vector3 dir = to / d;
+            Vector3 np = pos + dir * Mathf.Min(speed * Time.deltaTime, d);
+            np.y = GroundY(np, pos.y);
+            tr.position = np;
+            tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(dir), 8f * Time.deltaTime);
+        }
+
+        // altura del piso bajo 'p' (raycast). Fallback: 'fallbackY'.
+        static float GroundY(Vector3 p, float fallbackY)
+        {
+            if (Physics.Raycast(new Vector3(p.x, p.y + 3f, p.z), Vector3.down, out var hit, 12f))
+                return hit.point.y;
+            return fallbackY;
+        }
+
+        // para un personaje PARADO en 'pos' mirando 'faceTarget' (maneja el CharacterController).
+        static void PlaceStanding(Transform t, Vector3 pos, Vector3 faceTarget)
+        {
+            if (t == null) return;
+            var cc = t.GetComponent<CharacterController>();
+            bool was = cc != null && cc.enabled;
+            if (cc != null) cc.enabled = false;
+            pos.y = GroundY(pos, pos.y);
+            t.position = pos;
+            Vector3 look = faceTarget - pos; look.y = 0f;
+            if (look.sqrMagnitude > 1e-4f) t.rotation = Quaternion.LookRotation(look.normalized);
+            if (cc != null) cc.enabled = was;
         }
 
         // devuelve el control: re-activa la cámara de la persona, saca el bloqueo y borra la cenital.
