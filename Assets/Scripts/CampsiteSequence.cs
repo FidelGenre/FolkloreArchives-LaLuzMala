@@ -67,8 +67,16 @@ namespace FolkloreArchives
                 // 3) cámara CENITAL mientras estaciona
                 MakeOverheadCam();
 
+                // termina apenas el auto está CERCA del punto (o HasArrived, o timeout) -> así no
+                // queda esperando el acomodo fino y te devuelve el control rápido.
+                Vector3 parkW = new Vector3(campParkXZ.x, 0f, campParkXZ.y);
                 float t = 0f;
-                yield return new WaitUntil(() => autoDrive.HasArrived || (t += Time.deltaTime) > 25f);
+                while (!autoDrive.HasArrived && t < 15f)
+                {
+                    if (t > 1f && Flat2(car.transform.position, parkW) <= 4f) break;
+                    t += Time.deltaTime;
+                    yield return null;
+                }
                 car.autoPilot = false;
                 autoDrive.active = false;
                 car.externalThrottle = 0f; car.externalSteer = 0f;
