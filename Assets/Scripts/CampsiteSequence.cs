@@ -23,6 +23,7 @@ namespace FolkloreArchives
         public Vector3 driveTriggerPos = new Vector3(242.22f, 24.71229f, 199.8321f); // manejás hasta acá -> el auto sigue SOLO
         public float   driveTriggerRadius = 10f;
         public Vector2 campParkXZ = new Vector2(234.1218f, 213.4899f); // dónde FRENA/estaciona el auto (XZ, owner)
+        public float   campParkY   = 24.0379f;            // altura del punto de estacionado
         public float   campParkYaw = -40.427f;           // yaw final del auto al estacionar
 
         [Header("Cámara 3ª persona")]
@@ -67,11 +68,12 @@ namespace FolkloreArchives
                 // 3) cámara CENITAL mientras estaciona
                 MakeOverheadCam();
 
-                // termina apenas el auto está CERCA del punto (o HasArrived, o timeout) -> así no
-                // queda esperando el acomodo fino y te devuelve el control rápido.
-                Vector3 parkW = new Vector3(campParkXZ.x, 0f, campParkXZ.y);
+                // drive-in corto (para ver que "estaciona"), después ASIENTO EXACTO en el punto:
+                // el autopilot se traba en los árboles y no clava, así que al terminar teletransporto
+                // el auto al punto/yaw que dio el owner (siempre queda ahí).
+                Vector3 parkW = new Vector3(campParkXZ.x, campParkY, campParkXZ.y);
                 float t = 0f;
-                while (!autoDrive.HasArrived && t < 15f)
+                while (!autoDrive.HasArrived && t < 6f)
                 {
                     if (t > 1f && Flat2(car.transform.position, parkW) <= 4f) break;
                     t += Time.deltaTime;
@@ -80,6 +82,17 @@ namespace FolkloreArchives
                 car.autoPilot = false;
                 autoDrive.active = false;
                 car.externalThrottle = 0f; car.externalSteer = 0f;
+
+                // asentar EXACTO en el punto (posición + yaw), frenado del todo.
+                var rb = car.GetComponent<Rigidbody>();
+                Quaternion parkRot = Quaternion.Euler(0f, campParkYaw, 0f);
+                car.transform.position = parkW;
+                car.transform.rotation = parkRot;
+                if (rb != null)
+                {
+                    rb.position = parkW; rb.rotation = parkRot;
+                    if (!rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+                }
             }
             else
             {
