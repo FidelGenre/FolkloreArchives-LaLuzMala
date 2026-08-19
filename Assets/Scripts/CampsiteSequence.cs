@@ -11,6 +11,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace FolkloreArchives
 {
@@ -61,6 +62,12 @@ namespace FolkloreArchives
 
         [Header("Cajuela")]
         public float trunkOpenDeg = 70f;    // se abre girando sobre eje HORIZONTAL (se levanta). + = arriba, - = abajo.
+
+        [Header("Tu parte: carpa (morada) + leña")]
+        public Vector3 woodPlayerPos = new Vector3(229.8513f, 24.00745f, 231.7843f); // vos buscás la leña que falta acá
+        public float   playerReach   = 3.2f;   // distancia para tus interacciones con E
+        string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
+        string _playerSay;   // línea de diálogo (abajo, tipo guion)
 
         [Header("Carpa del jugador (la arma con E; los NPCs arman las otras dos)")]
         public string playerTentName = "Tents_DarkBlue"; // la "morada" (owner) -- derecha, cerca del auto
@@ -176,10 +183,10 @@ namespace FolkloreArchives
             var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
             PlaceStandingYaw(player, playerExitPos, playerExitYaw);   // en la puerta, mirando hacia la cajuela
 
-            // Rufus: baja del lado del acompañante y SE QUEDA (no va a la cajuela).
+            // Rufus: se queda SENTADO en el auto hasta que le abrís la puerta del acompañante (E).
             Transform dog = op.dog != null ? op.dog.transform : null;
-            if (op.dog != null && op.dog.CurrentSeat != null) yield return op.dog.ExitRoutine();
-            if (dog != null) PlaceStandingYaw(dog, dogExitPos, dogExitYaw);
+            if (op.dog != null && op.dog.CurrentSeat != null) StartCoroutine(DogWaitsForDoor());
+            else if (dog != null) PlaceStandingYaw(dog, dogExitPos, dogExitYaw);
 
             // NPCs: bajan cerca del auto.
             UnseatAndPlace(casual, cp + right * -2.6f + back * -1.2f, cp);
@@ -211,6 +218,150 @@ namespace FolkloreArchives
             GameObject tentGreen = npcTents.Count > 1 ? npcTents[1] : null; // carpa del negro
             StartCoroutine(GreenTentThenSit(green, tentGreen, center));
             StartCoroutine(PairTentThenTasks(casual, chica, tentPair, center));
+
+            // TU PARTE: recogés tu carpa de la cajuela, la ponés (fantasma celeste te marca dónde),
+            // y después el chico te pide leña -> vas a buscarla.
+            StartCoroutine(PlayerCampTasks());
+        }
+
+        // Rufus queda SENTADO en el auto hasta que el jugador le ABRE la puerta del acompañante;
+        // ahí baja y te sigue.
+        IEnumerator DogWaitsForDoor()
+        {
+            var carDoors = car.GetComponent<FolkloreArchives.Net.CarDoors>();
+            Transform paxDoor = NearestDoorTo(car.frontPassenger != null ? car.frontPassenger.position : car.transform.position);
+            yield return new WaitUntil(() => carDoors != null && paxDoor != null && carDoors.IsOpen(paxDoor));
+            if (op.dog != null && op.dog.CurrentSeat != null) yield return op.dog.ExitRoutine();
+            Transform dog = op.dog != null ? op.dog.transform : null;
+            if (dog != null) PlaceStandingYaw(dog, dogExitPos, dogExitYaw);
+        }
+
+        Transform NearestDoorTo(Vector3 p)
+        {
+            Transform best = null; float bd = float.MaxValue;
+            if (car != null && car.doors != null)
+                foreach (var d in car.doors) { if (d == null) continue; float dd = Vector3.Distance(d.position, p); if (dd < bd) { bd = dd; best = d; } }
+            return best;
+        }
+
+        // TU questline en el campamento: 1) recoger tu carpa de la cajuela; 2) ponerla donde marca
+        // el FANTASMA celeste; 3) el chico pide más leña; 4) ir a buscarla y llevarla a la fogata.
+        IEnumerator PlayerCampTasks()
+        {
+            Transform player = (op != null && op.player != null) ? op.player.transform : null;
+            if (player == null) yield break;
+            Vector3 cp = car.transform.position;
+            Vector3 trunk = cp - car.transform.forward * 4.6f; trunk.y = GroundY(trunk, cp.y);
+            Vector3 fire = _campsite != null ? _campsite.position : new Vector3(246f, cp.y, 232f);
+
+            // 1) recoger TU carpa (morada) de atrás de la cajuela.
+            yield return WaitPlayerInteract(player, trunk, playerReach, "[E] Recoger carpa");
+
+            // 2) FANTASMA celeste/transparente donde va la carpa -> ir y ponerla.
+            GameObject ghost = _playerTent != null ? MakeTentGhost(_playerTent) : null;
+            Vector3 target = _playerTent != null ? _playerTent.transform.position : trunk;
+            yield return WaitPlayerInteract(player, target, playerReach, "[E] Poner carpa");
+            if (ghost != null) Destroy(ghost);
+            if (_playerTent != null)
+            {
+                Vector3 full = _playerTent.transform.localScale == Vector3.zero ? Vector3.one : _playerTent.transform.localScale;
+                _playerTent.transform.localScale = full * 0.05f;
+                _playerTent.SetActive(true);
+                yield return PopScale(_playerTent, full);
+            }
+
+            // 3) el chico (MaleCasual) pide más leña.
+            yield return SayFor("Che, falta un poco de leña. ¿Podés traer?", 3.5f);
+
+            // 4) ir a buscar la leña que falta y llevarla a la fogata.
+            yield return WaitPlayerInteract(player, woodPlayerPos, playerReach, "[E] Juntar leña");
+            var log = MakeCarriedLog();
+            log.transform.SetParent(player, false);
+            log.transform.localPosition = new Vector3(0f, 1.1f, 0.5f);
+            log.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            yield return WaitPlayerInteract(player, fire, playerReach, "[E] Dejar la leña en la fogata");
+            if (log != null)
+            {
+                log.transform.SetParent(null, true);
+                Vector3 fp = fire; fp.y = GroundY(fire, fire.y);
+                log.transform.position = fp + new Vector3(-0.35f, 0.1f, 0.2f);
+                log.transform.rotation = Quaternion.Euler(0f, -25f, 90f);
+            }
+            // (próximo: noche -> comer/hablar -> dormir -> Rufus ve la Luz Mala)
+        }
+
+        // espera a que el jugador esté CERCA de 'pos' y apriete E. Mientras esté cerca, muestra 'hint'.
+        IEnumerator WaitPlayerInteract(Transform player, Vector3 pos, float reach, string hint)
+        {
+            while (true)
+            {
+                bool near = Flat2(player.position, pos) <= reach;
+                _playerHint = near ? hint : null;
+                var kb = Keyboard.current;
+                if (near && kb != null && kb[Key.E].wasPressedThisFrame) { _playerHint = null; yield break; }
+                yield return null;
+            }
+        }
+
+        // muestra una línea de diálogo (abajo) por 'secs' segundos.
+        IEnumerator SayFor(string text, float secs)
+        {
+            _playerSay = text;
+            yield return new WaitForSeconds(secs);
+            _playerSay = "";
+        }
+
+        // clon TRANSLÚCIDO celeste de la carpa, para marcar DÓNDE ponerla (sin collider).
+        GameObject MakeTentGhost(GameObject tent)
+        {
+            var ghost = Instantiate(tent);
+            ghost.name = "CarpaFantasma";
+            ghost.transform.SetParent(null, true);
+            ghost.transform.position = tent.transform.position;
+            ghost.transform.rotation = tent.transform.rotation;
+            ghost.transform.localScale = tent.transform.localScale == Vector3.zero ? Vector3.one : tent.transform.localScale;
+            ghost.SetActive(true);
+            foreach (var col in ghost.GetComponentsInChildren<Collider>(true)) Destroy(col);
+            var mat = GhostMat();
+            foreach (var r in ghost.GetComponentsInChildren<Renderer>(true))
+            {
+                var mats = new Material[r.sharedMaterials.Length];
+                for (int i = 0; i < mats.Length; i++) mats[i] = mat;
+                r.sharedMaterials = mats;
+            }
+            return ghost;
+        }
+
+        static Material _ghostMat;
+        static Material GhostMat()
+        {
+            if (_ghostMat != null) return _ghostMat;
+            var sh = Shader.Find("Universal Render Pipeline/Lit");
+            var m = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
+            Color c = new Color(0.45f, 0.82f, 1f, 0.35f); // celeste transparente
+            m.color = c;
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+            m.SetFloat("_Surface", 1f);
+            m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetInt("_ZWrite", 0);
+            m.DisableKeyword("_ALPHATEST_ON");
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.renderQueue = 3000;
+            _ghostMat = m;
+            return m;
+        }
+
+        GUIStyle _sayStyle;
+        void OnGUI()
+        {
+            if (!string.IsNullOrEmpty(_playerHint)) InteractHint.Draw(_playerHint);
+            if (!string.IsNullOrEmpty(_playerSay))
+            {
+                if (_sayStyle == null) _sayStyle = new GUIStyle(GUI.skin.label) { fontSize = 20, alignment = TextAnchor.MiddleCenter, wordWrap = true };
+                _sayStyle.normal.textColor = Color.white;
+                GUI.Label(new Rect(Screen.width * 0.5f - 300f, Screen.height - 130f, 600f, 56f), _playerSay, _sayStyle);
+            }
         }
 
         // El negro camina a greenTentPos, arma AHÍ su carpa (pop), y después va al tronco y se
