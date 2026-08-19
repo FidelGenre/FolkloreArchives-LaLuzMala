@@ -47,6 +47,14 @@ namespace FolkloreArchives
         public Vector3 dogExitPos    = new Vector3(232.31f, 24.03395f, 212.8251f);   // Rufus baja del lado del acompañante
         public float   dogExitYaw    = 137.143f;
 
+        [Header("Armado: carpa chica+chico, tronco, leña (owner)")]
+        public Vector3 tentPairPos = new Vector3(240.5201f, 22.88509f, 232.7946f); // chica + chico ponen la carpa
+        public float   tentPairYaw = 9.125f;
+        public Vector3 chicaSitPos = new Vector3(246.0744f, 23.76039f, 229.2029f); // la chica se sienta en este tronco
+        public float   chicaSitYaw = -6.075f;
+        public Vector3 woodPos     = new Vector3(240.1889f, 25.14602f, 247.7799f); // el chico busca leña acá
+        public float   woodYaw     = -29.675f;
+
         [Header("Carpa del jugador (la arma con E; los NPCs arman las otras dos)")]
         public string playerTentName = "Tents_DarkBlue"; // la "morada" (owner) -- derecha, cerca del auto
 
@@ -190,21 +198,109 @@ namespace FolkloreArchives
             if (cc != null) cc.enabled = true;
             RestoreControl();
 
-            // 4) cada NPC lleva su carpa y la arma PARADO AL LADO (no encima), LENTO desde la cajuela.
-            //    MaleCasual y el negro arman una c/u; la chica comparte con MaleCasual (no arma otra).
-            //    Tu carpa = _playerTent (la "morada"): queda oculta, la armás con E (próximo paso).
+            // 4) ARMADO. El negro arma SU carpa al lado (como antes). La chica y el chico (MaleCasual)
+            //    ponen SU carpa en tentPairPos; después la chica se SIENTA en el tronco y el chico va
+            //    a buscar LEÑA y la lleva a la fogata. Tu carpa (morada) la armás con E (próximo).
             Vector3 center = _campsite != null ? _campsite.position : new Vector3(246f, cp.y, 232f);
             var npcTents = new List<GameObject>();
             foreach (var t in _tents) if (t != null && t != _playerTent) npcTents.Add(t);
-            GameObject tentCasual = npcTents.Count > 0 ? npcTents[0] : null;
-            GameObject tentGreen  = npcTents.Count > 1 ? npcTents[1] : null;
-            Vector3 standCasual = BesideTent(tentCasual, center, 1.9f);
-            Vector3 standGreen  = BesideTent(tentGreen,  center, 1.9f);
-            Vector3 chicaSide   = Vector3.Cross(Vector3.up, (standCasual - center)).normalized * 1.4f;
-            StartCoroutine(WalkThenRaise(casual, standCasual,             tentCasual, center, 1.3f, null));
-            StartCoroutine(WalkThenRaise(chica,  standCasual + chicaSide, null,       center, 1.3f, null));
-            StartCoroutine(WalkThenRaise(green,  standGreen,              tentGreen,  center, 1.3f, null));
+            GameObject tentPair  = npcTents.Count > 0 ? npcTents[0] : null; // carpa chica+chico
+            GameObject tentGreen = npcTents.Count > 1 ? npcTents[1] : null; // carpa del negro
+            StartCoroutine(WalkThenRaise(green, BesideTent(tentGreen, center, 1.9f), tentGreen, center, 1.3f, null));
+            StartCoroutine(PairTentThenTasks(casual, chica, tentPair, center));
         }
+
+        // La chica y el chico caminan a tentPairPos y arman AHÍ su carpa. Después: la chica va al
+        // tronco y se sienta; el chico va a buscar leña y la lleva a la fogata.
+        IEnumerator PairTentThenTasks(Transform chico, Transform chica, GameObject tent, Vector3 fire)
+        {
+            Vector3 fwd = Fwd(tentPairYaw), rgt = Right(tentPairYaw);
+            Vector3 face = tentPairPos + fwd; // ambos miran hacia donde va la carpa
+            bool a = false, b = false;
+            if (chico != null) StartCoroutine(WalkNpcTo(chico, tentPairPos + rgt * -0.9f, face, () => a = true)); else a = true;
+            if (chica != null) StartCoroutine(WalkNpcTo(chica, tentPairPos + rgt *  0.9f, face, () => b = true)); else b = true;
+            float t = 0f; while (!(a && b) && t < 10f) { t += Time.deltaTime; yield return null; }
+
+            // armar la carpa EN tentPairPos (mirando tentPairYaw), con pop.
+            if (tent != null)
+            {
+                Vector3 tp = tentPairPos; tp.y = GroundY(tentPairPos, tentPairPos.y);
+                tent.transform.position = tp;
+                tent.transform.rotation = Quaternion.Euler(0f, tentPairYaw, 0f);
+                Vector3 full = tent.transform.localScale == Vector3.zero ? Vector3.one : tent.transform.localScale;
+                tent.transform.localScale = full * 0.05f;
+                tent.SetActive(true);
+                yield return PopScale(tent, full);
+            }
+
+            // la chica -> tronco (pos2) y se sienta; en paralelo el chico va por la leña.
+            if (chica != null) StartCoroutine(SitOnLog(chica));
+            if (chico != null) yield return FetchWood(chico, fire);
+        }
+
+        // camina la chica al tronco y la deja SENTADA (pose seated), mirando chicaSitYaw.
+        IEnumerator SitOnLog(Transform chica)
+        {
+            bool a = false;
+            StartCoroutine(WalkNpcTo(chica, chicaSitPos, chicaSitPos + Fwd(chicaSitYaw), () => a = true));
+            float t = 0f; while (!a && t < 10f) { t += Time.deltaTime; yield return null; }
+            PlaceSeated(chica, chicaSitPos, chicaSitYaw);
+        }
+
+        // el chico va a woodPos, "junta" leña (aparece un tronquito en sus manos), la lleva a la
+        // fogata y la deja ahí.
+        IEnumerator FetchWood(Transform chico, Vector3 fire)
+        {
+            bool a = false;
+            StartCoroutine(WalkNpcTo(chico, woodPos, woodPos + Fwd(woodYaw), () => a = true));
+            float t = 0f; while (!a && t < 14f) { t += Time.deltaTime; yield return null; }
+            yield return new WaitForSeconds(0.9f);   // se agacha / junta
+
+            var log = MakeCarriedLog();
+            log.transform.SetParent(chico, false);
+            log.transform.localPosition = new Vector3(0f, 1.15f, 0.4f);
+            log.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+            bool b = false;
+            StartCoroutine(WalkNpcTo(chico, fire + new Vector3(1.3f, 0f, 1.3f), fire, () => b = true));
+            t = 0f; while (!b && t < 14f) { t += Time.deltaTime; yield return null; }
+            yield return new WaitForSeconds(0.5f);
+
+            // dejar la leña en la fogata.
+            log.transform.SetParent(null, true);
+            Vector3 fp = fire; fp.y = GroundY(fire, fire.y);
+            log.transform.position = fp + new Vector3(0.3f, 0.1f, 0f);
+            log.transform.rotation = Quaternion.Euler(0f, 20f, 90f);
+        }
+
+        // tronquito de "leña" (cilindro marrón sin collider) para llevar a la fogata.
+        static GameObject MakeCarriedLog()
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            go.name = "LenaCargada";
+            var col = go.GetComponent<Collider>(); if (col != null) Destroy(col);
+            go.transform.localScale = new Vector3(0.12f, 0.35f, 0.12f);
+            var r = go.GetComponent<Renderer>(); if (r != null) r.material.color = new Color(0.35f, 0.25f, 0.15f);
+            return go;
+        }
+
+        // deja a un personaje SENTADO en 'pos' mirando 'yaw' (pose seated de HumanWalkAnim).
+        static void PlaceSeated(Transform t, Vector3 pos, float yaw)
+        {
+            if (t == null) return;
+            var cc = t.GetComponent<CharacterController>();
+            bool was = cc != null && cc.enabled;
+            if (cc != null) cc.enabled = false;
+            pos.y = GroundY(pos, pos.y, t);
+            t.position = pos;
+            t.rotation = Quaternion.Euler(0f, yaw, 0f);
+            if (cc != null) cc.enabled = was;
+            var anim = t.GetComponent<HumanWalkAnim>(); if (anim != null) anim.seated = true;
+        }
+
+        // direcciones planas desde un yaw (grados). Unity: forward=(sin,0,cos), right=(cos,0,-sin).
+        static Vector3 Fwd(float yaw)   { float r = yaw * Mathf.Deg2Rad; return new Vector3(Mathf.Sin(r), 0f, Mathf.Cos(r)); }
+        static Vector3 Right(float yaw) { float r = yaw * Mathf.Deg2Rad; return new Vector3(Mathf.Cos(r), 0f, -Mathf.Sin(r)); }
 
         // camina un NPC hasta 'dest' (sin armar carpa), lo deja mirando 'faceTarget', y avisa 'done'.
         IEnumerator WalkNpcTo(Transform npc, Vector3 dest, Vector3 faceTarget, System.Action done)
