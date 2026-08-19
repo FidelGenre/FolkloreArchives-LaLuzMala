@@ -80,6 +80,20 @@ namespace FolkloreArchives
 
             Debug.Log("<color=cyan>[Camp] llegaron al campamento. (próximo: bajan y arman)</color>");
             // (próximas etapas: bajar scripteado, armar carpas/fogata, noche, comer, dormir, Rufus)
+
+            // POR AHORA (solo está armada la llegada): devolver el control al jugador para que no
+            // quede trabado. Cuando arme "bajan/arman/noche" se mantiene la cinemática hasta ahí.
+            RestoreControl();
+        }
+
+        // devuelve el control: re-activa la cámara de la persona, saca el bloqueo y borra la cenital.
+        void RestoreControl()
+        {
+            var party = Object.FindFirstObjectByType<PartyController>();
+            if (party != null && party.personCam != null) party.personCam.gameObject.SetActive(true);
+            if (_overhead != null) Destroy(_overhead.gameObject);
+            _overhead = null;
+            PartyController.CinematicLock = false;
         }
 
         // cámara cenital (3ª persona desde arriba del campamento). Apaga las cámaras de persona/perro
