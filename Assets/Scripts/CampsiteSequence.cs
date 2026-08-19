@@ -57,7 +57,7 @@ namespace FolkloreArchives
         public Vector3 greenTentPos = new Vector3(249.8865f, 23.07505f, 234.3149f); // el negro pone su carpa acá
         public float   greenTentYaw = -120.779f;
         public Vector3 greenSitPos  = new Vector3(248.6f, 23.7f, 231.8f);           // el negro se sienta (tronco este; dame el exacto si es otro)
-        public float   seatYOffset  = -1.0f;   // ajuste de altura al sentarse en el tronco (m). Más negativo = más abajo.
+        public float   seatYOffset  = -1.3f;   // ajuste de altura al sentarse en el tronco (m). Más negativo = más abajo.
 
         [Header("Cajuela")]
         public float trunkOpenDeg = 70f;    // se abre girando sobre eje HORIZONTAL (se levanta). + = arriba, - = abajo.
@@ -308,6 +308,13 @@ namespace FolkloreArchives
             Vector3 fp = fire; fp.y = GroundY(fire, fire.y);
             log.transform.position = fp + new Vector3(0.3f, 0.1f, 0f);
             log.transform.rotation = Quaternion.Euler(0f, 20f, 90f);
+
+            // después de dejar la leña, el chico se sienta AL LADO de la chica (mismo tronco).
+            Vector3 sitPos = chicaSitPos + Right(chicaSitYaw) * 0.9f;
+            bool c = false;
+            StartCoroutine(WalkNpcTo(chico, sitPos, sitPos + Fwd(chicaSitYaw), () => c = true));
+            t = 0f; while (!c && t < 12f) { t += Time.deltaTime; yield return null; }
+            PlaceSeated(chico, sitPos, chicaSitYaw);
         }
 
         // tronquito de "leña" (cilindro marrón sin collider) para llevar a la fogata.
