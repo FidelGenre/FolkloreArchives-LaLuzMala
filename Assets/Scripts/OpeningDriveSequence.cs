@@ -138,7 +138,8 @@ namespace FolkloreArchives
                 PlaceStanding(player != null ? player.transform : null, new Vector3(459.73f, 17.08f, -44.16f), car.transform.position);
                 PlaceStanding(dog    != null ? dog.transform    : null, new Vector3(458.07f, 17.08f, -36.77f), car.transform.position);
                 PlayerVehicleInteractor.DrivingLocked = false;   // podés subir/bajar y manejar
-                // (el capítulo campamento se re-conecta cuando el owner pase la coord del trigger)
+                // arranca el capítulo campamento (espera a que manejes hasta el trigger)
+                gameObject.AddComponent<FolkloreArchives.CampsiteSequence>().Begin(this);
                 yield break;
             }
             if (cp >= 1)
