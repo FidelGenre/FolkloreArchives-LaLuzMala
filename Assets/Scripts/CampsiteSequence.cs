@@ -92,15 +92,33 @@ namespace FolkloreArchives
                 // 3) cámara CENITAL mientras estaciona
                 MakeOverheadCam();
 
-                // owner: "que vaya manejando hasta ahí SIN teletransportarse". Espera a que el
-                // autopilot LLEGUE de verdad al punto (o corte por seguridad a los 25s). Sin snap.
+                // owner: "que vaya manejando hasta ahí SIN teletransportarse". El autopilot frena a
+                // arriveRadius (8m) del punto -> quedaba "un punto más atrás". Lo dejo acercarse y
+                // remato con un GLIDE SUAVE (~1.5s) que recorre el último tramo hasta el punto/yaw
+                // EXACTO del owner. No es un salto: el auto se desliza gradualmente y clava ahí.
                 float t = 0f;
                 while (!autoDrive.HasArrived && t < 25f) { t += Time.deltaTime; yield return null; }
                 car.autoPilot = false;
                 autoDrive.active = false;
                 car.externalThrottle = 0f; car.externalSteer = 0f;
                 var rb = car.GetComponent<Rigidbody>();
-                if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+
+                Vector3 parkW = new Vector3(campParkXZ.x, campParkY, campParkXZ.y);
+                Quaternion parkRot = Quaternion.Euler(0f, campParkYaw, 0f);
+                Vector3 p0 = car.transform.position; Quaternion r0 = car.transform.rotation;
+                float g = 0f;
+                while (g < 1f)
+                {
+                    g += Time.deltaTime / 1.5f;
+                    float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(g));
+                    Vector3 pos = Vector3.Lerp(p0, parkW, k);
+                    Quaternion rot = Quaternion.Slerp(r0, parkRot, k);
+                    car.transform.position = pos; car.transform.rotation = rot;
+                    if (rb != null && !rb.isKinematic) { rb.position = pos; rb.rotation = rot; }
+                    yield return null;
+                }
+                car.transform.position = parkW; car.transform.rotation = parkRot;
+                if (rb != null && !rb.isKinematic) { rb.position = parkW; rb.rotation = parkRot; rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             }
             else
             {
