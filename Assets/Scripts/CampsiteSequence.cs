@@ -34,17 +34,20 @@ namespace FolkloreArchives
         public Vector3 overheadCamEuler = new Vector3(0f, 77.173f, 0f);
 
         [Header("Bajada (puntos del owner)")]
-        public Vector3 playerWalk      = new Vector3(250.1038f, 23.00087f, 224.2696f); // vos + Rufus (tu carpa la armás con E)
-        public float   playerYaw       = -27.062f;
+        public Vector3 playerWalk      = new Vector3(250.309f, 23.01033f, 224.0965f); // vos + Rufus (tu carpa la armás con E)
+        public float   playerYaw       = -24.107f;
         public Vector3 casualChicaWalk = new Vector3(240.6869f, 22.68489f, 237.0636f); // MaleCasual + la chica
         public float   casualChicaYaw  = 128.698f;
         public Vector3 greenWalk       = new Vector3(250.0287f, 23.05577f, 237.5826f); // MaleGreenJkt ("el negro")
         public float   greenYaw        = -155.462f;
 
+        [Header("Carpa del jugador (la arma con E; los NPCs arman las otras dos)")]
+        public string playerTentName = "Tents_DarkBlue"; // la "morada" (owner) -- derecha, cerca del auto
+
         Camera _overhead;   // cámara cenital (se mantiene durante toda la bajada/armado)
         Transform _campsite;
         readonly List<GameObject> _tents = new List<GameObject>(); // carpas ocultas al inicio; se revelan EN SU LUGAR
-        GameObject _playerTent;   // la carpa que queda para el jugador (la arma con E, próximo paso)
+        GameObject _playerTent;   // la carpa del jugador (la arma con E, próximo paso); NO la revelan los NPCs
 
         public void Begin(OpeningDriveSequence seq)
         {
@@ -175,9 +178,7 @@ namespace FolkloreArchives
             float tw = 0f;
             while (!(aCasual && aGreen && aChica) && tw < 8f) { tw += Time.deltaTime; yield return null; }
 
-            // la carpa que quedó SIN revelar es la tuya (la armás con E, próximo paso).
-            foreach (var t in _tents) if (t != null && !t.activeSelf) { _playerTent = t; break; }
-
+            // (tu carpa = _playerTent, la "morada": queda oculta, la armás con E en el próximo paso)
             RestoreControl();   // cámara a 1ª persona + control (armás tu carpa + juntás leña)
         }
 
@@ -226,7 +227,7 @@ namespace FolkloreArchives
             GameObject best = null; float bd = float.MaxValue;
             foreach (var go in _tents)
             {
-                if (go == null || go.activeSelf) continue;   // ya armada
+                if (go == null || go.activeSelf || go == _playerTent) continue;   // ya armada o es la del jugador
                 float d = Flat2(go.transform.position, pos);
                 if (d < bd) { bd = d; best = go; }
             }
@@ -265,6 +266,7 @@ namespace FolkloreArchives
             {
                 if (!child.name.StartsWith("Tents")) continue;
                 _tents.Add(child.gameObject);
+                if (child.name == playerTentName) _playerTent = child.gameObject; // la tuya (no la revelan los NPCs)
                 child.gameObject.SetActive(false);
             }
         }
