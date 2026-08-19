@@ -61,7 +61,6 @@ namespace FolkloreArchives
 
         [Header("Cajuela")]
         public float trunkOpenDeg = 70f;    // se abre girando sobre eje HORIZONTAL (se levanta). + = arriba, - = abajo.
-        Quaternion _trunkClosed; bool _trunkCached;
 
         [Header("Carpa del jugador (la arma con E; los NPCs arman las otras dos)")]
         public string playerTentName = "Tents_DarkBlue"; // la "morada" (owner) -- derecha, cerca del auto
@@ -457,28 +456,16 @@ namespace FolkloreArchives
                 { trunk = tr; break; }
             }
             if (trunk == null) { if (open) Debug.LogWarning("[Camp] no encontré la cajuela -> mirá el log de partes."); return; }
-            // NO uso CarDoors (abre girando sobre eje vertical = se corre al costado). La cajuela se
-            // LEVANTA: giro propio sobre el eje HORIZONTAL del auto (su right).
-            if (!_trunkCached) { _trunkClosed = trunk.localRotation; _trunkCached = true; }
-            StartCoroutine(AnimateTrunkUp(trunk, open));
-        }
-
-        // levanta/baja la cajuela girando sobre el eje HORIZONTAL (right del auto) desde su rotación
-        // cerrada cacheada. trunkOpenDeg controla cuánto (signo = arriba/abajo).
-        IEnumerator AnimateTrunkUp(Transform trunk, bool open)
-        {
-            Vector3 axis = trunk.parent != null ? trunk.parent.InverseTransformDirection(car.transform.right)
-                                                : Vector3.right;
-            Quaternion openRot = Quaternion.AngleAxis(trunkOpenDeg, axis) * _trunkClosed;
-            Quaternion from = trunk.localRotation, to = open ? openRot : _trunkClosed;
-            float t = 0f;
-            while (t < 1f)
+            // NO uso CarDoors (abre girando sobre eje vertical = se corre al costado). Le pongo un
+            // TrunkLid: se LEVANTA (bisagra horizontal) y ADEMÁS el jugador la abre/cierra con E.
+            var lid = trunk.GetComponent<TrunkLid>();
+            if (lid == null)
             {
-                t += Time.deltaTime / 0.6f;
-                trunk.localRotation = Quaternion.Slerp(from, to, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t)));
-                yield return null;
+                lid = trunk.gameObject.AddComponent<TrunkLid>();
+                lid.car = car.transform;
+                lid.openDeg = trunkOpenDeg;
             }
-            trunk.localRotation = to;
+            lid.SetOpen(open);
         }
 
         // "pop": escala la carpa de casi 0 a su tamaño real ('full') en ~0.6s (armado rápido, estilo PSX).
@@ -539,10 +526,48 @@ namespace FolkloreArchives
             float d = to.magnitude;
             if (d < 0.02f) return;
             Vector3 dir = to / d;
+            // esquivar el AUTO y a los OTROS personajes (no subirse al auto, no pisarse): si hay algo
+            // adelante, se rodea hacia el lado libre. El sondeo se acorta cerca del destino.
+            dir = AvoidDir(tr, pos, dir, Mathf.Min(1.7f, d));
             Vector3 np = pos + dir * Mathf.Min(speed * Time.deltaTime, d);
             np.y = GroundY(np, pos.y, tr);   // <-- pasar 'tr' para que el raycast NO se pegue a su propio collider
             tr.position = np;
             tr.rotation = Quaternion.Slerp(tr.rotation, Quaternion.LookRotation(dir), 8f * Time.deltaTime);
+        }
+
+        // devuelve una dirección de avance que RODEA obstáculos (auto/otros personajes). Prueba
+        // ángulos crecientes a ambos lados y elige el primer lado libre.
+        static Vector3 AvoidDir(Transform self, Vector3 pos, Vector3 dir, float probe)
+        {
+            if (probe < 0.5f || !BlockedAhead(self, pos, dir, probe)) return dir;
+            for (int deg = 35; deg <= 90; deg += 25)
+            {
+                Vector3 r = Quaternion.Euler(0f, deg, 0f) * dir;
+                if (!BlockedAhead(self, pos, r, probe)) return r;
+                Vector3 l = Quaternion.Euler(0f, -deg, 0f) * dir;
+                if (!BlockedAhead(self, pos, l, probe)) return l;
+            }
+            return dir; // todo bloqueado: seguir derecho (mejor que trabarse)
+        }
+
+        // ¿hay un obstáculo (auto u otro personaje) adelante, dentro de 'dist'?
+        static bool BlockedAhead(Transform self, Vector3 pos, Vector3 dir, float dist)
+        {
+            Vector3 origin = pos + Vector3.up * 0.8f;
+            var hits = Physics.SphereCastAll(origin, 0.35f, dir.normalized, dist);
+            foreach (var h in hits)
+                if (IsObstacle(h.collider, self)) return true;
+            return false;
+        }
+
+        // cuenta como obstáculo el AUTO y cualquier otro PERSONAJE (no el propio, ni el piso/carpas).
+        static bool IsObstacle(Collider col, Transform self)
+        {
+            if (col == null || col is TerrainCollider) return false;
+            if (self != null && (col.transform == self || col.transform.IsChildOf(self) || self.IsChildOf(col.transform))) return false;
+            if (col.GetComponentInParent<CarController>() != null) return true;
+            if (col.GetComponentInParent<HumanWalkAnim>() != null) return true;
+            return false;
         }
 
         // altura del piso bajo 'p' (raycast). Fallback: 'fallbackY'. Si se pasa 'self', se apagan
