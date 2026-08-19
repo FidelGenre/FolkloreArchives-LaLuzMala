@@ -23,13 +23,22 @@ namespace FolkloreArchives
         Coroutine _anim;
         bool _showHint;
         GUIStyle _style;
+        AudioClip _openClip, _closeClip;   // ruido de cajuela (reuso el de puerta de auto)
+        public float volume = 0.7f;
 
-        void Awake() { _closed = transform.localRotation; }
+        void Awake()
+        {
+            _closed = transform.localRotation;
+            _openClip  = Resources.Load<AudioClip>("car_door_open");
+            _closeClip = Resources.Load<AudioClip>("car_door_close");
+        }
 
         // abre/cierra (lo llama CampsiteSequence o el toggle con E).
         public void SetOpen(bool open)
         {
             _open = open;
+            var clip = open ? _openClip : _closeClip;
+            if (clip != null) AudioSource.PlayClipAtPoint(clip, transform.position, volume);
             if (_anim != null) StopCoroutine(_anim);
             _anim = StartCoroutine(Animate(open));
         }

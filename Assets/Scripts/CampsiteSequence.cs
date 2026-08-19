@@ -162,48 +162,44 @@ namespace FolkloreArchives
                 yield break;
             }
 
-            // 1) BAJAR. Jugador y perro con su rutina real (limpia asiento/pose/tamaño) + clamp de Y
-            //    (ExitRoutine a veces dejaba una Y absurda y "volaban"). Cada uno baja en SU punto.
+            // 1) BAJAR EN LA PUERTA. El jugador y Rufus NO van a la cajuela: bajan al lado del auto,
+            //    la cámara pasa YA a 1ª persona, y el jugador MIRA cómo los NPCs abren la cajuela.
             car.driving = false;
-            OpenTrunk(true);   // cajuela ABIERTA para sacar las carpas (queda abierta)
             Vector3 cp = car.transform.position;
             Vector3 right = car.transform.right, back = -car.transform.forward;
+            Vector3 trunkBack = cp + back * 5.2f; trunkBack.y = GroundY(trunkBack, cp.y);
 
-            // jugador: baja en su punto (owner)
+            // jugador: baja en la puerta, MIRANDO hacia la cajuela (para ver a los NPCs).
             var pvi = player.GetComponent<PlayerVehicleInteractor>();
             if (pvi != null && pvi.CurrentSeat != null) yield return pvi.ExitRoutine();
             { Vector3 pp = player.position; pp.y = cp.y; player.position = pp; }
             var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
-            PlaceStandingYaw(player, playerExitPos, playerExitYaw);
+            PlaceStanding(player, playerExitPos, trunkBack);   // mira hacia la cajuela
 
-            // Rufus: baja del lado del acompañante (owner)
+            // Rufus: baja del lado del acompañante y SE QUEDA (no va a la cajuela).
             Transform dog = op.dog != null ? op.dog.transform : null;
             if (op.dog != null && op.dog.CurrentSeat != null) yield return op.dog.ExitRoutine();
             if (dog != null) PlaceStandingYaw(dog, dogExitPos, dogExitYaw);
 
-            ReassertCinematic();   // ExitRoutine reactiva control/cámaras -> la cenital manda
-
-            // NPCs: bajan y se paran DETRÁS de la cajuela, MIRÁNDOLA (al auto). Se ABRE la cajuela.
+            // NPCs: bajan cerca del auto.
             UnseatAndPlace(casual, cp + right * -2.6f + back * -1.2f, cp);
             UnseatAndPlace(green,  cp + right * -3.6f + back * 0.2f, cp);
             UnseatAndPlace(chica,  cp + right * -2.6f + back * 2.0f, cp);
 
-            // 2) desde la puerta, el JUGADOR y los 3 NPCs CAMINAN hasta la cajuela y quedan
-            //    MIRÁNDOLA (facing al auto). Sacan las carpas.
-            Vector3 trunkBack = cp + back * 5.2f; trunkBack.y = GroundY(trunkBack, cp.y);
+            // 2) CONTROL al jugador YA (1ª persona), ni bien baja -> mira desde su propia cámara.
             var cc = player.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = true;
+            RestoreControl();
+
+            // 3) los 3 NPCs CAMINAN a la cajuela, la ABREN (con ruido) y "sacan" las carpas. El
+            //    jugador lo ve desde 1ª persona.
             bool dc = false, dg = false, dh = false;
             StartCoroutine(WalkNpcTo(casual, trunkBack + right * -1.7f, cp, () => dc = true));
             StartCoroutine(WalkNpcTo(green,  trunkBack + right *  1.7f, cp, () => dg = true));
             StartCoroutine(WalkNpcTo(chica,  trunkBack + right *  0.0f, cp, () => dh = true));
-            yield return WalkPlayerTo(player, cc, trunkBack + right * 2.7f, cp);   // el jugador (CC apagado)
-            float tw = 0f; while (!(dc && dg && dh) && tw < 8f) { tw += Time.deltaTime; yield return null; }
+            float tw = 0f; while (!(dc && dg && dh) && tw < 10f) { tw += Time.deltaTime; yield return null; }
+            OpenTrunk(true);   // los NPCs abren la cajuela
             yield return new WaitForSeconds(1.4f);   // sacan las tiendas de la cajuela
-
-            // 3) SE QUITA la cámara de enfoque -> control al jugador (1ª persona). La cajuela queda
-            //    ABIERTA (owner). Desde acá ve de cerca cómo arman las carpas.
-            if (cc != null) cc.enabled = true;
-            RestoreControl();
 
             // 4) ARMADO. El negro arma SU carpa al lado (como antes). La chica y el chico (MaleCasual)
             //    ponen SU carpa en tentPairPos; después la chica se SIENTA en el tronco y el chico va
