@@ -321,17 +321,22 @@ namespace FolkloreArchives
         }
 
         // deja a un personaje SENTADO en 'pos' mirando 'yaw' (pose seated de HumanWalkAnim).
+        // La pose seated SUBE el modelo -seatedModelDrop (0.63m, calibrado para el asiento del auto),
+        // así que en el tronco levitaban. Compenso bajando el transform esa misma cantidad para que
+        // queden APOYADOS en el tope del tronco (GroundY cae en el collider del tronco).
         static void PlaceSeated(Transform t, Vector3 pos, float yaw)
         {
             if (t == null) return;
+            var anim = t.GetComponent<HumanWalkAnim>();
             var cc = t.GetComponent<CharacterController>();
             bool was = cc != null && cc.enabled;
             if (cc != null) cc.enabled = false;
             pos.y = GroundY(pos, pos.y, t);
+            if (anim != null) pos.y += anim.seatedModelDrop;   // seatedModelDrop es negativo -> baja el transform
             t.position = pos;
             t.rotation = Quaternion.Euler(0f, yaw, 0f);
             if (cc != null) cc.enabled = was;
-            var anim = t.GetComponent<HumanWalkAnim>(); if (anim != null) anim.seated = true;
+            if (anim != null) anim.seated = true;
         }
 
         // direcciones planas desde un yaw (grados). Unity: forward=(sin,0,cos), right=(cos,0,-sin).
