@@ -55,7 +55,18 @@ namespace FolkloreArchives
             // se construía sin él -> lo agrego en runtime a las dos (sin duplicar) por si falta.
             EnsureCrosshair(personCam);
             EnsureCrosshair(dogCam);
+            HidePlaceLabels();
             Apply();
+        }
+
+        // owner: "saca los nombres de los lugares ya que me ubico bien ya". Los carteles del mundo
+        // los crea BuilderUtils.Label como GameObjects "Label_<texto>" con TextMesh. Los ocultamos
+        // en runtime (no regeneramos el mapa hand-editado); sirve aunque se regenere después.
+        static void HidePlaceLabels()
+        {
+            foreach (var tm in Object.FindObjectsByType<TextMesh>(FindObjectsSortMode.None))
+                if (tm != null && tm.name.StartsWith("Label_"))
+                    tm.gameObject.SetActive(false);
         }
 
         static void EnsureCrosshair(Camera cam)
