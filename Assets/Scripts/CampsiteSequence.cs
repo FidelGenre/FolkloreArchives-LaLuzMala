@@ -42,8 +42,8 @@ namespace FolkloreArchives
         public float   greenYaw        = -155.462f;
 
         [Header("Bajada: puntos exactos jugador/perro (owner)")]
-        public Vector3 playerExitPos = new Vector3(237.3621f, 24.10073f, 209.8857f); // el jugador baja acá
-        public float   playerExitYaw = -45.977f;
+        public Vector3 playerExitPos = new Vector3(232.5957f, 24.02715f, 212.6393f); // el jugador baja acá (puerta)
+        public float   playerExitYaw = 132.213f;
         public Vector3 dogExitPos    = new Vector3(232.31f, 24.03395f, 212.8251f);   // Rufus baja del lado del acompañante
         public float   dogExitYaw    = 137.143f;
 
@@ -174,7 +174,7 @@ namespace FolkloreArchives
             if (pvi != null && pvi.CurrentSeat != null) yield return pvi.ExitRoutine();
             { Vector3 pp = player.position; pp.y = cp.y; player.position = pp; }
             var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
-            PlaceStanding(player, playerExitPos, trunkBack);   // mira hacia la cajuela
+            PlaceStandingYaw(player, playerExitPos, playerExitYaw);   // en la puerta, mirando hacia la cajuela
 
             // Rufus: baja del lado del acompañante y SE QUEDA (no va a la cajuela).
             Transform dog = op.dog != null ? op.dog.transform : null;
