@@ -374,14 +374,13 @@ namespace FolkloreArchives
         // PARADO en su tronco esperando a que el jugador le hable (NO se sienta todavía).
         IEnumerator GreenTentThenStand(Transform green, GameObject tent, Vector3 fire)
         {
-            // caminar al lugar y ESPERAR a que LLEGUE (yield el propio walk) -> se planta mirándolo.
-            if (green != null) yield return WalkNpcTo(green, greenTentPos, greenTentPos + Fwd(greenTentYaw), null);
-            yield return new WaitForSeconds(0.4f);
+            // se para ENFRENTE del lugar de la carpa (del lado de la fogata), MIRANDO la carpa.
+            Vector3 toC = fire - greenTentPos; toC.y = 0f; toC = toC.sqrMagnitude < 0.01f ? Vector3.forward : toC.normalized;
+            Vector3 standFront = greenTentPos + toC * 1.4f; standFront.y = GroundY(standFront, greenTentPos.y);
+            if (green != null) yield return WalkNpcTo(green, standFront, greenTentPos, null);
+            yield return new WaitForSeconds(0.5f);   // plantado, mirando el lugar
 
-            float dg = green != null ? Flat2(green.position, greenTentPos) : -1f;
-            Debug.Log($"<color=lime>[Camp] POP carpa NEGRO | d={dg:0.00}m  (t={Time.time:0.0}s)</color>");
-
-            // armar la carpa MIENTRAS el negro está parado mirándola.
+            // aparece la carpa DELANTE de él.
             if (tent != null)
             {
                 Vector3 tp = greenTentPos; tp.y = GroundY(greenTentPos, greenTentPos.y);
@@ -393,6 +392,7 @@ namespace FolkloreArchives
                 yield return PopScale(tent, full);
             }
 
+            yield return new WaitForSeconds(0.9f);   // se queda mirando la carpa ya armada
             // RECIÉN AHORA se mueve al punto AL LADO de la carpa (greenStandPos) y queda esperando.
             if (green != null) StartCoroutine(WalkNpcTo(green, greenStandPos, greenStandPos + Fwd(greenStandYaw), null));
         }
@@ -412,12 +412,13 @@ namespace FolkloreArchives
         // tronco y se sienta; el chico va a buscar leña y la lleva a la fogata.
         IEnumerator PairTentThenTasks(Transform chico, Transform chica, GameObject tent, Vector3 fire)
         {
-            Vector3 fwd = Fwd(tentPairYaw), rgt = Right(tentPairYaw);
-            Vector3 face = tentPairPos + fwd; // ambos miran hacia donde va la carpa
-            Vector3 chicoDest = tentPairPos + rgt * -0.9f;
-            Vector3 chicaDest = tentPairPos + rgt *  0.9f;
-            // muevo a los DOS desde ACÁ (sin corrutinas paralelas que compitan) y solo salgo del
-            // loop cuando AMBOS están a <=0.4m de su lugar. Así la carpa NUNCA aparece antes.
+            // se paran ENFRENTE del lugar de la carpa (del lado de la fogata), flanqueándola y
+            // MIRÁNDOLA. Los muevo a los DOS desde acá y salgo cuando AMBOS están a <=0.4m.
+            Vector3 toC = fire - tentPairPos; toC.y = 0f; toC = toC.sqrMagnitude < 0.01f ? Vector3.forward : toC.normalized;
+            Vector3 baseStand = tentPairPos + toC * 1.3f;
+            Vector3 lateral = Vector3.Cross(Vector3.up, toC).normalized * 0.8f;
+            Vector3 chicoDest = baseStand + lateral; chicoDest.y = GroundY(chicoDest, tentPairPos.y);
+            Vector3 chicaDest = baseStand - lateral; chicaDest.y = GroundY(chicaDest, tentPairPos.y);
             float t = 0f;
             while (t < 30f)
             {
@@ -429,14 +430,10 @@ namespace FolkloreArchives
                 t += Time.deltaTime;
                 yield return null;
             }
-            FaceTarget(chico, face); FaceTarget(chica, face);
-            yield return new WaitForSeconds(0.4f);   // plantados, mirando -> ahora aparece la carpa
+            FaceTarget(chico, tentPairPos); FaceTarget(chica, tentPairPos);
+            yield return new WaitForSeconds(0.5f);   // plantados, mirando -> ahora aparece la carpa
 
-            float dc = chico != null ? Flat2(chico.position, tentPairPos) : -1f;
-            float dh = chica != null ? Flat2(chica.position, tentPairPos) : -1f;
-            Debug.Log($"<color=lime>[Camp] POP carpa PAREJA | chico d={dc:0.00}m  chica d={dh:0.00}m  (t={Time.time:0.0}s)</color>");
-
-            // armar la carpa EN tentPairPos (mirando tentPairYaw), con pop.
+            // aparece la carpa DELANTE de ellos.
             if (tent != null)
             {
                 Vector3 tp = tentPairPos; tp.y = GroundY(tentPairPos, tentPairPos.y);
@@ -448,6 +445,7 @@ namespace FolkloreArchives
                 yield return PopScale(tent, full);
             }
 
+            yield return new WaitForSeconds(0.9f);   // se quedan mirando la carpa ya armada
             // la chica va al tronco y se sienta; el chico (MaleCasual) se sienta AL LADO de ella.
             if (chica != null) StartCoroutine(SitOnLog(chica));
             if (chico != null) StartCoroutine(SitNextToChica(chico));
