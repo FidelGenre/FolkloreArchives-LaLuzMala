@@ -53,8 +53,6 @@ namespace FolkloreArchives
         public float   tentPairYaw = 9.125f;
         public Vector3 chicaSitPos = new Vector3(246.0744f, 23.76039f, 229.2029f); // la chica se sienta en este tronco
         public float   chicaSitYaw = -6.075f;
-        public Vector3 woodPos     = new Vector3(240.1889f, 25.14602f, 247.7799f); // el chico busca leña acá
-        public float   woodYaw     = -29.675f;
         public Vector3 greenTentPos = new Vector3(249.8865f, 23.07505f, 234.3149f); // el negro pone su carpa acá
         public float   greenTentYaw = -120.779f;
         public Vector3 greenSitPos  = new Vector3(248.6f, 23.7f, 231.8f);           // el negro se sienta (tronco este; dame el exacto si es otro)
@@ -64,8 +62,10 @@ namespace FolkloreArchives
         public float trunkOpenDeg = 70f;    // se abre girando sobre eje HORIZONTAL (se levanta). + = arriba, - = abajo.
 
         [Header("Tu parte: carpa (morada) + leña")]
-        public Vector3 woodPlayerPos = new Vector3(229.8513f, 24.00745f, 231.7843f); // vos buscás la leña que falta acá
+        public Vector3 woodPlayerPos = new Vector3(229.8513f, 24.00745f, 231.7843f); // TODOS buscan la leña acá (casual, negro y vos)
         public float   playerReach   = 3.2f;   // distancia para tus interacciones con E
+        public Vector3 casualStayPos = new Vector3(239.8789f, 22.83138f, 233.3926f); // MaleCasual espera acá tras armar su carpa
+        public float   casualStayYaw = 159.173f;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
 
@@ -270,10 +270,18 @@ namespace FolkloreArchives
                 yield return PopScale(_playerTent, full);
             }
 
-            // 3) el chico (MaleCasual) pide más leña.
-            yield return SayFor("Che, falta un poco de leña. ¿Podés traer?", 3.5f);
+            // 3) ir a HABLAR con MaleCasual (te espera en su punto) -> te pide ayuda con la leña.
+            yield return WaitPlayerInteract(player, casualStayPos, playerReach, "[E] Hablar con tu amigo");
+            yield return SayFor("¿Me ayudás a buscar leña para la fogata?", 3.5f);
 
-            // 4) ir a buscar la leña que falta y llevarla a la fogata.
+            // 4) RECIÉN AHÍ: casual Y el negro van a buscar leña al MISMO punto (el tuyo) y la
+            //    traen a la fogata. Vos también juntás ahí.
+            Transform casual = op != null ? op.friendMaleCasual  : null;
+            Transform green  = op != null ? op.friendMaleGreenJkt : null;
+            if (casual != null) StartCoroutine(NpcFetchWoodTo(casual, woodPlayerPos, fire, new Vector3(1.3f, 0f, 0.5f)));
+            if (green  != null) StartCoroutine(NpcFetchWoodTo(green,  woodPlayerPos, fire, new Vector3(-1.3f, 0f, -0.5f)));
+
+            // 5) vos también juntás leña en ese punto y la llevás a la fogata.
             yield return WaitPlayerInteract(player, woodPlayerPos, playerReach, "[E] Juntar leña");
             var log = MakeCarriedLog();
             log.transform.SetParent(player, false);
@@ -416,9 +424,10 @@ namespace FolkloreArchives
                 yield return PopScale(tent, full);
             }
 
-            // la chica -> tronco (pos2) y se sienta; en paralelo el chico va por la leña.
+            // la chica -> tronco (pos2) y se sienta; el chico se QUEDA parado en su punto,
+            // esperando a que el jugador le hable para ir a buscar leña.
             if (chica != null) StartCoroutine(SitOnLog(chica));
-            if (chico != null) yield return FetchWood(chico, fire);
+            if (chico != null) StartCoroutine(WalkNpcTo(chico, casualStayPos, casualStayPos + Fwd(casualStayYaw), null));
         }
 
         // camina la chica al tronco y la deja SENTADA (pose seated), mirando chicaSitYaw.
@@ -430,37 +439,32 @@ namespace FolkloreArchives
             PlaceSeated(chica, chicaSitPos, chicaSitYaw);
         }
 
-        // el chico va a woodPos, "junta" leña (aparece un tronquito en sus manos), la lleva a la
-        // fogata y la deja ahí.
-        IEnumerator FetchWood(Transform chico, Vector3 fire)
+        // un NPC va a 'woodAt' (con 'offset' para no encimarse), "junta" leña (tronquito en sus
+        // manos), la lleva a la fogata y la deja. Se para si estaba sentado.
+        IEnumerator NpcFetchWoodTo(Transform npc, Vector3 woodAt, Vector3 fire, Vector3 offset)
         {
+            if (npc == null) yield break;
+            var anim = npc.GetComponent<HumanWalkAnim>(); if (anim != null) anim.seated = false; // por si estaba sentado
             bool a = false;
-            StartCoroutine(WalkNpcTo(chico, woodPos, woodPos + Fwd(woodYaw), () => a = true));
-            float t = 0f; while (!a && t < 14f) { t += Time.deltaTime; yield return null; }
+            StartCoroutine(WalkNpcTo(npc, woodAt + offset, woodAt, () => a = true));
+            float t = 0f; while (!a && t < 16f) { t += Time.deltaTime; yield return null; }
             yield return new WaitForSeconds(0.9f);   // se agacha / junta
 
             var log = MakeCarriedLog();
-            log.transform.SetParent(chico, false);
+            log.transform.SetParent(npc, false);
             log.transform.localPosition = new Vector3(0f, 1.15f, 0.4f);
             log.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
 
             bool b = false;
-            StartCoroutine(WalkNpcTo(chico, fire + new Vector3(1.3f, 0f, 1.3f), fire, () => b = true));
-            t = 0f; while (!b && t < 14f) { t += Time.deltaTime; yield return null; }
+            StartCoroutine(WalkNpcTo(npc, fire + offset, fire, () => b = true));
+            t = 0f; while (!b && t < 16f) { t += Time.deltaTime; yield return null; }
             yield return new WaitForSeconds(0.5f);
 
             // dejar la leña en la fogata.
             log.transform.SetParent(null, true);
             Vector3 fp = fire; fp.y = GroundY(fire, fire.y);
-            log.transform.position = fp + new Vector3(0.3f, 0.1f, 0f);
+            log.transform.position = fp + offset * 0.3f + new Vector3(0f, 0.1f, 0f);
             log.transform.rotation = Quaternion.Euler(0f, 20f, 90f);
-
-            // después de dejar la leña, el chico se sienta AL LADO de la chica (mismo tronco).
-            Vector3 sitPos = chicaSitPos + Right(chicaSitYaw) * 0.9f;
-            bool c = false;
-            StartCoroutine(WalkNpcTo(chico, sitPos, sitPos + Fwd(chicaSitYaw), () => c = true));
-            t = 0f; while (!c && t < 12f) { t += Time.deltaTime; yield return null; }
-            PlaceSeated(chico, sitPos, chicaSitYaw);
         }
 
         // tronquito de "leña" (cilindro marrón sin collider) para llevar a la fogata.
