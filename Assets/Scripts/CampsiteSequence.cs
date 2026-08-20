@@ -214,7 +214,7 @@ namespace FolkloreArchives
             foreach (var t in _tents) if (t != null && t != _playerTent) npcTents.Add(t);
             GameObject tentPair  = npcTents.Count > 0 ? npcTents[0] : null; // carpa chica+chico
             GameObject tentGreen = npcTents.Count > 1 ? npcTents[1] : null; // carpa del negro
-            StartCoroutine(GreenTentThenSit(green, tentGreen, center));
+            StartCoroutine(GreenTentThenStand(green, tentGreen, center));
             StartCoroutine(PairTentThenTasks(casual, chica, tentPair, center));
 
             // TU PARTE: recogés tu carpa de la cajuela, la ponés (fantasma celeste te marca dónde),
@@ -272,10 +272,10 @@ namespace FolkloreArchives
             yield return WaitPlayerInteract(player, greenSitPos, playerReach, "[E] Hablar con tu amigo");
             yield return SayFor("¿Me ayudás a buscar leña para la fogata?", 3.5f);
 
-            // 4) RECIÉN AHÍ: el negro se para y va a buscar leña al MISMO punto (el tuyo) y la trae
-            //    a la fogata. MaleCasual y la chica se quedan sentados. Vos también juntás ahí.
+            // 4) RECIÉN AHÍ: el negro va a buscar leña al MISMO punto (el tuyo), la trae a la fogata
+            //    y DESPUÉS se sienta. MaleCasual y la chica ya están sentados. Vos también juntás ahí.
             Transform negro = op != null ? op.friendMaleGreenJkt : null;
-            if (negro != null) StartCoroutine(NpcFetchWoodTo(negro, woodPlayerPos, fire, new Vector3(1.3f, 0f, 0.5f)));
+            if (negro != null) StartCoroutine(NegroFetchThenSit(negro, fire));
 
             // 5) vos también juntás leña en ese punto y la llevás a la fogata.
             yield return WaitPlayerInteract(player, woodPlayerPos, playerReach, "[E] Juntar leña");
@@ -368,13 +368,12 @@ namespace FolkloreArchives
             }
         }
 
-        // El negro camina a greenTentPos, arma AHÍ su carpa (pop), y después va al tronco y se
-        // sienta mirando la fogata.
-        IEnumerator GreenTentThenSit(Transform green, GameObject tent, Vector3 fire)
+        // El negro camina a greenTentPos, arma AHÍ su carpa (recién cuando LLEGA), y después queda
+        // PARADO en su tronco esperando a que el jugador le hable (NO se sienta todavía).
+        IEnumerator GreenTentThenStand(Transform green, GameObject tent, Vector3 fire)
         {
-            bool a = false;
-            if (green != null) StartCoroutine(WalkNpcTo(green, greenTentPos, greenTentPos + Fwd(greenTentYaw), () => a = true)); else a = true;
-            float t = 0f; while (!a && t < 12f) { t += Time.deltaTime; yield return null; }
+            if (green != null) StartCoroutine(WalkNpcTo(green, greenTentPos, greenTentPos + Fwd(greenTentYaw), null));
+            float t = 0f; while (t < 25f && green != null && Flat2(green.position, greenTentPos) > 1.6f) { t += Time.deltaTime; yield return null; }
 
             if (tent != null)
             {
@@ -387,14 +386,19 @@ namespace FolkloreArchives
                 yield return PopScale(tent, full);
             }
 
-            if (green != null)
-            {
-                bool b = false;
-                StartCoroutine(WalkNpcTo(green, greenSitPos, fire, () => b = true));
-                t = 0f; while (!b && t < 12f) { t += Time.deltaTime; yield return null; }
-                Vector3 d = fire - greenSitPos; float yaw = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
-                PlaceSeated(green, greenSitPos, yaw);
-            }
+            // queda PARADO cerca de su tronco, mirando la fogata (esperando que le hables).
+            if (green != null) StartCoroutine(WalkNpcTo(green, greenSitPos, fire, null));
+        }
+
+        // (lo llama PlayerCampTasks tras el diálogo) el negro va a buscar leña y RECIÉN AHÍ se sienta.
+        IEnumerator NegroFetchThenSit(Transform negro, Vector3 fire)
+        {
+            yield return NpcFetchWoodTo(negro, woodPlayerPos, fire, new Vector3(1.3f, 0f, 0.5f));
+            if (negro == null) yield break;
+            StartCoroutine(WalkNpcTo(negro, greenSitPos, fire, null));
+            float t = 0f; while (t < 14f && Flat2(negro.position, greenSitPos) > 1.0f) { t += Time.deltaTime; yield return null; }
+            Vector3 d = fire - greenSitPos; float yaw = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
+            PlaceSeated(negro, greenSitPos, yaw);
         }
 
         // La chica y el chico caminan a tentPairPos y arman AHÍ su carpa. Después: la chica va al
@@ -403,10 +407,13 @@ namespace FolkloreArchives
         {
             Vector3 fwd = Fwd(tentPairYaw), rgt = Right(tentPairYaw);
             Vector3 face = tentPairPos + fwd; // ambos miran hacia donde va la carpa
-            bool a = false, b = false;
-            if (chico != null) StartCoroutine(WalkNpcTo(chico, tentPairPos + rgt * -0.9f, face, () => a = true)); else a = true;
-            if (chica != null) StartCoroutine(WalkNpcTo(chica, tentPairPos + rgt *  0.9f, face, () => b = true)); else b = true;
-            float t = 0f; while (!(a && b) && t < 10f) { t += Time.deltaTime; yield return null; }
+            if (chico != null) StartCoroutine(WalkNpcTo(chico, tentPairPos + rgt * -0.9f, face, null));
+            if (chica != null) StartCoroutine(WalkNpcTo(chica, tentPairPos + rgt *  0.9f, face, null));
+            // esperar a que AMBOS estén realmente CERCA del punto (no un tiempo fijo) antes de armar.
+            float t = 0f;
+            while (t < 25f && ((chico != null && Flat2(chico.position, tentPairPos) > 1.7f) ||
+                               (chica != null && Flat2(chica.position, tentPairPos) > 1.7f)))
+            { t += Time.deltaTime; yield return null; }
 
             // armar la carpa EN tentPairPos (mirando tentPairYaw), con pop.
             if (tent != null)
@@ -683,8 +690,8 @@ namespace FolkloreArchives
             if (d < 0.02f) return;
             Vector3 dir = to / d;
             // esquivar el AUTO y a los OTROS personajes (no subirse al auto, no pisarse): si hay algo
-            // adelante, se rodea hacia el lado libre. El sondeo se acorta cerca del destino.
-            dir = AvoidDir(tr, pos, dir, Mathf.Min(1.7f, d));
+            // adelante, se rodea hacia el lado libre. Sondeo corto para no oscilar cerca del destino.
+            dir = AvoidDir(tr, pos, dir, Mathf.Min(1.1f, d));
             Vector3 np = pos + dir * Mathf.Min(speed * Time.deltaTime, d);
             np.y = GroundY(np, pos.y, tr);   // <-- pasar 'tr' para que el raycast NO se pegue a su propio collider
             tr.position = np;
