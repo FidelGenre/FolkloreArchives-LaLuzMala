@@ -51,11 +51,11 @@ namespace FolkloreArchives
         [Header("Armado: carpa chica+chico, tronco, leña (owner)")]
         public Vector3 tentPairPos = new Vector3(240.5201f, 22.88509f, 232.7946f); // chica + chico ponen la carpa
         public float   tentPairYaw = 9.125f;
-        public Vector3 chicaSitPos = new Vector3(246.0744f, 23.76039f, 229.2029f); // la chica se sienta en este tronco
-        public float   chicaSitYaw = -6.075f;
+        public Vector3 chicaSitPos = new Vector3(248.6f, 23.7f, 231.8f);           // chica+casual en el tronco que era del negro (este)
+        public float   chicaSitYaw = -85.6f;                                        // mirando a la fogata desde ahí
         public Vector3 greenTentPos = new Vector3(249.8865f, 23.07505f, 234.3149f); // el negro pone su carpa acá
         public float   greenTentYaw = -120.779f;
-        public Vector3 greenSitPos  = new Vector3(248.6f, 23.7f, 231.8f);           // el negro se sienta (tronco este; dame el exacto si es otro)
+        public Vector3 greenSitPos  = new Vector3(246.0744f, 23.76039f, 229.2029f); // el negro en el tronco que era de ellos (sur); yaw auto a la fogata
         public float   seatYOffset  = -1.3f;   // ajuste de altura al sentarse en el tronco (m). Más negativo = más abajo.
 
         [Header("Cajuela")]
