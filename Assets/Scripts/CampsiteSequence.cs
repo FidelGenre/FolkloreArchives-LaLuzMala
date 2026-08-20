@@ -374,10 +374,11 @@ namespace FolkloreArchives
         // PARADO en su tronco esperando a que el jugador le hable (NO se sienta todavía).
         IEnumerator GreenTentThenStand(Transform green, GameObject tent, Vector3 fire)
         {
-            if (green != null) StartCoroutine(WalkNpcTo(green, greenTentPos, greenTentPos + Fwd(greenTentYaw), null));
-            float t = 0f; while (t < 25f && green != null && Flat2(green.position, greenTentPos) > 1.0f) { t += Time.deltaTime; yield return null; }
-            yield return new WaitForSeconds(0.6f);   // se planta ADELANTE antes de que aparezca la carpa
+            // caminar al lugar y ESPERAR a que LLEGUE (yield el propio walk) -> se planta mirándolo.
+            if (green != null) yield return WalkNpcTo(green, greenTentPos, greenTentPos + Fwd(greenTentYaw), null);
+            yield return new WaitForSeconds(0.4f);
 
+            // armar la carpa MIENTRAS el negro está parado mirándola.
             if (tent != null)
             {
                 Vector3 tp = greenTentPos; tp.y = GroundY(greenTentPos, greenTentPos.y);
@@ -389,7 +390,7 @@ namespace FolkloreArchives
                 yield return PopScale(tent, full);
             }
 
-            // YA armada la carpa, se mueve AL LADO de ella (greenStandPos) y queda parado esperando.
+            // RECIÉN AHORA se mueve al punto AL LADO de la carpa (greenStandPos) y queda esperando.
             if (green != null) StartCoroutine(WalkNpcTo(green, greenStandPos, greenStandPos + Fwd(greenStandYaw), null));
         }
 
@@ -410,14 +411,12 @@ namespace FolkloreArchives
         {
             Vector3 fwd = Fwd(tentPairYaw), rgt = Right(tentPairYaw);
             Vector3 face = tentPairPos + fwd; // ambos miran hacia donde va la carpa
-            if (chico != null) StartCoroutine(WalkNpcTo(chico, tentPairPos + rgt * -0.9f, face, null));
-            if (chica != null) StartCoroutine(WalkNpcTo(chica, tentPairPos + rgt *  0.9f, face, null));
-            // esperar a que AMBOS estén realmente PLANTADOS adelante (no un tiempo fijo) antes de armar.
-            float t = 0f;
-            while (t < 25f && ((chico != null && Flat2(chico.position, tentPairPos) > 1.3f) ||
-                               (chica != null && Flat2(chica.position, tentPairPos) > 1.3f)))
-            { t += Time.deltaTime; yield return null; }
-            yield return new WaitForSeconds(0.6f);   // se plantan ADELANTE antes de que aparezca la carpa
+            bool a = false, b = false;
+            if (chico != null) StartCoroutine(WalkNpcTo(chico, tentPairPos + rgt * -0.9f, face, () => a = true)); else a = true;
+            if (chica != null) StartCoroutine(WalkNpcTo(chica, tentPairPos + rgt *  0.9f, face, () => b = true)); else b = true;
+            // esperar a que AMBOS LLEGUEN de verdad (callbacks) -> se plantan adelante. Tope 25s.
+            float t = 0f; while (!(a && b) && t < 25f) { t += Time.deltaTime; yield return null; }
+            yield return new WaitForSeconds(0.4f);
 
             // armar la carpa EN tentPairPos (mirando tentPairYaw), con pop.
             if (tent != null)
@@ -727,14 +726,13 @@ namespace FolkloreArchives
             return false;
         }
 
-        // cuenta como obstáculo el AUTO y cualquier otro PERSONAJE (no el propio, ni el piso/carpas).
+        // cuenta como obstáculo SOLO el AUTO (para no subirse encima). Esquivar a los otros
+        // personajes hacía que se trabaran/oscilaran y no llegaran a los puntos -> se saca.
         static bool IsObstacle(Collider col, Transform self)
         {
             if (col == null || col is TerrainCollider) return false;
             if (self != null && (col.transform == self || col.transform.IsChildOf(self) || self.IsChildOf(col.transform))) return false;
-            if (col.GetComponentInParent<CarController>() != null) return true;
-            if (col.GetComponentInParent<HumanWalkAnim>() != null) return true;
-            return false;
+            return col.GetComponentInParent<CarController>() != null;
         }
 
         // altura del piso bajo 'p' (raycast). Fallback: 'fallbackY'. Si se pasa 'self', se apagan
