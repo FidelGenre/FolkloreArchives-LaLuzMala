@@ -177,10 +177,12 @@ namespace FolkloreArchives
             Vector3 trunkBack = cp + back * 5.2f; trunkBack.y = GroundY(trunkBack, cp.y);
 
             // jugador: baja en la puerta, MIRANDO hacia la cajuela (para ver a los NPCs).
+            var pAnim = player.GetComponent<HumanWalkAnim>();
+            if (pAnim != null) pAnim.seated = false;   // limpiar la pose sentada YA (antes de la transición de ExitRoutine)
             var pvi = player.GetComponent<PlayerVehicleInteractor>();
             if (pvi != null && pvi.CurrentSeat != null) yield return pvi.ExitRoutine();
             { Vector3 pp = player.position; pp.y = cp.y; player.position = pp; }
-            var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
+            if (pAnim != null) pAnim.seated = false;
             PlaceStandingYaw(player, playerExitPos, playerExitYaw);   // en la puerta, mirando hacia la cajuela
 
             // Rufus: se queda SENTADO en el auto hasta que le abrís la puerta del acompañante (E).
@@ -376,7 +378,7 @@ namespace FolkloreArchives
         {
             // se para ENFRENTE del lugar de la carpa (del lado de la fogata), MIRANDO la carpa.
             Vector3 toC = fire - greenTentPos; toC.y = 0f; toC = toC.sqrMagnitude < 0.01f ? Vector3.forward : toC.normalized;
-            Vector3 standFront = greenTentPos + toC * 1.4f; standFront.y = GroundY(standFront, greenTentPos.y);
+            Vector3 standFront = greenTentPos + toC * 1.0f; standFront.y = GroundY(standFront, greenTentPos.y);
             if (green != null) yield return WalkNpcTo(green, standFront, greenTentPos, null);
             yield return new WaitForSeconds(0.5f);   // plantado, mirando el lugar
 
@@ -415,8 +417,8 @@ namespace FolkloreArchives
             // se paran ENFRENTE del lugar de la carpa (del lado de la fogata), flanqueándola y
             // MIRÁNDOLA. Los muevo a los DOS desde acá y salgo cuando AMBOS están a <=0.4m.
             Vector3 toC = fire - tentPairPos; toC.y = 0f; toC = toC.sqrMagnitude < 0.01f ? Vector3.forward : toC.normalized;
-            Vector3 baseStand = tentPairPos + toC * 1.3f;
-            Vector3 lateral = Vector3.Cross(Vector3.up, toC).normalized * 0.8f;
+            Vector3 baseStand = tentPairPos + toC * 1.0f;
+            Vector3 lateral = Vector3.Cross(Vector3.up, toC).normalized * 0.7f;
             Vector3 chicoDest = baseStand + lateral; chicoDest.y = GroundY(chicoDest, tentPairPos.y);
             Vector3 chicaDest = baseStand - lateral; chicaDest.y = GroundY(chicaDest, tentPairPos.y);
             float t = 0f;
