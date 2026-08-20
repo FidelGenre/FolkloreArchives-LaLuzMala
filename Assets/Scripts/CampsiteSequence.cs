@@ -64,8 +64,6 @@ namespace FolkloreArchives
         [Header("Tu parte: carpa (morada) + leña")]
         public Vector3 woodPlayerPos = new Vector3(229.8513f, 24.00745f, 231.7843f); // TODOS buscan la leña acá (casual, negro y vos)
         public float   playerReach   = 3.2f;   // distancia para tus interacciones con E
-        public Vector3 casualStayPos = new Vector3(239.8789f, 22.83138f, 233.3926f); // MaleCasual espera acá tras armar su carpa
-        public float   casualStayYaw = 159.173f;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
 
@@ -214,8 +212,8 @@ namespace FolkloreArchives
             Vector3 center = _campsite != null ? _campsite.position : new Vector3(246f, cp.y, 232f);
             var npcTents = new List<GameObject>();
             foreach (var t in _tents) if (t != null && t != _playerTent) npcTents.Add(t);
-            GameObject tentPair  = npcTents.Count > 0 ? npcTents[0] : null; // carpa chica+chico
-            GameObject tentGreen = npcTents.Count > 1 ? npcTents[1] : null; // carpa del negro
+            GameObject tentPair  = npcTents.Count > 1 ? npcTents[1] : null; // carpa chica+chico (swap owner)
+            GameObject tentGreen = npcTents.Count > 0 ? npcTents[0] : null; // carpa del negro (swap owner)
             StartCoroutine(GreenTentThenSit(green, tentGreen, center));
             StartCoroutine(PairTentThenTasks(casual, chica, tentPair, center));
 
@@ -270,14 +268,14 @@ namespace FolkloreArchives
                 yield return PopScale(_playerTent, full);
             }
 
-            // 3) ir a HABLAR con MaleCasual (te espera en su punto) -> te pide ayuda con la leña.
-            yield return WaitPlayerInteract(player, casualStayPos, playerReach, "[E] Hablar con tu amigo");
+            // 3) ir a HABLAR con el NEGRO (sentado en su tronco) -> te pide ayuda con la leña.
+            yield return WaitPlayerInteract(player, greenSitPos, playerReach, "[E] Hablar con tu amigo");
             yield return SayFor("¿Me ayudás a buscar leña para la fogata?", 3.5f);
 
-            // 4) RECIÉN AHÍ: MaleCasual va a buscar leña al MISMO punto (el tuyo) y la trae a la
-            //    fogata. El negro NO: se queda sentado tras armar su carpa. Vos también juntás ahí.
-            Transform casual = op != null ? op.friendMaleCasual : null;
-            if (casual != null) StartCoroutine(NpcFetchWoodTo(casual, woodPlayerPos, fire, new Vector3(1.3f, 0f, 0.5f)));
+            // 4) RECIÉN AHÍ: el negro se para y va a buscar leña al MISMO punto (el tuyo) y la trae
+            //    a la fogata. MaleCasual y la chica se quedan sentados. Vos también juntás ahí.
+            Transform negro = op != null ? op.friendMaleGreenJkt : null;
+            if (negro != null) StartCoroutine(NpcFetchWoodTo(negro, woodPlayerPos, fire, new Vector3(1.3f, 0f, 0.5f)));
 
             // 5) vos también juntás leña en ese punto y la llevás a la fogata.
             yield return WaitPlayerInteract(player, woodPlayerPos, playerReach, "[E] Juntar leña");
@@ -422,10 +420,19 @@ namespace FolkloreArchives
                 yield return PopScale(tent, full);
             }
 
-            // la chica -> tronco (pos2) y se sienta; el chico se QUEDA parado en su punto,
-            // esperando a que el jugador le hable para ir a buscar leña.
+            // la chica va al tronco y se sienta; el chico (MaleCasual) se sienta AL LADO de ella.
             if (chica != null) StartCoroutine(SitOnLog(chica));
-            if (chico != null) StartCoroutine(WalkNpcTo(chico, casualStayPos, casualStayPos + Fwd(casualStayYaw), null));
+            if (chico != null) StartCoroutine(SitNextToChica(chico));
+        }
+
+        // MaleCasual camina al tronco de la chica y se sienta a su lado.
+        IEnumerator SitNextToChica(Transform chico)
+        {
+            Vector3 sitPos = chicaSitPos + Right(chicaSitYaw) * 0.9f;
+            bool a = false;
+            StartCoroutine(WalkNpcTo(chico, sitPos, sitPos + Fwd(chicaSitYaw), () => a = true));
+            float t = 0f; while (!a && t < 12f) { t += Time.deltaTime; yield return null; }
+            PlaceSeated(chico, sitPos, chicaSitYaw);
         }
 
         // camina la chica al tronco y la deja SENTADA (pose seated), mirando chicaSitYaw.
