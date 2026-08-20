@@ -378,6 +378,9 @@ namespace FolkloreArchives
             if (green != null) yield return WalkNpcTo(green, greenTentPos, greenTentPos + Fwd(greenTentYaw), null);
             yield return new WaitForSeconds(0.4f);
 
+            float dg = green != null ? Flat2(green.position, greenTentPos) : -1f;
+            Debug.Log($"<color=lime>[Camp] POP carpa NEGRO | d={dg:0.00}m  (t={Time.time:0.0}s)</color>");
+
             // armar la carpa MIENTRAS el negro está parado mirándola.
             if (tent != null)
             {
@@ -428,6 +431,10 @@ namespace FolkloreArchives
             }
             FaceTarget(chico, face); FaceTarget(chica, face);
             yield return new WaitForSeconds(0.4f);   // plantados, mirando -> ahora aparece la carpa
+
+            float dc = chico != null ? Flat2(chico.position, tentPairPos) : -1f;
+            float dh = chica != null ? Flat2(chica.position, tentPairPos) : -1f;
+            Debug.Log($"<color=lime>[Camp] POP carpa PAREJA | chico d={dc:0.00}m  chica d={dh:0.00}m  (t={Time.time:0.0}s)</color>");
 
             // armar la carpa EN tentPairPos (mirando tentPairYaw), con pop.
             if (tent != null)
