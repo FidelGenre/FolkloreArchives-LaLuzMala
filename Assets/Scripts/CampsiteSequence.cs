@@ -49,12 +49,12 @@ namespace FolkloreArchives
         public float   dogExitYaw    = 137.143f;
 
         [Header("Armado: carpa chica+chico, tronco, leña (owner)")]
-        public Vector3 tentPairPos = new Vector3(240.5201f, 22.88509f, 232.7946f); // chica + chico ponen la carpa
-        public float   tentPairYaw = 9.125f;
+        public Vector3 tentPairPos = new Vector3(249.8865f, 23.07505f, 234.3149f); // chica + chico ponen la carpa (swap: donde era la del negro)
+        public float   tentPairYaw = -120.779f;
         public Vector3 chicaSitPos = new Vector3(248.6f, 23.7f, 231.8f);           // chica+casual en el tronco que era del negro (este)
         public float   chicaSitYaw = -85.6f;                                        // mirando a la fogata desde ahí
-        public Vector3 greenTentPos = new Vector3(249.8865f, 23.07505f, 234.3149f); // el negro pone su carpa acá
-        public float   greenTentYaw = -120.779f;
+        public Vector3 greenTentPos = new Vector3(240.5201f, 22.88509f, 232.7946f); // el negro pone su carpa acá (swap: donde era la de ellos)
+        public float   greenTentYaw = 9.125f;
         public Vector3 greenSitPos  = new Vector3(246.0744f, 23.76039f, 229.2029f); // el negro en el tronco que era de ellos (sur); yaw auto a la fogata
         public float   seatYOffset  = -1.3f;   // ajuste de altura al sentarse en el tronco (m). Más negativo = más abajo.
 
@@ -212,8 +212,8 @@ namespace FolkloreArchives
             Vector3 center = _campsite != null ? _campsite.position : new Vector3(246f, cp.y, 232f);
             var npcTents = new List<GameObject>();
             foreach (var t in _tents) if (t != null && t != _playerTent) npcTents.Add(t);
-            GameObject tentPair  = npcTents.Count > 1 ? npcTents[1] : null; // carpa chica+chico (swap owner)
-            GameObject tentGreen = npcTents.Count > 0 ? npcTents[0] : null; // carpa del negro (swap owner)
+            GameObject tentPair  = npcTents.Count > 0 ? npcTents[0] : null; // carpa chica+chico
+            GameObject tentGreen = npcTents.Count > 1 ? npcTents[1] : null; // carpa del negro
             StartCoroutine(GreenTentThenSit(green, tentGreen, center));
             StartCoroutine(PairTentThenTasks(casual, chica, tentPair, center));
 
