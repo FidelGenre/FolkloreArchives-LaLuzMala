@@ -411,12 +411,23 @@ namespace FolkloreArchives
         {
             Vector3 fwd = Fwd(tentPairYaw), rgt = Right(tentPairYaw);
             Vector3 face = tentPairPos + fwd; // ambos miran hacia donde va la carpa
-            bool a = false, b = false;
-            if (chico != null) StartCoroutine(WalkNpcTo(chico, tentPairPos + rgt * -0.9f, face, () => a = true)); else a = true;
-            if (chica != null) StartCoroutine(WalkNpcTo(chica, tentPairPos + rgt *  0.9f, face, () => b = true)); else b = true;
-            // esperar a que AMBOS LLEGUEN de verdad (callbacks) -> se plantan adelante. Tope 25s.
-            float t = 0f; while (!(a && b) && t < 25f) { t += Time.deltaTime; yield return null; }
-            yield return new WaitForSeconds(0.4f);
+            Vector3 chicoDest = tentPairPos + rgt * -0.9f;
+            Vector3 chicaDest = tentPairPos + rgt *  0.9f;
+            // muevo a los DOS desde ACÁ (sin corrutinas paralelas que compitan) y solo salgo del
+            // loop cuando AMBOS están a <=0.4m de su lugar. Así la carpa NUNCA aparece antes.
+            float t = 0f;
+            while (t < 30f)
+            {
+                bool chicoNear = chico == null || Flat2(chico.position, chicoDest) <= 0.4f;
+                bool chicaNear = chica == null || Flat2(chica.position, chicaDest) <= 0.4f;
+                if (chicoNear && chicaNear) break;
+                if (chico != null && !chicoNear) StepToward(chico, chicoDest, 2.2f);
+                if (chica != null && !chicaNear) StepToward(chica, chicaDest, 2.2f);
+                t += Time.deltaTime;
+                yield return null;
+            }
+            FaceTarget(chico, face); FaceTarget(chica, face);
+            yield return new WaitForSeconds(0.4f);   // plantados, mirando -> ahora aparece la carpa
 
             // armar la carpa EN tentPairPos (mirando tentPairYaw), con pop.
             if (tent != null)
@@ -515,14 +526,23 @@ namespace FolkloreArchives
         static Vector3 Fwd(float yaw)   { float r = yaw * Mathf.Deg2Rad; return new Vector3(Mathf.Sin(r), 0f, Mathf.Cos(r)); }
         static Vector3 Right(float yaw) { float r = yaw * Mathf.Deg2Rad; return new Vector3(Mathf.Cos(r), 0f, -Mathf.Sin(r)); }
 
+        // gira 'tr' para mirar 'target' (plano).
+        static void FaceTarget(Transform tr, Vector3 target)
+        {
+            if (tr == null) return;
+            Vector3 look = target - tr.position; look.y = 0f;
+            if (look.sqrMagnitude > 1e-4f) tr.rotation = Quaternion.LookRotation(look.normalized);
+        }
+
         // camina un NPC hasta 'dest' (sin armar carpa), lo deja mirando 'faceTarget', y avisa 'done'.
         IEnumerator WalkNpcTo(Transform npc, Vector3 dest, Vector3 faceTarget, System.Action done)
         {
             if (npc == null) { done?.Invoke(); yield break; }
-            int guard = 0;
-            while (Flat2(npc.position, dest) > 0.5f && guard++ < 3000)
+            float t = 0f;
+            while (Flat2(npc.position, dest) > 0.5f && t < 20f)
             {
                 StepToward(npc, dest, 2.2f);
+                t += Time.deltaTime;
                 yield return null;
             }
             Vector3 look = faceTarget - npc.position; look.y = 0f;
