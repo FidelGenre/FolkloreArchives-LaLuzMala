@@ -274,12 +274,10 @@ namespace FolkloreArchives
             yield return WaitPlayerInteract(player, casualStayPos, playerReach, "[E] Hablar con tu amigo");
             yield return SayFor("¿Me ayudás a buscar leña para la fogata?", 3.5f);
 
-            // 4) RECIÉN AHÍ: casual Y el negro van a buscar leña al MISMO punto (el tuyo) y la
-            //    traen a la fogata. Vos también juntás ahí.
-            Transform casual = op != null ? op.friendMaleCasual  : null;
-            Transform green  = op != null ? op.friendMaleGreenJkt : null;
+            // 4) RECIÉN AHÍ: MaleCasual va a buscar leña al MISMO punto (el tuyo) y la trae a la
+            //    fogata. El negro NO: se queda sentado tras armar su carpa. Vos también juntás ahí.
+            Transform casual = op != null ? op.friendMaleCasual : null;
             if (casual != null) StartCoroutine(NpcFetchWoodTo(casual, woodPlayerPos, fire, new Vector3(1.3f, 0f, 0.5f)));
-            if (green  != null) StartCoroutine(NpcFetchWoodTo(green,  woodPlayerPos, fire, new Vector3(-1.3f, 0f, -0.5f)));
 
             // 5) vos también juntás leña en ese punto y la llevás a la fogata.
             yield return WaitPlayerInteract(player, woodPlayerPos, playerReach, "[E] Juntar leña");
