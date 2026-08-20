@@ -56,6 +56,8 @@ namespace FolkloreArchives
         public Vector3 greenTentPos = new Vector3(240.5201f, 22.88509f, 232.7946f); // el negro pone su carpa acá (swap: donde era la de ellos)
         public float   greenTentYaw = 9.125f;
         public Vector3 greenSitPos  = new Vector3(246.0744f, 23.76039f, 229.2029f); // el negro en el tronco que era de ellos (sur); yaw auto a la fogata
+        public Vector3 greenStandPos = new Vector3(239.8789f, 22.83138f, 233.3926f); // el negro queda PARADO al lado de su carpa (esperando que le hables)
+        public float   greenStandYaw = 159.173f;
         public float   seatYOffset  = -1.3f;   // ajuste de altura al sentarse en el tronco (m). Más negativo = más abajo.
 
         [Header("Cajuela")]
@@ -268,8 +270,8 @@ namespace FolkloreArchives
                 yield return PopScale(_playerTent, full);
             }
 
-            // 3) ir a HABLAR con el NEGRO (sentado en su tronco) -> te pide ayuda con la leña.
-            yield return WaitPlayerInteract(player, greenSitPos, playerReach, "[E] Hablar con tu amigo");
+            // 3) ir a HABLAR con el NEGRO (parado al lado de su carpa) -> te pide ayuda con la leña.
+            yield return WaitPlayerInteract(player, greenStandPos, playerReach, "[E] Hablar con tu amigo");
             yield return SayFor("¿Me ayudás a buscar leña para la fogata?", 3.5f);
 
             // 4) RECIÉN AHÍ: el negro va a buscar leña al MISMO punto (el tuyo), la trae a la fogata
@@ -373,7 +375,8 @@ namespace FolkloreArchives
         IEnumerator GreenTentThenStand(Transform green, GameObject tent, Vector3 fire)
         {
             if (green != null) StartCoroutine(WalkNpcTo(green, greenTentPos, greenTentPos + Fwd(greenTentYaw), null));
-            float t = 0f; while (t < 25f && green != null && Flat2(green.position, greenTentPos) > 1.6f) { t += Time.deltaTime; yield return null; }
+            float t = 0f; while (t < 25f && green != null && Flat2(green.position, greenTentPos) > 1.0f) { t += Time.deltaTime; yield return null; }
+            yield return new WaitForSeconds(0.6f);   // se planta ADELANTE antes de que aparezca la carpa
 
             if (tent != null)
             {
@@ -386,8 +389,8 @@ namespace FolkloreArchives
                 yield return PopScale(tent, full);
             }
 
-            // queda PARADO cerca de su tronco, mirando la fogata (esperando que le hables).
-            if (green != null) StartCoroutine(WalkNpcTo(green, greenSitPos, fire, null));
+            // YA armada la carpa, se mueve AL LADO de ella (greenStandPos) y queda parado esperando.
+            if (green != null) StartCoroutine(WalkNpcTo(green, greenStandPos, greenStandPos + Fwd(greenStandYaw), null));
         }
 
         // (lo llama PlayerCampTasks tras el diálogo) el negro va a buscar leña y RECIÉN AHÍ se sienta.
@@ -409,11 +412,12 @@ namespace FolkloreArchives
             Vector3 face = tentPairPos + fwd; // ambos miran hacia donde va la carpa
             if (chico != null) StartCoroutine(WalkNpcTo(chico, tentPairPos + rgt * -0.9f, face, null));
             if (chica != null) StartCoroutine(WalkNpcTo(chica, tentPairPos + rgt *  0.9f, face, null));
-            // esperar a que AMBOS estén realmente CERCA del punto (no un tiempo fijo) antes de armar.
+            // esperar a que AMBOS estén realmente PLANTADOS adelante (no un tiempo fijo) antes de armar.
             float t = 0f;
-            while (t < 25f && ((chico != null && Flat2(chico.position, tentPairPos) > 1.7f) ||
-                               (chica != null && Flat2(chica.position, tentPairPos) > 1.7f)))
+            while (t < 25f && ((chico != null && Flat2(chico.position, tentPairPos) > 1.3f) ||
+                               (chica != null && Flat2(chica.position, tentPairPos) > 1.3f)))
             { t += Time.deltaTime; yield return null; }
+            yield return new WaitForSeconds(0.6f);   // se plantan ADELANTE antes de que aparezca la carpa
 
             // armar la carpa EN tentPairPos (mirando tentPairYaw), con pop.
             if (tent != null)
