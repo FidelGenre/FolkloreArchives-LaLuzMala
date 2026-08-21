@@ -380,8 +380,10 @@ namespace FolkloreArchives
             // frena adelante y no se pasa de largo (antes venía del lado de la fogata = opuesto).
             Vector3 fromCar = car.transform.position - greenTentPos; fromCar.y = 0f;
             fromCar = fromCar.sqrMagnitude < 0.01f ? -Fwd(greenTentYaw) : fromCar.normalized;
-            Vector3 standFront = greenTentPos + fromCar * 0.9f; standFront.y = GroundY(standFront, greenTentPos.y);
-            if (green != null) yield return WalkNpcTo(green, standFront, greenTentPos, null);
+            Vector3 standFront = greenTentPos + fromCar * 0.55f; standFront.y = GroundY(standFront, greenTentPos.y);
+            float tw = 0f;
+            while (green != null && Flat2(green.position, standFront) > 0.25f && tw < 25f) { StepToward(green, standFront, 2.2f); tw += Time.deltaTime; yield return null; }
+            FaceTarget(green, greenTentPos);
             yield return new WaitForSeconds(0.5f);   // plantado, mirando el lugar
 
             float dn = green != null ? Flat2(green.position, greenTentPos) : -1f;
@@ -423,15 +425,15 @@ namespace FolkloreArchives
             // MIRÁNDOLA. Los muevo a los DOS desde acá y salgo cuando AMBOS están a <=0.4m.
             Vector3 fromCar = car.transform.position - tentPairPos; fromCar.y = 0f;
             fromCar = fromCar.sqrMagnitude < 0.01f ? -Fwd(tentPairYaw) : fromCar.normalized;
-            Vector3 baseStand = tentPairPos + fromCar * 0.9f;
-            Vector3 lateral = Vector3.Cross(Vector3.up, fromCar).normalized * 0.55f;
+            Vector3 baseStand = tentPairPos + fromCar * 0.35f;
+            Vector3 lateral = Vector3.Cross(Vector3.up, fromCar).normalized * 0.5f;
             Vector3 chicoDest = baseStand + lateral; chicoDest.y = GroundY(chicoDest, tentPairPos.y);
             Vector3 chicaDest = baseStand - lateral; chicaDest.y = GroundY(chicaDest, tentPairPos.y);
             float t = 0f;
             while (t < 30f)
             {
-                bool chicoNear = chico == null || Flat2(chico.position, chicoDest) <= 0.4f;
-                bool chicaNear = chica == null || Flat2(chica.position, chicaDest) <= 0.4f;
+                bool chicoNear = chico == null || Flat2(chico.position, chicoDest) <= 0.25f;
+                bool chicaNear = chica == null || Flat2(chica.position, chicaDest) <= 0.25f;
                 if (chicoNear && chicaNear) break;
                 if (chico != null && !chicoNear) StepToward(chico, chicoDest, 2.2f);
                 if (chica != null && !chicaNear) StepToward(chica, chicaDest, 2.2f);
