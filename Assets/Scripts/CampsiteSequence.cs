@@ -446,10 +446,11 @@ namespace FolkloreArchives
             FaceTarget(chico, tentPairPos); FaceTarget(chica, tentPairPos);   // miran la carpa
             yield return new WaitForSeconds(0.5f);   // plantados, mirando -> ahora aparece la carpa
 
-            float dpc = chico != null ? Flat2(chico.position, tentPairPos) : -1f;
-            float dph = chica != null ? Flat2(chica.position, tentPairPos) : -1f;
+            float dpc = chico != null ? Flat2(chico.position, pairStandPos) : -1f;
+            float dph = chica != null ? Flat2(chica.position, pairStandPos) : -1f;
             string tnp = tent != null ? tent.name : "NULL";
-            Debug.Log($"<color=cyan>[Camp] PAREJA llego (chico d={dpc:0.0}m chica d={dph:0.0}m) -> arma '{tnp}' en {tentPairPos} (t={Time.time:0.0}s)</color>");
+            Vector3 tentVis = tent != null ? tent.transform.position : Vector3.zero;
+            Debug.Log($"<color=cyan>[Camp] PAREJA al PUNTO (chico d={dpc:0.0}m chica d={dph:0.0}m) -> SetActive '{tnp}'. carpa.transform en {tentVis} (t={Time.time:0.0}s)</color>");
             // aparece la carpa DELANTE de ellos.
             if (tent != null)
             {
