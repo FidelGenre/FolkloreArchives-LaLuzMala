@@ -378,7 +378,7 @@ namespace FolkloreArchives
         {
             // se para ENFRENTE del lugar de la carpa (del lado de la fogata), MIRANDO la carpa.
             Vector3 toC = fire - greenTentPos; toC.y = 0f; toC = toC.sqrMagnitude < 0.01f ? Vector3.forward : toC.normalized;
-            Vector3 standFront = greenTentPos + toC * 1.0f; standFront.y = GroundY(standFront, greenTentPos.y);
+            Vector3 standFront = greenTentPos + toC * 0.6f; standFront.y = GroundY(standFront, greenTentPos.y);
             if (green != null) yield return WalkNpcTo(green, standFront, greenTentPos, null);
             yield return new WaitForSeconds(0.5f);   // plantado, mirando el lugar
 
@@ -420,8 +420,8 @@ namespace FolkloreArchives
             // se paran ENFRENTE del lugar de la carpa (del lado de la fogata), flanqueándola y
             // MIRÁNDOLA. Los muevo a los DOS desde acá y salgo cuando AMBOS están a <=0.4m.
             Vector3 toC = fire - tentPairPos; toC.y = 0f; toC = toC.sqrMagnitude < 0.01f ? Vector3.forward : toC.normalized;
-            Vector3 baseStand = tentPairPos + toC * 1.0f;
-            Vector3 lateral = Vector3.Cross(Vector3.up, toC).normalized * 0.7f;
+            Vector3 baseStand = tentPairPos + toC * 0.5f;
+            Vector3 lateral = Vector3.Cross(Vector3.up, toC).normalized * 0.55f;
             Vector3 chicoDest = baseStand + lateral; chicoDest.y = GroundY(chicoDest, tentPairPos.y);
             Vector3 chicaDest = baseStand - lateral; chicaDest.y = GroundY(chicaDest, tentPairPos.y);
             float t = 0f;
