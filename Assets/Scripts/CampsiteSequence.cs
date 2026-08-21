@@ -425,8 +425,11 @@ namespace FolkloreArchives
         {
             // se paran ENFRENTE del lugar de la carpa (del lado de la fogata), flanqueándola y
             // MIRÁNDOLA. Los muevo a los DOS desde acá y salgo cuando AMBOS están a <=0.4m.
-            // la pareja se para en pairStandPos (punto exacto del owner), flanqueada para no encimarse.
-            Vector3 lateral = Right(pairStandYaw) * 0.5f;
+            // la pareja se para en pairStandPos (punto exacto del owner). Los separo PERPENDICULAR
+            // al eje pareja-carpa, así los DOS quedan a la misma distancia del punto (no uno lejos).
+            Vector3 toTent = tentPairPos - pairStandPos; toTent.y = 0f;
+            toTent = toTent.sqrMagnitude < 0.01f ? Fwd(pairStandYaw) : toTent.normalized;
+            Vector3 lateral = Vector3.Cross(Vector3.up, toTent).normalized * 0.45f;
             Vector3 chicoDest = pairStandPos - lateral; chicoDest.y = GroundY(chicoDest, pairStandPos.y);
             Vector3 chicaDest = pairStandPos + lateral; chicaDest.y = GroundY(chicaDest, pairStandPos.y);
             float t = 0f;
@@ -440,8 +443,7 @@ namespace FolkloreArchives
                 t += Time.deltaTime;
                 yield return null;
             }
-            if (chico != null) chico.rotation = Quaternion.Euler(0f, pairStandYaw, 0f);
-            if (chica != null) chica.rotation = Quaternion.Euler(0f, pairStandYaw, 0f);
+            FaceTarget(chico, tentPairPos); FaceTarget(chica, tentPairPos);   // miran la carpa
             yield return new WaitForSeconds(0.5f);   // plantados, mirando -> ahora aparece la carpa
 
             float dpc = chico != null ? Flat2(chico.position, tentPairPos) : -1f;
