@@ -49,8 +49,10 @@ namespace FolkloreArchives
         public float   dogExitYaw    = 137.143f;
 
         [Header("Armado: carpa chica+chico, tronco, leña (owner)")]
-        public Vector3 tentPairPos = new Vector3(249.8865f, 23.07505f, 234.3149f); // chica + chico ponen la carpa (swap: donde era la del negro)
+        public Vector3 tentPairPos = new Vector3(249.8865f, 23.07505f, 234.3149f); // dónde queda la carpa de la pareja
         public float   tentPairYaw = -120.779f;
+        public Vector3 pairStandPos = new Vector3(251.9019f, 23.17876f, 235.0608f); // la pareja se para ACÁ; al llegar aparece su carpa
+        public float   pairStandYaw = -39.627f;
         public Vector3 chicaSitPos = new Vector3(248.6f, 23.7f, 231.8f);           // chica+casual en el tronco que era del negro (este)
         public float   chicaSitYaw = -85.6f;                                        // mirando a la fogata desde ahí
         public Vector3 greenTentPos = new Vector3(240.5201f, 22.88509f, 232.7946f); // el negro pone su carpa acá (swap: donde era la de ellos)
@@ -423,12 +425,10 @@ namespace FolkloreArchives
         {
             // se paran ENFRENTE del lugar de la carpa (del lado de la fogata), flanqueándola y
             // MIRÁNDOLA. Los muevo a los DOS desde acá y salgo cuando AMBOS están a <=0.4m.
-            Vector3 fromCar = car.transform.position - tentPairPos; fromCar.y = 0f;
-            fromCar = fromCar.sqrMagnitude < 0.01f ? -Fwd(tentPairYaw) : fromCar.normalized;
-            Vector3 baseStand = tentPairPos + fromCar * 0.35f;
-            Vector3 lateral = Vector3.Cross(Vector3.up, fromCar).normalized * 0.5f;
-            Vector3 chicoDest = baseStand + lateral; chicoDest.y = GroundY(chicoDest, tentPairPos.y);
-            Vector3 chicaDest = baseStand - lateral; chicaDest.y = GroundY(chicaDest, tentPairPos.y);
+            // la pareja se para en pairStandPos (punto exacto del owner), flanqueada para no encimarse.
+            Vector3 lateral = Right(pairStandYaw) * 0.5f;
+            Vector3 chicoDest = pairStandPos - lateral; chicoDest.y = GroundY(chicoDest, pairStandPos.y);
+            Vector3 chicaDest = pairStandPos + lateral; chicaDest.y = GroundY(chicaDest, pairStandPos.y);
             float t = 0f;
             while (t < 30f)
             {
@@ -440,7 +440,8 @@ namespace FolkloreArchives
                 t += Time.deltaTime;
                 yield return null;
             }
-            FaceTarget(chico, tentPairPos); FaceTarget(chica, tentPairPos);
+            if (chico != null) chico.rotation = Quaternion.Euler(0f, pairStandYaw, 0f);
+            if (chica != null) chica.rotation = Quaternion.Euler(0f, pairStandYaw, 0f);
             yield return new WaitForSeconds(0.5f);   // plantados, mirando -> ahora aparece la carpa
 
             float dpc = chico != null ? Flat2(chico.position, tentPairPos) : -1f;
