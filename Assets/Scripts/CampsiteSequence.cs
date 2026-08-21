@@ -376,9 +376,11 @@ namespace FolkloreArchives
         // PARADO en su tronco esperando a que el jugador le hable (NO se sienta todavía).
         IEnumerator GreenTentThenStand(Transform green, GameObject tent, Vector3 fire)
         {
-            // se para ENFRENTE del lugar de la carpa (del lado de la fogata), MIRANDO la carpa.
-            Vector3 toC = fire - greenTentPos; toC.y = 0f; toC = toC.sqrMagnitude < 0.01f ? Vector3.forward : toC.normalized;
-            Vector3 standFront = greenTentPos + toC * 0.6f; standFront.y = GroundY(standFront, greenTentPos.y);
+            // se para del lado por donde VIENE (el auto), justo ANTES de la carpa, MIRÁNDOLA. Así
+            // frena adelante y no se pasa de largo (antes venía del lado de la fogata = opuesto).
+            Vector3 fromCar = car.transform.position - greenTentPos; fromCar.y = 0f;
+            fromCar = fromCar.sqrMagnitude < 0.01f ? -Fwd(greenTentYaw) : fromCar.normalized;
+            Vector3 standFront = greenTentPos + fromCar * 0.9f; standFront.y = GroundY(standFront, greenTentPos.y);
             if (green != null) yield return WalkNpcTo(green, standFront, greenTentPos, null);
             yield return new WaitForSeconds(0.5f);   // plantado, mirando el lugar
 
@@ -419,9 +421,10 @@ namespace FolkloreArchives
         {
             // se paran ENFRENTE del lugar de la carpa (del lado de la fogata), flanqueándola y
             // MIRÁNDOLA. Los muevo a los DOS desde acá y salgo cuando AMBOS están a <=0.4m.
-            Vector3 toC = fire - tentPairPos; toC.y = 0f; toC = toC.sqrMagnitude < 0.01f ? Vector3.forward : toC.normalized;
-            Vector3 baseStand = tentPairPos + toC * 0.5f;
-            Vector3 lateral = Vector3.Cross(Vector3.up, toC).normalized * 0.55f;
+            Vector3 fromCar = car.transform.position - tentPairPos; fromCar.y = 0f;
+            fromCar = fromCar.sqrMagnitude < 0.01f ? -Fwd(tentPairYaw) : fromCar.normalized;
+            Vector3 baseStand = tentPairPos + fromCar * 0.9f;
+            Vector3 lateral = Vector3.Cross(Vector3.up, fromCar).normalized * 0.55f;
             Vector3 chicoDest = baseStand + lateral; chicoDest.y = GroundY(chicoDest, tentPairPos.y);
             Vector3 chicaDest = baseStand - lateral; chicaDest.y = GroundY(chicaDest, tentPairPos.y);
             float t = 0f;
