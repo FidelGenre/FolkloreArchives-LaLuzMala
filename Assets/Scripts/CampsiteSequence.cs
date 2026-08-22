@@ -79,6 +79,7 @@ namespace FolkloreArchives
         public float   nightCamYaw  = 60.933f;
         public float   dogFireScaleMul = 0.4f;   // qué tan chico queda Rufus sentado en el tronco (menor = más chico)
         Transform _dogModel; Vector3 _dogModelScaleSaved;
+        GameObject _poop;   // la caca de Rufus (se limpia a la mañana siguiente)
         public Vector3 towerLightPos = new Vector3(352.3531f, 51.31269f, 219.8981f); // binoculares parpadeando en la torre (owner)
 
         [Header("Escena nocturna: Rufus + Luz Mala (owner)")]
@@ -471,7 +472,7 @@ namespace FolkloreArchives
 
             // 2) llevá a Rufus al lugar y "[E] Cagar" (te movés hasta ahí).
             yield return WaitPlayerInteract(dog, dogPoopPos, 2.8f, "[E] Cagar");
-            var poop = MakePoop(dog.position + dog.forward * -0.35f);
+            _poop = MakePoop(dog.position + dog.forward * -0.35f);
             _playerHint = null;
             yield return new WaitForSeconds(1.2f);
 
@@ -533,6 +534,70 @@ namespace FolkloreArchives
             // 7) AMANECE lento (mismo plano del campamento) + parpadeo dentro de la carpa + aparecen
             //    afuera -> arranca el NUEVO DÍA y te movés libremente.
             yield return WakeNewDay(playerTent, playerYaw, player, dog);
+
+            // 8) mañana: limpiás la caca, hablás con el malecasual (pesca / faltan las cañas) y
+            //    arrancan LIBRES al rancho de la vieja a pedir prestadas unas cañas.
+            yield return MorningAfterWake();
+        }
+
+        // Mañana siguiente: el malecasual está PARADO afuera de su carpa; la chica y el negro
+        // sentados en los troncos. Limpiás la caca de Rufus, hablás sobre ir a pescar, no están
+        // las cañas en el auto, el malecasual los putea y deciden ir a un rancho cercano a pedir
+        // prestado. Al final te suelta el control (caminás vos + Rufus, NO scripteado).
+        IEnumerator MorningAfterWake()
+        {
+            Transform player = op != null && op.player != null ? op.player.transform : null;
+            Transform casual = op != null ? op.friendMaleCasual  : null;
+            Transform chica  = op != null ? op.friendFemaleSec   : null;
+            Transform negro  = op != null ? op.friendMaleGreenJkt : null;
+            if (player == null) yield break;
+            Vector3 fire = _campsite != null ? _campsite.position : new Vector3(246f, 23f, 232f);
+
+            // NPCs despiertos: malecasual PARADO afuera de su carpa; chica y negro en los troncos.
+            if (casual != null) PlaceStandingYaw(casual, pairStandPos, pairStandYaw);
+            if (chica  != null) PlaceSeated(chica, chicaSitPos, chicaSitYaw);
+            if (negro  != null) { float ny = Mathf.Atan2(fire.x - greenSitPos.x, fire.z - greenSitPos.z) * Mathf.Rad2Deg; PlaceSeated(negro, greenSitPos, ny); }
+
+            // control tuyo (persona, 1ª persona) y libre.
+            var party = Object.FindFirstObjectByType<PartyController>();
+            if (party != null) party.ForceControl(false);
+            PartyController.CinematicLock = false;
+
+            // 1) LIMPIAR la caca de Rufus.
+            if (_poop != null)
+            {
+                yield return WaitPlayerInteract(player, _poop.transform.position, playerReach, "[E] Limpiar la caca de Rufus");
+                if (_poop != null) { Destroy(_poop); _poop = null; }
+                yield return SayFor("Listo... qué asco, Rufus.", 2.2f);
+            }
+
+            // 2) hablar con el MALECASUAL (parado afuera de su carpa).
+            _playerHint = "Hablá con tu amigo";
+            yield return WaitPlayerInteract(player, pairStandPos, playerReach + 0.6f, "[E] Hablar");
+            _playerHint = null;
+            if (casual != null) FaceTarget(casual, player.position);
+            yield return SayFor("¡Buen día! Hoy vamos a pescar, hay un lago acá cerca.", 3.2f);
+            yield return SayFor("¿Trajeron las cañas?", 2.4f);
+            yield return SayFor("Eh... deben estar en el auto. Fijate.", 2.8f);
+
+            // 3) ir al AUTO a buscar las cañas -> no están.
+            _playerHint = "Fijate las cañas en el auto";
+            yield return WaitPlayerInteract(player, car != null ? car.transform.position : fire, playerReach + 1.5f, "[E] Revisar el auto");
+            _playerHint = null;
+            yield return SayFor("No están... nos olvidamos las cañas.", 2.8f);
+
+            // 4) volver con el malecasual.
+            _playerHint = "Volvé con tu amigo";
+            yield return WaitPlayerInteract(player, pairStandPos, playerReach + 0.6f, "[E] Hablar");
+            _playerHint = null;
+            if (casual != null) FaceTarget(casual, player.position);
+            yield return SayFor("Son unos pelotudos... No pierden la cabeza porque la tienen pegada.", 3.8f);
+            yield return SayFor("De última le preguntamos: vimos un rancho acá cerca.", 3.2f);
+            yield return SayFor("Capaz nos presta unas cañas.", 2.4f);
+            yield return SayFor("Bueno, dale.", 1.8f);
+
+            // 5) LIBRE: te vas caminando (vos + Rufus) al rancho de la vieja. NO scripteado.
+            _playerHint = "Andá al rancho a pedir unas cañas";
         }
 
         // Despertar al día siguiente: (A) amanece LENTO con el mismo plano cenital del campamento,
