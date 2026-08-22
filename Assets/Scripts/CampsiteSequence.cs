@@ -74,7 +74,7 @@ namespace FolkloreArchives
         public float   playerSitYaw = 84.533f;
         public Vector3 nightCamPos  = new Vector3(234.8221f, 26.89305f, 222.9142f); // cámara de la noche (24.593 + 2.30 de altura de ojos)
         public float   nightCamYaw  = 60.933f;
-        public Vector3 towerLightPos = new Vector3(185.9f, 30f, 253.8f); // binoculares parpadeando en la torre (owner: pasame el exacto)
+        public Vector3 towerLightPos = new Vector3(352.3531f, 51.31269f, 219.8981f); // binoculares parpadeando en la torre (owner)
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
 
@@ -364,25 +364,43 @@ namespace FolkloreArchives
             yield return EveryoneToSleep();
         }
 
-        // punto de luz que PARPADEA (binoculares) en la torre. Se destruye al terminar.
+        // destello que PARPADEA (binoculares) en la torre: luz puntual (glow local) + una esfera
+        // BRILLANTE unlit para que se VEA el puntito desde el campamento (a ~106m). Se destruye al final.
         GameObject MakeBlinkingLight(Vector3 pos)
         {
             var go = new GameObject("BinocularesTorre");
             go.transform.position = pos;
             var l = go.AddComponent<Light>();
             l.type = LightType.Point;
-            l.color = new Color(0.8f, 0.9f, 1f);
-            l.intensity = 6f;
-            l.range = 25f;
-            StartCoroutine(Blink(l));
+            l.color = new Color(0.85f, 0.92f, 1f);
+            l.intensity = 8f;
+            l.range = 30f;
+
+            var dot = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            dot.name = "Glint";
+            dot.transform.SetParent(go.transform, false);
+            dot.transform.localScale = Vector3.one * 0.6f;
+            var col = dot.GetComponent<Collider>(); if (col != null) Destroy(col);
+            var r = dot.GetComponent<Renderer>();
+            if (r != null)
+            {
+                var sh = Shader.Find("Universal Render Pipeline/Unlit");
+                var m = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
+                Color c = new Color(0.92f, 0.96f, 1f);
+                m.color = c; if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+                r.sharedMaterial = m;
+            }
+            StartCoroutine(Blink(l, dot));
             return go;
         }
 
-        IEnumerator Blink(Light l)
+        IEnumerator Blink(Light l, GameObject dot)
         {
             while (l != null)
             {
-                l.enabled = !l.enabled;
+                bool on = !l.enabled;
+                l.enabled = on;
+                if (dot != null) dot.SetActive(on);
                 yield return new WaitForSeconds(Random.Range(0.12f, 0.5f));
             }
         }
