@@ -350,8 +350,17 @@ namespace FolkloreArchives
             yield return SayFor("Igual qué lindo quedó el campamento, ¿no?", 3.2f);
             yield return SayFor("Sí, tranqui. Una noche perfecta.", 3.0f);
 
-            // LUZ PARPADEANTE de unos binoculares desde la torre (alguien los observa).
+            // LUZ PARPADEANTE de unos binoculares desde la torre (alguien los observa). La torre está
+            // a ~106m: el clip de noche (85m) y la niebla densa la tapan -> extiendo la vista y aclaro
+            // un poco la niebla mientras dura el destello (y lo restauro después).
             var beacon = MakeBlinkingLight(towerLightPos);
+            var party = Object.FindFirstObjectByType<PartyController>();
+            Camera pcam = party != null ? party.personCam : null;
+            float savedClip = pcam != null ? pcam.farClipPlane : 85f;
+            float savedFog = RenderSettings.fogDensity;
+            if (pcam != null) pcam.farClipPlane = 220f;
+            RenderSettings.fogDensity = 0.012f;
+
             yield return SayFor("...¿vieron esa luz en la torre?", 2.6f);
             yield return SayFor("Parpadea... como si alguien nos estuviera mirando.", 3.2f);
             // susto del jugador y de Rufus.
@@ -359,6 +368,8 @@ namespace FolkloreArchives
             yield return SayFor("Dale, no es nada. Son unos faloperos de la torre.", 3.2f);
             yield return SayFor("Vayan a dormir, mañana seguimos.", 3.0f);
             if (beacon != null) Destroy(beacon);
+            if (pcam != null) pcam.farClipPlane = savedClip;   // restaurar la vista cerrada de noche
+            RenderSettings.fogDensity = savedFog;
 
             // todos se levantan de los troncos y se van a DORMIR (acostados dentro de sus carpas).
             yield return EveryoneToSleep();
