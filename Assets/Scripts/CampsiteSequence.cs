@@ -60,6 +60,8 @@ namespace FolkloreArchives
         public Vector3 greenSitPos  = new Vector3(246.0744f, 23.76039f, 229.2029f); // el negro en el tronco que era de ellos (sur); yaw auto a la fogata
         public Vector3 greenStandPos = new Vector3(239.8789f, 22.83138f, 233.3926f); // el negro queda PARADO al lado de su carpa (esperando que le hables)
         public float   greenStandYaw = 159.173f;
+        public Vector3 greenSleepPos = new Vector3(240.9831f, 22.69508f, 236.8229f); // el negro se acuesta ADENTRO de su carpa (owner)
+        public float   greenSleepYaw = 134.933f;
         public float   seatYOffset  = -1.3f;   // ajuste de altura al sentarse en el tronco (m). Más negativo = más abajo.
 
         [Header("Cajuela")]
@@ -426,7 +428,7 @@ namespace FolkloreArchives
 
             StartCoroutine(SleepInTent(casual, tentPairPos, tentPairYaw, Right(tentPairYaw) * -0.35f));
             StartCoroutine(SleepInTent(chica,  tentPairPos, tentPairYaw, Right(tentPairYaw) *  0.35f));
-            StartCoroutine(SleepInTent(green,  greenTentPos, greenTentYaw, Vector3.zero));
+            StartCoroutine(SleepInTent(green,  greenSleepPos, greenSleepYaw, Vector3.zero));
 
             Vector3 pTent = _playerTent != null ? _playerTent.transform.position : playerSitPos;
             float pYaw = _playerTent != null ? _playerTent.transform.eulerAngles.y : playerSitYaw;
