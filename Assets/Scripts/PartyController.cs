@@ -104,6 +104,14 @@ namespace FolkloreArchives
             return Vector3.Angle(personCam.transform.forward, to) < 35f;    // apuntándolo
         }
 
+        // fuerza el control (persona/perro) desde una cinemática (ej. CampsiteSequence: la escena
+        // nocturna donde controlás a Rufus).
+        public void ForceControl(bool controlDog)
+        {
+            controllingDog = controlDog;
+            Apply();
+        }
+
         void Apply()
         {
             // owner: "controlando al perro también se mueve el auto" -> el auto NO debe leer WASD

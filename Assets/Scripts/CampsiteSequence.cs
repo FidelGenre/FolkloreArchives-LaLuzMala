@@ -75,6 +75,11 @@ namespace FolkloreArchives
         public Vector3 nightCamPos  = new Vector3(234.8221f, 26.89305f, 222.9142f); // cámara de la noche (24.593 + 2.30 de altura de ojos)
         public float   nightCamYaw  = 60.933f;
         public Vector3 towerLightPos = new Vector3(352.3531f, 51.31269f, 219.8981f); // binoculares parpadeando en la torre (owner)
+
+        [Header("Escena nocturna: Rufus + Luz Mala (owner)")]
+        public Vector3 luzMalaPos = new Vector3(194.1414f, 23.9108f, 254.7851f); // la Luz Mala aparece acá (lago)
+        public Vector3 dogPoopPos = new Vector3(238f, 24f, 241f);                 // Rufus va a cagar acá (provisional, pasame el exacto)
+        LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
 
@@ -92,6 +97,10 @@ namespace FolkloreArchives
             car = Object.FindFirstObjectByType<CarController>();
             autoDrive = car != null ? car.GetComponent<CarAutoDrive>() : null;
             HideCampForSetup();   // las carpas arrancan OCULTAS -> aparecen off-camera al llegar
+            // la Luz Mala arranca DESACTIVADA (si no, aparecería sola de noche); la controla la
+            // escena nocturna (aparece en el lago cuando Rufus termina de cagar).
+            _luzMala = Object.FindFirstObjectByType<LuzMala>();
+            if (_luzMala != null) _luzMala.gameObject.SetActive(false);
             StartCoroutine(Run());
         }
 
@@ -421,6 +430,97 @@ namespace FolkloreArchives
             Vector3 pTent = _playerTent != null ? _playerTent.transform.position : playerSitPos;
             float pYaw = _playerTent != null ? _playerTent.transform.eulerAngles.y : playerSitYaw;
             yield return SleepInTent(player, pTent, pYaw, Vector3.zero);
+
+            // Rufus se echa al lado del jugador en la carpa (después se levanta a cagar).
+            Transform dog = op != null && op.dog != null ? op.dog.transform : null;
+            if (dog != null) PlaceStandingYaw(dog, pTent + Right(pYaw) * 0.7f, pYaw);
+
+            // ESCENA NOCTURNA: se cambia a Rufus, se levanta a cagar, ve la Luz Mala en el lago,
+            // ladra -> se va, y el jugador se despierta y lo lleva a dormir.
+            yield return DogNightScene(pTent, pYaw);
+        }
+
+        // Rufus (lo controlás) se levanta, va a cagar, ve la Luz Mala en el lago, ladra -> se va;
+        // el jugador se despierta y lo lleva de nuevo a la carpa.
+        IEnumerator DogNightScene(Vector3 playerTent, float playerYaw)
+        {
+            Transform dog = op != null && op.dog != null ? op.dog.transform : null;
+            Transform player = op != null && op.player != null ? op.player.transform : null;
+            if (dog == null) yield break;
+
+            yield return new WaitForSeconds(1.5f);   // duermen un rato
+
+            // 1) se cambia el control a Rufus (cámara del perro). Va CAMINANDO a cagar (scripteado).
+            var party = Object.FindFirstObjectByType<PartyController>();
+            if (party != null) party.ForceControl(true);
+            PartyController.CinematicLock = true;   // el walk lo hago yo (StepToward)
+            float t = 0f;
+            while (Flat2(dog.position, dogPoopPos) > 0.5f && t < 15f) { StepToward(dog, dogPoopPos, 2.2f); t += Time.deltaTime; yield return null; }
+
+            // 2) caga (pausa + una cacota chiquita).
+            _playerHint = "Rufus se pone a cagar...";
+            var poop = MakePoop(dog.position + dog.forward * -0.3f);
+            yield return new WaitForSeconds(2.5f);
+            _playerHint = null;
+
+            // 3) aparece la LUZ MALA en el lago (lejos). El perro la mira.
+            if (_luzMala != null)
+            {
+                _luzMala.transform.position = luzMalaPos;
+                _luzMala.holdStill = true;
+                _luzMala.gameObject.SetActive(true);
+            }
+            FaceTarget(dog, luzMalaPos);
+
+            // 4) te devuelvo el control del perro para que LADRES (B). La Luz Mala se va al ladrar.
+            PartyController.CinematicLock = false;
+            _playerHint = "[B] Ladrarle a la luz";
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            float guard = 0f;
+            while (guard < 25f && !(kb != null && kb.bKey.wasPressedThisFrame)) { guard += Time.deltaTime; yield return null; }
+            _playerHint = null;
+            if (_luzMala != null) _luzMala.gameObject.SetActive(false);   // se va al ladrar
+            yield return new WaitForSeconds(0.8f);
+
+            // 5) el jugador se DESPIERTA (control a la persona) y va a buscar a Rufus.
+            PartyController.CinematicLock = true;
+            if (party != null) party.ForceControl(false);
+            if (player != null)
+            {
+                var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
+                var pcc = player.GetComponent<CharacterController>(); if (pcc != null) pcc.enabled = false;
+                player.rotation = Quaternion.Euler(0f, playerYaw, 0f);
+                t = 0f;
+                while (Flat2(player.position, dog.position) > 1.2f && t < 15f) { StepToward(player, dog.position, 2.2f); t += Time.deltaTime; yield return null; }
+            }
+            yield return SayFor("Rufus, ¿qué hacés? Vení, a dormir.", 3f);
+
+            // 6) el jugador lleva a Rufus de vuelta a la carpa; los dos se echan.
+            if (poop != null) { /* la cacota queda */ }
+            var pDest = playerTent;
+            float tt = 0f;
+            while ((player != null && Flat2(player.position, pDest) > 0.6f) && tt < 15f)
+            {
+                if (player != null) StepToward(player, pDest, 2.0f);
+                StepToward(dog, pDest + Right(playerYaw) * 0.7f, 2.0f);   // Rufus sigue al lado
+                tt += Time.deltaTime; yield return null;
+            }
+            if (player != null) PlaceLyingInTent(player, pDest, playerYaw);
+            PlaceStandingYaw(dog, pDest + Right(playerYaw) * 0.7f, playerYaw);
+            // (fin de la noche por ahora)
+        }
+
+        // una cacota chiquita (marrón) en el piso.
+        GameObject MakePoop(Vector3 pos)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            go.name = "Cacota";
+            var col = go.GetComponent<Collider>(); if (col != null) Destroy(col);
+            pos.y = GroundY(pos, pos.y) + 0.05f;
+            go.transform.position = pos;
+            go.transform.localScale = new Vector3(0.14f, 0.08f, 0.14f);
+            var r = go.GetComponent<Renderer>(); if (r != null) r.material.color = new Color(0.28f, 0.18f, 0.08f);
+            return go;
         }
 
         // un personaje se PARA, camina a su carpa y se ACUESTA dentro.
