@@ -361,8 +361,8 @@ namespace FolkloreArchives
             if (pcam != null) pcam.farClipPlane = 220f;
             RenderSettings.fogDensity = 0.012f;
 
-            yield return SayFor("...¿vieron esa luz en la torre?", 2.6f);
-            yield return SayFor("Parpadea... como si alguien nos estuviera mirando.", 3.2f);
+            yield return SayFor("...¿vieron esa luz blanca en la torre?", 2.6f);
+            yield return SayFor("Es fija... como si alguien nos mirara con binoculares.", 3.2f);
             // susto del jugador y de Rufus.
             yield return SayFor("(Rufus gruñe y se te pega, erizado)", 2.6f);
             yield return SayFor("Dale, no es nada. Son unos faloperos de la torre.", 3.2f);
@@ -375,15 +375,15 @@ namespace FolkloreArchives
             yield return EveryoneToSleep();
         }
 
-        // destello que PARPADEA (binoculares) en la torre: luz puntual (glow local) + una esfera
-        // BRILLANTE unlit para que se VEA el puntito desde el campamento (a ~106m). Se destruye al final.
+        // luz BLANCA FIJA (reflejo de unos binoculares) en la torre: luz puntual (glow local) + una
+        // esfera BLANCA unlit para que se VEA el punto desde el campamento (a ~106m). No parpadea.
         GameObject MakeBlinkingLight(Vector3 pos)
         {
             var go = new GameObject("BinocularesTorre");
             go.transform.position = pos;
             var l = go.AddComponent<Light>();
             l.type = LightType.Point;
-            l.color = new Color(0.85f, 0.92f, 1f);
+            l.color = Color.white;
             l.intensity = 8f;
             l.range = 30f;
 
@@ -397,23 +397,10 @@ namespace FolkloreArchives
             {
                 var sh = Shader.Find("Universal Render Pipeline/Unlit");
                 var m = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
-                Color c = new Color(0.92f, 0.96f, 1f);
-                m.color = c; if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+                m.color = Color.white; if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", Color.white);
                 r.sharedMaterial = m;
             }
-            StartCoroutine(Blink(l, dot));
             return go;
-        }
-
-        IEnumerator Blink(Light l, GameObject dot)
-        {
-            while (l != null)
-            {
-                bool on = !l.enabled;
-                l.enabled = on;
-                if (dot != null) dot.SetActive(on);
-                yield return new WaitForSeconds(Random.Range(0.12f, 0.5f));
-            }
         }
 
         // todos se paran y van a acostarse DENTRO de su carpa.
