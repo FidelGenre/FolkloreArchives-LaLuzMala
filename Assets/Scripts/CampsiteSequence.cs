@@ -77,8 +77,10 @@ namespace FolkloreArchives
         public Vector3 towerLightPos = new Vector3(352.3531f, 51.31269f, 219.8981f); // binoculares parpadeando en la torre (owner)
 
         [Header("Escena nocturna: Rufus + Luz Mala (owner)")]
-        public Vector3 luzMalaPos = new Vector3(194.1414f, 23.9108f, 254.7851f); // la Luz Mala aparece acá (lago)
-        public Vector3 dogPoopPos = new Vector3(238f, 24f, 241f);                 // Rufus va a cagar acá (provisional, pasame el exacto)
+        public Vector3 luzMalaPos = new Vector3(194.1414f, 23.9108f, 254.7851f); // la Luz Mala aparece acá (lago, de lejos)
+        public Vector3 dogPoopPos = new Vector3(242.588f, 23.2307f, 219.621f);    // Rufus va a cagar acá (owner)
+        public Vector3 dogBarkPos = new Vector3(232.609f, 23.88499f, 239.5024f);  // Rufus se para acá a ladrarle a la luz (owner)
+        public float   dogBarkYaw = -68.502f;                                      // mirando al lago (Luz Mala)
         LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
@@ -450,64 +452,52 @@ namespace FolkloreArchives
 
             yield return new WaitForSeconds(1.5f);   // duermen un rato
 
-            // 1) se cambia el control a Rufus (cámara del perro). Va CAMINANDO a cagar (scripteado).
+            // 1) CONTROL a Rufus (LIBRE: te movés vos, cámara del perro). Se levanta de al lado tuyo.
             var party = Object.FindFirstObjectByType<PartyController>();
             if (party != null) party.ForceControl(true);
-            PartyController.CinematicLock = true;   // el walk lo hago yo (StepToward)
-            float t = 0f;
-            while (Flat2(dog.position, dogPoopPos) > 0.5f && t < 15f) { StepToward(dog, dogPoopPos, 2.2f); t += Time.deltaTime; yield return null; }
+            PartyController.CinematicLock = false;   // te movés vos
+            var dcc = dog.GetComponent<CharacterController>(); if (dcc != null) dcc.enabled = true;
 
-            // 2) caga (pausa + una cacota chiquita).
-            _playerHint = "Rufus se pone a cagar...";
-            var poop = MakePoop(dog.position + dog.forward * -0.3f);
-            yield return new WaitForSeconds(2.5f);
+            // 2) llevá a Rufus al lugar y "[E] Cagar" (te movés hasta ahí).
+            yield return WaitPlayerInteract(dog, dogPoopPos, 2.8f, "[E] Cagar");
+            var poop = MakePoop(dog.position + dog.forward * -0.35f);
             _playerHint = null;
+            yield return new WaitForSeconds(1.2f);
 
-            // 3) aparece la LUZ MALA en el lago (lejos). El perro la mira.
+            // 3) al cagar, aparece la LUZ MALA EN FRENTE (en el lago). Andá hacia ella (seguís vos).
             if (_luzMala != null)
             {
                 _luzMala.transform.position = luzMalaPos;
                 _luzMala.holdStill = true;
                 _luzMala.gameObject.SetActive(true);
             }
-            FaceTarget(dog, luzMalaPos);
+            _playerHint = "Una luz en el lago... acercate";
 
-            // 4) te devuelvo el control del perro para que LADRES (B). La Luz Mala se va al ladrar.
-            PartyController.CinematicLock = false;
-            _playerHint = "[B] Ladrarle a la luz";
-            var kb = UnityEngine.InputSystem.Keyboard.current;
+            // 4) cuando LLEGÁS al punto (frente a la luz), Rufus se PAUSA y LADRA solo -> la luz se va.
             float guard = 0f;
-            while (guard < 25f && !(kb != null && kb.bKey.wasPressedThisFrame)) { guard += Time.deltaTime; yield return null; }
+            while (guard < 60f && Flat2(dog.position, dogBarkPos) > 2.5f) { guard += Time.deltaTime; yield return null; }
             _playerHint = null;
+            PartyController.CinematicLock = true;   // Rufus se pausa (no lo movés)
+            PlaceStandingYaw(dog, dogBarkPos, dogBarkYaw);   // parado en el punto, mirando la luz
+            var da = dog.GetComponent<DogAudio>();
+            if (da != null) da.Bark();
+            yield return new WaitForSeconds(0.7f);
+            if (da != null) da.Bark();
             if (_luzMala != null) _luzMala.gameObject.SetActive(false);   // se va al ladrar
-            yield return new WaitForSeconds(0.8f);
+            yield return new WaitForSeconds(0.9f);
 
-            // 5) el jugador se DESPIERTA (control a la persona) y va a buscar a Rufus.
-            PartyController.CinematicLock = true;
+            // 5) se despierta el OTRO jugador (la persona) y LLAMA a Rufus. Te devuelvo el control de
+            //    la persona; Rufus te sigue.
             if (party != null) party.ForceControl(false);
             if (player != null)
             {
                 var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
-                var pcc = player.GetComponent<CharacterController>(); if (pcc != null) pcc.enabled = false;
+                var pcc = player.GetComponent<CharacterController>(); if (pcc != null) pcc.enabled = true;
                 player.rotation = Quaternion.Euler(0f, playerYaw, 0f);
-                t = 0f;
-                while (Flat2(player.position, dog.position) > 1.2f && t < 15f) { StepToward(player, dog.position, 2.2f); t += Time.deltaTime; yield return null; }
             }
-            yield return SayFor("Rufus, ¿qué hacés? Vení, a dormir.", 3f);
-
-            // 6) el jugador lleva a Rufus de vuelta a la carpa; los dos se echan.
-            if (poop != null) { /* la cacota queda */ }
-            var pDest = playerTent;
-            float tt = 0f;
-            while ((player != null && Flat2(player.position, pDest) > 0.6f) && tt < 15f)
-            {
-                if (player != null) StepToward(player, pDest, 2.0f);
-                StepToward(dog, pDest + Right(playerYaw) * 0.7f, 2.0f);   // Rufus sigue al lado
-                tt += Time.deltaTime; yield return null;
-            }
-            if (player != null) PlaceLyingInTent(player, pDest, playerYaw);
-            PlaceStandingYaw(dog, pDest + Right(playerYaw) * 0.7f, playerYaw);
-            // (fin de la noche por ahora)
+            yield return SayFor("¡Rufus! ¿Qué hacés ahí? Vení, a dormir.", 3.2f);
+            PartyController.CinematicLock = false;   // volvés a jugar (llevá a Rufus a la carpa)
+            // (próximo: dormir del todo -> día siguiente)
         }
 
         // una cacota chiquita (marrón) en el piso.
