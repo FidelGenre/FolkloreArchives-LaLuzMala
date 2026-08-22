@@ -172,19 +172,20 @@ namespace FolkloreArchives
                 // (si no, en el atardecer no se ven ni las montañas del skybox).
                 bool dusk = _phase == Phase.Dusk;
 
-                // niebla: exp². "Más lejos" = menos densidad.
-                RenderSettings.fogDensity = (dusk ? 0.018f : 0.05f) / Mathf.Max(0.3f, GameSettings.FogFarMul);
-                float grassDist = (dusk ? 32f : 15f) * GameSettings.GrassDistanceMul;
+                // niebla: exp². "Más lejos" = menos densidad. owner: "aumentá la vista de día" ->
+                // la TARDE tiene menos niebla y MÁS distancia de vista que antes.
+                RenderSettings.fogDensity = (dusk ? 0.009f : 0.05f) / Mathf.Max(0.3f, GameSettings.FogFarMul);
+                float grassDist = (dusk ? 48f : 15f) * GameSettings.GrassDistanceMul;
                 if (terrain != null)
                 {
                     terrain.detailObjectDistance = grassDist;
-                    terrain.treeDistance         = (dusk ? 85f : 55f) * GameSettings.TreeDistanceMul;
+                    terrain.treeDistance         = (dusk ? 150f : 55f) * GameSettings.TreeDistanceMul;
                     // night: dense fog + short flashlight, billboards even closer (~22m)
-                    terrain.treeBillboardDistance = (dusk ? 30f : 22f) * GameSettings.TreeBillboardMul;
+                    terrain.treeBillboardDistance = (dusk ? 45f : 22f) * GameSettings.TreeBillboardMul;
                     terrain.detailObjectDensity  = (dusk ? 0.24f : 0.28f) * GameSettings.GrassDensityMul;
                     terrain.Flush(); // reconstruye pasto/árboles YA (no de a poco al cambiar preset)
                 }
-                SetGameplayFarClip((dusk ? 120f : 85f) * GameSettings.ViewDistanceMul);
+                SetGameplayFarClip((dusk ? 220f : 85f) * GameSettings.ViewDistanceMul);
                 Shader.SetGlobalFloat("_GrassFadeEnd", grassDist);
                 Shader.SetGlobalFloat("_GrassFadeStart", Mathf.Max(0f, grassDist - 4f));
             }

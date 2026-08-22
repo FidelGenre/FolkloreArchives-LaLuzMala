@@ -334,10 +334,19 @@ namespace FolkloreArchives
             Transform dog = op != null && op.dog != null ? op.dog.transform : null;
             if (dog != null) PlaceStandingYaw(dog, playerSitPos + Right(playerSitYaw) * 0.9f, playerSitYaw);
 
-            // cámara fija de la noche + transición SUAVE (en paralelo con la charla).
+            // cámara fija de la noche.
             MakeNightCam();
+
+            // VISTA EXTENDIDA durante TODA la charla (se ve lejos, se llega a ver la torre a ~106m).
+            var party = Object.FindFirstObjectByType<PartyController>();
+            Camera pcam = party != null ? party.personCam : null;
+            if (pcam != null) pcam.farClipPlane = 260f;
+            RenderSettings.fogDensity = 0.010f;
+
+            // se oscurece SUAVE pero MANTENIENDO la vista abierta (oscurece sol/ambiente/cielo,
+            // NO sube la niebla ni cierra el clip). Corre en paralelo con la charla.
             var dn = Object.FindFirstObjectByType<DayNightController>();
-            if (dn != null) StartCoroutine(dn.FadeToNight(12f));
+            if (dn != null) StartCoroutine(DarkenKeepingView(dn, 12f));
 
             // CHARLA junto al fuego (cuentan cosas, se ríen) mientras se hace de noche.
             yield return SayFor("¿Se acuerdan la última vez que acampamos acá?", 3.2f);
@@ -350,26 +359,15 @@ namespace FolkloreArchives
             yield return SayFor("Igual qué lindo quedó el campamento, ¿no?", 3.2f);
             yield return SayFor("Sí, tranqui. Una noche perfecta.", 3.0f);
 
-            // LUZ PARPADEANTE de unos binoculares desde la torre (alguien los observa). La torre está
-            // a ~106m: el clip de noche (85m) y la niebla densa la tapan -> extiendo la vista y aclaro
-            // un poco la niebla mientras dura el destello (y lo restauro después).
+            // LUZ BLANCA FIJA de unos binoculares desde la torre (alguien los observa).
             var beacon = MakeBlinkingLight(towerLightPos);
-            var party = Object.FindFirstObjectByType<PartyController>();
-            Camera pcam = party != null ? party.personCam : null;
-            float savedClip = pcam != null ? pcam.farClipPlane : 85f;
-            float savedFog = RenderSettings.fogDensity;
-            if (pcam != null) pcam.farClipPlane = 220f;
-            RenderSettings.fogDensity = 0.012f;
-
             yield return SayFor("...¿vieron esa luz blanca en la torre?", 2.6f);
             yield return SayFor("Es fija... como si alguien nos mirara con binoculares.", 3.2f);
-            // susto del jugador y de Rufus.
+            // el jugador y Rufus se asustan; los otros LOS cargan por asustadizos.
             yield return SayFor("(Rufus gruñe y se te pega, erizado)", 2.6f);
-            yield return SayFor("Dale, no es nada. Son unos faloperos de la torre.", 3.2f);
-            yield return SayFor("Vayan a dormir, mañana seguimos.", 3.0f);
+            yield return SayFor("Uy, arrancaron ustedes dos... ¡par de faloperos!", 3.2f);
+            yield return SayFor("No fue nada, vayan a dormir. Mañana seguimos.", 3.0f);
             if (beacon != null) Destroy(beacon);
-            if (pcam != null) pcam.farClipPlane = savedClip;   // restaurar la vista cerrada de noche
-            RenderSettings.fogDensity = savedFog;
 
             // todos se levantan de los troncos y se van a DORMIR (acostados dentro de sus carpas).
             yield return EveryoneToSleep();
@@ -407,6 +405,10 @@ namespace FolkloreArchives
         IEnumerator EveryoneToSleep()
         {
             RemoveSeatedLook();   // el jugador se levanta -> se saca el free-look sentado
+            // cerrar la noche del todo (niebla/clip normales de noche + fase Night para la Luz Mala).
+            var dn = Object.FindFirstObjectByType<DayNightController>();
+            if (dn != null) dn.SetPhase(DayNightController.Phase.Night);
+
             Transform player = op != null && op.player != null ? op.player.transform : null;
             Transform casual = op != null ? op.friendMaleCasual  : null;
             Transform green  = op != null ? op.friendMaleGreenJkt : null;
@@ -467,6 +469,27 @@ namespace FolkloreArchives
                 var sl = party.personCam.GetComponent<SeatedLook>();
                 if (sl != null) Destroy(sl);
                 party.personCam.transform.localRotation = Quaternion.identity;
+            }
+        }
+
+        // oscurece la escena (sol/ambiente/cielo hacia noche) SIN tocar la niebla ni el clip -> la
+        // vista queda ABIERTA durante toda la charla. La fase Night definitiva la pone al ir a dormir.
+        IEnumerator DarkenKeepingView(DayNightController dn, float secs)
+        {
+            float t = 0f;
+            while (t < secs)
+            {
+                float k = t / secs;
+                if (dn != null && dn.sun != null)
+                {
+                    dn.sun.intensity = Mathf.Lerp(0.72f, 0.16f, k);
+                    dn.sun.color     = Color.Lerp(new Color(1f, 0.78f, 0.58f), new Color(0.42f, 0.52f, 0.78f), k);
+                }
+                RenderSettings.ambientLight = Color.Lerp(new Color(0.22f, 0.20f, 0.25f), new Color(0.016f, 0.026f, 0.052f), k);
+                if (k >= 0.5f && dn != null && dn.nightSkybox != null && RenderSettings.skybox != dn.nightSkybox)
+                    RenderSettings.skybox = dn.nightSkybox;
+                t += Time.deltaTime;
+                yield return null;
             }
         }
 
