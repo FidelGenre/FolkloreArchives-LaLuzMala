@@ -324,6 +324,20 @@ namespace FolkloreArchives
         }
 
         // clon TRANSLÚCIDO celeste de la carpa, para marcar DÓNDE ponerla (sin collider).
+        // fantasma de 'tent' colocado en 'pos' mirando 'yaw' (para marcar dónde va antes de armarla).
+        GameObject MakeGhostAt(GameObject tent, Vector3 pos, float yaw)
+        {
+            if (tent == null) return null;
+            var ghost = MakeTentGhost(tent);
+            if (ghost != null)
+            {
+                Vector3 gp = pos; gp.y = GroundY(pos, pos.y);
+                ghost.transform.position = gp;
+                ghost.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            }
+            return ghost;
+        }
+
         GameObject MakeTentGhost(GameObject tent)
         {
             var ghost = Instantiate(tent);
@@ -380,6 +394,9 @@ namespace FolkloreArchives
         // PARADO en su tronco esperando a que el jugador le hable (NO se sienta todavía).
         IEnumerator GreenTentThenStand(Transform green, GameObject tent, Vector3 fire)
         {
+            // carpa FANTASMA (transparente) en el lugar, desde el arranque, hasta que la ponga.
+            GameObject ghost = MakeGhostAt(tent, greenTentPos, greenTentYaw);
+
             // se para del lado por donde VIENE (el auto), justo ANTES de la carpa, MIRÁNDOLA. Así
             // frena adelante y no se pasa de largo (antes venía del lado de la fogata = opuesto).
             Vector3 fromCar = car.transform.position - greenTentPos; fromCar.y = 0f;
@@ -390,10 +407,8 @@ namespace FolkloreArchives
             FaceTarget(green, greenTentPos);
             yield return new WaitForSeconds(0.5f);   // plantado, mirando el lugar
 
-            float dn = green != null ? Flat2(green.position, greenTentPos) : -1f;
-            string tn = tent != null ? tent.name : "NULL";
-            Debug.Log($"<color=orange>[Camp] NEGRO llego (d={dn:0.0}m) -> arma '{tn}' en {greenTentPos} (t={Time.time:0.0}s)</color>");
-            // aparece la carpa DELANTE de él.
+            // aparece la carpa (el fantasma se reemplaza por la real).
+            if (ghost != null) Destroy(ghost);
             if (tent != null)
             {
                 Vector3 tp = greenTentPos; tp.y = GroundY(greenTentPos, greenTentPos.y);
@@ -425,8 +440,9 @@ namespace FolkloreArchives
         // tronco y se sienta; el chico va a buscar leña y la lleva a la fogata.
         IEnumerator PairTentThenTasks(Transform chico, Transform chica, GameObject tent, Vector3 fire)
         {
-            // se paran ENFRENTE del lugar de la carpa (del lado de la fogata), flanqueándola y
-            // MIRÁNDOLA. Los muevo a los DOS desde acá y salgo cuando AMBOS están a <=0.4m.
+            // carpa FANTASMA (transparente) en el lugar, desde el arranque, hasta que la pongan.
+            GameObject ghost = MakeGhostAt(tent, tentPairPos, tentPairYaw);
+
             // la pareja se para en pairStandPos (punto exacto del owner). Los separo PERPENDICULAR
             // al eje pareja-carpa, así los DOS quedan a la misma distancia del punto (no uno lejos).
             Vector3 toTent = tentPairPos - pairStandPos; toTent.y = 0f;
@@ -445,15 +461,11 @@ namespace FolkloreArchives
                 t += Time.deltaTime;
                 yield return null;
             }
-            FaceTarget(chico, tentPairPos); FaceTarget(chica, tentPairPos);   // miran la carpa
+            FaceTarget(chico, tentPairPos); FaceTarget(chica, tentPairPos);   // MIRAN la carpa (no se dan vuelta todavía)
             yield return new WaitForSeconds(0.5f);   // plantados, mirando -> ahora aparece la carpa
 
-            float dpc = chico != null ? Flat2(chico.position, pairStandPos) : -1f;
-            float dph = chica != null ? Flat2(chica.position, pairStandPos) : -1f;
-            string tnp = tent != null ? tent.name : "NULL";
-            Vector3 tentVis = tent != null ? tent.transform.position : Vector3.zero;
-            Debug.Log($"<color=cyan>[Camp] PAREJA al PUNTO (chico d={dpc:0.0}m chica d={dph:0.0}m) -> SetActive '{tnp}'. carpa.transform en {tentVis} (t={Time.time:0.0}s)</color>");
-            // aparece la carpa DELANTE de ellos.
+            // aparece la carpa (el fantasma se reemplaza por la real).
+            if (ghost != null) Destroy(ghost);
             if (tent != null)
             {
                 Vector3 tp = tentPairPos; tp.y = GroundY(tentPairPos, tentPairPos.y);
@@ -465,8 +477,8 @@ namespace FolkloreArchives
                 yield return PopScale(tent, full);
             }
 
-            yield return new WaitForSeconds(0.9f);   // se quedan mirando la carpa ya armada
-            // la chica va al tronco y se sienta; el chico (MaleCasual) se sienta AL LADO de ella.
+            // YA puesta la carpa: la miran un rato y RECIÉN AHÍ se dan vuelta para ir a los troncos.
+            yield return new WaitForSeconds(1.2f);
             if (chica != null) StartCoroutine(SitOnLog(chica));
             if (chico != null) StartCoroutine(SitNextToChica(chico));
         }
