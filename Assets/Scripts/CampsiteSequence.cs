@@ -306,7 +306,10 @@ namespace FolkloreArchives
                 log.transform.rotation = Quaternion.Euler(0f, -25f, 90f);
             }
 
-            // 6) ya está la leña -> PRENDER la fogata (recién ahora aparece la opción).
+            // 6) recién cuando el negro TAMBIÉN dejó su leña -> aparece la opción de PRENDER.
+            _playerHint = "Esperá a que traigan la leña...";
+            yield return new WaitUntil(() => _negroWoodDone);
+            _playerHint = null;
             yield return WaitPlayerInteract(player, fire, playerReach, "[E] Prender la fogata");
             SetCampfireLit(true);
 
@@ -330,11 +333,30 @@ namespace FolkloreArchives
             Transform dog = op != null && op.dog != null ? op.dog.transform : null;
             if (dog != null) PlaceStandingYaw(dog, playerSitPos + Right(playerSitYaw) * 0.9f, playerSitYaw);
 
-            // cámara fija de la noche + transición suave.
+            // cámara fija de la noche + transición SUAVE (en paralelo con la charla).
             MakeNightCam();
             var dn = Object.FindFirstObjectByType<DayNightController>();
-            if (dn != null) yield return dn.FadeToNight(12f);
-            else yield return new WaitForSeconds(2f);
+            if (dn != null) StartCoroutine(dn.FadeToNight(12f));
+
+            // CHARLA junto al fuego (cuentan cosas, se ríen) mientras se hace de noche.
+            yield return SayFor("¿Se acuerdan la última vez que acampamos acá?", 3.2f);
+            yield return SayFor("¡Jaja sí! Cuando se te prendió fuego la campera, gordo.", 3.4f);
+            yield return SayFor("Eh, casi me muero y ustedes cagados de risa...", 3.2f);
+
+            // a mitad de la charla, la cámara pasa a 1ª PERSONA (seguís sentado).
+            SwitchToPlayerCamSeated();
+
+            yield return SayFor("Igual qué lindo quedó el campamento, ¿no?", 3.2f);
+            yield return SayFor("Sí, tranqui. Una noche perfecta.", 3.0f);
+            // (próximo: luz parpadeante de la torre -> susto -> a dormir)
+        }
+
+        // pasa de la cámara de la noche a la del JUGADOR (1ª persona), siguiendo sentado.
+        void SwitchToPlayerCamSeated()
+        {
+            if (_overhead != null) { Destroy(_overhead.gameObject); _overhead = null; }
+            var party = Object.FindFirstObjectByType<PartyController>();
+            if (party != null && party.personCam != null) party.personCam.gameObject.SetActive(true);
         }
 
         // cámara fija que mira la fogata mientras se hace de noche (apaga persona/perro).
@@ -480,9 +502,12 @@ namespace FolkloreArchives
         }
 
         // (lo llama PlayerCampTasks tras el diálogo) el negro va a buscar leña y RECIÉN AHÍ se sienta.
+        bool _negroWoodDone;   // el negro ya dejó su leña en la fogata (la fogata se prende cuando esto + la tuya)
+
         IEnumerator NegroFetchThenSit(Transform negro, Vector3 fire)
         {
             yield return NpcFetchWoodTo(negro, woodPlayerPos, fire, new Vector3(1.3f, 0f, 0.5f));
+            _negroWoodDone = true;
             if (negro == null) yield break;
             StartCoroutine(WalkNpcTo(negro, greenSitPos, fire, null));
             float t = 0f; while (t < 14f && Flat2(negro.position, greenSitPos) > 1.0f) { t += Time.deltaTime; yield return null; }
