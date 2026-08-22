@@ -6,6 +6,7 @@
 //  cámara) partiendo de los valores base por modo y multiplicándolos
 //  por los settings gráficos del jugador (GameSettings).
 // ============================================================
+using System.Collections;
 using UnityEngine;
 
 namespace FolkloreArchives
@@ -107,6 +108,37 @@ namespace FolkloreArchives
             }
 
             ApplyGraphics(); // distancias/niebla con los multiplicadores de GameSettings
+        }
+
+        // Transición SUAVE de TARDE (Dusk) a NOCHE en 'secs' segundos (no un corte). Interpola sol,
+        // ambiente, niebla y tinte del pasto; cambia el skybox a mitad de camino (la niebla ya
+        // oculta el cielo). Al terminar deja la fase Night limpia.
+        public IEnumerator FadeToNight(float secs)
+        {
+            SetPhase(Phase.Dusk);
+            float t = 0f;
+            while (t < secs) { t += Time.deltaTime; SetNightBlend(t / secs); yield return null; }
+            SetPhase(Phase.Night);
+        }
+
+        // aplica un estado intermedio tarde(0)->noche(1). No toca las distancias del terreno (caras
+        // de recalcular); esas quedan como Dusk hasta que FadeToNight llama SetPhase(Night) al final.
+        public void SetNightBlend(float k)
+        {
+            k = Mathf.Clamp01(k);
+            if (sun != null)
+            {
+                sun.intensity = Mathf.Lerp(0.72f, 0.16f, k);
+                sun.color     = Color.Lerp(new Color(1f, 0.78f, 0.58f), new Color(0.42f, 0.52f, 0.78f), k);
+                sun.shadows   = LightShadows.Hard;
+            }
+            RenderSettings.ambientLight = Color.Lerp(new Color(0.22f, 0.20f, 0.25f), new Color(0.016f, 0.026f, 0.052f), k);
+            RenderSettings.fogMode  = FogMode.ExponentialSquared;
+            RenderSettings.fogDensity = Mathf.Lerp(0.018f, 0.05f, k) / Mathf.Max(0.3f, GameSettings.FogFarMul);
+            RenderSettings.fogColor = Color.Lerp(new Color(0.36f, 0.33f, 0.36f), new Color(0.035f, 0.055f, 0.105f), k);
+            Shader.SetGlobalColor("_GrassTintMul", Color.Lerp(new Color(0.42f, 0.34f, 0.22f), Color.white, k));
+            if (k >= 0.5f && nightSkybox != null) RenderSettings.skybox = nightSkybox;
+            else if (k < 0.5f && duskSkybox != null) RenderSettings.skybox = duskSkybox;
         }
 
         // Aplica las distancias del modo actual multiplicadas por los settings del

@@ -68,6 +68,12 @@ namespace FolkloreArchives
         [Header("Tu parte: carpa (morada) + leña")]
         public Vector3 woodPlayerPos = new Vector3(229.8513f, 24.00745f, 231.7843f); // TODOS buscan la leña acá (casual, negro y vos)
         public float   playerReach   = 3.2f;   // distancia para tus interacciones con E
+
+        [Header("Sentarse a la fogata + noche (owner)")]
+        public Vector3 playerSitPos = new Vector3(243.3525f, 23.79453f, 232.117f); // el jugador se sienta en este tronco (Rufus al lado)
+        public float   playerSitYaw = 84.533f;
+        public Vector3 nightCamPos  = new Vector3(234.8221f, 26.89305f, 222.9142f); // cámara de la noche (24.593 + 2.30 de altura de ojos)
+        public float   nightCamYaw  = 60.933f;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
 
@@ -303,7 +309,51 @@ namespace FolkloreArchives
             // 6) ya está la leña -> PRENDER la fogata (recién ahora aparece la opción).
             yield return WaitPlayerInteract(player, fire, playerReach, "[E] Prender la fogata");
             SetCampfireLit(true);
-            // (próximo: noche -> comer/hablar -> dormir -> Rufus ve la Luz Mala)
+
+            // 7) el jugador y Rufus se sientan en el tronco; una cámara muestra cómo se hace de
+            //    NOCHE de forma SUAVE (no un corte). (próximo: comer/hablar -> dormir -> Luz Mala)
+            yield return SitAtFireAndNight(player);
+        }
+
+        // el jugador camina al tronco y se sienta, Rufus queda al lado, y una cámara fija muestra
+        // la transición SUAVE tarde->noche.
+        IEnumerator SitAtFireAndNight(Transform player)
+        {
+            PartyController.CinematicLock = true;
+            var cc = player.GetComponent<CharacterController>();
+            if (cc != null) cc.enabled = false;
+            float tw = 0f;
+            while (Flat2(player.position, playerSitPos) > 0.4f && tw < 12f) { StepToward(player, playerSitPos, 2.0f); tw += Time.deltaTime; yield return null; }
+            PlaceSeated(player, playerSitPos, playerSitYaw);
+
+            // Rufus al lado (no tiene pose "sentado en tronco": lo pongo al lado, en el piso).
+            Transform dog = op != null && op.dog != null ? op.dog.transform : null;
+            if (dog != null) PlaceStandingYaw(dog, playerSitPos + Right(playerSitYaw) * 0.9f, playerSitYaw);
+
+            // cámara fija de la noche + transición suave.
+            MakeNightCam();
+            var dn = Object.FindFirstObjectByType<DayNightController>();
+            if (dn != null) yield return dn.FadeToNight(12f);
+            else yield return new WaitForSeconds(2f);
+        }
+
+        // cámara fija que mira la fogata mientras se hace de noche (apaga persona/perro).
+        void MakeNightCam()
+        {
+            if (_overhead != null) return;
+            var go = new GameObject("CampNightCam");
+            go.transform.position = nightCamPos;
+            go.transform.rotation = Quaternion.Euler(0f, nightCamYaw, 0f);
+            _overhead = go.AddComponent<Camera>();
+            _overhead.tag = "MainCamera";
+            _overhead.farClipPlane = 500f;
+            go.AddComponent<AudioListener>();
+            var party = Object.FindFirstObjectByType<PartyController>();
+            if (party != null)
+            {
+                if (party.personCam != null) party.personCam.gameObject.SetActive(false);
+                if (party.dogCam != null)    party.dogCam.gameObject.SetActive(false);
+            }
         }
 
         // espera a que el jugador esté CERCA de 'pos' y apriete E. Mientras esté cerca, muestra 'hint'.
