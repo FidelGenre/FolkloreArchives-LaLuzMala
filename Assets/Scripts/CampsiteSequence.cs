@@ -76,6 +76,8 @@ namespace FolkloreArchives
         public float   playerSitYaw = 84.533f;
         public Vector3 nightCamPos  = new Vector3(234.8221f, 26.89305f, 222.9142f); // cámara de la noche (24.593 + 2.30 de altura de ojos)
         public float   nightCamYaw  = 60.933f;
+        public float   dogFireScaleMul = 0.4f;   // qué tan chico queda Rufus sentado en el tronco (menor = más chico)
+        Transform _dogModel; Vector3 _dogModelScaleSaved;
         public Vector3 towerLightPos = new Vector3(352.3531f, 51.31269f, 219.8981f); // binoculares parpadeando en la torre (owner)
 
         [Header("Escena nocturna: Rufus + Luz Mala (owner)")]
@@ -342,9 +344,15 @@ namespace FolkloreArchives
             while (Flat2(player.position, playerSitPos) > 0.4f && tw < 12f) { StepToward(player, playerSitPos, 2.0f); tw += Time.deltaTime; yield return null; }
             PlaceSeated(player, playerSitPos, playerSitYaw);
 
-            // Rufus al lado (no tiene pose "sentado en tronco": lo pongo al lado, en el piso).
+            // Rufus al lado (no tiene pose "sentado en tronco": lo pongo al lado, en el piso). Lo
+            // ACHICO para el tronco (aparecía gigante); se restaura cuando se despierta a cagar.
             Transform dog = op != null && op.dog != null ? op.dog.transform : null;
-            if (dog != null) PlaceStandingYaw(dog, playerSitPos + Right(playerSitYaw) * 0.9f, playerSitYaw);
+            if (dog != null)
+            {
+                PlaceStandingYaw(dog, playerSitPos + Right(playerSitYaw) * 0.9f, playerSitYaw);
+                _dogModel = dog.Find("Model");
+                if (_dogModel != null) { _dogModelScaleSaved = _dogModel.localScale; _dogModel.localScale = _dogModelScaleSaved * dogFireScaleMul; }
+            }
 
             // cámara fija de la noche.
             MakeNightCam();
@@ -454,6 +462,7 @@ namespace FolkloreArchives
             yield return new WaitForSeconds(1.5f);   // duermen un rato
 
             // 1) CONTROL a Rufus (LIBRE: te movés vos, cámara del perro). Se levanta de al lado tuyo.
+            if (_dogModel != null) _dogModel.localScale = _dogModelScaleSaved;   // vuelve a su tamaño normal (ya no está en el tronco)
             var party = Object.FindFirstObjectByType<PartyController>();
             if (party != null) party.ForceControl(true);
             PartyController.CinematicLock = false;   // te movés vos
