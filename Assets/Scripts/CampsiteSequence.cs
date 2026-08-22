@@ -74,6 +74,7 @@ namespace FolkloreArchives
         public float   playerSitYaw = 84.533f;
         public Vector3 nightCamPos  = new Vector3(234.8221f, 26.89305f, 222.9142f); // cámara de la noche (24.593 + 2.30 de altura de ojos)
         public float   nightCamYaw  = 60.933f;
+        public Vector3 towerLightPos = new Vector3(185.9f, 30f, 253.8f); // binoculares parpadeando en la torre (owner: pasame el exacto)
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
 
@@ -348,7 +349,82 @@ namespace FolkloreArchives
 
             yield return SayFor("Igual qué lindo quedó el campamento, ¿no?", 3.2f);
             yield return SayFor("Sí, tranqui. Una noche perfecta.", 3.0f);
-            // (próximo: luz parpadeante de la torre -> susto -> a dormir)
+
+            // LUZ PARPADEANTE de unos binoculares desde la torre (alguien los observa).
+            var beacon = MakeBlinkingLight(towerLightPos);
+            yield return SayFor("...¿vieron esa luz en la torre?", 2.6f);
+            yield return SayFor("Parpadea... como si alguien nos estuviera mirando.", 3.2f);
+            // susto del jugador y de Rufus.
+            yield return SayFor("(Rufus gruñe y se te pega, erizado)", 2.6f);
+            yield return SayFor("Dale, no es nada. Son unos faloperos de la torre.", 3.2f);
+            yield return SayFor("Vayan a dormir, mañana seguimos.", 3.0f);
+            if (beacon != null) Destroy(beacon);
+
+            // todos se levantan de los troncos y se van a DORMIR (acostados dentro de sus carpas).
+            yield return EveryoneToSleep();
+        }
+
+        // punto de luz que PARPADEA (binoculares) en la torre. Se destruye al terminar.
+        GameObject MakeBlinkingLight(Vector3 pos)
+        {
+            var go = new GameObject("BinocularesTorre");
+            go.transform.position = pos;
+            var l = go.AddComponent<Light>();
+            l.type = LightType.Point;
+            l.color = new Color(0.8f, 0.9f, 1f);
+            l.intensity = 6f;
+            l.range = 25f;
+            StartCoroutine(Blink(l));
+            return go;
+        }
+
+        IEnumerator Blink(Light l)
+        {
+            while (l != null)
+            {
+                l.enabled = !l.enabled;
+                yield return new WaitForSeconds(Random.Range(0.12f, 0.5f));
+            }
+        }
+
+        // todos se paran y van a acostarse DENTRO de su carpa.
+        IEnumerator EveryoneToSleep()
+        {
+            Transform player = op != null && op.player != null ? op.player.transform : null;
+            Transform casual = op != null ? op.friendMaleCasual  : null;
+            Transform green  = op != null ? op.friendMaleGreenJkt : null;
+            Transform chica  = op != null ? op.friendFemaleSec    : null;
+
+            StartCoroutine(SleepInTent(casual, tentPairPos, tentPairYaw, Right(tentPairYaw) * -0.35f));
+            StartCoroutine(SleepInTent(chica,  tentPairPos, tentPairYaw, Right(tentPairYaw) *  0.35f));
+            StartCoroutine(SleepInTent(green,  greenTentPos, greenTentYaw, Vector3.zero));
+
+            Vector3 pTent = _playerTent != null ? _playerTent.transform.position : playerSitPos;
+            float pYaw = _playerTent != null ? _playerTent.transform.eulerAngles.y : playerSitYaw;
+            yield return SleepInTent(player, pTent, pYaw, Vector3.zero);
+        }
+
+        // un personaje se PARA, camina a su carpa y se ACUESTA dentro.
+        IEnumerator SleepInTent(Transform who, Vector3 tentPos, float tentYaw, Vector3 offset)
+        {
+            if (who == null) yield break;
+            var anim = who.GetComponent<HumanWalkAnim>(); if (anim != null) anim.seated = false; // se para
+            var cc = who.GetComponent<CharacterController>(); if (cc != null) cc.enabled = false;
+            Vector3 dest = tentPos + offset;
+            float t = 0f;
+            while (Flat2(who.position, dest) > 0.5f && t < 15f) { StepToward(who, dest, 2.0f); t += Time.deltaTime; yield return null; }
+            PlaceLyingInTent(who, dest, tentYaw);
+        }
+
+        // deja al personaje ACOSTADO (horizontal, boca arriba) en el piso de la carpa.
+        void PlaceLyingInTent(Transform who, Vector3 pos, float yaw)
+        {
+            if (who == null) return;
+            var anim = who.GetComponent<HumanWalkAnim>(); if (anim != null) anim.seated = false;
+            var cc = who.GetComponent<CharacterController>(); if (cc != null) cc.enabled = false; // queda apagado (acostado)
+            Vector3 p = pos; p.y = GroundY(pos, pos.y) + 0.15f;
+            who.position = p;
+            who.rotation = Quaternion.Euler(-90f, yaw, 0f);   // recostado boca arriba, alineado con la carpa
         }
 
         // pasa de la cámara de la noche a la del JUGADOR (1ª persona), siguiendo sentado.
