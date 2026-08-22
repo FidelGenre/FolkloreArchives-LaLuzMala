@@ -498,30 +498,36 @@ namespace FolkloreArchives
             if (_luzMala != null) _luzMala.gameObject.SetActive(false);   // se va al ladrar
             yield return new WaitForSeconds(0.9f);
 
-            // 5) se despierta el OTRO jugador (la persona) y LLAMA a Rufus. Vuelve a la persona pero
-            //    TODO scripteado (no te movés): te reta y te lleva de vuelta a la carpa.
-            if (party != null) party.ForceControl(false);
+            // 5) se despierta la persona: se PARA al lado de la carpa y te reta. SEGUÍS con Rufus
+            //    (su cámara) -> llevalo vos de vuelta a la carpa.
             if (player != null)
             {
                 var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
-                player.rotation = Quaternion.Euler(0f, playerYaw, 0f);
+                PlaceStandingYaw(player, playerTent + Right(playerYaw) * 1.2f, playerYaw);   // parado al lado de la carpa
             }
-            PartyController.CinematicLock = true;    // scripteado
-            yield return SayFor("¡Rufus! ¿Qué hacés ahí? Vení, a dormir.", 3.2f);
+            PartyController.CinematicLock = false;   // te movés con Rufus (cámara del perro)
+            _playerSay  = "¡Rufus! ¿Qué hacés ahí? Vení, a dormir.";   // te reta mientras volvés
+            _playerHint = "Volvé a la carpa";
 
-            // 6) el jugador lleva a Rufus de vuelta a la carpa y se ACUESTAN (scripteado).
+            // 6) cuando Rufus LLEGA a la carpa (mantuvo la cámara hasta acá), AMBOS entran y se
+            //    acuestan (scripteado).
+            float back = 0f;
+            while (back < 60f && Flat2(dog.position, playerTent) > 1.6f) { back += Time.deltaTime; yield return null; }
+            _playerSay = ""; _playerHint = null;
+            PartyController.CinematicLock = true;
             if (player != null) { var pcc = player.GetComponent<CharacterController>(); if (pcc != null) pcc.enabled = false; }
             if (dcc != null) dcc.enabled = false;
-            float back = 0f;
-            while (back < 18f && (Flat2(dog.position, playerTent) > 1.1f || (player != null && Flat2(player.position, playerTent) > 0.8f)))
+            Vector3 dogSpot = playerTent + Right(playerYaw) * 0.7f;
+            float enter = 0f;
+            while (enter < 6f && (Flat2(dog.position, dogSpot) > 0.4f || (player != null && Flat2(player.position, playerTent) > 0.4f)))
             {
-                if (player != null) StepToward(player, playerTent, 2.4f);
-                StepToward(dog, playerTent + Right(playerYaw) * 0.7f, 2.4f);
-                back += Time.deltaTime;
+                if (player != null) StepToward(player, playerTent, 2.2f);
+                StepToward(dog, dogSpot, 2.2f);
+                enter += Time.deltaTime;
                 yield return null;
             }
             if (player != null) PlaceLyingInTent(player, playerTent, playerYaw);
-            PlaceLyingInTent(dog, playerTent + Right(playerYaw) * 0.7f, playerYaw);
+            PlaceLyingInTent(dog, dogSpot, playerYaw);
             yield return new WaitForSeconds(1.0f);
 
             // 7) AMANECE lento (mismo plano del campamento) + parpadeo dentro de la carpa + aparecen
