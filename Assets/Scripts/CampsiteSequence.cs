@@ -218,9 +218,11 @@ namespace FolkloreArchives
             Vector3 center = _campsite != null ? _campsite.position : new Vector3(246f, cp.y, 232f);
             var npcTents = new List<GameObject>();
             foreach (var t in _tents) if (t != null && t != _playerTent) npcTents.Add(t);
-            GameObject tentPair  = npcTents.Count > 0 ? npcTents[0] : null; // carpa chica+chico
-            GameObject tentGreen = npcTents.Count > 1 ? npcTents[1] : null; // carpa del negro
-            StartCoroutine(GreenTentThenStand(green, tentGreen, center));
+            // SWAP owner: la de la PAREJA es la VERDE (npcTents[1]), la del NEGRO es la ROJA (npcTents[0]).
+            // Antes estaban al revés -> el negro disparaba la de la pareja y viceversa.
+            GameObject tentPair  = npcTents.Count > 1 ? npcTents[1] : null; // carpa chica+chico (verde)
+            GameObject tentNegro = npcTents.Count > 0 ? npcTents[0] : null; // carpa del negro (roja)
+            StartCoroutine(GreenTentThenStand(green, tentNegro, center));
             StartCoroutine(PairTentThenTasks(casual, chica, tentPair, center));
 
             // TU PARTE: recogés tu carpa de la cajuela, la ponés (fantasma celeste te marca dónde),
