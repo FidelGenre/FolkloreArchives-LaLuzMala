@@ -79,8 +79,7 @@ namespace FolkloreArchives
         [Header("Escena nocturna: Rufus + Luz Mala (owner)")]
         public Vector3 luzMalaPos = new Vector3(194.1414f, 23.9108f, 254.7851f); // la Luz Mala aparece acá (lago, de lejos)
         public Vector3 dogPoopPos = new Vector3(242.588f, 23.2307f, 219.621f);    // Rufus va a cagar acá (owner)
-        public Vector3 dogBarkPos = new Vector3(232.609f, 23.88499f, 239.5024f);  // Rufus se para acá a ladrarle a la luz (owner)
-        public float   dogBarkYaw = -68.502f;                                      // mirando al lago (Luz Mala)
+        public Vector3 dogBarkPos = new Vector3(231.419f, 24.38922f, 240.93f);    // Rufus se para acá a ladrarle a la luz (owner)
         LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
@@ -478,7 +477,8 @@ namespace FolkloreArchives
             while (guard < 60f && Flat2(dog.position, dogBarkPos) > 2.5f) { guard += Time.deltaTime; yield return null; }
             _playerHint = null;
             PartyController.CinematicLock = true;   // Rufus se pausa (no lo movés)
-            PlaceStandingYaw(dog, dogBarkPos, dogBarkYaw);   // parado en el punto, mirando la luz
+            float barkYaw = Mathf.Atan2(luzMalaPos.x - dogBarkPos.x, luzMalaPos.z - dogBarkPos.z) * Mathf.Rad2Deg;
+            PlaceStandingYaw(dog, dogBarkPos, barkYaw);   // parado en el punto, mirando la luz
             var da = dog.GetComponent<DogAudio>();
             if (da != null) da.Bark();
             yield return new WaitForSeconds(0.7f);
