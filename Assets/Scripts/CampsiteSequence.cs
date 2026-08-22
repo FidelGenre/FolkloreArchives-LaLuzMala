@@ -299,6 +299,10 @@ namespace FolkloreArchives
                 log.transform.position = fp + new Vector3(-0.35f, 0.1f, 0.2f);
                 log.transform.rotation = Quaternion.Euler(0f, -25f, 90f);
             }
+
+            // 6) ya está la leña -> PRENDER la fogata (recién ahora aparece la opción).
+            yield return WaitPlayerInteract(player, fire, playerReach, "[E] Prender la fogata");
+            SetCampfireLit(true);
             // (próximo: noche -> comer/hablar -> dormir -> Rufus ve la Luz Mala)
         }
 
@@ -725,6 +729,29 @@ namespace FolkloreArchives
                 _tents.Add(child.gameObject);
                 if (child.name == playerTentName) _playerTent = child.gameObject; // la tuya (no la revelan los NPCs)
                 child.gameObject.SetActive(false);
+            }
+            SetCampfireLit(false);   // la fogata arranca APAGADA (se prende al juntar la leña)
+        }
+
+        Light _fireLight; ParticleSystem _fireParticles; GameObject _fireEmber;
+
+        // prende/apaga la fogata: la luz, las partículas de fuego y la brasa (glow). Deja el pozo
+        // con la leña visible. owner: "la fogata no debe estar prendida hasta que juntemos la leña".
+        void SetCampfireLit(bool lit)
+        {
+            if (_campsite == null) return;
+            Transform fire = _campsite.Find("Campfire");
+            if (fire == null) return;
+            if (_fireLight == null) _fireLight = fire.GetComponentInChildren<Light>(true);
+            if (_fireParticles == null) _fireParticles = fire.GetComponentInChildren<ParticleSystem>(true);
+            if (_fireEmber == null) { var e = fire.Find("Ember"); if (e != null) _fireEmber = e.gameObject; }
+
+            if (_fireLight != null) _fireLight.enabled = lit;
+            if (_fireEmber != null) _fireEmber.SetActive(lit);
+            if (_fireParticles != null)
+            {
+                _fireParticles.gameObject.SetActive(lit);
+                if (lit) _fireParticles.Play(); else _fireParticles.Clear();
             }
         }
 
