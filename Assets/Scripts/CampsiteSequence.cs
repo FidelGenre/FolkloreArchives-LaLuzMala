@@ -12,6 +12,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace FolkloreArchives
 {
@@ -497,18 +498,129 @@ namespace FolkloreArchives
             if (_luzMala != null) _luzMala.gameObject.SetActive(false);   // se va al ladrar
             yield return new WaitForSeconds(0.9f);
 
-            // 5) se despierta el OTRO jugador (la persona) y LLAMA a Rufus. Te devuelvo el control de
-            //    la persona; Rufus te sigue.
+            // 5) se despierta el OTRO jugador (la persona) y LLAMA a Rufus. Vuelve a la persona pero
+            //    TODO scripteado (no te movés): te reta y te lleva de vuelta a la carpa.
             if (party != null) party.ForceControl(false);
             if (player != null)
             {
                 var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
-                var pcc = player.GetComponent<CharacterController>(); if (pcc != null) pcc.enabled = true;
                 player.rotation = Quaternion.Euler(0f, playerYaw, 0f);
             }
+            PartyController.CinematicLock = true;    // scripteado
             yield return SayFor("¡Rufus! ¿Qué hacés ahí? Vení, a dormir.", 3.2f);
-            PartyController.CinematicLock = false;   // volvés a jugar (llevá a Rufus a la carpa)
-            // (próximo: dormir del todo -> día siguiente)
+
+            // 6) el jugador lleva a Rufus de vuelta a la carpa y se ACUESTAN (scripteado).
+            if (player != null) { var pcc = player.GetComponent<CharacterController>(); if (pcc != null) pcc.enabled = false; }
+            if (dcc != null) dcc.enabled = false;
+            float back = 0f;
+            while (back < 18f && (Flat2(dog.position, playerTent) > 1.1f || (player != null && Flat2(player.position, playerTent) > 0.8f)))
+            {
+                if (player != null) StepToward(player, playerTent, 2.4f);
+                StepToward(dog, playerTent + Right(playerYaw) * 0.7f, 2.4f);
+                back += Time.deltaTime;
+                yield return null;
+            }
+            if (player != null) PlaceLyingInTent(player, playerTent, playerYaw);
+            PlaceLyingInTent(dog, playerTent + Right(playerYaw) * 0.7f, playerYaw);
+            yield return new WaitForSeconds(1.0f);
+
+            // 7) AMANECE lento (mismo plano del campamento) + parpadeo dentro de la carpa + aparecen
+            //    afuera -> arranca el NUEVO DÍA y te movés libremente.
+            yield return WakeNewDay(playerTent, playerYaw, player, dog);
+        }
+
+        // Despertar al día siguiente: (A) amanece LENTO con el mismo plano cenital del campamento,
+        // (B) cámara mirando el techo de la carpa con un PARPADEO (abrís los ojos), (C) aparecen
+        // afuera parados y te devuelve el control LIBRE (1ª persona, Rufus te sigue).
+        IEnumerator WakeNewDay(Vector3 playerTent, float playerYaw, Transform player, Transform dog)
+        {
+            PartyController.CinematicLock = true;
+
+            // (A) MISMO PLANO del campamento (cenital) mientras amanece de a poco.
+            MakeNightCam();   // reusa _overhead en nightCamPos/nightCamYaw
+            var dn = Object.FindFirstObjectByType<DayNightController>();
+            if (dn != null) yield return BrightenToDay(dn, 8f);
+            yield return new WaitForSeconds(0.6f);
+
+            // (B) cámara mirando ARRIBA dentro de la carpa + parpadeo (te despertás).
+            if (_overhead != null) { Destroy(_overhead.gameObject); _overhead = null; }
+            var upCam = MakeUpCam(playerTent, playerYaw);
+            var black = MakeBlackOverlay();
+            var img = black.GetComponent<RawImage>();
+            if (img != null) img.color = Color.black;             // arranca en negro (ojos cerrados)
+            yield return FadeOverlay(img, 1f, 0f, 0.6f);          // abrís los ojos
+            yield return new WaitForSeconds(0.5f);
+            yield return FadeOverlay(img, 0f, 1f, 0.16f);         // parpadeo: cerrás
+            yield return FadeOverlay(img, 1f, 0f, 0.35f);         // y abrís
+            yield return new WaitForSeconds(0.5f);
+            if (black != null) Destroy(black);
+            if (upCam != null) Destroy(upCam.gameObject);
+
+            // (C) aparecen AFUERA de la carpa, parados, y control LIBRE (nuevo día).
+            Vector3 outside = playerTent + Fwd(playerYaw) * 2.2f;
+            if (player != null)
+            {
+                var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
+                PlaceStandingYaw(player, outside, playerYaw);
+                var pcc = player.GetComponent<CharacterController>(); if (pcc != null) pcc.enabled = true;
+            }
+            if (dog != null) PlaceStandingYaw(dog, outside + Right(playerYaw) * 1.1f, playerYaw);
+
+            var party = Object.FindFirstObjectByType<PartyController>();
+            if (party != null) party.ForceControl(false);        // volvés a la persona; Rufus te sigue
+            PartyController.CinematicLock = false;                // te movés libremente
+        }
+
+        // interpola NOCHE -> TARDE ("de día") en 'secs' seg. Al terminar deja la fase Dusk limpia
+        // (vuelve la vista larga del atardecer).
+        IEnumerator BrightenToDay(DayNightController dn, float secs)
+        {
+            float t = 0f;
+            while (t < secs) { t += Time.deltaTime; dn.SetNightBlend(1f - t / secs); yield return null; }
+            dn.SetPhase(DayNightController.Phase.Dusk);
+        }
+
+        // cámara dentro de la carpa mirando el TECHO (POV acostado boca arriba).
+        Camera MakeUpCam(Vector3 pos, float yaw)
+        {
+            var go = new GameObject("CampWakeCam");
+            Vector3 p = pos; p.y = GroundY(pos, pos.y) + 0.4f;
+            go.transform.position = p;
+            go.transform.rotation = Quaternion.Euler(-70f, yaw, 0f);   // pitch negativo = mira arriba
+            var cam = go.AddComponent<Camera>();
+            cam.tag = "MainCamera";
+            cam.farClipPlane = 300f;
+            go.AddComponent<AudioListener>();
+            var party = Object.FindFirstObjectByType<PartyController>();
+            if (party != null)
+            {
+                if (party.personCam != null) party.personCam.gameObject.SetActive(false);
+                if (party.dogCam != null)    party.dogCam.gameObject.SetActive(false);
+            }
+            return cam;
+        }
+
+        // overlay negro a pantalla completa (para el parpadeo).
+        GameObject MakeBlackOverlay()
+        {
+            var go = new GameObject("CampWakeBlack");
+            var canvas = go.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 5000;
+            var img = go.AddComponent<RawImage>();
+            img.color = new Color(0f, 0f, 0f, 0f);
+            var rt = img.rectTransform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            return go;
+        }
+
+        // fade del overlay negro de 'from' a 'to' (0 transparente, 1 negro pleno) en 'secs' seg.
+        IEnumerator FadeOverlay(RawImage img, float from, float to, float secs)
+        {
+            float t = 0f;
+            while (t < secs) { t += Time.deltaTime; float a = Mathf.Lerp(from, to, t / secs); if (img != null) img.color = new Color(0f, 0f, 0f, a); yield return null; }
+            if (img != null) img.color = new Color(0f, 0f, 0f, to);
         }
 
         // una cacota chiquita (marrón) en el piso.
