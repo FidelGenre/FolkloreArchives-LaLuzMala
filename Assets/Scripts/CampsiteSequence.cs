@@ -408,6 +408,7 @@ namespace FolkloreArchives
         // todos se paran y van a acostarse DENTRO de su carpa.
         IEnumerator EveryoneToSleep()
         {
+            RemoveSeatedLook();   // el jugador se levanta -> se saca el free-look sentado
             Transform player = op != null && op.player != null ? op.player.transform : null;
             Transform casual = op != null ? op.friendMaleCasual  : null;
             Transform green  = op != null ? op.friendMaleGreenJkt : null;
@@ -445,12 +446,30 @@ namespace FolkloreArchives
             who.rotation = Quaternion.Euler(-90f, yaw, 0f);   // recostado boca arriba, alineado con la carpa
         }
 
-        // pasa de la cámara de la noche a la del JUGADOR (1ª persona), siguiendo sentado.
+        // pasa de la cámara de la noche a la del JUGADOR (1ª persona), siguiendo sentado. Habilita el
+        // free-look sentado (mirás alrededor con límites, sin darte vuelta ni moverte).
         void SwitchToPlayerCamSeated()
         {
             if (_overhead != null) { Destroy(_overhead.gameObject); _overhead = null; }
             var party = Object.FindFirstObjectByType<PartyController>();
-            if (party != null && party.personCam != null) party.personCam.gameObject.SetActive(true);
+            if (party != null && party.personCam != null)
+            {
+                party.personCam.gameObject.SetActive(true);
+                if (party.personCam.GetComponent<SeatedLook>() == null)
+                    party.personCam.gameObject.AddComponent<SeatedLook>();
+            }
+        }
+
+        // saca el free-look sentado (el jugador se va a levantar y caminar).
+        void RemoveSeatedLook()
+        {
+            var party = Object.FindFirstObjectByType<PartyController>();
+            if (party != null && party.personCam != null)
+            {
+                var sl = party.personCam.GetComponent<SeatedLook>();
+                if (sl != null) Destroy(sl);
+                party.personCam.transform.localRotation = Quaternion.identity;
+            }
         }
 
         // cámara fija que mira la fogata mientras se hace de noche (apaga persona/perro).
