@@ -610,9 +610,80 @@ namespace FolkloreArchives
             yield return SayFor("No atiende nadie...", 2.0f);
             yield return SayFor("Habrá alguien atrás. Vamos a ver por el granero.", 3.0f);
             _playerHint = "Buscá a alguien por el baño del granero";
-            // (sigue: baño del granero -> sale el viejo (susto) -> charla -> despierta a la vieja ->
-            //  favor de las ovejas -> caja del granero (screamer del pollo) -> arreglar el baño ->
-            //  mates + historia de la Luz Mala -> volver al campamento. FALTAN coordenadas.)
+
+            // 7) baño del granero (letrina): tocás -> sale el viejo (susto) -> charla -> la vieja -> favor.
+            yield return RanchoBathroomScene();
+        }
+
+        // Escena del BAÑO del rancho: el jugador toca la puerta de la letrina, SALE EL VIEJO
+        // (susto), lo confronta ("propiedad privada"), le piden una caña, el viejo despierta a
+        // la vieja, ella viene y les presta las cañas a cambio de un favor: sacar las ovejas.
+        // Todo referenciado por OBJETO (letrina.007 / RanchoViejo / OldLady_Storyteller), sin
+        // coordenadas hardcodeadas.
+        IEnumerator RanchoBathroomScene()
+        {
+            Transform player = op != null && op.player != null ? op.player.transform : null;
+            if (player == null) yield break;
+            Transform door    = FindObj("letrina.007");
+            Transform oldMan  = FindObj("RanchoViejo");
+            Transform oldLady = FindObj("OldLady_Storyteller");
+            if (door == null) { _playerHint = null; yield break; }   // sin letrina no hay escena
+
+            // 1) tocás la puerta del baño
+            yield return WaitPlayerInteract(player, door.position, playerReach + 1.2f, "[E] Tocar la puerta");
+            _playerHint = null;
+            PartyController.CinematicLock = true;   // scripteado a partir de acá
+            yield return SayFor("(Tocás la puerta del baño...)", 1.2f);
+
+            // 2) SALE EL VIEJO (susto): se activa, te encara, flash negro + ladrido de Rufus
+            if (oldMan != null) { oldMan.gameObject.SetActive(true); FaceTarget(oldMan, player.position); }
+            var black = MakeBlackOverlay();
+            var img = black != null ? black.GetComponent<RawImage>() : null;
+            if (img != null) img.color = Color.black;
+            yield return FadeOverlay(img, 1f, 0f, 0.5f);
+            if (black != null) Destroy(black);
+            var da = op.dog != null ? op.dog.GetComponent<DogAudio>() : null;
+            if (da != null) da.Bark();
+
+            // 3) confrontación + pedido de la caña
+            yield return SayFor("¡¿Qué hacen acá?! ¡Esto es propiedad privada!", 3.2f);
+            yield return SayFor("Perdón, señor... estamos acampando acá cerca.", 3.0f);
+            yield return SayFor("¿No tendría una caña de pescar para prestarnos?", 3.2f);
+            yield return SayFor("Cañas... las que usamos con mi mujer. Pregúntenle a ella, ya la despierto.", 4.0f);
+
+            // 4) el viejo va a buscar a la vieja
+            if (oldMan != null && oldLady != null)
+            {
+                float t = 0f;
+                while (t < 8f && Flat2(oldMan.position, oldLady.position) > 1.6f) { StepToward(oldMan, oldLady.position, 2.2f); t += Time.deltaTime; yield return null; }
+                FaceTarget(oldMan, oldLady.position);
+            }
+            yield return SayFor("(El viejo entra y despierta a la vieja...)", 2.0f);
+
+            // 5) la vieja viene hacia el jugador
+            if (oldLady != null)
+            {
+                float t = 0f;
+                while (t < 14f && Flat2(oldLady.position, player.position) > 2.4f) { StepToward(oldLady, player.position, 2.0f); t += Time.deltaTime; yield return null; }
+                FaceTarget(oldLady, player.position);
+            }
+            yield return SayFor("Buenas... mucho gusto. ¿Qué necesitan, chicos?", 3.2f);
+            yield return SayFor("Unas cañas para pescar, nos las olvidamos y vinimos a acampar.", 3.6f);
+            yield return SayFor("Mmm... dale, se las presto. Pero a cambio de un favor.", 3.4f);
+            yield return SayFor("Sáquenme las ovejas a pastar, ¿sí? Yo ya no puedo.", 3.4f);
+
+            PartyController.CinematicLock = false;   // volvés a moverte
+            _playerHint = "Abrí la puerta del corral para sacar las ovejas";
+            // (sigue: abrir corral -> ovejas pastan -> caja del granero (screamer) -> arreglar
+            //  el baño -> mates + historia de la Luz Mala -> volver. FALTAN coordenadas.)
+        }
+
+        // busca un objeto por nombre en la escena (incluye inactivos, ej. RanchoViejo desactivado).
+        static Transform FindObj(string name)
+        {
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (t != null && t.name == name) return t;
+            return null;
         }
 
         // Despertar al día siguiente: (A) amanece LENTO con el mismo plano cenital del campamento,
