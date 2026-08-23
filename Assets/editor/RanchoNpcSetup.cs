@@ -25,7 +25,7 @@ namespace FolkloreArchives.MapGen
         const float  TargetHeight = 2.15f;  // hombre adulto (la vieja es 2.0; los amigos 2.2)
         const string SheepObj = "Assets/ExternalAssets/Sheep/sheep.obj";
         const string SheepTex = "Assets/ExternalAssets/Sheep/sheep_tex.jpg";
-        const float  SheepHeight = 1.0f;    // altura de la oveja (chica)
+        const float  SheepHeight = 1.6f;    // altura de la oveja (owner: "más grandes")
 
         // el pack "Characters PSX" usa rig Mixamo (mixamorig:*): mismos limbs que el amigo
         // "green jacket". HumanWalkAnim con esto = camina + brazos a los lados (no T-pose).
