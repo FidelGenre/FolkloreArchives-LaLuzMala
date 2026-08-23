@@ -702,3 +702,197 @@ todos los terrenos y corre `ForestBuilder.SetGrassFadeGlobals(250)` (si no el sh
 de pasto lo desvanece igual). Solo editor: al entrar a Play restaura
 MapLayout.DetailRenderDistance; Enforce cada 0.5s por si Generate/día-noche lo pisan.
 FarDistance ajustable arriba del archivo.
+
+---
+
+## Troncos del campamento → modelo PS1 real (16/8/2026)
+
+Owner: reemplazar los 3 troncos-asiento del campamento PRINCIPAL (eran cilindros
+procedurales "LogSeat", IDs 1-3 en CampsiteBuilder) por el asset descargado "Retro
+PSX Style Fallen Tree Trunk" de ratoddy (itch.io — sumado a ASSET_CREDITS).
+
+Asset copiado a `Assets/ExternalAssets/FallenTrunk/` (trunk.fbx + texture/texture.png).
+Medido en Blender (desde el .blend; el FBX rompe el importer de Blender por una luz):
+mesh 2.13 × 9.37 × 2.10 → eje largo Y, sección ~2.1. A ~3.4 m de largo da radio ≈0.37,
+casi igual que los cilindros viejos.
+
+CampsiteBuilder:
+- Nuevo `TrunkSeat(...)`: instancia el FBX, DETECTA el eje más largo en runtime y lo
+  acuesta a lo largo de +Z (base yaw=0), lo escala a targetLen, apoya la base en el
+  piso centrado, y le pone MeshCollider convexo (el cilindro tenía capsule). Usa la
+  textura propia del asset (CampTexMat: URP point+mate). Si falta el FBX → fallback al
+  cilindro procedural.
+- El FBX se exportó del .blend con CÁMARA + 2 LUCES adentro → se destruyen al instanciar
+  (si no, metía cámaras/luces sueltas en el campamento).
+- `Reg` ahora tiene overload `Reg(go, bake)`: los troncos van con bake:false (se ubican
+  solos, no se les aplica el BakedLayout viejo de los cilindros) pero IGUAL incrementan
+  el ID → no se corren los IDs de leña/carpas/mesa. Entradas 1-3 del BakedLayout quedan
+  sin usar a propósito.
+
+Para verlo: regenerar el mapa (el campamento es procedural, se rearma en cada Generate).
+
+Fix textura (16/8/2026): el tronco se veía con manchones blancos. La textura es un
+atlas RGBA (corteza/anillos opacos + musgo sobre FONDO TRANSPARENTE alfa 0 con RGB
+blanco + hongos opacos); el material opaco mostraba ese fondo del musgo como blanco.
+Nuevo `TrunkMat()` = URP/Lit con RECORTE ALFA (cutout, cutoff 0.5, doble cara, mate),
+y fuerza el import de la textura a alphaIsTransparency + point + sin mips. Reemplaza el
+CampTexMat opaco que usaba antes.
+
+---
+
+## Gallinero + 4 gallinas en la granja (18/8/2026)
+
+Owner: agregar a la granja (casa de la vieja / AbandonedFarm) el chicken coop y 4
+gallinas. Assets Sketchfab CC-BY (acreditar): "Chicken Coop (Free)" by wolfgar74 +
+"PS1 Chicken" by honungsbi8. Ambos GLB (materiales/texturas embebidos → Unity los
+importa a URP solos). Copiados a `Assets/ExternalAssets/ChickenFarm/`. Medidos en
+Blender: coop 167×279×249 (alto ~249 su unidad) → escala por altura a 2.2 m; gallina
+~2×2×2 → 0.38 m.
+
+`ChickenCoopBuilder.cs`: instancia coop + 4 gallinas bajo FOLKLORE_MAP en un grupo
+"ChickenCoop" (nombres únicos: Coop, Chicken_0..3), escala por altura, apoya base en
+el piso, yaw. Se llama desde `HouseBuilder.BuildBarn` (rama UseAbandonedFarm), que
+corre ANTES de ApplySavedLayout → quedan cubiertos por Save Map Layout (movibles/
+borrables a mano, persisten al regenerar; mismo criterio que PC/silla YPF). Coop con
+MeshCollider por pieza; gallinas sin collider (chicas, decorativas). Posición base
+(195,170) cerca de OldLadyHouseCenter — el owner la ajusta a mano. Sumados a
+ASSET_CREDITS.
+
+Nota animación (18/8/2026): el GLB "PS1 Chicken" trae 1 clip (`Armature.001Action`,
+malla skinned). Se importa clip + rig, pero las gallinas se colocan como props
+ESTÁTICOS (sin Animator) — decisión del owner: dejarlas quietas por ahora. Para
+animarlas MÁS ADELANTE (regenerate-safe): NO agregar el Animator a mano en la escena
+(el builder re-instancia las gallinas en cada Generate y lo borra). Hacerlo en
+`ChickenCoopBuilder.Place(...)`: crear/attachear un AnimatorController que loopee el
+clip, con offset de tiempo por gallina (Chicken_0..3) para desincronizarlas.
+
+---
+
+## Chancho + caballo en la granja (18/8/2026)
+
+Owner: sumar 2 animales más a la granja. Assets Sketchfab CC-BY (acreditar): "PS1 Pig"
+by Jo_Zinn5632 + "Cavalo no estilo de PS1" by Moustache_Cat. GLB, copiados a
+`Assets/ExternalAssets/ChickenFarm/` (ps1_pig.glb, cavalo_ps1.glb).
+
+Se agregan en `ChickenCoopBuilder`: chancho + caballo como hermanos sueltos bajo
+FOLKLORE_MAP (nombres únicos "Pig"/"Horse") → cubiertos por Save Map Layout igual que
+las gallinas. Escala por altura (Pig 0.85 m, Horse 1.6 m).
+
+OJO orientación del CABALLO: el GLB viene ACOSTADO de costado. Verificado parseando el
+glTF (bounds en espacio Unity Y-up): Pig X=2.19 Y=3.34 Z=6.51 (parado OK); Horse
+X=1.71 Y=0.63 Z=2.09 (su alto real 1.71 está en X, no en Y). Se agregó `extraEuler` a
+`Place(...)` que endereza ANTES de medir/escalar; el caballo usa `HorseRollDeg=-90`
+(roll sobre Z). Si sale PATAS ARRIBA, cambiar a +90 (constante arriba del archivo).
+
+Animaciones: pig trae 1 clip, horse 6 clips (ambos skinned). Se colocan ESTÁTICOS
+(sin Animator), igual criterio que las gallinas. Colliders: coop sí (MeshFilter);
+animales (skinned, sin MeshFilter) NO por ahora — decorativos.
+
+---
+
+## Animaciones de los animales de la granja (18/8/2026)
+
+Owner: animar los animales (dijo "como los pollos" — aclaración: las gallinas estaban
+ESTÁTICAS, así que se animan TODOS ahora: 4 gallinas + chancho + caballo).
+
+Enfoque regenerate-safe (horneado en el builder):
+- Nuevo runtime `Assets/Scripts/LoopClipAnim.cs` (namespace FolkloreArchives): reproduce
+  un AnimationClip LEGACY en loop vía componente Animation, con `startOffset` para
+  desincronizar copias. Corre en Play/build (no en el Scene view en modo edición).
+- `ChickenCoopBuilder.MakeLegacyClip(glb, cache)`: saca el clip del GLB (prefiere "idle"
+  si hay; chicken/pig traen 1, horse trae 6), hace una COPIA legacy+loop como asset en
+  Generated/anim_*.anim.
+- `AttachAnim(inst, clip, offset)`: saca el Animator que trae el GLB (choca con Animation
+  legacy) y agrega LoopClipAnim en la raíz del modelo. Gallinas con offset i*0.5s
+  (desincronizadas); chancho/caballo offset 0 (uno solo cada uno).
+
+Notas:
+- Se ven quietos en el Scene view (modo edición); ANIMAN al dar Play / en el build.
+- Caballo: agarra el clip "idle" o el primero de los 6; si queda raro (galopando en el
+  lugar) se cambia el criterio de MakeLegacyClip.
+- Siguen sin collider (skinned, decorativos) y sin marcar static (animan).
+
+Corrección (18/8/2026): el CABALLO desaparecía al dar Play con su animación legacy (su
+clip mueve la raíz/huesos → se va de cuadro / rompe skinning). Se dejó ESTÁTICO (sin
+AttachAnim). Gallinas + chancho siguen animados. Para animar el caballo bien en el
+futuro haría falta un Animator + controller propio (no legacy).
+
+---
+
+## Corral de gallinas (reja sin fierros + madera) (20/8/2026)
+
+Owner: hacer el corral de las gallinas en la granja — tomar la reja del asset chain-link
+PERO sin los fierros/postes de adelante (dejar solo el tejido) y rodearla con madera.
+
+`CorralBuilder.cs`:
+- `NettingMesh()`: toma la malla de chain_link_fence_01.fbx (1 mesh, 2 submeshes) y arma
+  una versión SOLO-TEJIDO copiando el/los submesh(es) que NO son de acero (material
+  "steel/galv" = los fierros del frente). Guarda Generated/mesh_chainlink_netting.asset.
+  Material del tejido = reusa Assets/Settings/ChainLinkFence_Chain.mat (cutout doble cara)
+  o lo arma inline.
+- `Build()`: corral rectangular (Center 195,169; 9×8 m; paneles de 2 m) con POSTES y
+  TRAVESAÑOS de madera (Cube + material corral_wood marrón) y el tejido entre postes.
+  Entrada (gate) = panel del medio del lado sur salteado. Colliders: postes/travesaños
+  (Cube nativo) + BoxCollider fino en cada panel de tejido.
+- Grupo "CorralGallinas" bajo FOLKLORE_MAP, creado desde HouseBuilder.BuildBarn (antes de
+  ApplySavedLayout) → guardable/movible con Save Map Layout. Nombres únicos (Poste_/
+  Reja_/Travesano_ + índice global).
+
+No es asset nuevo (reusa el chain-link de DanglingBat, ya en ASSET_CREDITS). Parámetros
+(tamaño/alto/posición) tuneables arriba del archivo.
+
+Textura madera corral (20/8/2026): postes+travesaños del corral usan Wood_04.jpg (pino claro; owner pidió más clara)
+del pack AbandonedFarm (misma madera que el galpón → combina), vía MatTextured, en vez
+del marrón plano. Fallback a color si falta la textura.
+
+Techo del corral (20/8/2026): CorralBuilder.BuildRoof — vigas de madera a lo largo de X
+(una por línea de postes en Z, a la altura PostH) + tejido HORIZONTAL tileado (~2m,
+acostado con rot -90° en X, recentrado por bounds) cubriendo toda la planta. Nombres
+TechoViga_/TechoReja_.
+
+---
+
+## Muebles PSX en la casa de la vieja (20/8/2026)
+
+Owner: agregar el "PSX Furniture Pack" (Akneeee, itch.io name-your-price) a la casa de
+la vieja — es el "pack de muebles viejos" que motivó desactivar los muebles nappin.
+GLB único (furniture.glb, texturas embebidas) con todas las piezas ya dispuestas como
+habitación. Copiado a Assets/ExternalAssets/PSXFurniture/.
+
+Medido en Blender: viene ~2.3× grande (silla 2.1 m, ropero 4.6 m) → escala 0.43 =
+tamaño real. `PsxFurnitureBuilder.Build(mapRoot, houseBounds)`: instancia el GLB entero
+bajo FOLKLORE_MAP (NO bajo la casa, para no heredar AlpHouseScale), escala 0.43, centra
+en la planta de la casa (hb.center XZ) y apoya en el piso (hb.min.y). Colliders
+MeshCollider por pieza. Nombre único "MueblesVieja" → guardable con Save Map Layout
+(grupo o pieza individual). Se llama desde HouseBuilder.BuildAlpHouse (antes de
+ApplySavedLayout). Sumado a ASSET_CREDITS.
+
+---
+
+## Muebles abandonados (PSX Derelict) en la casa de la vieja (20/8/2026)
+
+Owner: agregar "PSX Derelict Furniture" (Daniel Jurys, CC0) a la casa de la vieja pero
+APARTE del PSX Furniture Pack ya puesto. 6 GLB sueltos (chair, couch, fridge, mattress,
+shelf, vase), ya a tamaño REAL (escala 1) y SIN animación. Copiados a
+Assets/ExternalAssets/PSXDerelict/.
+
+`PsxDerelictFurnitureBuilder.Build(mapRoot, hb)`: grupo aparte "MueblesViejaDerelict"
+bajo FOLKLORE_MAP; cada pieza en una fracción del footprint de la casa (agrupadas en el
+FONDO, fz 0.73-0.86, repartidas en X) → set separado del otro (que quedó centrado).
+Base al piso (hb.min.y), colliders MeshCollider, nombres únicos → Save Map Layout. Se
+llama desde HouseBuilder.BuildAlpHouse tras PsxFurnitureBuilder. CC0 → sin obligación de
+acreditar (igual anotado en ASSET_CREDITS).
+
+Cama doble (20/8/2026): "Low Poly PSX Style Double Bed" (Icevanilla, Sketchfab, CC-BY).
+GLB a tamaño real (2.06×1.54×2.56 m), sin animación. Copiado a PSXDerelict/double_bed.glb
+y agregado a PsxDerelictFurnitureBuilder.Items en un rincón dormitorio (frente-izq,
+fx0.22/fz0.28, yaw90) → aparte del cluster del fondo. Sumado a ASSET_CREDITS (CC-BY).
+
+Fix brillo cama v2 (20/8/2026): el fix por propiedades no pegó (material no URP o con emisión). Ahora
+brillaba vs el resto. PsxDerelictFurnitureBuilder.MakeMatte() deja los materiales MATE
+(smoothness/metallic 0, specular + reflejos OFF) sobre COPIAS del material (no toca el
+asset importado). Se aplica a TODAS las piezas del set derelict para que queden parejas.
+
+Fix brillo cama v2: seguía brillando tras regenerar (material importado no era URP/Lit
+o tenía emisión → ignoraba la luz). MakeMatte ahora REARMA cada material como URP/Lit
+mate tomando la textura base, y apaga specular/reflejos + EMISIÓN (EmissiveIsBlack).

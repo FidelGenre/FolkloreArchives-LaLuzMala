@@ -24,6 +24,10 @@ namespace FolkloreArchives.MapGen
     {
         const string CampDir    = "Assets/ExternalAssets/CampsitePS1/";
         const string CampTexDir = CampDir + "Textures/";
+        // Tronco caído PS1 "Retro PSX Style Fallen Tree Trunk" (ratoddy, itch.io — ver ASSET_CREDITS).
+        // Reemplaza los 3 cilindros-asiento procedurales del campamento.
+        const string TrunkFbx = "Assets/ExternalAssets/FallenTrunk/trunk.fbx";
+        const string TrunkTex = "Assets/ExternalAssets/FallenTrunk/texture/texture.png";
 
         public static void Build(Transform camp, Terrain t, Vector2 c)
         {
@@ -37,9 +41,14 @@ namespace FolkloreArchives.MapGen
             // El ORDEN define el ID estable (0..8) de cada objeto para guardar/restaurar
             // ediciones manuales (Tools > Save Campsite Layout). No reordenar sin re-guardar.
             Reg(FirePit(camp, t, c, charcoal, fire));                                        // 0 fogata
-            Reg(HLog(camp, bark,     Ground(t, c.x,        c.y - 2.5f), 3.4f, 0.36f, 90f));  // 1 tronco sur
-            Reg(HLog(camp, barkGrey, Ground(t, c.x - 2.6f, c.y + 0.1f), 3.0f, 0.34f,  0f));  // 2 tronco oeste
-            Reg(HLog(camp, bark,     Ground(t, c.x + 2.6f, c.y - 0.2f), 3.0f, 0.34f,  8f));  // 3 tronco este
+            // Troncos-asiento = modelo PS1 real (fallen trunk). Se orientan/asientan solos
+            // (detectan su eje largo, lo acuestan y calzan el largo objetivo), por eso NO se les
+            // aplica el BakedLayout viejo (era para los cilindros) → Reg(..., bake:false). Si el FBX
+            // falta, caen a un cilindro procedural (fallbackMat).
+            var trunk = AssetDatabase.LoadAssetAtPath<GameObject>(TrunkFbx);
+            Reg(TrunkSeat(camp, trunk, bark,     Ground(t, c.x,        c.y - 2.5f), 90f, 3.4f), false); // 1 tronco sur
+            Reg(TrunkSeat(camp, trunk, barkGrey, Ground(t, c.x - 2.6f, c.y + 0.1f),  0f, 3.0f), false); // 2 tronco oeste
+            Reg(TrunkSeat(camp, trunk, bark,     Ground(t, c.x + 2.6f, c.y - 0.2f),  8f, 3.0f), false); // 3 tronco este
             Reg(Firewood(camp, t, bark, c.x - 3.2f, c.y - 2.6f));                            // 4 leña
 
             var poles = Tex("Poles");
@@ -78,9 +87,16 @@ namespace FolkloreArchives.MapGen
             (new Vector3(6.84f, 0.0002356f, -1.57f),new Vector3(0f, 99.76956f, 0f),        new Vector3(1.5f, 1.5f, 1.5f)),
         };
 
-        static void Reg(GameObject go)
+        static void Reg(GameObject go) => Reg(go, true);
+
+        // bake=false: NO aplica el BakedLayout (el objeto ya se ubicó/orientó solo, ej. los
+        // troncos-asiento FBX que detectan su eje largo). IGUAL incrementa el ID para no correr
+        // los IDs de lo que viene después (leña, carpas, mesa). Las entradas 1..3 del BakedLayout
+        // (los cilindros viejos) quedan sin usar a propósito.
+        static void Reg(GameObject go, bool bake)
         {
             int id = _regId++;
+            if (!bake) return;
             if (go == null || id >= BakedLayout.Length) return;
             var b = BakedLayout[id];
             go.transform.localPosition    = b.pos;
@@ -353,6 +369,54 @@ namespace FolkloreArchives.MapGen
             return m;
         }
 
+        // Material del tronco caído: URP/Lit con RECORTE ALFA (cutout). El atlas es RGBA y el
+        // musgo viene sobre fondo TRANSPARENTE (alfa 0) → sin recorte se veía blanco. Con alpha clip
+        // el fondo se descarta y queda solo el musgo; corteza/anillos/hongos son opacos y quedan
+        // igual. Doble cara para que los cards planos de musgo se vean de ambos lados. Cacheado.
+        static Material _trunkMat;
+        static Material TrunkMat()
+        {
+            if (_trunkMat != null) return _trunkMat;
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(TrunkTex);
+            // asegurar el import: alfa real como transparencia + PS1 (point, sin mips)
+            string p = AssetDatabase.GetAssetPath(tex);
+            if (AssetImporter.GetAtPath(p) is TextureImporter ti &&
+                (!ti.alphaIsTransparency || ti.alphaSource != TextureImporterAlphaSource.FromInput ||
+                 ti.filterMode != FilterMode.Point || ti.mipmapEnabled))
+            {
+                ti.alphaSource = TextureImporterAlphaSource.FromInput;
+                ti.alphaIsTransparency = true;
+                ti.filterMode = FilterMode.Point;
+                ti.mipmapEnabled = false;
+                ti.SaveAndReimport();
+                tex = AssetDatabase.LoadAssetAtPath<Texture2D>(TrunkTex);
+            }
+
+            var m = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = "trunk_cutout" };
+            if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", tex);
+            m.mainTexture = tex;
+            m.color = Color.white;
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", Color.white);
+            // opaco + alpha clipping = recorte duro (el alfa es 0/255, cutoff 0.5 va justo)
+            if (m.HasProperty("_Surface")) m.SetFloat("_Surface", 0f);
+            m.SetOverrideTag("RenderType", "TransparentCutout");
+            if (m.HasProperty("_AlphaClip")) m.SetFloat("_AlphaClip", 1f);
+            m.EnableKeyword("_ALPHATEST_ON");
+            if (m.HasProperty("_Cutoff")) m.SetFloat("_Cutoff", 0.5f);
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+            // mate, sin reflejos (como el resto del campamento PS1)
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0f);
+            if (m.HasProperty("_SpecularHighlights")) m.SetFloat("_SpecularHighlights", 0f);
+            if (m.HasProperty("_EnvironmentReflections")) m.SetFloat("_EnvironmentReflections", 0f);
+            m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+            m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+            // doble cara: los cards de musgo son planos → visibles de ambos lados
+            if (m.HasProperty("_Cull")) m.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+            m.doubleSidedGI = true;
+            _trunkMat = m;
+            return m;
+        }
+
         static Texture2D Tex(string n) => AssetDatabase.LoadAssetAtPath<Texture2D>(CampTexDir + n + ".png");
 
         // Fuerza el import de una textura del pack a Point + sin mipmaps (crunch PS1).
@@ -366,6 +430,68 @@ namespace FolkloreArchives.MapGen
                 ti.mipmapEnabled = false;
                 ti.SaveAndReimport();
             }
+        }
+
+        // ── Tronco-asiento: modelo PS1 "fallen trunk" acostado y apoyado en el piso ──
+        //  Instancia el FBX, le pone su textura propia (PS1, point+mate), DETECTA su eje más
+        //  largo y lo acuesta a lo largo de +Z (yaw=0), lo escala a 'targetLen' metros de largo, lo
+        //  apoya con la base en el piso centrado en 'ground', y le agrega collider sólido (el
+        //  cilindro viejo tenía capsule). Si el FBX no está, cae al cilindro procedural.
+        static GameObject TrunkSeat(Transform parent, GameObject proto, Material fallbackMat,
+                                    Vector3 ground, float yawDeg, float targetLen)
+        {
+            if (proto == null)
+            {
+                Debug.LogWarning("[Campsite] falta " + TrunkFbx + " — uso tronco procedural. " +
+                                 "Hacé foco en Unity para que importe el FBX y regenerá.");
+                return HLog(parent, fallbackMat, ground, targetLen, targetLen * 0.11f, yawDeg);
+            }
+
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(proto);
+            inst.name = "FallenTrunk";
+            inst.transform.SetParent(parent, false);
+
+            // El FBX se exportó del .blend CON cámara + luces adentro → Unity las importa como
+            // hijos. Si no las saco, cada tronco mete una cámara y 2 luces en el campamento
+            // (rompe el render/iluminación). Destruyo todo hijo que sea Camera o Light.
+            var junk = new HashSet<GameObject>();
+            foreach (var cam in inst.GetComponentsInChildren<Camera>(true)) if (cam) junk.Add(cam.gameObject);
+            foreach (var li in inst.GetComponentsInChildren<Light>(true))  if (li)  junk.Add(li.gameObject);
+            foreach (var g in junk) if (g && g != inst) Object.DestroyImmediate(g);
+
+            // textura propia del asset (atlas RGBA: corteza/anillos opacos + musgo con FONDO
+            // TRANSPARENTE + hongos). Material con RECORTE ALFA, si no el fondo del musgo (alfa 0,
+            // RGB blanco) se ve como manchones blancos.
+            var mat = TrunkMat();
+            foreach (var r in inst.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var outM = new Material[Mathf.Max(1, r.sharedMaterials.Length)];
+                for (int i = 0; i < outM.Length; i++) outM[i] = mat;
+                r.sharedMaterials = outM;
+            }
+
+            // acostar el eje LARGO a lo largo de +Z (base yaw=0), después aplicar yaw
+            Quaternion r0 = inst.transform.rotation;               // rotación de import
+            inst.transform.localScale = Vector3.one;
+            Bounds b0 = PropBounds(inst);                          // medido a escala 1, rotación r0
+            Vector3 s = b0.size;
+            Vector3 axis = (s.x >= s.y && s.x >= s.z) ? Vector3.right
+                         : (s.y >= s.z ? Vector3.up : Vector3.forward);
+            float longDim = Mathf.Max(s.x, Mathf.Max(s.y, s.z));
+            inst.transform.rotation = Quaternion.Euler(0f, yawDeg, 0f)
+                                    * Quaternion.FromToRotation(axis, Vector3.forward) * r0;
+            if (longDim > 0.001f) inst.transform.localScale = Vector3.one * (targetLen / longDim);
+
+            // apoyar la base en el piso, centrado en XZ sobre 'ground'
+            Bounds b = PropBounds(inst);
+            inst.transform.position += new Vector3(ground.x - b.center.x, ground.y - b.min.y, ground.z - b.center.z);
+
+            // collider sólido (convexo) por cada malla → el jugador no lo atraviesa (como el cilindro)
+            foreach (var mf in inst.GetComponentsInChildren<MeshFilter>(true))
+                if (mf.sharedMesh != null && mf.GetComponent<Collider>() == null)
+                    mf.gameObject.AddComponent<MeshCollider>().convex = true;
+
+            return inst;
         }
 
         // ── Un tronco horizontal (cilindro) apoyado en el piso ────────────────

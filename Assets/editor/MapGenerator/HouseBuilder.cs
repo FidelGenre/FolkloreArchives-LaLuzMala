@@ -225,6 +225,8 @@ namespace FolkloreArchives.MapGen
             // (muebles nappin desactivados: el owner quiere un pack de muebles viejos)
             AddInteriorLights(inst.transform, hb);
             if (UseNappinFurniture) BuildAlpFurniture(inst.transform, hb);
+            PsxFurnitureBuilder.Build(parent, hb);          // muebles PSX (Akneeee) dentro de la casa
+            PsxDerelictFurnitureBuilder.Build(parent, hb);  // muebles abandonados (Daniel Jurys), set aparte
             BuildBarn(parent, terrain);
 
             Debug.Log($"<color=lime>Casa de la vieja: modelo ALP en OldLadyRanch (materiales a URP: {fixedMats}).</color>");
@@ -343,7 +345,7 @@ namespace FolkloreArchives.MapGen
         const bool UseAbandonedFarm = true;
         static void BuildBarn(Transform parent, Terrain terrain)
         {
-            if (UseAbandonedFarm) { AbandonedFarmBuilder.Build(parent, terrain); return; }
+            if (UseAbandonedFarm) { AbandonedFarmBuilder.Build(parent, terrain); ChickenCoopBuilder.Build(parent, terrain); CorralBuilder.Build(parent, terrain); return; }
 
             var g = BuilderUtils.Group(parent, "OldLadyBarn", Vector3.zero);
             Vector2 c = MapLayout.OldLadyBarnCenter;
