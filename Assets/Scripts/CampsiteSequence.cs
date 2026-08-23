@@ -86,6 +86,10 @@ namespace FolkloreArchives
         public Vector3 luzMalaPos = new Vector3(194.1414f, 23.9108f, 254.7851f); // la Luz Mala aparece acá (lago, de lejos)
         public Vector3 dogPoopPos = new Vector3(242.588f, 23.2307f, 219.621f);    // Rufus va a cagar acá (owner)
         public Vector3 dogBarkPos = new Vector3(231.419f, 24.38922f, 240.93f);    // Rufus se para acá a ladrarle a la luz (owner)
+
+        // ---- rancho de la vieja (misión de las cañas) ----
+        public Vector3 houseDoorPos = new Vector3(136.1347f, 27.24684f, 125.4351f); // puerta de la casa: tocás acá (owner TEST_PLAYER)
+        public float   houseDoorYaw = -178.982f;
         LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
@@ -598,6 +602,17 @@ namespace FolkloreArchives
 
             // 5) LIBRE: te vas caminando (vos + Rufus) al rancho de la vieja. NO scripteado.
             _playerHint = "Andá al rancho a pedir unas cañas";
+
+            // 6) al LLEGAR a la puerta de la casa tocás -> no atiende nadie -> a buscar por el granero.
+            yield return WaitPlayerInteract(player, houseDoorPos, playerReach + 0.6f, "[E] Tocar la puerta");
+            yield return SayFor("(Tocás la puerta...)", 1.6f);
+            yield return new WaitForSeconds(1.4f);
+            yield return SayFor("No atiende nadie...", 2.0f);
+            yield return SayFor("Habrá alguien atrás. Vamos a ver por el granero.", 3.0f);
+            _playerHint = "Buscá a alguien por el baño del granero";
+            // (sigue: baño del granero -> sale el viejo (susto) -> charla -> despierta a la vieja ->
+            //  favor de las ovejas -> caja del granero (screamer del pollo) -> arreglar el baño ->
+            //  mates + historia de la Luz Mala -> volver al campamento. FALTAN coordenadas.)
         }
 
         // Despertar al día siguiente: (A) amanece LENTO con el mismo plano cenital del campamento,
