@@ -138,6 +138,52 @@ namespace FolkloreArchives.MapGen
             }
         }
 
+        // Arma una TRANQUERA abrible a partir del Cube.184 seleccionado (que es combined mesh y
+        // no se puede rotar). Lee su AABB/material, crea una réplica-plank con bisagra en un
+        // extremo (eje Y) + CorralGate, y DESACTIVA el original.
+        [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
+        static void BuildGate()
+        {
+            var sel = Selection.activeGameObject;
+            if (sel == null) { EditorUtility.DisplayDialog("Tranquera", "Seleccioná primero la puerta del corral (Cube.184).", "OK"); return; }
+            var rend = sel.GetComponent<Renderer>();
+            if (rend == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+
+            Bounds wb = rend.bounds;                 // AABB en mundo (la puerta)
+            Vector3 c = wb.center, s = wb.size;
+            bool longX = s.x >= s.z;                 // eje largo horizontal = a lo largo de la tranquera
+            float length = longX ? s.x : s.z;
+            Vector3 longDir = longX ? Vector3.right : Vector3.forward;
+            Vector3 hinge = c - longDir * (length * 0.5f);   // bisagra en un EXTREMO
+
+            var mat = rend.sharedMaterial;
+
+            var prev = FindByName("TranqueraCorral");
+            if (prev != null) Object.DestroyImmediate(prev.gameObject);
+
+            var pivot = new GameObject("TranqueraCorral");
+            pivot.transform.position = hinge;
+            pivot.transform.rotation = Quaternion.identity;
+
+            var plank = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            plank.name = "Plank";
+            plank.transform.SetParent(pivot.transform, true);
+            plank.transform.position = c;
+            plank.transform.rotation = Quaternion.identity;
+            plank.transform.localScale = s;          // pivot con escala 1 -> tamaño mundo = s
+            if (mat != null) plank.GetComponent<Renderer>().sharedMaterial = mat;
+
+            pivot.AddComponent<FolkloreArchives.CorralGate>();
+
+            sel.SetActive(false);   // ocultamos la puerta combined original
+
+            Undo.RegisterCreatedObjectUndo(pivot, "Armar tranquera");
+            Selection.activeGameObject = pivot;
+            EditorGUIUtility.PingObject(pivot);
+            Debug.Log("[Rancho] 'TranqueraCorral' armada (bisagra en un extremo, eje Y). Original " +
+                      sel.name + " desactivado. Ajustá openDeg (+/-) si abre para el lado equivocado.");
+        }
+
         static Texture2D LoadPointTex(string path)
         {
             var imp = AssetImporter.GetAtPath(path) as TextureImporter;

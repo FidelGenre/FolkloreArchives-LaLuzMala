@@ -90,6 +90,8 @@ namespace FolkloreArchives
         // ---- rancho de la vieja (misión de las cañas) ----
         public Vector3 houseDoorPos = new Vector3(136.1347f, 27.24684f, 125.4351f); // puerta de la casa: tocás acá (owner TEST_PLAYER)
         public float   houseDoorYaw = -178.982f;
+        public Vector3 corralGateStand = new Vector3(116.6176f, 26.97f, 149.8931f);  // parado acá para abrir la tranquera (owner)
+        public Vector3 sheepPasturePos = new Vector3(124.067f, 26.1109f, 167.3692f); // las ovejas van a pastar acá (owner)
         LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
@@ -673,9 +675,22 @@ namespace FolkloreArchives
             yield return SayFor("Sáquenme las ovejas a pastar, ¿sí? Yo ya no puedo.", 3.4f);
 
             PartyController.CinematicLock = false;   // volvés a moverte
-            _playerHint = "Abrí la puerta del corral para sacar las ovejas";
-            // (sigue: abrir corral -> ovejas pastan -> caja del granero (screamer) -> arreglar
-            //  el baño -> mates + historia de la Luz Mala -> volver. FALTAN coordenadas.)
+            _playerHint = "Abrí la tranquera del corral para sacar las ovejas";
+
+            // 6) abrir la TRANQUERA (la arma el botón de editor como "TranqueraCorral"). Esperamos
+            //    a que la abras con E; después salen las ovejas al pastizal (falta el MODELO de oveja).
+            Transform gateT = FindObj("TranqueraCorral");
+            var gate = gateT != null ? gateT.GetComponent<CorralGate>() : null;
+            if (gate != null)
+            {
+                while (!gate.IsOpen) yield return null;
+                _playerHint = null;
+                yield return SayFor("¡Vamos, ovejas! A pastar...", 2.6f);
+                // TODO(ovejas): soltar las ovejas hacia sheepPasturePos cuando tengamos el modelo.
+            }
+            _playerHint = "Llevá las ovejas al pastizal";
+            // (sigue: ovejas pastan -> caja del granero (screamer) -> arreglar el baño -> mates +
+            //  historia de la Luz Mala -> volver. FALTA el modelo de oveja.)
         }
 
         // busca un objeto por nombre en la escena (incluye inactivos, ej. RanchoViejo desactivado).
