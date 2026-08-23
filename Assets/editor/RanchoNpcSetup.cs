@@ -23,6 +23,9 @@ namespace FolkloreArchives.MapGen
         const string Fbx = "Assets/ExternalAssets/OldManNPC/Character_32.fbx";
         const string Tex = "Assets/ExternalAssets/OldManNPC/Character_32.png";
         const float  TargetHeight = 2.15f;  // hombre adulto (la vieja es 2.0; los amigos 2.2)
+        const string SheepObj = "Assets/ExternalAssets/Sheep/sheep.obj";
+        const string SheepTex = "Assets/ExternalAssets/Sheep/sheep_tex.jpg";
+        const float  SheepHeight = 1.0f;    // altura de la oveja (chica)
 
         // el pack "Characters PSX" usa rig Mixamo (mixamorig:*): mismos limbs que el amigo
         // "green jacket". HumanWalkAnim con esto = camina + brazos a los lados (no T-pose).
@@ -182,6 +185,78 @@ namespace FolkloreArchives.MapGen
             EditorGUIUtility.PingObject(pivot);
             Debug.Log("[Rancho] 'TranqueraCorral' armada (bisagra en un extremo, eje Y). Original " +
                       sel.name + " desactivado. Ajustá openDeg (+/-) si abre para el lado equivocado.");
+        }
+
+        // pone N ovejas (sheep.obj) en un cluster cerca de la tranquera. La secuencia las
+        // mueve al pastizal cuando abrís la tranquera. Grupo "Ovejas" con hijos "Oveja_i".
+        [MenuItem("Folklore/Poner ovejas en el corral")]
+        static void PlaceSheep()
+        {
+            AssetDatabase.Refresh();
+            var obj = AssetDatabase.LoadAssetAtPath<GameObject>(SheepObj);
+            if (obj == null) { EditorUtility.DisplayDialog("Ovejas", "No encontré " + SheepObj + " (¿lo importó Unity?).", "OK"); return; }
+
+            var prev = FindByName("Ovejas");
+            if (prev != null) Object.DestroyImmediate(prev.gameObject);
+            var group = new GameObject("Ovejas");
+
+            // punto de spawn del rebaño (owner TEST_PLAYER, adentro del corral)
+            Vector3 baseP = new Vector3(108.905f, 26.75688f, 154.3876f);
+
+            // material URP con la textura (Point = PSX)
+            var tex = LoadPointTex(SheepTex);
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.05f);
+            mat = BuilderUtils.SaveMaterialStable(mat, "Assets/Settings/PSX_Oveja.mat");
+
+            const int N = 4;
+            for (int i = 0; i < N; i++)
+            {
+                var s = BuildSheep(obj, mat, i);
+                s.transform.SetParent(group.transform);
+                float ang = i * 90f * Mathf.Deg2Rad;
+                Vector3 p = baseP + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * (1.0f + i * 0.25f);
+                if (Physics.Raycast(p + Vector3.up * 5f, Vector3.down, out var hit, 30f)) p.y = hit.point.y;
+                s.transform.position = p;
+                s.transform.rotation = Quaternion.Euler(0f, i * 63f, 0f);
+            }
+            Undo.RegisterCreatedObjectUndo(group, "Poner ovejas");
+            Selection.activeGameObject = group;
+            EditorGUIUtility.PingObject(group);
+            Debug.Log("[Rancho] " + N + " ovejas puestas en 'Ovejas' cerca del corral. Movelas si hace falta.");
+        }
+
+        static GameObject BuildSheep(GameObject obj, Material mat, int idx)
+        {
+            var go = new GameObject("Oveja_" + idx);
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(obj);
+            model.name = "Model";
+            model.transform.SetParent(go.transform);
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one;
+
+            var rends = model.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                Bounds b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                float h = Mathf.Max(0.0001f, b.size.y);
+                model.transform.localScale = Vector3.one * (SheepHeight / h);
+                Bounds b2 = rends[0].bounds;
+                foreach (var r in model.GetComponentsInChildren<Renderer>()) b2.Encapsulate(r.bounds);
+                model.transform.localPosition = new Vector3(0f, -(b2.min.y - go.transform.position.y), 0f);
+                foreach (var r in rends)
+                {
+                    var arr = new Material[r.sharedMaterials.Length];
+                    for (int k = 0; k < arr.Length; k++) arr[k] = mat;
+                    r.sharedMaterials = arr;
+                }
+            }
+            var col = go.AddComponent<CapsuleCollider>();
+            col.height = SheepHeight; col.radius = SheepHeight * 0.4f; col.center = new Vector3(0f, SheepHeight * 0.5f, 0f);
+            return go;
         }
 
         static Texture2D LoadPointTex(string path)

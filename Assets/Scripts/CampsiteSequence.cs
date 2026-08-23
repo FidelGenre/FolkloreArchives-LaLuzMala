@@ -685,12 +685,33 @@ namespace FolkloreArchives
             {
                 while (!gate.IsOpen) yield return null;
                 _playerHint = null;
-                yield return SayFor("¡Vamos, ovejas! A pastar...", 2.6f);
-                // TODO(ovejas): soltar las ovejas hacia sheepPasturePos cuando tengamos el modelo.
+                yield return SayFor("¡Vamos, ovejas! A pastar...", 2.2f);
+
+                // las ovejas (grupo "Ovejas", lo pone el botón de editor) salen al pastizal
+                Transform flockRoot = FindObj("Ovejas");
+                if (flockRoot != null)
+                {
+                    var flock = new List<Transform>();
+                    foreach (Transform s in flockRoot) flock.Add(s);
+                    float t = 0f;
+                    while (t < 22f)
+                    {
+                        bool all = true;
+                        for (int i = 0; i < flock.Count; i++)
+                        {
+                            Vector3 dest = sheepPasturePos + Right(0f) * ((i - (flock.Count - 1) * 0.5f) * 1.3f);
+                            if (Flat2(flock[i].position, dest) > 1.0f) { StepToward(flock[i], dest, 1.7f); all = false; }
+                        }
+                        if (all) break;
+                        t += Time.deltaTime;
+                        yield return null;
+                    }
+                    yield return SayFor("Listo, ya están pastando tranquilas.", 2.4f);
+                }
             }
-            _playerHint = "Llevá las ovejas al pastizal";
-            // (sigue: ovejas pastan -> caja del granero (screamer) -> arreglar el baño -> mates +
-            //  historia de la Luz Mala -> volver. FALTA el modelo de oveja.)
+            _playerHint = "Volvé con la vieja";
+            // (sigue: caja del granero (screamer) -> arreglar el baño -> mates + historia de la Luz
+            //  Mala -> volver al campamento. FALTAN coordenadas.)
         }
 
         // busca un objeto por nombre en la escena (incluye inactivos, ej. RanchoViejo desactivado).
