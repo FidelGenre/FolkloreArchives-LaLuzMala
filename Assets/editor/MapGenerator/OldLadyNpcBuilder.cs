@@ -74,6 +74,17 @@ namespace FolkloreArchives.MapGen
                 for (int k = 0; k < arr.Length; k++) arr[k] = mat;
                 r.sharedMaterials = arr;
             }
+
+            // movilidad/pose: HumanWalkAnim (camina + brazos a los lados). El pack "Characters
+            // PSX" usa rig Mixamo (mixamorig:*), mismos limbs que el amigo "green jacket".
+            var anim = go.AddComponent<FolkloreArchives.HumanWalkAnim>();
+            anim.limbs = new[]
+            {
+                new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:LeftUpLeg",  phase =  1f },
+                new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:RightUpLeg", phase = -1f },
+                new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:LeftArm",    phase = -1f },
+                new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:RightArm",   phase =  1f },
+            };
         }
 
         static Texture2D LoadPointTex(string path)

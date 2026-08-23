@@ -24,6 +24,16 @@ namespace FolkloreArchives.MapGen
         const string Tex = "Assets/ExternalAssets/OldManNPC/Character_32.png";
         const float  TargetHeight = 2.15f;  // hombre adulto (la vieja es 2.0; los amigos 2.2)
 
+        // el pack "Characters PSX" usa rig Mixamo (mixamorig:*): mismos limbs que el amigo
+        // "green jacket". HumanWalkAnim con esto = camina + brazos a los lados (no T-pose).
+        static readonly FolkloreArchives.HumanWalkAnim.Limb[] MixamoLimbs =
+        {
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:LeftUpLeg",  phase =  1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:RightUpLeg", phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:LeftArm",    phase = -1f },
+            new FolkloreArchives.HumanWalkAnim.Limb { bone = "mixamorig:RightArm",   phase =  1f },
+        };
+
         [MenuItem("Folklore/Poner viejo del rancho en la letrina")]
         static void PlaceOldMan()
         {
@@ -91,6 +101,15 @@ namespace FolkloreArchives.MapGen
                 r.sharedMaterials = arr;
             }
 
+            // colisión (cápsula parada) + animación procedural (camina + brazos abajo), igual amigos
+            var col = go.AddComponent<CapsuleCollider>();
+            col.height = TargetHeight; col.radius = TargetHeight * 0.16f; col.center = new Vector3(0f, TargetHeight * 0.5f, 0f);
+            var anim = go.AddComponent<FolkloreArchives.HumanWalkAnim>();
+            anim.limbs = MixamoLimbs;
+
+            // la VIEJA (ya en la escena) también necesita la misma movilidad/pose
+            EnsureMobility(FindByName("OldLady_Storyteller"));
+
             // pos: justo afuera de la puerta, apoyado en el piso (raycast al terreno)
             Vector3 p = doorPos + outward * 0.6f;
             if (Physics.Raycast(p + Vector3.up * 5f, Vector3.down, out var hit, 30f)) p.y = hit.point.y;
@@ -105,6 +124,18 @@ namespace FolkloreArchives.MapGen
             EditorGUIUtility.PingObject(go);
             Debug.Log("[Rancho] 'RanchoViejo' (Character_32) puesto DESACTIVADO en " + p +
                       ", mirando afuera de la letrina. Lo activa la secuencia al tocar la puerta.");
+        }
+
+        // agrega HumanWalkAnim (camina + brazos a los lados) si no lo tiene ya
+        static void EnsureMobility(Transform npc)
+        {
+            if (npc == null) return;
+            if (npc.GetComponent<FolkloreArchives.HumanWalkAnim>() == null)
+            {
+                var a = npc.gameObject.AddComponent<FolkloreArchives.HumanWalkAnim>();
+                a.limbs = MixamoLimbs;
+                Debug.Log("[Rancho] HumanWalkAnim agregado a " + npc.name);
+            }
         }
 
         static Texture2D LoadPointTex(string path)
