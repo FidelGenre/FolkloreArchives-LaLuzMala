@@ -43,27 +43,46 @@ namespace FolkloreArchives.MapGen
                 foreach (var m in r.sharedMaterials)
                     if (m != null && !mats.ContainsKey(m.name)) mats[m.name] = m;
 
-            // 3) instanciar la granja fresca del FBX y aislar el nodo "letrina"
+            // 3) instanciar la granja fresca del FBX y DESEMPAQUETARLA (si no, no se puede reparentar)
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(Fbx);
             if (fbx == null) { EditorUtility.DisplayDialog("Letrina", "No encontré " + Fbx, "OK"); return; }
             var farm = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
-            var letr = FindLetrina(farm.transform);
-            if (letr == null)
+            PrefabUtility.UnpackPrefabInstance(farm, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+
+            // 4) juntar TODAS las piezas de la letrina (letrina, letrina.001 ... letrina.006)
+            var pieces = new List<Transform>();
+            foreach (var t in farm.GetComponentsInChildren<Transform>(true))
+                if (t != null && t.name.ToLowerInvariant().StartsWith("letrina")) pieces.Add(t);
+            if (pieces.Count == 0)
             {
                 Object.DestroyImmediate(farm);
-                EditorUtility.DisplayDialog("Letrina", "No encontré un nodo 'letrina' dentro del FBX.", "OK");
+                EditorUtility.DisplayDialog("Letrina", "No encontré piezas 'letrina*' dentro del FBX.", "OK");
                 return;
             }
 
-            letr.SetParent(null, true);
-            letr.name = "Letrina_Fresca";
-            Object.DestroyImmediate(farm);   // tiramos el resto de la granja instanciada
+            // centro (por bounds de los renderers) para usar de pivote del grupo
+            Bounds? bb = null;
+            foreach (var p in pieces)
+            {
+                var rr = p.GetComponent<Renderer>();
+                if (rr == null) continue;
+                if (bb == null) bb = rr.bounds; else { var b = bb.Value; b.Encapsulate(rr.bounds); bb = b; }
+            }
+            Vector3 anchor = bb.HasValue ? bb.Value.center : pieces[0].position;
 
-            // 4) ubicarla EXACTO donde tenías la rota
-            letr.position = wp; letr.rotation = wr; letr.localScale = ws;
+            // grupo nuevo en el anchor; metemos las piezas manteniendo su layout (worldPositionStays)
+            var group = new GameObject("Letrina_Fresca");
+            group.transform.position = anchor;
+            group.transform.rotation = Quaternion.identity;
+            foreach (var p in pieces) p.SetParent(group.transform, true);
 
-            // 5) re-aplicar los materiales URP por nombre (evita magenta si el FBX trae built-in)
-            foreach (var r in letr.GetComponentsInChildren<Renderer>(true))
+            Object.DestroyImmediate(farm);   // tiramos el resto de la granja
+
+            // 5) mover el grupo a donde tenías la rota (dejo rotación/escala AUTORAL: derecha y tamaño OK)
+            group.transform.position = wp;
+
+            // 6) re-aplicar los materiales URP por nombre (evita magenta si el FBX trae built-in)
+            foreach (var r in group.GetComponentsInChildren<Renderer>(true))
             {
                 var src = r.sharedMaterials; bool changed = false;
                 for (int i = 0; i < src.Length; i++)
@@ -71,26 +90,14 @@ namespace FolkloreArchives.MapGen
                 if (changed) r.sharedMaterials = src;
             }
 
-            // 6) apagamos la rota (la borrás vos cuando confirmes que quedó bien)
+            // 7) apagamos la rota (la borrás vos cuando confirmes que quedó bien)
             old.SetActive(false);
-            Undo.RegisterCreatedObjectUndo(letr.gameObject, "Reponer letrina");
-            Selection.activeGameObject = letr.gameObject;
-            EditorGUIUtility.PingObject(letr.gameObject);
-            Debug.Log("[Letrina] Repuesta 'Letrina_Fresca' en " + wp +
-                      ". La vieja quedó DESACTIVADA; si quedó bien, borrala.");
-        }
-
-        // busca el nodo de la letrina en el FBX: exacto "letrina" primero; si no, el primero que empiece con "letrina".
-        static Transform FindLetrina(Transform root)
-        {
-            Transform starts = null;
-            foreach (var t in root.GetComponentsInChildren<Transform>(true))
-            {
-                string n = t.name.ToLowerInvariant();
-                if (n == "letrina") return t;
-                if (starts == null && n.StartsWith("letrina")) starts = t;
-            }
-            return starts;
+            Undo.RegisterCreatedObjectUndo(group, "Reponer letrina");
+            Selection.activeGameObject = group;
+            EditorGUIUtility.PingObject(group);
+            Debug.Log("[Letrina] Repuesta 'Letrina_Fresca' (" + pieces.Count + " piezas) en " + wp +
+                      ". La vieja quedó DESACTIVADA; si quedó bien, borrala. Ajustá Y y rotación si hace falta.");
+            _ = wr; _ = ws;
         }
     }
 }
