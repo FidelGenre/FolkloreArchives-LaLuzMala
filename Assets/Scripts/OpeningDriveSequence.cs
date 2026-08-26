@@ -119,6 +119,16 @@ namespace FolkloreArchives
             PlayerVehicleInteractor.DrivingLocked = true;
 
             int cp = ReadCheckpoint();
+            if (cp >= 3)
+            {
+                // DEBUG (checkpoint 3): saltear TODO el campamento (llegada/carpas/noche/Rufus·Luz
+                // Mala/despertar/charla de la mañana) -> arranca LIBRE justo en "andá al rancho a
+                // pedir unas cañas". CampsiteSequence.BeginAtRancho arma TODO el estado (auto
+                // estacionado en el campamento, carpas puestas, amigos en su lugar de mañana,
+                // jugador+perro libres) -- no hace falta tocar nada más acá.
+                gameObject.AddComponent<FolkloreArchives.CampsiteSequence>().BeginAtRancho(this);
+                yield break;
+            }
             if (cp >= 2)
             {
                 // DEBUG (checkpoint 2): saltear TODA la YPF -> SOLO los 3 amigos ya sentados atrás.

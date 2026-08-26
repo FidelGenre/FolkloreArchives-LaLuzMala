@@ -8,6 +8,9 @@
 //    · YPF bajada    -> saltea el meado y el viaje: aparece con todos bajándose.
 //    · Tienda        -> además saltea la dispersión: chica en el baño + amigos
 //                       ubicados, listo para golpear la oficina.
+//    · Rancho (cañas)-> además saltea TODO el campamento (carpas/noche/Rufus-Luz
+//                       Mala/despertar/charla mañana): arranca LIBRE en "andá al
+//                       rancho a pedir unas cañas" (letrina/viejo/vieja/ovejas).
 // ============================================================
 using UnityEditor;
 using UnityEngine;
@@ -17,7 +20,7 @@ namespace FolkloreArchives.MapGen
     [InitializeOnLoad]
     public static class DebugCheckpointButtons
     {
-        static readonly string[] Names = { "▶ 0 · Meando", "▶ 1 · YPF bajada", "▶ 2 · En el auto (al campamento)" };
+        static readonly string[] Names = { "▶ 0 · Meando", "▶ 1 · YPF bajada", "▶ 2 · En el auto (al campamento)", "▶ 3 · Rancho (cañas)" };
 
         static DebugCheckpointButtons()
         {
