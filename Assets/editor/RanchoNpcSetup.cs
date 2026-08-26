@@ -256,6 +256,9 @@ namespace FolkloreArchives.MapGen
             var gate = fresh.AddComponent<FolkloreArchives.CorralGate>();
             gate.hintClosed = "[E] Abrir la puerta";
             gate.hintOpen   = "[E] Cerrar la puerta";
+            gate.openDeg = -100f;   // owner: abría para ADENTRO -- invertido para que abra hacia afuera
+            gate.openClipName  = "door_open";    // owner: nada de sonido de puerta de auto -- puerta normal
+            gate.closeClipName = "door_close";
 
             old.SetActive(false);   // la puerta combined original queda desactivada
 

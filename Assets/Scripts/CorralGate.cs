@@ -24,6 +24,8 @@ namespace FolkloreArchives
         public float volume = 0.7f;
         public string hintClosed = "[E] Abrir la tranquera";   // cartel [E] con la puerta/tranquera cerrada
         public string hintOpen   = "[E] Cerrar la tranquera";  // cartel [E] con la puerta/tranquera abierta
+        public string openClipName  = "car_door_open";   // nombre del clip en Resources/ (sin extensión)
+        public string closeClipName = "car_door_close";
 
         Quaternion _closed;
         bool _open;
@@ -36,8 +38,8 @@ namespace FolkloreArchives
         void Awake()
         {
             _closed = transform.localRotation;
-            _openClip  = Resources.Load<AudioClip>("car_door_open");   // reuso; se puede cambiar por uno de tranquera
-            _closeClip = Resources.Load<AudioClip>("car_door_close");
+            _openClip  = Resources.Load<AudioClip>(openClipName);
+            _closeClip = Resources.Load<AudioClip>(closeClipName);
         }
 
         // abre/cierra (lo llama la secuencia o el toggle con E).
