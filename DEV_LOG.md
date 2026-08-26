@@ -896,3 +896,147 @@ asset importado). Se aplica a TODAS las piezas del set derelict para que queden 
 Fix brillo cama v2: seguía brillando tras regenerar (material importado no era URP/Lit
 o tenía emisión → ignoraba la luz). MakeMatte ahora REARMA cada material como URP/Lit
 mate tomando la textura base, y apaga specular/reflejos + EMISIÓN (EmissiveIsBlack).
+
+Hogar/chimenea (20/8/2026): "Fireplace Low-poly" (MaX3Dd, Sketchfab, CC-BY). GLB chico
+(0.67×0.52×0.26 m) → se ESCALA por altura a 1.3 m. Copiado a PSXDerelict/fireplace.glb,
+agregado a PsxDerelictFurnitureBuilder.Items (pared derecha, fx0.94/fz0.55, yaw-90,
+targetH1.3). Se agregó campo targetH a Items (>0 = escalar por altura; 0 = tamaño real).
+MakeMatte aplica igual (sin brillo). Sumado a ASSET_CREDITS (CC-BY).
+
+Mesa PS1 duplicada en casa vieja (22/8/2026): owner pidió duplicar la mesa del campamento
+criminal (PS1_Table) en la casa de la vieja. PsxDerelictFurnitureBuilder.PlacePs1Table():
+instancia HouseFurniture_PS1/PS1_Table.fbx con el mismo material (stove_atlas mate, igual
+que CriminalCampBuilder.PS1KitMat), escala ~0.75 m, en el centro de la casa, nombre único
+"PS1_Table" en el grupo MueblesViejaDerelict → Save Map Layout. Reusa asset existente (sin
+descarga nueva).
+
+Sillas PS1 + comedor (22/8/2026): owner pidió copiar también la silla del campamento criminal.
+Refactor: PlacePs1Table → PlacePs1Kit(fbxName, uniqueName, fx, fz, yaw, targetH) genérico. En la
+casa de la vieja ahora arma un COMEDOR: PS1_Table (centro) + 4 PS1_Chair alrededor (sur/norte/
+oeste/este, mirando la mesa), mismo material stove_atlas mate, nombres únicos → Save Map Layout.
+
+Bonfire (22/8/2026): "Bonfire Lowpoly" (Christian Gentry, Sketchfab, CC-BY). GLB tamaño real
+(1.81×0.87×1.81 m), sin animación ni emisión (llamas pintadas en textura). Copiado a
+PSXDerelict/bonfire.glb, agregado a PsxDerelictFurnitureBuilder.Items con matte=FALSE (se
+conserva su material original, no se le fuerza el mate como al resto). Se agregó campo bool
+'matte' a Items. Nota: no ilumina de noche (no tiene emisión/luz); si se quiere que brille se
+puede sumar un Point Light + emisivo aparte. Sumado a ASSET_CREDITS (CC-BY).
+
+Bonfire solo madera (22/8/2026): owner pidió sacar el anillo de piedras y dejar solo la
+madera. La malla es una sola (1 material) → PsxDerelictFurnitureBuilder.StripBonfireStones()
+filtra por GEOMETRÍA en espacio mundo: descarta los triángulos con radio horizontal > 80% del
+máximo (las piedras del borde; hay un hueco claro en r 0.68-0.76 sobre 0.907). Crea malla nueva
+"bonfire_wood" (conserva verts/uv/colores) y la asigna; el collider usa esa malla filtrada.
+
+Fuego + luz bonfire (22/8/2026): owner pidió partículas de fuego e iluminación en la hoguera.
+CampsiteBuilder.AddFireParticles se hizo public (reuso del sistema de fuego PS1). Nuevo
+PsxDerelictFurnitureBuilder.AddBonfireFire(): agrega Point Light cálida (color 1,0.55,0.2;
+intensity 2.6; range 12; sin sombras) + partículas de fuego, colgadas del GRUPO (escala 1, para
+que el tamaño de partícula no dependa de la escala del modelo) posicionadas en el top real de la
+madera (PropBounds mundo). Nombres BonfireLight/FireParticles → Save Map Layout.
+
+Fuego bonfire v2 (22/8/2026): owner "no se ven partículas" (estaba en el menú co-op/spawn,
+lejos de la casa; los objetos BonfireLight/FireParticles SÍ existían en la jerarquía).
+AddFireParticles ahora devuelve el GameObject. AddBonfireFire agranda el fuego del bonfire
+(startSize 0.5-1.15, lifetime 0.55-1.1, rate 32, shape radius 0.45), lo sube sobre los troncos
+(0.55*alto) y sube la luz (intensity 3.2, range 14). Se ve en Scene view (focus FireParticles) y
+en Play estando cerca del bonfire.
+
+Baño en casa vieja (22/8/2026): 3 GLB (bathroom_set 17 mallas 0.88x1.15x0.79; dirty_sink
+0.68x0.80x1.0; psx_toilet GIGANTE 1.76x4.13x2.62 → targetH 0.75). Copiados a PSXDerelict/
+(bathroom_set.glb/dirty_sink.glb/psx_toilet.glb), agregados a PsxDerelictFurnitureBuilder.Items
+en rincón frente-derecha (fz 0.15-0.30), matte=true. OJO: el owner NO pasó los links de descarga
+→ ASSET_CREDITS con ⚠ (pedir fuente/autor/licencia).
+
+Fuego bonfire v3 (22/8/2026): owner sigue sin ver fuego en Play (estaba en el LOBBY co-op
+"elegí personaje", donde la simulación puede estar pausada → partículas no emiten). Se subió
+la luz (intensity 5, range 18) y se puso prewarm=true + playOnAwake + ps.Play() para que el
+fuego arranque YA encendido. Test definitivo: Scene view, doble-clic en FireParticles (frame) →
+se ven las llamas y dónde está. En Play hay que estar cerca del bonfire y con la partida ya
+iniciada (no en el lobby).
+
+Fuego bonfire v4 - FIX REAL (22/8/2026): el fuego NO se veía porque el owner movió el bonfire al
+hogar y lo escaló a ~0.0055 vía Save Map Layout, pero el fuego/luz colgaban del GRUPO en la
+pos/escala por defecto → al aplicar el layout el bonfire se mudaba/achicaba y el fuego quedaba
+huérfano (lejos y gigante). Fix: AddBonfireFire ahora cuelga BonfireLight + FireParticles del
+BONFIRE (siguen su move+escala del layout) y usa main.scalingMode = Shape para que el TAMAÑO de
+partícula sea inmune a la escala chiquísima del bonfire (velocidad/tamaño ignoran la escala; solo
+el shape de emisión se achica → emisión casi puntual, ok). La luz (range mundo) no depende de escala.
+La fogata del campamento se veía porque su fuego está en un grupo a escala 1.
+
+Farm props (22/8/2026): "PSXProp - Farm Props" (Wardster, Sketchfab, CC-BY). 1 GLB combinado
+(pozo/well, barriles, rueda de afilar, carrete de cable, farm_prop_P1) + un PLANO gigante de
+display (55 m) que se descarta. Copiado a ChickenFarm/farm_props.glb. ChickenCoopBuilder.
+PlaceFarmProps(): instancia el GLB entero como cluster "FarmProps" en el patio de la granja
+(FarmPropsSpot 204,179), borra los hijos "Plano"/"Materiais"/"decalMoss", apoya en el piso,
+MakeMatte (público ahora, reusado de PsxDerelictFurnitureBuilder), colliders. Nombre único →
+Save Map Layout (el owner reparte las piezas). Props a tamaño real (escala 1). CC-BY → acreditar
+a Wardster (en ASSET_CREDITS).
+
+## 2026-08-26 — HANDOFF: cinemática campamento (noche→día) + misión del RANCHO DE LA VIEJA (cañas)
+
+Contexto para retomar en cualquier sesión nueva. Todo esto vive en `Assets/Scripts/CampsiteSequence.cs`
+(director coroutine que corre desde el auto → campamento → noche → perro/Luz Mala → despertar →
+mañana → rancho) + botones de editor en el menú **Folklore ▸ …**. Referenciado por OBJETO
+(no coords hardcodeadas): `letrina.007`, `RanchoViejo`, `OldLady_Storyteller`, `TranqueraCorral`,
+`Ovejas`. Coords sí-hardcodeadas en campos públicos de CampsiteSequence: `houseDoorPos`,
+`corralGateStand`, `sheepPasturePos`, `playerSitPos`, `nightCamPos`, `luzMalaPos`, `dogPoopPos`,
+`dogBarkPos`.
+
+CINEMÁTICA CAMPAMENTO (ya andaba, se sumó):
+- Perro (Rufus) al lado del jugador en el tronco de la fogata: se ACHICA (`dogFireScaleMul=0.4`,
+  escala el hijo "Model"); se restaura al despertarse de noche.
+- Despertar nuevo día (`WakeNewDay`): tras el reto por ladrar, Rufus MANTIENE su cámara hasta
+  volver a la carpa; el humano se para al lado de la carpa y lo reta; al llegar ambos entran y se
+  acuestan; AMANECE lento con el mismo plano cenital del campamento (`MakeNightCam`) + parpadeo
+  negro (cámara mirando el techo de la carpa) + aparecen afuera → control libre.
+- Mañana (`MorningAfterWake`): limpiás la caca de Rufus con E; hablás con el malecasual (parado
+  fuera de su carpa; chica y negro en los troncos) sobre pescar; faltan las cañas (revisás el
+  auto); deciden ir a un rancho a pedir prestado; caminás LIBRE al rancho.
+
+MISIÓN RANCHO (nuevo, `RanchoBathroomScene`):
+- Tocás la puerta de la casa (`houseDoorPos` 136.13,125.44) → no atiende → al granero.
+- Tocás la LETRINA (`letrina.007`) → se ACTIVA `RanchoViejo` (susto: flash negro + ladrido) →
+  "¡propiedad privada!" → pedís caña → "pregúntenle a mi mujer, ya la despierto" → el viejo camina
+  a `OldLady_Storyteller`, ella viene al jugador → "mucho gusto…" → presta las cañas a cambio de
+  SACAR LAS OVEJAS.
+- Hint "Abrí la tranquera" → abrís `TranqueraCorral` con E → las 4 `Ovejas` caminan solas al
+  pastizal (`sheepPasturePos` 124.07,167.37).
+
+BOTONES DE EDITOR (menú Folklore):
+- `LetrinaFixer.cs` → "Reponer letrina (fresca con texturas)": la letrina de la escena es un
+  Combined Mesh (static batch) que se rompe al moverla; esto instancia una copia limpia del
+  AbandonedFarm.fbx en el mismo transform. (Ya usado; la letrina quedó en piezas letrina.00x.)
+- `RanchoNpcSetup.cs` →
+  · "Poner viejo del rancho en la letrina": construye `RanchoViejo` del `OldManNPC/Character_32.fbx`
+    (pack Characters PSX, rig Mixamo) con material URP + `HumanWalkAnim` + MixamoLimbs, DESACTIVADO
+    en la puerta de la letrina; de paso agrega HumanWalkAnim a `OldLady_Storyteller` (EnsureMobility).
+  · "Armar tranquera del corral (abrible)": desde el `Cube.184` seleccionado (combined mesh) arma
+    una réplica-plank con bisagra en un extremo (eje Y) + `CorralGate` (E abre/cierra) y desactiva
+    el original. `openDeg=95` (poné -95 si abre para el lado equivocado).
+  · "Poner ovejas en el corral": 4 ovejas (`Sheep/sheep.obj`) en (108.9,154.4) con material
+    URP/Point; `SheepHeight=1.6`.
+- Componente nuevo: `Assets/Scripts/CorralGate.cs` (bisagra vertical + E + InteractHint + sonido).
+
+ASSETS (en `Assets/ExternalAssets/`, GITIGNORED — no se versionan):
+- `OldManNPC/Character_32.fbx` + `Character_32.png`: viejo canoso (sweater/jeans), extraído de
+  `Downloads/Characters_psx.rar` (pack "Characters PSX" de Elbolilloduro, CC0 — mismo de la vieja).
+- `Sheep/sheep.obj` + `sheep.mtl` + `sheep_tex.jpg`: oveja, extraída de `Downloads/9143.zip`
+  (OBJ estilo Sketchfab). ⚠ ASSET_CREDITS: falta fuente/autor/licencia de la oveja — pedir al owner.
+
+LAYOUT: 4 clones de chancho `Pig (1..4)` (copiados por un amigo, estaban en el corral de las
+ovejas) marcados `deleted:true` en `layout_FullMap.json` → `MapLayoutPersistence` NO los recrea al
+regenerar (línea 295 solo clona si `deleted=false`; 267 "ocultar = borrar"). El original `/Pig#0`
+del gallinero queda intacto.
+
+PENDIENTE (próximos pasos, FALTAN coords TEST_PLAYER del owner):
+1. Caja de herramientas ARRIBA del granero + SCREAMER del pollo (`ChickenFarm/ps1_chicken.glb`):
+   subir al granero → salta el pollo (susto) → agarrás la caja → bajás → se la das a la vieja.
+2. Arreglar la CADENA del baño (minijuego simple). Variante 2 jugadores: el perro caza conejos que
+   comen los cultivos mientras el humano arregla el baño (DIFERIDO a 2 players, como el sueño de
+   las ovejas saltando la valla).
+3. MATES adentro con la vieja → cuenta la HISTORIA de la Luz Mala → vuelven al campamento.
+
+RECORDATORIOS: la escena `.unity` NO está en git (cambios de escena = Ctrl+S en Unity + Tools ▸
+Folklore Archives ▸ Save Map Layout). Commit+push tras cada cambio de código. `Assets/Resources/` y
+`ExternalAssets/` gitignored. No regenerar el mapa hand-editeado. Solo links de assets REALES.
