@@ -141,30 +141,31 @@ namespace FolkloreArchives.MapGen
             }
         }
 
-        // Arma una TRANQUERA abrible a partir del Cube.184 seleccionado (que es combined mesh y
-        // no se puede rotar). Lee su AABB/material, crea una réplica-plank con bisagra en un
-        // extremo (eje Y) + CorralGate, y DESACTIVA el original.
-        [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
-        static void BuildGate()
+        // Arma una puerta/tranquera ABRIBLE a partir del objeto seleccionado (normalmente un
+        // trozo de Combined Mesh que no se puede rotar/animar tal cual, como la puerta del
+        // corral o una puerta de casa). Lee su AABB/material, crea una réplica-plank (Cube) con
+        // bisagra en un EXTREMO (eje Y, como una puerta real) + CorralGate, y DESACTIVA el
+        // original. La réplica arranca en LA MISMA pose que el original (bounds calcados) --
+        // CorralGate graba esa pose como "cerrada" al entrar a Play. Reusado por la tranquera del
+        // corral y la puerta de la casa.
+        static GameObject BuildHingeDoor(GameObject sel, string name, float openDeg, string hintClosed, string hintOpen)
         {
-            var sel = Selection.activeGameObject;
-            if (sel == null) { EditorUtility.DisplayDialog("Tranquera", "Seleccioná primero la puerta del corral (Cube.184).", "OK"); return; }
             var rend = sel.GetComponent<Renderer>();
-            if (rend == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+            if (rend == null) return null;
 
             Bounds wb = rend.bounds;                 // AABB en mundo (la puerta)
             Vector3 c = wb.center, s = wb.size;
-            bool longX = s.x >= s.z;                 // eje largo horizontal = a lo largo de la tranquera
+            bool longX = s.x >= s.z;                 // eje largo horizontal = ancho de la puerta
             float length = longX ? s.x : s.z;
             Vector3 longDir = longX ? Vector3.right : Vector3.forward;
             Vector3 hinge = c - longDir * (length * 0.5f);   // bisagra en un EXTREMO
 
             var mat = rend.sharedMaterial;
 
-            var prev = FindByName("TranqueraCorral");
+            var prev = FindByName(name);
             if (prev != null) Object.DestroyImmediate(prev.gameObject);
 
-            var pivot = new GameObject("TranqueraCorral");
+            var pivot = new GameObject(name);
             pivot.transform.position = hinge;
             pivot.transform.rotation = Quaternion.identity;
 
@@ -176,15 +177,48 @@ namespace FolkloreArchives.MapGen
             plank.transform.localScale = s;          // pivot con escala 1 -> tamaño mundo = s
             if (mat != null) plank.GetComponent<Renderer>().sharedMaterial = mat;
 
-            pivot.AddComponent<FolkloreArchives.CorralGate>();
+            var gate = pivot.AddComponent<FolkloreArchives.CorralGate>();
+            gate.openDeg = openDeg;
+            gate.hintClosed = hintClosed;
+            gate.hintOpen = hintOpen;
 
             sel.SetActive(false);   // ocultamos la puerta combined original
 
-            Undo.RegisterCreatedObjectUndo(pivot, "Armar tranquera");
+            Undo.RegisterCreatedObjectUndo(pivot, "Armar " + name);
             Selection.activeGameObject = pivot;
             EditorGUIUtility.PingObject(pivot);
+            return pivot;
+        }
+
+        [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
+        static void BuildGate()
+        {
+            var sel = Selection.activeGameObject;
+            if (sel == null) { EditorUtility.DisplayDialog("Tranquera", "Seleccioná primero la puerta del corral (Cube.184).", "OK"); return; }
+            if (sel.GetComponent<Renderer>() == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+            var pivot = BuildHingeDoor(sel, "TranqueraCorral", 95f, "[E] Abrir la tranquera", "[E] Cerrar la tranquera");
+            if (pivot == null) return;
             Debug.Log("[Rancho] 'TranqueraCorral' armada (bisagra en un extremo, eje Y). Original " +
                       sel.name + " desactivado. Ajustá openDeg (+/-) si abre para el lado equivocado.");
+        }
+
+        // owner: "la puerta debería estar cerrada cuando voy a golpearla y también debería poder
+        // abrir y cerrarse" -- la puerta de la casa (ej. "Door04_pr") es Combined Mesh (static
+        // batch), no se puede animar tal cual. Mismo tratamiento que la tranquera: seleccionar la
+        // puerta en la escena y correr este botón.
+        [MenuItem("Folklore/Armar puerta de la casa (abrible)")]
+        static void BuildHouseDoor()
+        {
+            var sel = Selection.activeGameObject;
+            if (sel == null) { EditorUtility.DisplayDialog("Puerta", "Seleccioná primero la puerta de la casa (ej. Door04_pr).", "OK"); return; }
+            if (sel.GetComponent<Renderer>() == null) { EditorUtility.DisplayDialog("Puerta", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+            var pivot = BuildHingeDoor(sel, "PuertaCasa", 100f, "[E] Abrir la puerta", "[E] Cerrar la puerta");
+            if (pivot == null) return;
+            Debug.Log("[Rancho] 'PuertaCasa' armada (bisagra en un extremo, eje Y). Original " + sel.name +
+                      " desactivado. Arranca CERRADA con la pose que tenía el original al entrar a Play -- " +
+                      "si se ve entreabierta, rotá 'PuertaCasa' (o su hijo 'Plank') en el Editor hasta que " +
+                      "quede a ras del marco ANTES de dar Play. Ajustá openDeg (+/-) si abre para el lado " +
+                      "equivocado, o la posición del pivote en el código si la bisagra quedó del lado que no es.");
         }
 
         // pone N ovejas (sheep.obj) en un cluster cerca de la tranquera. La secuencia las
