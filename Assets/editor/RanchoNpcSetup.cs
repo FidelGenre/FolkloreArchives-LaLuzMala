@@ -203,22 +203,58 @@ namespace FolkloreArchives.MapGen
         }
 
         // owner: "la puerta debería estar cerrada cuando voy a golpearla y también debería poder
-        // abrir y cerrarse" -- la puerta de la casa (ej. "Door04_pr") es Combined Mesh (static
-        // batch), no se puede animar tal cual. Mismo tratamiento que la tranquera: seleccionar la
-        // puerta en la escena y correr este botón.
+        // abrir y cerrarse" -- v1 (BuildHingeDoor con un Cube genérico, como la tranquera) salió
+        // FEA: el Cube toma el material con UVs de caja (se veía negra) y el AABB copiaba el
+        // bounds del original YA abierto. Mejor: "Door04_pr" tiene un PREFAB PROPIO en el pack
+        // ("Assets/ALP_Assets/country house01/Prefabs/Door04_pr.prefab") con la malla real +
+        // picaporte + colliders, y el AUTOR ya puso el pivote (0,0,0 local) en la BISAGRA (no en
+        // el centro) -- pensado justamente para poder rotarlo. En vez de aproximar con un cubo,
+        // se reinstancia ESE prefab fresco (sin static-batch) en el mismo lugar del original y se
+        // le cuelga CorralGate directo -- misma malla y textura que el original, sin cubo.
+        const string HouseDoorPrefabPath = "Assets/ALP_Assets/country house01/Prefabs/Door04_pr.prefab";
+
         [MenuItem("Folklore/Armar puerta de la casa (abrible)")]
         static void BuildHouseDoor()
         {
-            var sel = Selection.activeGameObject;
-            if (sel == null) { EditorUtility.DisplayDialog("Puerta", "Seleccioná primero la puerta de la casa (ej. Door04_pr).", "OK"); return; }
-            if (sel.GetComponent<Renderer>() == null) { EditorUtility.DisplayDialog("Puerta", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
-            var pivot = BuildHingeDoor(sel, "PuertaCasa", 100f, "[E] Abrir la puerta", "[E] Cerrar la puerta");
-            if (pivot == null) return;
-            Debug.Log("[Rancho] 'PuertaCasa' armada (bisagra en un extremo, eje Y). Original " + sel.name +
-                      " desactivado. Arranca CERRADA con la pose que tenía el original al entrar a Play -- " +
-                      "si se ve entreabierta, rotá 'PuertaCasa' (o su hijo 'Plank') en el Editor hasta que " +
-                      "quede a ras del marco ANTES de dar Play. Ajustá openDeg (+/-) si abre para el lado " +
-                      "equivocado, o la posición del pivote en el código si la bisagra quedó del lado que no es.");
+            var old = Selection.activeGameObject;
+            if (old == null) { EditorUtility.DisplayDialog("Puerta", "Seleccioná primero la puerta de la casa (Door04_pr) en la Hierarchy.", "OK"); return; }
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HouseDoorPrefabPath);
+            if (prefab == null) { EditorUtility.DisplayDialog("Puerta", "No encontré " + HouseDoorPrefabPath, "OK"); return; }
+
+            // transform MUNDO del viejo (ahí la dejamos) -- mismo criterio que LetrinaFixer.
+            var ot = old.transform;
+            Vector3 wp = ot.position; Quaternion wr = ot.rotation; Vector3 ws = ot.lossyScale;
+
+            var prev = FindByName("PuertaCasa");
+            if (prev != null) Object.DestroyImmediate(prev.gameObject);
+
+            var fresh = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            fresh.name = "PuertaCasa";
+            PrefabUtility.UnpackPrefabInstance(fresh, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            fresh.transform.position = wp;
+            fresh.transform.rotation = wr;
+            fresh.transform.localScale = ws;
+
+            // el prefab autoral trae m_StaticEditorFlags=31 (Batching Static incluido) -- si lo
+            // dejamos así, Unity la vuelve a static-batchear al entrar a Play y quedamos EXACTO en
+            // el mismo problema (Combined Mesh, no rotable). Sacar el flag en TODA la jerarquía.
+            foreach (var t in fresh.GetComponentsInChildren<Transform>(true))
+                GameObjectUtility.SetStaticEditorFlags(t.gameObject, (StaticEditorFlags)0);
+
+            fresh.AddComponent<FolkloreArchives.CorralGate>();
+
+            old.SetActive(false);   // la puerta combined original queda desactivada
+
+            Undo.RegisterCreatedObjectUndo(fresh, "Armar puerta de la casa");
+            Selection.activeGameObject = fresh;
+            EditorGUIUtility.PingObject(fresh);
+            Debug.Log("[Rancho] 'PuertaCasa' repuesta con el PREFAB real (Door04_pr: malla + picaporte + " +
+                      "colliders) en " + wp + ". Original " + old.name + " desactivado. Arranca CERRADA " +
+                      "con la pose que tenga al entrar a Play -- el pivote del prefab YA está en la " +
+                      "bisagra (autoral), así que si se ve entreabierta simplemente rotá 'PuertaCasa' en " +
+                      "el Editor hasta que cierre bien, ANTES de dar Play. Ajustá openDeg (+/-) en el " +
+                      "CorralGate si abre para el lado equivocado.");
         }
 
         // pone N ovejas (sheep.obj) en un cluster cerca de la tranquera. La secuencia las
