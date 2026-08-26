@@ -253,7 +253,9 @@ namespace FolkloreArchives.MapGen
                 r.sharedMaterials = src;
             }
 
-            fresh.AddComponent<FolkloreArchives.CorralGate>();
+            var gate = fresh.AddComponent<FolkloreArchives.CorralGate>();
+            gate.hintClosed = "[E] Abrir la puerta";
+            gate.hintOpen   = "[E] Cerrar la puerta";
 
             old.SetActive(false);   // la puerta combined original queda desactivada
 
