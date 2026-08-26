@@ -242,6 +242,17 @@ namespace FolkloreArchives.MapGen
             foreach (var t in fresh.GetComponentsInChildren<Transform>(true))
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, (StaticEditorFlags)0);
 
+            // el material del prefab tal cual viene del pack (Standard) sale MAGENTA en URP -- el
+            // resto de la casa lo convierte al vuelo con HouseBuilder.NappinUrp (cacheado por
+            // material -> mismo "nap_DoorsMap01" que ya usa el resto de la casa, si Generate ya
+            // corrió en esta sesión del Editor).
+            foreach (var r in fresh.GetComponentsInChildren<Renderer>(true))
+            {
+                var src = r.sharedMaterials;
+                for (int i = 0; i < src.Length; i++) src[i] = HouseBuilder.NappinUrp(src[i]);
+                r.sharedMaterials = src;
+            }
+
             fresh.AddComponent<FolkloreArchives.CorralGate>();
 
             old.SetActive(false);   // la puerta combined original queda desactivada

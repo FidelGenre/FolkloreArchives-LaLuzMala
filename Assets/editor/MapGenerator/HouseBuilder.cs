@@ -747,10 +747,12 @@ namespace FolkloreArchives.MapGen
         const bool UseNappinFurniture = false; // muebles nappin OFF (el owner usará un pack de muebles viejos)
         const float AlpHouseDropY = 0f;    // ajuste fino de altura (si flota/se hunde)
 
-        // Convierte los materiales built-in del pack nappin a URP (una vez por material,
-        // cacheado): crea un URP/Lit copiando la textura del gradiente y el color/emisión.
+        // Convierte materiales built-in (Standard) a URP (una vez por material, cacheado): crea un
+        // URP/Lit copiando textura/normal/color/emisión. Pública: la reusan otros builders que
+        // instancian piezas sueltas de assets ALP/nappin fuera de BuildAlpHouse (ej. RanchoNpcSetup
+        // al reponer una puerta del pack) para no quedar en magenta.
         static readonly Dictionary<Material, Material> _napMatCache = new Dictionary<Material, Material>();
-        static Material NappinUrp(Material src)
+        public static Material NappinUrp(Material src)
         {
             if (src == null) return BuilderUtils.Mat("nap_null", new Color(0.6f, 0.6f, 0.6f), 0f);
             if (src.shader != null && src.shader.name.Contains("Universal")) return src;
