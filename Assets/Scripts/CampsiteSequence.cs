@@ -616,13 +616,26 @@ namespace FolkloreArchives
 
             _playerHint = "Andá al rancho a pedir unas cañas";
 
+            // owner: "la primera vez que toco la puerta no debería abrirse, solo sonar el golpe" --
+            // "PuertaCasa" (si ya está armada, ver RanchoNpcSetup) tiene su PROPIO CorralGate
+            // escuchando E para abrir/cerrar libremente; mientras dura este golpe SCRIPTEADO lo
+            // apagamos (misma E, pero sin abrir la puerta) y solo suena el golpe. Se rehabilita
+            // apenas termina el diálogo -- de ahí en más el jugador la abre/cierra como quiera.
+            Transform houseDoor = FindObj("PuertaCasa");
+            var houseGate = houseDoor != null ? houseDoor.GetComponent<CorralGate>() : null;
+            if (houseGate != null) houseGate.enabled = false;
+
             // al LLEGAR a la puerta de la casa tocás -> no atiende nadie -> a buscar por el granero.
             yield return WaitPlayerInteract(player, houseDoorPos, playerReach + 0.6f, "[E] Tocar la puerta");
+            var knock = Resources.Load<AudioClip>("door_knock");
+            if (knock != null) AudioSource.PlayClipAtPoint(knock, houseDoorPos, 0.8f);
             yield return SayFor("(Tocás la puerta...)", 1.6f);
             yield return new WaitForSeconds(1.4f);
             yield return SayFor("No atiende nadie...", 2.0f);
             yield return SayFor("Habrá alguien atrás. Vamos a ver por el granero.", 3.0f);
             _playerHint = "Buscá a alguien por el baño del granero";
+
+            if (houseGate != null) houseGate.enabled = true;   // ya se puede abrir/cerrar libremente
 
             // baño del granero (letrina): tocás -> sale el viejo (susto) -> charla -> la vieja -> favor.
             yield return RanchoBathroomScene();
