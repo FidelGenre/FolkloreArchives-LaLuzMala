@@ -254,11 +254,7 @@ namespace FolkloreArchives.MapGen
             }
 
             var gate = fresh.AddComponent<FolkloreArchives.CorralGate>();
-            gate.hintClosed = "[E] Abrir la puerta";
-            gate.hintOpen   = "[E] Cerrar la puerta";
-            gate.openDeg = -100f;   // owner: abría para ADENTRO -- invertido para que abra hacia afuera
-            gate.openClipName  = "door_open";    // owner: nada de sonido de puerta de auto -- puerta normal
-            gate.closeClipName = "door_close";
+            ApplyHouseDoorConfig(gate);
 
             old.SetActive(false);   // la puerta combined original queda desactivada
 
@@ -271,6 +267,44 @@ namespace FolkloreArchives.MapGen
                       "bisagra (autoral), así que si se ve entreabierta simplemente rotá 'PuertaCasa' en " +
                       "el Editor hasta que cierre bien, ANTES de dar Play. Ajustá openDeg (+/-) en el " +
                       "CorralGate si abre para el lado equivocado.");
+        }
+
+        // valores de config de la puerta de la casa (hint/lado que abre/sonido) -- separado de
+        // BuildHouseDoor para poder reaplicarlos SIN reconstruir el objeto (ver botón de abajo).
+        static void ApplyHouseDoorConfig(FolkloreArchives.CorralGate gate)
+        {
+            gate.hintClosed = "[E] Abrir la puerta";
+            gate.hintOpen   = "[E] Cerrar la puerta";
+            gate.openDeg = -100f;   // owner: abría para ADENTRO -- invertido para que abra hacia afuera
+            gate.openClipName  = "door_open";    // owner: nada de sonido de puerta de auto -- puerta normal
+            gate.closeClipName = "door_close";
+        }
+
+        // owner: "no me aplicaste los cambios... sigue abriendo para adentro, sigue el ruido del
+        // auto, sigue diciendo tranquera" -- ese CorralGate ya estaba CREADO en la escena desde
+        // antes; cambiar los valores por default en el código NO actualiza un componente que ya
+        // existe (solo aplican a una instancia NUEVA). Este botón reaplica hint/openDeg/sonido a la
+        // "PuertaCasa" que YA está en la escena, SIN tocar su rotación (la "cerrada" ajustada a mano).
+        [MenuItem("Folklore/Actualizar puerta de la casa (config, sin rehacerla)")]
+        static void UpdateHouseDoorConfig()
+        {
+            var door = FindByName("PuertaCasa");
+            if (door == null)
+            {
+                EditorUtility.DisplayDialog("Puerta", "No encontré 'PuertaCasa' en la escena -- primero corré 'Armar puerta de la casa (abrible)'.", "OK");
+                return;
+            }
+            var gate = door.GetComponent<FolkloreArchives.CorralGate>();
+            if (gate == null)
+            {
+                EditorUtility.DisplayDialog("Puerta", "'PuertaCasa' no tiene un componente CorralGate.", "OK");
+                return;
+            }
+            ApplyHouseDoorConfig(gate);
+            EditorUtility.SetDirty(gate);
+            Selection.activeGameObject = door.gameObject;
+            EditorGUIUtility.PingObject(door);
+            Debug.Log("[Rancho] 'PuertaCasa' actualizada (hint, lado que abre, sonido). Rotación NO tocada.");
         }
 
         // pone N ovejas (sheep.obj) en un cluster cerca de la tranquera. La secuencia las
