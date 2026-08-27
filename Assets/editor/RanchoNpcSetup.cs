@@ -22,7 +22,7 @@ namespace FolkloreArchives.MapGen
     {
         const string Fbx = "Assets/ExternalAssets/OldManNPC/Character_32.fbx";
         const string Tex = "Assets/ExternalAssets/OldManNPC/Character_32.png";
-        const float  TargetHeight = 2.15f;  // hombre adulto (la vieja es 2.0; los amigos 2.2)
+        const float  TargetHeight = 2.2f;  // owner: "tan alto como todos los NPCs" -- igual a los amigos adultos (la vieja es 2.0, más baja a propósito)
         const string SheepObj = "Assets/ExternalAssets/Sheep/sheep.obj";
         const string SheepTex = "Assets/ExternalAssets/Sheep/sheep_tex.jpg";
         const float  SheepHeight = 1.6f;    // altura de la oveja (owner: "más grandes")

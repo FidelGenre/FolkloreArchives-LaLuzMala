@@ -112,6 +112,10 @@ namespace FolkloreArchives
             new PathPoint { pos = new Vector3(90.70193f, 28.17672f, 134.9482f),  yaw = 170.605f },
             new PathPoint { pos = new Vector3(91.38409f, 28.45722f, 129.4504f),  yaw = 90.525f },
             new PathPoint { pos = new Vector3(103.9425f, 27.63788f, 129.6086f),  yaw = 92.365f },
+            // owner: "necesito que pase por esa coordenada que ahí está la puerta, si no sigue
+            // derecho" -- sin este punto el tramo de arriba corta en diagonal y no cruza el vano
+            // de la puerta de la casa.
+            new PathPoint { pos = new Vector3(136.1309f, 26.53745f, 127.7668f),  yaw = 174.845f },
             new PathPoint { pos = new Vector3(135.9511f, 26.63578f, 126.8103f),  yaw = 120.285f },
             new PathPoint { pos = new Vector3(136.0238f, 27.24991f, 121.2403f),  yaw = 166.525f },
             new PathPoint { pos = new Vector3(133.958f,  27.24991f, 119.0233f),  yaw = -88.275f },
@@ -820,6 +824,9 @@ namespace FolkloreArchives
             if (knockClip != null) AudioSource.PlayClipAtPoint(knockClip, door.position, 0.8f);
 
             // SALE EL VIEJO (susto): se abre la puerta, se activa, te encara, flash negro + ladrido
+            // + el MISMO sonido de screamer que Richard en la YPF (owner: "que salte el mismo
+            // susto... el mismo ruido" -- Stage3_RichardScreamer en YpfStorySequence usa el clip
+            // Resources "jumpscare").
             if (doorGate != null) doorGate.SetOpen(true);
             if (oldMan != null)
             {
@@ -827,6 +834,8 @@ namespace FolkloreArchives
                 oldMan.rotation = Quaternion.Euler(0f, ranchoViejoYaw, 0f);
                 oldMan.gameObject.SetActive(true);
             }
+            var jumpscare = Resources.Load<AudioClip>("jumpscare");
+            if (jumpscare != null) AudioSource.PlayClipAtPoint(jumpscare, ranchoViejoPos, 1f);
             var black = MakeBlackOverlay();
             var img = black != null ? black.GetComponent<RawImage>() : null;
             if (img != null) img.color = Color.black;
