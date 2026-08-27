@@ -842,13 +842,10 @@ namespace FolkloreArchives
             yield return SayFor("¿No tendría una caña de pescar para prestarnos?", 3.2f);
             yield return SayFor("Cañas... las que usamos con mi mujer. Pregúntenle a ella, ya la despierto.", 4.0f);
 
-            // 4) el viejo va a buscar a la vieja
-            if (oldMan != null && oldLady != null)
-            {
-                float t = 0f;
-                while (t < 8f && Flat2(oldMan.position, oldLady.position) > 1.6f) { StepToward(oldMan, oldLady.position, 2.2f); t += Time.deltaTime; yield return null; }
-                FaceTarget(oldMan, oldLady.position);
-            }
+            // 4) el viejo va a buscar a la vieja -- el recorrido lo hace 'viejoKitchenPath' (ver
+            // abajo), NO este walk viejo (owner: "sacá la caminata anterior, es vieja, las nuevas
+            // son para despertar a la vieja" -- el viejo iba primero a oldLady.position y recién
+            // ahí arrancaba el recorrido nuevo, duplicando el viaje / yendo a un lugar de más).
             yield return SayFor("(El viejo entra y despierta a la vieja...)", 2.0f);
 
             // el viejo, ya avisada la vieja, se va a la cocina -- EN PARALELO (no bloquea la
