@@ -848,9 +848,16 @@ namespace FolkloreArchives
             // ahí arrancaba el recorrido nuevo, duplicando el viaje / yendo a un lugar de más).
             yield return SayFor("(El viejo entra y despierta a la vieja...)", 2.0f);
 
-            // el viejo, ya avisada la vieja, se va a la cocina -- EN PARALELO (no bloquea la
-            // charla con la vieja/jugador que sigue abajo).
+            // el viejo, ya avisada la vieja, se va a la cocina -- EN PARALELO (no bloquea nada de
+            // lo de abajo).
             if (oldMan != null) StartCoroutine(ViejoWalkToKitchen(oldMan));
+
+            // owner: "mientras está yendo el viejo a la casa ya debería dejarme mover" -- se
+            // libera el control ACÁ (no al final de toda la charla con la vieja): caminás libre
+            // mientras el viejo se va y la vieja se acerca/habla (la sigue siguiendo tu posición
+            // en vivo aunque te muevas, ver el StepToward de abajo).
+            PartyController.CinematicLock = false;
+            if (doorGate != null) doorGate.enabled = true;   // la puerta de la letrina ya se abre/cierra libre
 
             // 5) la vieja viene hacia el jugador
             if (oldLady != null)
@@ -864,8 +871,6 @@ namespace FolkloreArchives
             yield return SayFor("Mmm... dale, se las presto. Pero a cambio de un favor.", 3.4f);
             yield return SayFor("Sáquenme las ovejas a pastar, ¿sí? Yo ya no puedo.", 3.4f);
 
-            PartyController.CinematicLock = false;   // volvés a moverte
-            if (doorGate != null) doorGate.enabled = true;   // la puerta de la letrina ya se abre/cierra libre
             _playerHint = "Abrí la tranquera del corral para sacar las ovejas";
 
             // 6) abrir la TRANQUERA (la arma el botón de editor como "TranqueraCorral"). Esperamos
