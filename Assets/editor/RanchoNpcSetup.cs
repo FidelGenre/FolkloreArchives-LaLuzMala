@@ -151,13 +151,24 @@ namespace FolkloreArchives.MapGen
         static GameObject BuildHingeDoor(GameObject sel, string name, float openDeg, string hintClosed, string hintOpen)
         {
             var rend = sel.GetComponent<Renderer>();
-            if (rend == null) return null;
+            var mf = sel.GetComponent<MeshFilter>();
+            if (rend == null || mf == null || mf.sharedMesh == null) return null;
 
-            Bounds wb = rend.bounds;                 // AABB en mundo (la puerta)
-            Vector3 c = wb.center, s = wb.size;
-            bool longX = s.x >= s.z;                 // eje largo horizontal = ancho de la puerta
+            // owner: la réplica salió "como un cuadrado" -- Cube.184 había quedado rotado en un
+            // ángulo cualquiera (no alineado a los ejes) mientras se probaba a mano, y el AABB de
+            // MUNDO (Renderer.bounds) se INFLA/deforma con la rotación (máximo a 45°) -> tamaño
+            // mal calculado. Fix: usar los bounds LOCALES del mesh (invariantes a la rotación) +
+            // conservar la orientación/ejes REALES del original, en vez de asumir mundo/ejes X-Z.
+            Bounds lb = mf.sharedMesh.bounds;
+            Vector3 s = Vector3.Scale(lb.size, sel.transform.lossyScale);   // tamaño real (sin distorsión)
+            Vector3 c = sel.transform.TransformPoint(lb.center);           // centro en MUNDO
+
+            bool longX = s.x >= s.z;                 // eje largo LOCAL del original = ancho de la puerta
             float length = longX ? s.x : s.z;
-            Vector3 longDir = longX ? Vector3.right : Vector3.forward;
+            Vector3 longDir = longX ? sel.transform.right : sel.transform.forward;
+            longDir.y = 0f;
+            if (longDir.sqrMagnitude < 1e-6f) longDir = sel.transform.right;
+            longDir.Normalize();
             Vector3 hinge = c - longDir * (length * 0.5f);   // bisagra en un EXTREMO
 
             var mat = rend.sharedMaterial;
@@ -173,8 +184,8 @@ namespace FolkloreArchives.MapGen
             plank.name = "Plank";
             plank.transform.SetParent(pivot.transform, true);
             plank.transform.position = c;
-            plank.transform.rotation = Quaternion.identity;
-            plank.transform.localScale = s;          // pivot con escala 1 -> tamaño mundo = s
+            plank.transform.rotation = sel.transform.rotation;   // MISMA orientación que el original
+            plank.transform.localScale = s;
             if (mat != null) plank.GetComponent<Renderer>().sharedMaterial = mat;
 
             var gate = pivot.AddComponent<FolkloreArchives.CorralGate>();
