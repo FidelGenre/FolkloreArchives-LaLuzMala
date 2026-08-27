@@ -90,13 +90,26 @@ namespace FolkloreArchives.MapGen
                 if (changed) r.sharedMaterials = src;
             }
 
-            // 7) apagamos la rota (la borrás vos cuando confirmes que quedó bien)
-            old.SetActive(false);
+            // 7) apagamos TODAS las piezas "letrina*" viejas que sigan activas (antes solo apagaba
+            // la seleccionada -- si se corría esto con OTRA pieza seleccionada, el resto de las
+            // viejas quedaban activas superpuestas con las frescas, causando duplicados confusos:
+            // dos objetos con el mismo nombre, uno roto/Combined Mesh y otro sano).
+            int deactivated = 0;
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (t == null || !t.gameObject.activeSelf) continue;
+                if (t.IsChildOf(group.transform)) continue;   // no apagar las piezas frescas recién puestas
+                if (!t.name.ToLowerInvariant().StartsWith("letrina")) continue;
+                t.gameObject.SetActive(false);
+                deactivated++;
+            }
+
             Undo.RegisterCreatedObjectUndo(group, "Reponer letrina");
             Selection.activeGameObject = group;
             EditorGUIUtility.PingObject(group);
             Debug.Log("[Letrina] Repuesta 'Letrina_Fresca' (" + pieces.Count + " piezas) en " + wp +
-                      ". La vieja quedó DESACTIVADA; si quedó bien, borrala. Ajustá Y y rotación si hace falta.");
+                      ". " + deactivated + " pieza(s) 'letrina*' vieja(s) quedaron DESACTIVADAS " +
+                      "(no solo la seleccionada); si quedó bien, borralas. Ajustá Y y rotación si hace falta.");
             _ = wr; _ = ws;
         }
     }
