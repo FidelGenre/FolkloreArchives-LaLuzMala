@@ -132,6 +132,18 @@ namespace FolkloreArchives
             new PathPoint { pos = new Vector3(142.1169f, 27.16053f, 118.7661f), yaw = 90.685f },
             new PathPoint { pos = new Vector3(142.7618f, 27.16053f, 117.6976f), yaw = 140.765f },
         };
+
+        // owner: "y después todo por acá hasta llegar a la cocina, antes de llegar a la cocina se
+        // levanta la vieja y empieza a caminar hasta la puerta" -- tramo FINAL (a la cocina de
+        // verdad), después de despertar a la vieja. Corre en PARALELO (StartCoroutine, no yield)
+        // una vez que ella ya se levantó, así el orden queda: la despierta -> ella camina hacia
+        // vos MIENTRAS él sigue de largo a la cocina.
+        public PathPoint[] viejoToKitchenPath =
+        {
+            new PathPoint { pos = new Vector3(142.4135f, 27.16053f, 119.1725f), yaw = -93.635f },
+            new PathPoint { pos = new Vector3(136.6069f, 27.16053f, 118.8755f), yaw = -91.795f },
+            new PathPoint { pos = new Vector3(129.2438f, 27.16053f, 119.4303f), yaw = -8.755f },
+        };
         LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
@@ -887,6 +899,10 @@ namespace FolkloreArchives
                 PlaceStandingYaw(oldLady, oldLadySleepPos, oldLadySleepYaw);
             }
 
+            // el viejo sigue de largo a la cocina de verdad -- EN PARALELO (no bloquea a la vieja
+            // caminando hacia vos, más abajo).
+            if (oldMan != null) StartCoroutine(WalkPath(oldMan, viejoToKitchenPath));
+
             // 5) la vieja viene hacia el jugador
             if (oldLady != null)
             {
@@ -1418,6 +1434,24 @@ namespace FolkloreArchives
         // se abre/cierra sola al pasar (ver ViejoWalkToKitchen). Si se agregan/sacan puntos antes
         // de ese, actualizar este índice.
         const int ViejoDoorPathIndex = 3;
+
+        // camina 'who' por una lista de puntos EN ORDEN (sin lógica de puertas); al llegar al
+        // último queda PARADO ahí, mirando su yaw. Genérico -- reusado por el tramo final del
+        // viejo (de la vieja a la cocina de verdad, ver viejoToKitchenPath).
+        IEnumerator WalkPath(Transform who, PathPoint[] path)
+        {
+            if (who == null || path == null) yield break;
+            foreach (var wp in path)
+            {
+                float t = 0f;
+                while (t < 12f && Flat2(who.position, wp.pos) > 0.5f) { StepToward(who, wp.pos, 2.2f); t += Time.deltaTime; yield return null; }
+            }
+            if (path.Length > 0)
+            {
+                var last = path[path.Length - 1];
+                PlaceStandingYaw(who, last.pos, last.yaw);
+            }
+        }
 
         // el viejo camina el recorrido 'viejoKitchenPath' (owner, TEST_PLAYER) punto a punto hasta
         // donde está la vieja; al pasar por la puerta de la casa (PuertaCasa, si es abrible) se
