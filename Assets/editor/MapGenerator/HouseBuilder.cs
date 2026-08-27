@@ -417,11 +417,19 @@ namespace FolkloreArchives.MapGen
             BarnBox(g, wood, new Vector3(-(1.5f + sideW / 2f), eaveH / 2f, D / 2f), new Vector3(sideW, eaveH, t));
             BarnBox(g, wood, new Vector3(1.5f + sideW / 2f, eaveH / 2f, D / 2f), new Vector3(sideW, eaveH, t));
             BarnBox(g, wood, new Vector3(0f, (2.8f + eaveH) / 2f, D / 2f), new Vector3(3.0f, eaveH - 2.8f, t)); // dintel
-            // hojas del portón (un poco entornadas, madera oscura)
-            // hojas del portón con BISAGRA en el marco (no giran sobre su centro). Una
-            // bien abierta, la otra entornada (galpón abandonado). Sin collider → se entra.
-            BarnDoorLeaf(g, door, -1.5f, +1f, -70f, D / 2f, 1.45f, 2.7f, 1.35f);  // izquierda, abierta
-            BarnDoorLeaf(g, door, 1.5f, -1f, 22f, D / 2f, 1.45f, 2.7f, 1.35f);    // derecha, entornada
+            // hojas del portón, con BISAGRA en el marco (no giran sobre su centro). Sin collider
+            // → se entra igual, esté abierto o cerrado (decorativo/interactivo, no bloquea).
+            //
+            // owner: "debemos ir a abrir la puerta del granero, la cual no pude acomodar porque
+            // tiene las mallas separadas como la puerta del baño" -- antes las 2 hojas quedaban
+            // SIEMPRE entornadas (arte del galpón abandonado) y TODO el grupo se marca Static
+            // (MarkStaticRecursive, más abajo) para el lightmap -> exactamente el mismo problema
+            // de Combined Mesh que tuvieron la letrina/casa al intentar moverlas a mano. Ahora
+            // arrancan CERRADAS (openDeg 0 = a ras del marco) y la hoja izquierda es ABRIBLE con E
+            // (CorralGate, mismo criterio que la puerta de la casa/letrina) -- se excluye del
+            // Static sweep para que se pueda animar. La derecha queda fija cerrada (decorativa).
+            var barnLeafHinge = BarnDoorLeaf(g, door, -1.5f, +1f, 0f, D / 2f, 1.45f, 2.7f, 1.35f);  // izquierda, ABRIBLE
+            BarnDoorLeaf(g, door, 1.5f, -1f, 0f, D / 2f, 1.45f, 2.7f, 1.35f);                       // derecha, fija cerrada
 
             // TECHO a dos aguas: dos planos inclinados que se juntan en la cumbrera
             float run = W / 2f, rise = ridgeY - eaveH;
@@ -454,6 +462,21 @@ namespace FolkloreArchives.MapGen
             lg.AddComponent<FolkloreArchives.LightFlicker>();
 
             BuilderUtils.MarkStaticRecursive(g);
+
+            // excluir la hoja ABRIBLE del Static sweep de arriba (si no, Unity la vuelve a
+            // static-batchear al entrar a Play y queda EXACTO en el mismo problema de mallas
+            // separadas que tuvo la letrina/casa) y colgarle CorralGate.
+            if (barnLeafHinge != null)
+            {
+                foreach (var tr in barnLeafHinge.GetComponentsInChildren<Transform>(true))
+                    tr.gameObject.isStatic = false;
+                var barnGate = barnLeafHinge.AddComponent<FolkloreArchives.CorralGate>();
+                barnGate.hintClosed = "[E] Abrir la puerta del granero";
+                barnGate.hintOpen   = "[E] Cerrar la puerta del granero";
+                barnGate.openDeg = -70f;   // mismo ángulo que tenía de arte la hoja "abierta" original
+                barnGate.openClipName  = "door_open";
+                barnGate.closeClipName = "door_close";
+            }
         }
 
         // Busca el primer GameObject (modelo importado) dentro de una carpeta de assets.
@@ -480,8 +503,9 @@ namespace FolkloreArchives.MapGen
 
         // Hoja de portón que gira sobre la BISAGRA (en el marco), no sobre su centro:
         // un pivote vacío en el marco + la hoja colgada a un costado. dir=+1 la hoja va
-        // hacia +x desde la bisagra, dir=-1 hacia -x.
-        static void BarnDoorLeaf(Transform g, Material m, float hingeX, float dir, float openDeg,
+        // hacia +x desde la bisagra, dir=-1 hacia -x. Devuelve el pivote ("BarnDoor") para
+        // poder colgarle CorralGate y excluirlo del Static sweep (ver llamador).
+        static GameObject BarnDoorLeaf(Transform g, Material m, float hingeX, float dir, float openDeg,
                                  float z, float w, float h, float yc)
         {
             var hinge = new GameObject("BarnDoor");
@@ -494,6 +518,7 @@ namespace FolkloreArchives.MapGen
             leaf.transform.localScale = new Vector3(w, h, 0.08f);
             leaf.GetComponent<MeshRenderer>().sharedMaterial = m;
             Object.DestroyImmediate(leaf.GetComponent<Collider>());
+            return hinge;
         }
 
         // Rellena el triángulo del hastial (entre el alero y la cumbrera) con tablones
