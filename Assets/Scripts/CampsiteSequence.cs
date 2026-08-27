@@ -100,6 +100,25 @@ namespace FolkloreArchives
         // en cualquier lado. Con esto fijo, no depende más de qué pieza se llame cómo.
         public Vector3 ranchoViejoPos = new Vector3(91.70499f, 27.734f, 136.79f);
         public float   ranchoViejoYaw = -98.717f;
+
+        // owner: "por ahí tiene que ir el viejo, entrar a la casa y ponerse a cocinar luego de
+        // avisarle a la vieja" -- recorrido punto a punto (TEST_PLAYER) desde donde aparece hasta
+        // la cocina adentro de la casa. Camina en PARALELO al resto de la escena (mientras la vieja
+        // habla con el jugador) y al llegar queda PARADO ahí (sin animación de cocinar todavía).
+        [System.Serializable]
+        public struct PathPoint { public Vector3 pos; public float yaw; }
+        public PathPoint[] viejoKitchenPath =
+        {
+            new PathPoint { pos = new Vector3(90.70193f, 28.17672f, 134.9482f),  yaw = 170.605f },
+            new PathPoint { pos = new Vector3(91.38409f, 28.45722f, 129.4504f),  yaw = 90.525f },
+            new PathPoint { pos = new Vector3(103.9425f, 27.63788f, 129.6086f),  yaw = 92.365f },
+            new PathPoint { pos = new Vector3(135.9511f, 26.63578f, 126.8103f),  yaw = 120.285f },
+            new PathPoint { pos = new Vector3(136.0238f, 27.24991f, 121.2403f),  yaw = 166.525f },
+            new PathPoint { pos = new Vector3(133.958f,  27.24991f, 119.0233f),  yaw = -88.275f },
+            new PathPoint { pos = new Vector3(129.1333f, 27.16053f, 119.7665f),  yaw = -3.555f },
+            new PathPoint { pos = new Vector3(139.0468f, 27.22418f, 118.6315f),  yaw = 89.325f },
+            new PathPoint { pos = new Vector3(143.5105f, 27.16053f, 117.6989f),  yaw = 163.325f },
+        };
         LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
@@ -832,6 +851,10 @@ namespace FolkloreArchives
             }
             yield return SayFor("(El viejo entra y despierta a la vieja...)", 2.0f);
 
+            // el viejo, ya avisada la vieja, se va a la cocina -- EN PARALELO (no bloquea la
+            // charla con la vieja/jugador que sigue abajo).
+            if (oldMan != null) StartCoroutine(ViejoWalkToKitchen(oldMan));
+
             // 5) la vieja viene hacia el jugador
             if (oldLady != null)
             {
@@ -1359,6 +1382,24 @@ namespace FolkloreArchives
             if (tr == null) return;
             Vector3 look = target - tr.position; look.y = 0f;
             if (look.sqrMagnitude > 1e-4f) tr.rotation = Quaternion.LookRotation(look.normalized);
+        }
+
+        // el viejo camina el recorrido 'viejoKitchenPath' (owner, TEST_PLAYER) punto a punto hasta
+        // la cocina de la casa; al llegar al último queda PARADO ahí, mirando el yaw de ese punto
+        // (sin animación de cocinar todavía -- pendiente).
+        IEnumerator ViejoWalkToKitchen(Transform viejo)
+        {
+            if (viejo == null || viejoKitchenPath == null) yield break;
+            foreach (var wp in viejoKitchenPath)
+            {
+                float t = 0f;
+                while (t < 12f && Flat2(viejo.position, wp.pos) > 0.5f) { StepToward(viejo, wp.pos, 2.2f); t += Time.deltaTime; yield return null; }
+            }
+            if (viejoKitchenPath.Length > 0)
+            {
+                var last = viejoKitchenPath[viejoKitchenPath.Length - 1];
+                PlaceStandingYaw(viejo, last.pos, last.yaw);
+            }
         }
 
         // camina un NPC hasta 'dest' (sin armar carpa), lo deja mirando 'faceTarget', y avisa 'done'.
