@@ -307,6 +307,36 @@ namespace FolkloreArchives.MapGen
             Debug.Log("[Rancho] 'PuertaCasa' actualizada (hint, lado que abre, sonido). Rotación NO tocada.");
         }
 
+        // owner: quiso acomodar "letrina.007" (la puerta del baño del rancho) y se le rompía la
+        // malla al rotarla -- mismo síntoma de siempre (Combined Mesh). Solución: correr primero
+        // "Reponer letrina (fresca con texturas)" (LetrinaFixer), que la deja con SU PROPIA malla
+        // (ya no combinada). Una vez limpia, hacerla abrible es directo: no hace falta reconstruir
+        // nada (a diferencia de la puerta de la casa), solo colgarle CorralGate.
+        [MenuItem("Folklore/Armar puerta de la letrina (abrible)")]
+        static void BuildLetrinaDoor()
+        {
+            var sel = Selection.activeGameObject;
+            if (sel == null) { EditorUtility.DisplayDialog("Letrina", "Seleccioná primero la puerta de la letrina (letrina.007) en la Hierarchy.", "OK"); return; }
+            if (sel.GetComponent<Renderer>() == null) { EditorUtility.DisplayDialog("Letrina", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+
+            var gate = sel.GetComponent<FolkloreArchives.CorralGate>();
+            if (gate == null) gate = Undo.AddComponent<FolkloreArchives.CorralGate>(sel);
+            gate.hintClosed = "[E] Abrir la puerta";
+            gate.hintOpen   = "[E] Cerrar la puerta";
+            gate.openDeg = -100f;   // mismo criterio que la puerta de la casa: para afuera
+            gate.openClipName  = "door_open";
+            gate.closeClipName = "door_close";
+            EditorUtility.SetDirty(sel);
+
+            Selection.activeGameObject = sel;
+            EditorGUIUtility.PingObject(sel);
+            Debug.Log("[Rancho] '" + sel.name + "' ahora es abrible (CorralGate). Arranca CERRADA con " +
+                      "la pose que tenga al entrar a Play -- dejala así en el Editor si ya se ve bien " +
+                      "cerrada. Ajustá openDeg (+/-) en el Inspector si abre para el lado equivocado. " +
+                      "(La secuencia del susto ya desactiva/reactiva este CorralGate sola alrededor del " +
+                      "golpe scripteado, para que esa E no la abra.)");
+        }
+
         // pone N ovejas (sheep.obj) en un cluster cerca de la tranquera. La secuencia las
         // mueve al pastizal cuando abrís la tranquera. Grupo "Ovejas" con hijos "Oveja_i".
         [MenuItem("Folklore/Poner ovejas en el corral")]

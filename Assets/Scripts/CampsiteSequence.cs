@@ -768,6 +768,12 @@ namespace FolkloreArchives
             Transform oldLady = FindObj("OldLady_Storyteller");
             if (door == null) { _playerHint = null; yield break; }   // sin letrina no hay escena
 
+            // si la puerta de la letrina es abrible (CorralGate, ver RanchoNpcSetup), la misma E
+            // del golpe scripteado también la abriría -- apagada mientras dura el susto, se
+            // rehabilita cuando volvés a moverte libre (más abajo).
+            var doorGate = door.GetComponent<CorralGate>();
+            if (doorGate != null) doorGate.enabled = false;
+
             // 1) tocás la puerta del baño
             yield return WaitPlayerInteract(player, door.position, playerReach + 1.2f, "[E] Tocar la puerta");
             _playerHint = null;
@@ -812,6 +818,7 @@ namespace FolkloreArchives
             yield return SayFor("Sáquenme las ovejas a pastar, ¿sí? Yo ya no puedo.", 3.4f);
 
             PartyController.CinematicLock = false;   // volvés a moverte
+            if (doorGate != null) doorGate.enabled = true;   // la puerta de la letrina ya se abre/cierra libre
             _playerHint = "Abrí la tranquera del corral para sacar las ovejas";
 
             // 6) abrir la TRANQUERA (la arma el botón de editor como "TranqueraCorral"). Esperamos
