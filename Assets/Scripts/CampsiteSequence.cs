@@ -101,6 +101,12 @@ namespace FolkloreArchives
         public Vector3 ranchoViejoPos = new Vector3(91.70499f, 27.734f, 136.79f);
         public float   ranchoViejoYaw = -98.717f;
 
+        // dónde/cómo está ACOSTADA la vieja (dormida) hasta que el viejo la despierta (owner,
+        // Inspector). Coincide con el final de viejoKitchenPath -- ahí es donde el viejo la
+        // encuentra.
+        public Vector3 oldLadySleepPos = new Vector3(143.5203f, 28.13925f, 116.112f);
+        public float   oldLadySleepYaw = -86.835f;
+
         // owner: "por ahí tiene que ir el viejo, entrar a la casa y ponerse a cocinar luego de
         // avisarle a la vieja" -- recorrido punto a punto (TEST_PLAYER) desde donde aparece hasta
         // la cocina adentro de la casa. Camina en PARALELO al resto de la escena (mientras la vieja
@@ -799,6 +805,10 @@ namespace FolkloreArchives
             Transform oldLady = FindObj("OldLady_Storyteller");
             if (door == null) { _playerHint = null; yield break; }   // sin letrina no hay escena
 
+            // owner: "poné la vieja acá acostada" -- duerme hasta que el viejo la despierta (más
+            // abajo, cuando termina viejoKitchenPath).
+            if (oldLady != null) PlaceLyingInTent(oldLady, oldLadySleepPos, oldLadySleepYaw);
+
             // si la puerta de la letrina es abrible (CorralGate, ver RanchoNpcSetup), la misma E
             // de los golpes scripteados también la abriría -- apagada mientras dura el susto, se
             // rehabilita cuando volvés a moverte libre (más abajo).
@@ -865,6 +875,14 @@ namespace FolkloreArchives
             if (doorGate != null) doorGate.enabled = true;   // la puerta de la letrina ya se abre/cierra libre
             if (oldMan != null) yield return ViejoWalkToKitchen(oldMan);
             yield return SayFor("(El viejo entra y despierta a la vieja...)", 2.0f);
+
+            // se levanta (estaba acostada) en el mismo lugar, ANTES de caminar hacia el jugador.
+            if (oldLady != null)
+            {
+                var ladyAnim = oldLady.GetComponent<HumanWalkAnim>(); if (ladyAnim != null) ladyAnim.seated = false;
+                var ladyCc = oldLady.GetComponent<CharacterController>(); if (ladyCc != null) ladyCc.enabled = true;
+                PlaceStandingYaw(oldLady, oldLadySleepPos, oldLadySleepYaw);
+            }
 
             // 5) la vieja viene hacia el jugador
             if (oldLady != null)
