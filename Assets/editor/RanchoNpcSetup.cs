@@ -217,8 +217,12 @@ namespace FolkloreArchives.MapGen
             var mf = sel.GetComponent<MeshFilter>();
             if (mf == null || mf.sharedMesh == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene mesh.", "OK"); return; }
 
+            // este FBX nunca se había cargado antes en el proyecto (a diferencia de
+            // wooden_fence_open, que ya usa FenceBuilder) -- sin este Refresh la primera carga
+            // podía fallar en silencio (mismo motivo por el que PlaceOldMan lo hace).
+            AssetDatabase.Refresh();
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraAssetFbx);
-            if (fbx == null) { EditorUtility.DisplayDialog("Tranquera", "No encontré " + TranqueraAssetFbx, "OK"); return; }
+            if (fbx == null) { EditorUtility.DisplayDialog("Tranquera", "No encontré " + TranqueraAssetFbx + " (¿está el pack WoodenFence en el proyecto?).", "OK"); return; }
 
             // tamaño/orientación REALES del original (bounds locales, invariantes a la rotación
             // actual -- mismo fix que BuildHingeDoor, por si Cube.184 vuelve a quedar rotado).
@@ -241,12 +245,20 @@ namespace FolkloreArchives.MapGen
             pivot.transform.rotation = Quaternion.identity;
 
             var inst = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
+            if (inst == null)
+            {
+                Object.DestroyImmediate(pivot);
+                EditorUtility.DisplayDialog("Tranquera", "PrefabUtility.InstantiatePrefab devolvió null para " + TranqueraAssetFbx + " -- revisá la Console por errores de import.", "OK");
+                return;
+            }
             inst.name = "Plank";
             inst.transform.SetParent(pivot.transform, true);
 
             // escala UNIFORME: el ancho propio del asset (tal como vino) pasa a medir lo mismo
             // que medía Cube.184 -- no estirar (deformaría los tablones).
             var instRends = inst.GetComponentsInChildren<Renderer>();
+            if (instRends.Length == 0)
+                Debug.LogWarning("[Rancho] wooden_fence_closed no tiene Renderers -- ¿el FBX importó bien? La 'Plank' va a quedar invisible.");
             if (instRends.Length > 0)
             {
                 Bounds ib = instRends[0].bounds;
