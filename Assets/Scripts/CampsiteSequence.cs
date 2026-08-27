@@ -122,12 +122,15 @@ namespace FolkloreArchives
             // derecho" -- sin este punto el tramo de arriba corta en diagonal y no cruza el vano
             // de la puerta de la casa.
             new PathPoint { pos = new Vector3(136.1309f, 26.53745f, 127.7668f),  yaw = 174.845f },
-            new PathPoint { pos = new Vector3(135.9511f, 26.63578f, 126.8103f),  yaw = 120.285f },
-            new PathPoint { pos = new Vector3(136.0238f, 27.24991f, 121.2403f),  yaw = 166.525f },
-            new PathPoint { pos = new Vector3(133.958f,  27.24991f, 119.0233f),  yaw = -88.275f },
-            new PathPoint { pos = new Vector3(129.1333f, 27.16053f, 119.7665f),  yaw = -3.555f },
-            new PathPoint { pos = new Vector3(139.0468f, 27.22418f, 118.6315f),  yaw = 89.325f },
-            new PathPoint { pos = new Vector3(143.5105f, 27.16053f, 117.6989f),  yaw = 163.325f },
+            // owner: "cuando entra el viejo no está haciendo el recorrido, pasa la puerta y
+            // desaparece -- primero debe ir hasta acá desde la puerta y terminar acá despertando a
+            // la vieja". Los puntos de ADENTRO de la casa (después de la puerta) quedaron
+            // desactualizados (el viejo se perdía) -- reemplazados por estos 4, hasta terminar
+            // junto a oldLadySleepPos.
+            new PathPoint { pos = new Vector3(136.258f,  27.1659f,  123.9994f), yaw = 178.205f },
+            new PathPoint { pos = new Vector3(136.2014f, 27.16053f, 118.7161f), yaw = 91.885f },
+            new PathPoint { pos = new Vector3(142.1169f, 27.16053f, 118.7661f), yaw = 90.685f },
+            new PathPoint { pos = new Vector3(142.7618f, 27.16053f, 117.6976f), yaw = 140.765f },
         };
         LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
