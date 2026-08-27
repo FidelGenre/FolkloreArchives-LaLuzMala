@@ -107,6 +107,16 @@ namespace FolkloreArchives
         public Vector3 oldLadySleepPos = new Vector3(143.5203f, 28.13925f, 116.112f);
         public float   oldLadySleepYaw = -86.835f;
 
+        // owner: "la vieja al levantarse debe ir hasta acá y terminar acá, y ahí recién habla con
+        // los chicos" -- recorrido FIJO (TEST_PLAYER) hasta la puerta; ya no persigue player.position
+        // en vivo (ver WalkPath, "5) la vieja..." más abajo).
+        public PathPoint[] oldLadyGreetPath =
+        {
+            new PathPoint { pos = new Vector3(143.9885f, 27.16053f, 119.0913f), yaw = -92.355f },
+            new PathPoint { pos = new Vector3(136.1418f, 27.16053f, 118.716f),  yaw = -0.915f },
+            new PathPoint { pos = new Vector3(136.2163f, 27.24991f, 125.2371f), yaw = -3.715f },
+        };
+
         // owner: "por ahí tiene que ir el viejo, entrar a la casa y ponerse a cocinar luego de
         // avisarle a la vieja" -- recorrido punto a punto (TEST_PLAYER) desde donde aparece hasta
         // la cocina adentro de la casa. Camina en PARALELO al resto de la escena (mientras la vieja
@@ -903,13 +913,9 @@ namespace FolkloreArchives
             // caminando hacia vos, más abajo).
             if (oldMan != null) StartCoroutine(WalkPath(oldMan, viejoToKitchenPath));
 
-            // 5) la vieja viene hacia el jugador
-            if (oldLady != null)
-            {
-                float t = 0f;
-                while (t < 14f && Flat2(oldLady.position, player.position) > 2.4f) { StepToward(oldLady, player.position, 2.0f); t += Time.deltaTime; yield return null; }
-                FaceTarget(oldLady, player.position);
-            }
+            // 5) la vieja camina su recorrido FIJO (owner, TEST_PLAYER) hasta la puerta -- ya NO
+            // persigue tu posición en vivo; llega, se para, y RECIÉN AHÍ habla con los chicos.
+            if (oldLady != null) yield return WalkPath(oldLady, oldLadyGreetPath);
             yield return SayFor("Buenas... mucho gusto. ¿Qué necesitan, chicos?", 3.2f);
             yield return SayFor("Unas cañas para pescar, nos las olvidamos y vinimos a acampar.", 3.6f);
             yield return SayFor("Mmm... dale, se las presto. Pero a cambio de un favor.", 3.4f);
@@ -1466,16 +1472,25 @@ namespace FolkloreArchives
             for (int i = 0; i < viejoKitchenPath.Length; i++)
             {
                 var wp = viejoKitchenPath[i];
-                // owner: "debería abrirse y cerrarse la puerta cuando él pasa" -- se abre sola
-                // justo antes de cruzarla.
-                if (i == ViejoDoorPathIndex && houseDoorGate != null) houseDoorGate.SetOpen(true);
+                bool isDoorLeg = i == ViejoDoorPathIndex && houseDoorGate != null;
+                bool opened = false;
 
                 float t = 0f;
-                while (t < 12f && Flat2(viejo.position, wp.pos) > 0.5f) { StepToward(viejo, wp.pos, 2.2f); t += Time.deltaTime; yield return null; }
+                while (t < 12f && Flat2(viejo.position, wp.pos) > 0.5f)
+                {
+                    // owner: "se está timeando mal, la puerta se abre antes de que llegue a ella"
+                    // -- antes se abría al ARRANCAR este tramo (podían faltar varios metros). Ahora
+                    // se abre recién cuando está cerca de VERDAD (mismo radio que CorralGate.reach).
+                    if (isDoorLeg && !opened && Flat2(viejo.position, wp.pos) <= 3.5f) { houseDoorGate.SetOpen(true); opened = true; }
+                    StepToward(viejo, wp.pos, 2.2f);
+                    t += Time.deltaTime;
+                    yield return null;
+                }
 
                 // y se cierra sola una vez que ya la cruzó.
-                if (i == ViejoDoorPathIndex && houseDoorGate != null)
+                if (isDoorLeg)
                 {
+                    if (!opened) houseDoorGate.SetOpen(true);   // por si arrancó ya cerca (guard)
                     yield return new WaitForSeconds(0.6f);
                     houseDoorGate.SetOpen(false);
                 }
