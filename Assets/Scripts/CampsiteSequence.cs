@@ -851,22 +851,20 @@ namespace FolkloreArchives
             yield return SayFor("¿No tendría una caña de pescar para prestarnos?", 3.2f);
             yield return SayFor("Cañas... las que usamos con mi mujer. Pregúntenle a ella, ya la despierto.", 4.0f);
 
-            // 4) el viejo va a buscar a la vieja -- el recorrido lo hace 'viejoKitchenPath' (ver
-            // abajo), NO este walk viejo (owner: "sacá la caminata anterior, es vieja, las nuevas
-            // son para despertar a la vieja" -- el viejo iba primero a oldLady.position y recién
-            // ahí arrancaba el recorrido nuevo, duplicando el viaje / yendo a un lugar de más).
-            yield return SayFor("(El viejo entra y despierta a la vieja...)", 2.0f);
-
-            // el viejo, ya avisada la vieja, se va a la cocina -- EN PARALELO (no bloquea nada de
-            // lo de abajo).
-            if (oldMan != null) StartCoroutine(ViejoWalkToKitchen(oldMan));
-
+            // 4) el viejo camina HACIA LA VIEJA para despertarla -- el recorrido lo hace
+            // 'viejoKitchenPath' (owner: "la caminata hacia la vieja es la que te di, antes de ir
+            // a la cocina, después de entrar por la puerta del rancho"): cruza la puerta de la
+            // casa (se abre/cierra sola al pasar, ver ViejoWalkToKitchen) y llega hasta donde está
+            // ella. RECIÉN cuando llega se la despierta (dialogue) y ella sale a saludarte.
+            //
             // owner: "mientras está yendo el viejo a la casa ya debería dejarme mover" -- se
             // libera el control ACÁ (no al final de toda la charla con la vieja): caminás libre
-            // mientras el viejo se va y la vieja se acerca/habla (la sigue siguiendo tu posición
-            // en vivo aunque te muevas, ver el StepToward de abajo).
+            // mientras él camina. Es un yield (no StartCoroutine): el SCRIPT espera a que él
+            // llegue antes de seguir con la vieja, pero vos ya te movés libre mientras tanto.
             PartyController.CinematicLock = false;
             if (doorGate != null) doorGate.enabled = true;   // la puerta de la letrina ya se abre/cierra libre
+            if (oldMan != null) yield return ViejoWalkToKitchen(oldMan);
+            yield return SayFor("(El viejo entra y despierta a la vieja...)", 2.0f);
 
             // 5) la vieja viene hacia el jugador
             if (oldLady != null)
@@ -1395,16 +1393,37 @@ namespace FolkloreArchives
             if (look.sqrMagnitude > 1e-4f) tr.rotation = Quaternion.LookRotation(look.normalized);
         }
 
+        // índice (0-based) del punto de 'viejoKitchenPath' que cae en la puerta de la casa -- ahí
+        // se abre/cierra sola al pasar (ver ViejoWalkToKitchen). Si se agregan/sacan puntos antes
+        // de ese, actualizar este índice.
+        const int ViejoDoorPathIndex = 3;
+
         // el viejo camina el recorrido 'viejoKitchenPath' (owner, TEST_PLAYER) punto a punto hasta
-        // la cocina de la casa; al llegar al último queda PARADO ahí, mirando el yaw de ese punto
-        // (sin animación de cocinar todavía -- pendiente).
+        // donde está la vieja; al pasar por la puerta de la casa (PuertaCasa, si es abrible) se
+        // abre sola y se cierra atrás suyo. Al llegar al último punto queda PARADO ahí, mirando el
+        // yaw de ese punto.
         IEnumerator ViejoWalkToKitchen(Transform viejo)
         {
             if (viejo == null || viejoKitchenPath == null) yield break;
-            foreach (var wp in viejoKitchenPath)
+            var houseDoorT = FindObj("PuertaCasa");
+            var houseDoorGate = houseDoorT != null ? houseDoorT.GetComponent<CorralGate>() : null;
+
+            for (int i = 0; i < viejoKitchenPath.Length; i++)
             {
+                var wp = viejoKitchenPath[i];
+                // owner: "debería abrirse y cerrarse la puerta cuando él pasa" -- se abre sola
+                // justo antes de cruzarla.
+                if (i == ViejoDoorPathIndex && houseDoorGate != null) houseDoorGate.SetOpen(true);
+
                 float t = 0f;
                 while (t < 12f && Flat2(viejo.position, wp.pos) > 0.5f) { StepToward(viejo, wp.pos, 2.2f); t += Time.deltaTime; yield return null; }
+
+                // y se cierra sola una vez que ya la cruzó.
+                if (i == ViejoDoorPathIndex && houseDoorGate != null)
+                {
+                    yield return new WaitForSeconds(0.6f);
+                    houseDoorGate.SetOpen(false);
+                }
             }
             if (viejoKitchenPath.Length > 0)
             {
