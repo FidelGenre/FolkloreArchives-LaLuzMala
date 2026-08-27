@@ -769,18 +769,31 @@ namespace FolkloreArchives
             if (door == null) { _playerHint = null; yield break; }   // sin letrina no hay escena
 
             // si la puerta de la letrina es abrible (CorralGate, ver RanchoNpcSetup), la misma E
-            // del golpe scripteado también la abriría -- apagada mientras dura el susto, se
+            // de los golpes scripteados también la abriría -- apagada mientras dura el susto, se
             // rehabilita cuando volvés a moverte libre (más abajo).
             var doorGate = door.GetComponent<CorralGate>();
             if (doorGate != null) doorGate.enabled = false;
+            var knockClip = Resources.Load<AudioClip>("door_knock");
 
-            // 1) tocás la puerta del baño
+            // owner: "la primera vez que toque la puerta que desde adentro el viejo diga ocupado,
+            // y al tocarla de nuevo que se abra... y salga el viejo tipo screamer". Dos golpes:
+            // 1) primer golpe: nadie sale, contesta "¡Ocupado!" desde adentro (la puerta NO se abre).
+            yield return WaitPlayerInteract(player, door.position, playerReach + 1.2f, "[E] Tocar la puerta");
+            _playerHint = null;
+            if (knockClip != null) AudioSource.PlayClipAtPoint(knockClip, door.position, 0.8f);
+            yield return SayFor("(Tocás la puerta del baño...)", 1.2f);
+            yield return SayFor("¡Ocupado!", 1.8f);   // voz del viejo, desde adentro (no se activa/muestra todavía)
+            yield return new WaitForSeconds(0.6f);
+
+            // 2) segundo golpe: RECIÉN ahí se abre la puerta y sale el viejo tipo screamer.
+            _playerHint = "[E] Tocar la puerta de nuevo";
             yield return WaitPlayerInteract(player, door.position, playerReach + 1.2f, "[E] Tocar la puerta");
             _playerHint = null;
             PartyController.CinematicLock = true;   // scripteado a partir de acá
-            yield return SayFor("(Tocás la puerta del baño...)", 1.2f);
+            if (knockClip != null) AudioSource.PlayClipAtPoint(knockClip, door.position, 0.8f);
 
-            // 2) SALE EL VIEJO (susto): se activa, te encara, flash negro + ladrido de Rufus
+            // SALE EL VIEJO (susto): se abre la puerta, se activa, te encara, flash negro + ladrido
+            if (doorGate != null) doorGate.SetOpen(true);
             if (oldMan != null) { oldMan.gameObject.SetActive(true); FaceTarget(oldMan, player.position); }
             var black = MakeBlackOverlay();
             var img = black != null ? black.GetComponent<RawImage>() : null;
@@ -791,6 +804,7 @@ namespace FolkloreArchives
             if (da != null) da.Bark();
 
             // 3) confrontación + pedido de la caña
+            yield return SayFor("¡¿Qué carajo pasa?!", 2.4f);
             yield return SayFor("¡¿Qué hacen acá?! ¡Esto es propiedad privada!", 3.2f);
             yield return SayFor("Perdón, señor... estamos acampando acá cerca.", 3.0f);
             yield return SayFor("¿No tendría una caña de pescar para prestarnos?", 3.2f);
