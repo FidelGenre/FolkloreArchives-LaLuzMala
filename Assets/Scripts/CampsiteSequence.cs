@@ -92,6 +92,14 @@ namespace FolkloreArchives
         public float   houseDoorYaw = -178.982f;
         public Vector3 corralGateStand = new Vector3(116.6176f, 26.97f, 149.8931f);  // parado acá para abrir la tranquera (owner)
         public Vector3 sheepPasturePos = new Vector3(124.067f, 26.1109f, 167.3692f); // las ovejas van a pastar acá (owner)
+
+        // dónde/cómo aparece el viejo al salir de la letrina (owner, Inspector). FIJO a propósito
+        // -- antes se calculaba en RanchoNpcSetup a partir de "letrina.007"/"letrina.006", pero esos
+        // números NO son estables: cada vez que se repone/regenera la letrina, Unity puede
+        // reasignarlos a piezas distintas (puerta vs. estructura), haciendo que el viejo apareciera
+        // en cualquier lado. Con esto fijo, no depende más de qué pieza se llame cómo.
+        public Vector3 ranchoViejoPos = new Vector3(91.70499f, 27.734f, 136.79f);
+        public float   ranchoViejoYaw = -98.717f;
         LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
@@ -794,7 +802,12 @@ namespace FolkloreArchives
 
             // SALE EL VIEJO (susto): se abre la puerta, se activa, te encara, flash negro + ladrido
             if (doorGate != null) doorGate.SetOpen(true);
-            if (oldMan != null) { oldMan.gameObject.SetActive(true); FaceTarget(oldMan, player.position); }
+            if (oldMan != null)
+            {
+                oldMan.position = ranchoViejoPos;   // pose FIJA (owner) -- ver comentario del campo
+                oldMan.rotation = Quaternion.Euler(0f, ranchoViejoYaw, 0f);
+                oldMan.gameObject.SetActive(true);
+            }
             var black = MakeBlackOverlay();
             var img = black != null ? black.GetComponent<RawImage>() : null;
             if (img != null) img.color = Color.black;
