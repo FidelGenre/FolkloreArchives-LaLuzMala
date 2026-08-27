@@ -201,16 +201,90 @@ namespace FolkloreArchives.MapGen
             return pivot;
         }
 
+        // owner: "no se ve como se veía la tranquera antes que era un asset" -- el cubo plano
+        // (BuildHingeDoor) no tiene el relieve real (tablones) que tenía el original. En vez de
+        // aproximar con un cubo, se reinstancia el modelo REAL del mismo pack de las vallas de los
+        // caminos (wooden_fence_closed.fbx, "PSX style modular walls & fences" -- ver
+        // FenceBuilder.cs), escalado para que su ancho coincida con el que tenía Cube.184.
+        const string TranqueraAssetFbx = "Assets/ExternalAssets/WoodenFence/models/wooden_fence_closed.fbx";
+        const string TranqueraAssetTex = "Assets/ExternalAssets/WoodenFence/textures/low_wooden_wall.jpg";
+
         [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
         static void BuildGate()
         {
             var sel = Selection.activeGameObject;
             if (sel == null) { EditorUtility.DisplayDialog("Tranquera", "Seleccioná primero la puerta del corral (Cube.184).", "OK"); return; }
-            if (sel.GetComponent<Renderer>() == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
-            var pivot = BuildHingeDoor(sel, "TranqueraCorral", 95f, "[E] Abrir la tranquera", "[E] Cerrar la tranquera");
-            if (pivot == null) return;
-            Debug.Log("[Rancho] 'TranqueraCorral' armada (bisagra en un extremo, eje Y). Original " +
-                      sel.name + " desactivado. Ajustá openDeg (+/-) si abre para el lado equivocado.");
+            var mf = sel.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene mesh.", "OK"); return; }
+
+            var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraAssetFbx);
+            if (fbx == null) { EditorUtility.DisplayDialog("Tranquera", "No encontré " + TranqueraAssetFbx, "OK"); return; }
+
+            // tamaño/orientación REALES del original (bounds locales, invariantes a la rotación
+            // actual -- mismo fix que BuildHingeDoor, por si Cube.184 vuelve a quedar rotado).
+            Bounds lb = mf.sharedMesh.bounds;
+            Vector3 s = Vector3.Scale(lb.size, sel.transform.lossyScale);
+            Vector3 c = sel.transform.TransformPoint(lb.center);
+            bool longX = s.x >= s.z;
+            float length = longX ? s.x : s.z;
+            Vector3 longDir = longX ? sel.transform.right : sel.transform.forward;
+            longDir.y = 0f;
+            if (longDir.sqrMagnitude < 1e-6f) longDir = sel.transform.right;
+            longDir.Normalize();
+            Vector3 hinge = c - longDir * (length * 0.5f);
+
+            var prev = FindByName("TranqueraCorral");
+            if (prev != null) Object.DestroyImmediate(prev.gameObject);
+
+            var pivot = new GameObject("TranqueraCorral");
+            pivot.transform.position = hinge;
+            pivot.transform.rotation = Quaternion.identity;
+
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
+            inst.name = "Plank";
+            inst.transform.SetParent(pivot.transform, true);
+
+            // escala UNIFORME: el ancho propio del asset (tal como vino) pasa a medir lo mismo
+            // que medía Cube.184 -- no estirar (deformaría los tablones).
+            var instRends = inst.GetComponentsInChildren<Renderer>();
+            if (instRends.Length > 0)
+            {
+                Bounds ib = instRends[0].bounds;
+                for (int i = 1; i < instRends.Length; i++) ib.Encapsulate(instRends[i].bounds);
+                float assetWidth = Mathf.Max(ib.size.x, ib.size.z);
+                if (assetWidth > 0.001f) inst.transform.localScale = Vector3.one * (length / assetWidth);
+            }
+            inst.transform.position = c;
+            inst.transform.rotation = sel.transform.rotation;   // misma orientación que Cube.184
+
+            // textura del pack (misma que usa FenceBuilder para las vallas de los caminos),
+            // material URP cacheado/estable (mismo .mat, no duplica).
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(TranqueraAssetTex);
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (tex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+            mat = BuilderUtils.SaveMaterialStable(mat, "Assets/Settings/WoodenFence.mat");
+            foreach (var r in instRends)
+            {
+                var arr = new Material[r.sharedMaterials.Length];
+                for (int k = 0; k < arr.Length; k++) arr[k] = mat;
+                r.sharedMaterials = arr;
+            }
+
+            var gate = pivot.AddComponent<FolkloreArchives.CorralGate>();
+            gate.openDeg = 95f;
+            gate.hintClosed = "[E] Abrir la tranquera";
+            gate.hintOpen = "[E] Cerrar la tranquera";
+
+            sel.SetActive(false);   // ocultamos la puerta combined original
+
+            Undo.RegisterCreatedObjectUndo(pivot, "Armar tranquera");
+            Selection.activeGameObject = pivot;
+            EditorGUIUtility.PingObject(pivot);
+            Debug.Log("[Rancho] 'TranqueraCorral' armada con el modelo REAL (wooden_fence_closed, " +
+                      "no un cubo) en " + hinge + ". Original " + sel.name + " desactivado. Ajustá " +
+                      "openDeg (+/-) si abre para el lado equivocado, o la escala/posición a mano si " +
+                      "no calzó perfecto con el hueco del corral.");
         }
 
         // owner: "la puerta debería estar cerrada cuando voy a golpearla y también debería poder
