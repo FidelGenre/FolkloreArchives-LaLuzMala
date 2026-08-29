@@ -916,7 +916,15 @@ namespace FolkloreArchives
 
             // 5) la vieja camina su recorrido FIJO (owner, TEST_PLAYER) hasta la puerta -- ya NO
             // persigue tu posición en vivo; llega, se para, y RECIÉN AHÍ habla con los chicos.
+            // owner: "no se está abriendo la puerta, queda la vieja atravesándola" (la puerta del
+            // RANCHO/casa, "PuertaCasa" -- no la de la letrina). Solo la abrís VOS con E, nada la
+            // abría para ella. Se abre sola antes de que camine y se cierra atrás suyo, mismo
+            // criterio que el viejo con esta misma puerta (ver ViejoWalkToKitchen).
+            var houseDoorForLady = FindObj("PuertaCasa");
+            var houseGateForLady = houseDoorForLady != null ? houseDoorForLady.GetComponent<CorralGate>() : null;
+            if (houseGateForLady != null) houseGateForLady.SetOpen(true);
             if (oldLady != null) yield return WalkPath(oldLady, oldLadyGreetPath);
+            if (houseGateForLady != null) { yield return new WaitForSeconds(0.6f); houseGateForLady.SetOpen(false); }
             yield return SayFor("Buenas... mucho gusto. ¿Qué necesitan, chicos?", 3.2f);
             yield return SayFor("Unas cañas para pescar, nos las olvidamos y vinimos a acampar.", 3.6f);
             yield return SayFor("Mmm... dale, se las presto. Pero a cambio de un favor.", 3.4f);
