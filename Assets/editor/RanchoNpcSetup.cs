@@ -227,6 +227,33 @@ namespace FolkloreArchives.MapGen
                       sel.name + " desactivado. Ajustá openDeg (+/-) si abre para el lado equivocado.");
         }
 
+        // owner: "no me está saliendo la opción [de abrir la tranquera]" -- a TranqueraCorral se le
+        // había perdido el componente CorralGate (mismo síntoma que ya tuvo PuertaCasa). Sin él, la
+        // misión (RanchoBathroomScene) salta directo al hint de después sin esperar a que se abra.
+        // Mismo botón "reponer config sin rehacer" que ya existe para la puerta de la casa.
+        [MenuItem("Folklore/Actualizar tranquera del corral (config, sin rehacerla)")]
+        static void UpdateGateConfig()
+        {
+            var door = FindByName("TranqueraCorral");
+            if (door == null)
+            {
+                EditorUtility.DisplayDialog("Tranquera", "No encontré 'TranqueraCorral' en la escena -- primero corré 'Armar tranquera del corral (abrible)'.", "OK");
+                return;
+            }
+            var gate = door.GetComponent<FolkloreArchives.CorralGate>();
+            bool wasMissing = gate == null;
+            if (gate == null) gate = door.gameObject.AddComponent<FolkloreArchives.CorralGate>();
+            gate.openDeg = 95f;
+            gate.hintClosed = "[E] Abrir la tranquera";
+            gate.hintOpen = "[E] Cerrar la tranquera";
+            EditorUtility.SetDirty(gate);
+            Selection.activeGameObject = door.gameObject;
+            EditorGUIUtility.PingObject(door);
+            Debug.Log("[Rancho] 'TranqueraCorral' actualizada." +
+                      (wasMissing ? " Le faltaba el CorralGate -- se le agregó de nuevo." : "") +
+                      " Rotación NO tocada.");
+        }
+
         // owner: "la puerta debería estar cerrada cuando voy a golpearla y también debería poder
         // abrir y cerrarse" -- v1 (BuildHingeDoor con un Cube genérico, como la tranquera) salió
         // FEA: el Cube toma el material con UVs de caja (se veía negra) y el AABB copiaba el
