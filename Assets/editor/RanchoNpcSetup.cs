@@ -171,7 +171,10 @@ namespace FolkloreArchives.MapGen
             longDir.Normalize();
             Vector3 hinge = c - longDir * (length * 0.5f);   // bisagra en un EXTREMO
 
-            var mat = rend.sharedMaterial;
+            // owner: "aparece pero sin el asset" (negro) -- mismo caso que la puerta de la casa al
+            // principio: el material original suele ser Standard (no URP), se ve roto/negro. Misma
+            // conversión que ya se usó ahí.
+            var mat = HouseBuilder.NappinUrp(rend.sharedMaterial);
 
             var prev = FindByName(name);
             if (prev != null) Object.DestroyImmediate(prev.gameObject);
