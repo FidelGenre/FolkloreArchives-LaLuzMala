@@ -273,7 +273,14 @@ namespace FolkloreArchives.MapGen
                 scaleFactor = Mathf.Clamp(scaleFactor, 0.05f, 20f);
             }
             inst.transform.localScale = Vector3.one * scaleFactor;
-            inst.transform.rotation = sel.transform.rotation;   // orientación ANTES de centrar
+            // owner: "no aparece" -- Plank quedaba con Rotation X=-90 (acostado de costado), no
+            // parado. Copiar sel.transform.rotation TAL CUAL heredaba basura del padre de
+            // Cube.184 (rotación de MUNDO, puede no ser plana si el padre está inclinado). Fix:
+            // parado siempre derecho (sin roll/pitch), solo con el giro horizontal (yaw) de
+            // 'longDir', que ya viene aplanado (longDir.y = 0 más arriba).
+            inst.transform.rotation = longDir.sqrMagnitude > 1e-6f
+                ? Quaternion.LookRotation(longDir, Vector3.up)
+                : Quaternion.identity;
 
             // centrar la malla de VERDAD en 'c' -- si el pivote del asset no está en el centro
             // geométrico (común en modelos importados), mover solo el ROOT a 'c' puede dejar la
