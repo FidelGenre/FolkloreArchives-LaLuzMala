@@ -252,7 +252,17 @@ namespace FolkloreArchives.MapGen
                 return;
             }
             inst.name = "Plank";
+            // desempaquetar (si no, sigue atado al prefab -- algunos cambios pueden no "pegar" o
+            // heredar configuración del asset original, como el Static que veníamos arrastrando).
+            PrefabUtility.UnpackPrefabInstance(inst, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
             inst.transform.SetParent(pivot.transform, true);
+
+            // el prefab/FBX puede venir marcado Static de fábrica -- si quedaba así, Unity la
+            // vuelve a static-batchear al entrar a Play y queda invisible/rota (mismo problema
+            // que ya tuvo la puerta de la casa). Sacado explícito en TODA la jerarquía.
+            GameObjectUtility.SetStaticEditorFlags(pivot, (StaticEditorFlags)0);
+            foreach (var tr in inst.GetComponentsInChildren<Transform>(true))
+                GameObjectUtility.SetStaticEditorFlags(tr.gameObject, (StaticEditorFlags)0);
 
             // escala UNIFORME: el ancho propio del asset (tal como vino) pasa a medir lo mismo
             // que medía Cube.184 -- no estirar (deformaría los tablones).
