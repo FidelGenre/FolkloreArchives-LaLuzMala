@@ -171,10 +171,16 @@ namespace FolkloreArchives.MapGen
             longDir.Normalize();
             Vector3 hinge = c - longDir * (length * 0.5f);   // bisagra en un EXTREMO
 
-            // owner: "aparece pero sin el asset" (negro) -- mismo caso que la puerta de la casa al
-            // principio: el material original suele ser Standard (no URP), se ve roto/negro. Misma
-            // conversión que ya se usó ahí.
-            var mat = HouseBuilder.NappinUrp(rend.sharedMaterial);
+            // owner: "no se está poniendo el material original" (sigue negro incluso después de
+            // NappinUrp -- ese material tiene algo raro que la conversión estándar no arregla).
+            // En vez de perseguirlo, uso directo el material de madera YA PROBADO del proyecto
+            // (el mismo que usan las vallas de los caminos, FenceBuilder.cs) -- URP/Lit simple,
+            // sin sorpresas.
+            var fenceTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ExternalAssets/WoodenFence/textures/low_wooden_wall.jpg");
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (fenceTex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", fenceTex);
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+            mat = BuilderUtils.SaveMaterialStable(mat, "Assets/Settings/WoodenFence.mat");
 
             var prev = FindByName(name);
             if (prev != null) Object.DestroyImmediate(prev.gameObject);
