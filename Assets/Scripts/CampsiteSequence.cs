@@ -603,20 +603,9 @@ namespace FolkloreArchives
             yield return SayFor("Bueno, dale.", 1.8f);
 
             // 5) LIBRE: te vas caminando (vos + Rufus) al rancho de la vieja. NO scripteado.
-            yield return GoToRanchoFlow();
-        }
-
-        // Desde acá arranca tanto el flujo NORMAL (después de la charla en el campamento, arriba)
-        // como el checkpoint de DEBUG "Rancho (cañas)" (BeginAtRancho, más abajo): caminás LIBRE
-        // hasta la puerta de la casa, no atienden, vas al baño del granero -> RanchoBathroomScene.
-        public IEnumerator GoToRanchoFlow()
-        {
-            Transform player = op != null && op.player != null ? op.player.transform : null;
-            if (player == null) yield break;
-
             _playerHint = "Andá al rancho a pedir unas cañas";
 
-            // al LLEGAR a la puerta de la casa tocás -> no atiende nadie -> a buscar por el granero.
+            // 6) al LLEGAR a la puerta de la casa tocás -> no atiende nadie -> a buscar por el granero.
             yield return WaitPlayerInteract(player, houseDoorPos, playerReach + 0.6f, "[E] Tocar la puerta");
             yield return SayFor("(Tocás la puerta...)", 1.6f);
             yield return new WaitForSeconds(1.4f);
@@ -624,121 +613,8 @@ namespace FolkloreArchives
             yield return SayFor("Habrá alguien atrás. Vamos a ver por el granero.", 3.0f);
             _playerHint = "Buscá a alguien por el baño del granero";
 
-            // baño del granero (letrina): tocás -> sale el viejo (susto) -> charla -> la vieja -> favor.
+            // 7) baño del granero (letrina): tocás -> sale el viejo (susto) -> charla -> la vieja -> favor.
             yield return RanchoBathroomScene();
-        }
-
-        // ---- DEBUG checkpoint "Rancho (cañas)" ----
-        // owner: "pone un nuevo checkpoint a partir de que hay que ir hasta lo de la vieja" --
-        // saltea TODA la cinemática del campamento (llegada, armado de carpas, noche, Rufus/Luz
-        // Mala, despertar, charla de la mañana) y arranca LIBRE justo en el punto de arriba
-        // ("andá al rancho a pedir unas cañas"). El campamento aparece YA armado (auto estacionado,
-        // 3 carpas puestas, fogata prendida, los 3 amigos en su lugar de mañana) para no tener que
-        // rehacer toda la noche cada vez que se prueba la misión del rancho. Lo dispara
-        // OpeningDriveSequence cuando el checkpoint de EditorPrefs es >= 3 (ver DebugCheckpointButtons.cs).
-        public void BeginAtRancho(OpeningDriveSequence seq)
-        {
-            op = seq;
-            car = Object.FindFirstObjectByType<CarController>();
-            _luzMala = Object.FindFirstObjectByType<LuzMala>();
-            if (_luzMala != null) _luzMala.gameObject.SetActive(false);
-            StartCoroutine(SetupAtRanchoCheckpoint());
-        }
-
-        IEnumerator SetupAtRanchoCheckpoint()
-        {
-            yield return null;   // mismo motivo que Run(): esperar el Start() de PlayerVehicleInteractor
-
-            // el auto queda estacionado en el campamento (como al final de la llegada), vacío.
-            if (car != null)
-            {
-                Vector3 parkW = new Vector3(campParkXZ.x, campParkY, campParkXZ.y);
-                Quaternion parkRot = Quaternion.Euler(0f, campParkYaw, 0f);
-                car.transform.position = parkW; car.transform.rotation = parkRot;
-                var rb = car.GetComponent<Rigidbody>();
-                if (rb != null && !rb.isKinematic) { rb.position = parkW; rb.rotation = parkRot; rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
-                car.autoPilot = false; car.driving = false;
-                car.externalThrottle = 0f; car.externalSteer = 0f;
-            }
-
-            // campamento YA armado: revela las 3 carpas en su lugar final (sin animación de pop) y
-            // prende la fogata (la noche ya pasó).
-            HideCampForSetup();
-            foreach (var t in _tents) { if (t == null) continue; t.transform.localScale = Vector3.one; t.SetActive(true); }
-            var npcTents = new List<GameObject>();
-            foreach (var t in _tents) if (t != null && t != _playerTent) npcTents.Add(t);
-            // mismo swap que DisembarkAndWalk: npcTents[1] = pareja, npcTents[0] = negro.
-            GameObject tentPair  = npcTents.Count > 1 ? npcTents[1] : null;
-            GameObject tentNegro = npcTents.Count > 0 ? npcTents[0] : null;
-            if (tentPair != null)
-            {
-                Vector3 tp = tentPairPos; tp.y = GroundY(tp, tp.y);
-                tentPair.transform.position = tp; tentPair.transform.rotation = Quaternion.Euler(0f, tentPairYaw, 0f);
-            }
-            if (tentNegro != null)
-            {
-                Vector3 tp = greenTentPos; tp.y = GroundY(tp, tp.y);
-                tentNegro.transform.position = tp; tentNegro.transform.rotation = Quaternion.Euler(0f, greenTentYaw, 0f);
-            }
-            SetCampfireLit(true);
-
-            // los 3 amigos: FUERA del auto (ya bajaron hace rato) y en su lugar de la MAÑANA
-            // (mismas posiciones que arma MorningAfterWake).
-            Transform casual = op != null ? op.friendMaleCasual  : null;
-            Transform chica  = op != null ? op.friendFemaleSec   : null;
-            Transform negro  = op != null ? op.friendMaleGreenJkt : null;
-            UnparentFriend(casual); UnparentFriend(chica); UnparentFriend(negro);
-            Vector3 fire = _campsite != null ? _campsite.position : new Vector3(246f, 23f, 232f);
-            if (casual != null) PlaceStandingYaw(casual, pairStandPos, pairStandYaw);
-            if (chica  != null) PlaceSeated(chica, chicaSitPos, chicaSitYaw);
-            if (negro  != null) { float ny = Mathf.Atan2(fire.x - greenSitPos.x, fire.z - greenSitPos.z) * Mathf.Rad2Deg; PlaceSeated(negro, greenSitPos, ny); }
-
-            // vos + Rufus, PARADOS y libres, afuera de tu carpa (mañana ya, caca de Rufus ya limpia).
-            Transform player = op != null && op.player != null ? op.player.transform : null;
-            Transform dog    = op != null && op.dog != null    ? op.dog.transform    : null;
-            Vector3 pTent = _playerTent != null ? _playerTent.transform.position : playerSitPos;
-            float pYaw = _playerTent != null ? _playerTent.transform.eulerAngles.y : playerSitYaw;
-            Vector3 outside = pTent + Fwd(pYaw) * 2.2f;
-            if (player != null)
-            {
-                var pvi = player.GetComponent<PlayerVehicleInteractor>();
-                if (pvi != null && pvi.CurrentSeat != null) yield return pvi.ExitRoutine();
-                var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
-                PlaceStandingYaw(player, outside, pYaw);
-                var pcc = player.GetComponent<CharacterController>(); if (pcc != null) pcc.enabled = true;
-            }
-            if (dog != null)
-            {
-                var dvi = dog.GetComponent<PlayerVehicleInteractor>();
-                if (dvi != null && dvi.CurrentSeat != null) yield return dvi.ExitRoutine();
-                PlaceStandingYaw(dog, outside + Right(pYaw) * 1.1f, pYaw);
-                var dcc = dog.GetComponent<CharacterController>(); if (dcc != null) dcc.enabled = true;
-            }
-
-            // día (misma fase final que deja BrightenToDay tras el amanecer), sin la animación.
-            var dn = Object.FindFirstObjectByType<DayNightController>();
-            if (dn != null) { dn.SetNightBlend(0f); dn.SetPhase(DayNightController.Phase.Dusk); }
-
-            // control LIBRE al jugador.
-            var party = Object.FindFirstObjectByType<PartyController>();
-            if (party != null) party.ForceControl(false);
-            PlayerVehicleInteractor.DrivingLocked = false;
-            PlayerVehicleInteractor.PastGasStation = true;
-            RestoreControl();
-
-            // arranca justo en el pedido: "andá al rancho a pedir unas cañas".
-            yield return GoToRanchoFlow();
-        }
-
-        // desparenta a un amigo (por si quedó sentado en el auto) y lo deja listo para pararlo/
-        // sentarlo a mano -- mismo criterio que UnseatAndPlace, sin la parte de PARARLO todavía.
-        static void UnparentFriend(Transform npc)
-        {
-            if (npc == null) return;
-            npc.SetParent(null, false);
-            npc.localScale = Vector3.one;
-            var fw = npc.GetComponent<FriendWander>(); if (fw != null) fw.enabled = false;
-            var anim = npc.GetComponent<HumanWalkAnim>(); if (anim != null) anim.seated = false;
         }
 
         // Escena del BAÑO del rancho: el jugador toca la puerta de la letrina, SALE EL VIEJO
