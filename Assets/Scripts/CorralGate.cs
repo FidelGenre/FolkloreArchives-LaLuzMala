@@ -1,14 +1,10 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
-//  CorralGate.cs — puerta/tranquera GENÉRICA que se abre/cierra girando sobre
-//  una bisagra VERTICAL (eje Y) en un extremo, como una puerta real. Se toca
-//  con E apuntándola de cerca. La arma el botón de editor RanchoNpcSetup
-//  (BuildHingeDoor, reusado por la tranquera del corral y la puerta de la
-//  casa); la secuencia de la misión la puede abrir sola (SetOpen) y
-//  consultar IsOpen (ej. para soltar las ovejas cuando se abre la tranquera).
-//  La rotación que TENÍA el objeto al arrancar Play queda grabada como
-//  "cerrada" (Awake) -- para corregir cómo se ve cerrada, rotar el objeto
-//  (o su hijo "Plank") en el Editor ANTES de dar Play.
+//  CorralGate.cs — tranquera del corral que se abre/cierra girando sobre
+//  una bisagra VERTICAL (eje Y) en un extremo, como una puerta. Se toca
+//  con E apuntándola de cerca. La arma el botón de editor RanchoNpcSetup;
+//  la secuencia de la misión la puede abrir sola (SetOpen) y consultar
+//  IsOpen para soltar las ovejas.
 // ============================================================
 using System.Collections;
 using UnityEngine;
@@ -22,10 +18,6 @@ namespace FolkloreArchives
         public float reach = 3.5f;     // distancia para tocarla con E
         public float aimAngle = 45f;   // hay que estar apuntándola
         public float volume = 0.7f;
-        public string hintClosed = "[E] Abrir la tranquera";   // cartel [E] con la puerta/tranquera cerrada
-        public string hintOpen   = "[E] Cerrar la tranquera";  // cartel [E] con la puerta/tranquera abierta
-        public string openClipName  = "car_door_open";   // nombre del clip en Resources/ (sin extensión)
-        public string closeClipName = "car_door_close";
 
         Quaternion _closed;
         bool _open;
@@ -38,8 +30,8 @@ namespace FolkloreArchives
         void Awake()
         {
             _closed = transform.localRotation;
-            _openClip  = Resources.Load<AudioClip>(openClipName);
-            _closeClip = Resources.Load<AudioClip>(closeClipName);
+            _openClip  = Resources.Load<AudioClip>("car_door_open");   // reuso; se puede cambiar por uno de tranquera
+            _closeClip = Resources.Load<AudioClip>("car_door_close");
         }
 
         // abre/cierra (lo llama la secuencia o el toggle con E).
@@ -83,7 +75,7 @@ namespace FolkloreArchives
         void OnGUI()
         {
             if (!_showHint) return;
-            InteractHint.Draw(_open ? hintOpen : hintClosed);
+            InteractHint.Draw(_open ? "[E] Cerrar la tranquera" : "[E] Abrir la tranquera");
         }
     }
 }

@@ -92,69 +92,6 @@ namespace FolkloreArchives
         public float   houseDoorYaw = -178.982f;
         public Vector3 corralGateStand = new Vector3(116.6176f, 26.97f, 149.8931f);  // parado acá para abrir la tranquera (owner)
         public Vector3 sheepPasturePos = new Vector3(124.067f, 26.1109f, 167.3692f); // las ovejas van a pastar acá (owner)
-
-        // dónde/cómo aparece el viejo al salir de la letrina (owner, Inspector). FIJO a propósito
-        // -- antes se calculaba en RanchoNpcSetup a partir de "letrina.007"/"letrina.006", pero esos
-        // números NO son estables: cada vez que se repone/regenera la letrina, Unity puede
-        // reasignarlos a piezas distintas (puerta vs. estructura), haciendo que el viejo apareciera
-        // en cualquier lado. Con esto fijo, no depende más de qué pieza se llame cómo.
-        public Vector3 ranchoViejoPos = new Vector3(91.70499f, 27.734f, 136.79f);
-        public float   ranchoViejoYaw = -98.717f;
-
-        // dónde/cómo está ACOSTADA la vieja (dormida) hasta que el viejo la despierta (owner,
-        // Inspector). Coincide con el final de viejoKitchenPath -- ahí es donde el viejo la
-        // encuentra.
-        public Vector3 oldLadySleepPos = new Vector3(143.5203f, 28.13925f, 116.112f);
-        public float   oldLadySleepYaw = -86.835f;
-
-        // owner: "la vieja al levantarse debe ir hasta acá y terminar acá, y ahí recién habla con
-        // los chicos" -- recorrido FIJO (TEST_PLAYER) hasta la puerta; ya no persigue player.position
-        // en vivo (ver WalkPath, "5) la vieja..." más abajo).
-        public PathPoint[] oldLadyGreetPath =
-        {
-            new PathPoint { pos = new Vector3(143.9885f, 27.16053f, 119.0913f), yaw = -92.355f },
-            new PathPoint { pos = new Vector3(136.1418f, 27.16053f, 118.716f),  yaw = -0.915f },
-            new PathPoint { pos = new Vector3(136.2163f, 27.24991f, 125.2371f), yaw = -3.715f },
-        };
-
-        // owner: "por ahí tiene que ir el viejo, entrar a la casa y ponerse a cocinar luego de
-        // avisarle a la vieja" -- recorrido punto a punto (TEST_PLAYER) desde donde aparece hasta
-        // la cocina adentro de la casa. Camina en PARALELO al resto de la escena (mientras la vieja
-        // habla con el jugador) y al llegar queda PARADO ahí (sin animación de cocinar todavía).
-        [System.Serializable]
-        public struct PathPoint { public Vector3 pos; public float yaw; }
-        public PathPoint[] viejoKitchenPath =
-        {
-            new PathPoint { pos = new Vector3(90.70193f, 28.17672f, 134.9482f),  yaw = 170.605f },
-            new PathPoint { pos = new Vector3(91.38409f, 28.45722f, 129.4504f),  yaw = 90.525f },
-            new PathPoint { pos = new Vector3(103.9425f, 27.63788f, 129.6086f),  yaw = 92.365f },
-            // owner: "necesito que pase por esa coordenada que ahí está la puerta, si no sigue
-            // derecho" -- sin este punto el tramo de arriba corta en diagonal y no cruza el vano
-            // de la puerta de la casa. Corregido (owner: "el viejo no está pasando por la puerta,
-            // está atravesando la pared" -- el punto original cortaba la esquina).
-            new PathPoint { pos = new Vector3(136.2944f, 26.67501f, 126.4635f),  yaw = -178.355f },
-            // owner: "cuando entra el viejo no está haciendo el recorrido, pasa la puerta y
-            // desaparece -- primero debe ir hasta acá desde la puerta y terminar acá despertando a
-            // la vieja". Los puntos de ADENTRO de la casa (después de la puerta) quedaron
-            // desactualizados (el viejo se perdía) -- reemplazados por estos 4, hasta terminar
-            // junto a oldLadySleepPos.
-            new PathPoint { pos = new Vector3(136.258f,  27.1659f,  123.9994f), yaw = 178.205f },
-            new PathPoint { pos = new Vector3(136.2014f, 27.16053f, 118.7161f), yaw = 91.885f },
-            new PathPoint { pos = new Vector3(142.1169f, 27.16053f, 118.7661f), yaw = 90.685f },
-            new PathPoint { pos = new Vector3(142.7618f, 27.16053f, 117.6976f), yaw = 140.765f },
-        };
-
-        // owner: "y después todo por acá hasta llegar a la cocina, antes de llegar a la cocina se
-        // levanta la vieja y empieza a caminar hasta la puerta" -- tramo FINAL (a la cocina de
-        // verdad), después de despertar a la vieja. Corre en PARALELO (StartCoroutine, no yield)
-        // una vez que ella ya se levantó, así el orden queda: la despierta -> ella camina hacia
-        // vos MIENTRAS él sigue de largo a la cocina.
-        public PathPoint[] viejoToKitchenPath =
-        {
-            new PathPoint { pos = new Vector3(142.4135f, 27.16053f, 119.1725f), yaw = -93.635f },
-            new PathPoint { pos = new Vector3(136.6069f, 27.16053f, 118.8755f), yaw = -91.795f },
-            new PathPoint { pos = new Vector3(129.2438f, 27.16053f, 119.4303f), yaw = -8.755f },
-        };
         LuzMala _luzMala;
         string _playerHint;  // cartel [E] tuyo (se dibuja con InteractHint)
         string _playerSay;   // línea de diálogo (abajo, tipo guion)
@@ -666,155 +603,18 @@ namespace FolkloreArchives
             yield return SayFor("Bueno, dale.", 1.8f);
 
             // 5) LIBRE: te vas caminando (vos + Rufus) al rancho de la vieja. NO scripteado.
-            yield return GoToRanchoFlow();
-        }
-
-        // Desde acá arranca tanto el flujo NORMAL (después de la charla en el campamento, arriba)
-        // como el checkpoint de DEBUG "Rancho (cañas)" (BeginAtRancho, más abajo): caminás LIBRE
-        // hasta la puerta de la casa, no atienden, vas al baño del granero -> RanchoBathroomScene.
-        public IEnumerator GoToRanchoFlow()
-        {
-            Transform player = op != null && op.player != null ? op.player.transform : null;
-            if (player == null) yield break;
-
             _playerHint = "Andá al rancho a pedir unas cañas";
 
-            // owner: "la primera vez que toco la puerta no debería abrirse, solo sonar el golpe" --
-            // "PuertaCasa" (si ya está armada, ver RanchoNpcSetup) tiene su PROPIO CorralGate
-            // escuchando E para abrir/cerrar libremente; mientras dura este golpe SCRIPTEADO lo
-            // apagamos (misma E, pero sin abrir la puerta) y solo suena el golpe. Se rehabilita
-            // apenas termina el diálogo -- de ahí en más el jugador la abre/cierra como quiera.
-            Transform houseDoor = FindObj("PuertaCasa");
-            var houseGate = houseDoor != null ? houseDoor.GetComponent<CorralGate>() : null;
-            if (houseGate != null) houseGate.enabled = false;
-
-            // al LLEGAR a la puerta de la casa tocás -> no atiende nadie -> a buscar por el granero.
+            // 6) al LLEGAR a la puerta de la casa tocás -> no atiende nadie -> a buscar por el granero.
             yield return WaitPlayerInteract(player, houseDoorPos, playerReach + 0.6f, "[E] Tocar la puerta");
-            var knock = Resources.Load<AudioClip>("door_knock");
-            if (knock != null) AudioSource.PlayClipAtPoint(knock, houseDoorPos, 0.8f);
             yield return SayFor("(Tocás la puerta...)", 1.6f);
             yield return new WaitForSeconds(1.4f);
             yield return SayFor("No atiende nadie...", 2.0f);
             yield return SayFor("Habrá alguien atrás. Vamos a ver por el granero.", 3.0f);
             _playerHint = "Buscá a alguien por el baño del granero";
 
-            if (houseGate != null) houseGate.enabled = true;   // ya se puede abrir/cerrar libremente
-
-            // baño del granero (letrina): tocás -> sale el viejo (susto) -> charla -> la vieja -> favor.
+            // 7) baño del granero (letrina): tocás -> sale el viejo (susto) -> charla -> la vieja -> favor.
             yield return RanchoBathroomScene();
-        }
-
-        // ---- DEBUG checkpoint "Rancho (cañas)" ----
-        // owner: "pone un nuevo checkpoint a partir de que hay que ir hasta lo de la vieja" --
-        // saltea TODA la cinemática del campamento (llegada, armado de carpas, noche, Rufus/Luz
-        // Mala, despertar, charla de la mañana) y arranca LIBRE justo en el punto de arriba
-        // ("andá al rancho a pedir unas cañas"). El campamento aparece YA armado (auto estacionado,
-        // 3 carpas puestas, fogata prendida, los 3 amigos en su lugar de mañana) para no tener que
-        // rehacer toda la noche cada vez que se prueba la misión del rancho. Lo dispara
-        // OpeningDriveSequence cuando el checkpoint de EditorPrefs es >= 3 (ver DebugCheckpointButtons.cs).
-        public void BeginAtRancho(OpeningDriveSequence seq)
-        {
-            op = seq;
-            car = Object.FindFirstObjectByType<CarController>();
-            _luzMala = Object.FindFirstObjectByType<LuzMala>();
-            if (_luzMala != null) _luzMala.gameObject.SetActive(false);
-            StartCoroutine(SetupAtRanchoCheckpoint());
-        }
-
-        IEnumerator SetupAtRanchoCheckpoint()
-        {
-            yield return null;   // mismo motivo que Run(): esperar el Start() de PlayerVehicleInteractor
-
-            // el auto queda estacionado en el campamento (como al final de la llegada), vacío.
-            if (car != null)
-            {
-                Vector3 parkW = new Vector3(campParkXZ.x, campParkY, campParkXZ.y);
-                Quaternion parkRot = Quaternion.Euler(0f, campParkYaw, 0f);
-                car.transform.position = parkW; car.transform.rotation = parkRot;
-                var rb = car.GetComponent<Rigidbody>();
-                if (rb != null && !rb.isKinematic) { rb.position = parkW; rb.rotation = parkRot; rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
-                car.autoPilot = false; car.driving = false;
-                car.externalThrottle = 0f; car.externalSteer = 0f;
-            }
-
-            // campamento YA armado: revela las 3 carpas en su lugar final (sin animación de pop) y
-            // prende la fogata (la noche ya pasó).
-            HideCampForSetup();
-            foreach (var t in _tents) { if (t == null) continue; t.transform.localScale = Vector3.one; t.SetActive(true); }
-            var npcTents = new List<GameObject>();
-            foreach (var t in _tents) if (t != null && t != _playerTent) npcTents.Add(t);
-            // mismo swap que DisembarkAndWalk: npcTents[1] = pareja, npcTents[0] = negro.
-            GameObject tentPair  = npcTents.Count > 1 ? npcTents[1] : null;
-            GameObject tentNegro = npcTents.Count > 0 ? npcTents[0] : null;
-            if (tentPair != null)
-            {
-                Vector3 tp = tentPairPos; tp.y = GroundY(tp, tp.y);
-                tentPair.transform.position = tp; tentPair.transform.rotation = Quaternion.Euler(0f, tentPairYaw, 0f);
-            }
-            if (tentNegro != null)
-            {
-                Vector3 tp = greenTentPos; tp.y = GroundY(tp, tp.y);
-                tentNegro.transform.position = tp; tentNegro.transform.rotation = Quaternion.Euler(0f, greenTentYaw, 0f);
-            }
-            SetCampfireLit(true);
-
-            // los 3 amigos: FUERA del auto (ya bajaron hace rato) y en su lugar de la MAÑANA
-            // (mismas posiciones que arma MorningAfterWake).
-            Transform casual = op != null ? op.friendMaleCasual  : null;
-            Transform chica  = op != null ? op.friendFemaleSec   : null;
-            Transform negro  = op != null ? op.friendMaleGreenJkt : null;
-            UnparentFriend(casual); UnparentFriend(chica); UnparentFriend(negro);
-            Vector3 fire = _campsite != null ? _campsite.position : new Vector3(246f, 23f, 232f);
-            if (casual != null) PlaceStandingYaw(casual, pairStandPos, pairStandYaw);
-            if (chica  != null) PlaceSeated(chica, chicaSitPos, chicaSitYaw);
-            if (negro  != null) { float ny = Mathf.Atan2(fire.x - greenSitPos.x, fire.z - greenSitPos.z) * Mathf.Rad2Deg; PlaceSeated(negro, greenSitPos, ny); }
-
-            // vos + Rufus, PARADOS y libres, afuera de tu carpa (mañana ya, caca de Rufus ya limpia).
-            Transform player = op != null && op.player != null ? op.player.transform : null;
-            Transform dog    = op != null && op.dog != null    ? op.dog.transform    : null;
-            Vector3 pTent = _playerTent != null ? _playerTent.transform.position : playerSitPos;
-            float pYaw = _playerTent != null ? _playerTent.transform.eulerAngles.y : playerSitYaw;
-            Vector3 outside = pTent + Fwd(pYaw) * 2.2f;
-            if (player != null)
-            {
-                var pvi = player.GetComponent<PlayerVehicleInteractor>();
-                if (pvi != null && pvi.CurrentSeat != null) yield return pvi.ExitRoutine();
-                var pAnim = player.GetComponent<HumanWalkAnim>(); if (pAnim != null) pAnim.seated = false;
-                PlaceStandingYaw(player, outside, pYaw);
-                var pcc = player.GetComponent<CharacterController>(); if (pcc != null) pcc.enabled = true;
-            }
-            if (dog != null)
-            {
-                var dvi = dog.GetComponent<PlayerVehicleInteractor>();
-                if (dvi != null && dvi.CurrentSeat != null) yield return dvi.ExitRoutine();
-                PlaceStandingYaw(dog, outside + Right(pYaw) * 1.1f, pYaw);
-                var dcc = dog.GetComponent<CharacterController>(); if (dcc != null) dcc.enabled = true;
-            }
-
-            // día (misma fase final que deja BrightenToDay tras el amanecer), sin la animación.
-            var dn = Object.FindFirstObjectByType<DayNightController>();
-            if (dn != null) { dn.SetNightBlend(0f); dn.SetPhase(DayNightController.Phase.Dusk); }
-
-            // control LIBRE al jugador.
-            var party = Object.FindFirstObjectByType<PartyController>();
-            if (party != null) party.ForceControl(false);
-            PlayerVehicleInteractor.DrivingLocked = false;
-            PlayerVehicleInteractor.PastGasStation = true;
-            RestoreControl();
-
-            // arranca justo en el pedido: "andá al rancho a pedir unas cañas".
-            yield return GoToRanchoFlow();
-        }
-
-        // desparenta a un amigo (por si quedó sentado en el auto) y lo deja listo para pararlo/
-        // sentarlo a mano -- mismo criterio que UnseatAndPlace, sin la parte de PARARLO todavía.
-        static void UnparentFriend(Transform npc)
-        {
-            if (npc == null) return;
-            npc.SetParent(null, false);
-            npc.localScale = Vector3.one;
-            var fw = npc.GetComponent<FriendWander>(); if (fw != null) fw.enabled = false;
-            var anim = npc.GetComponent<HumanWalkAnim>(); if (anim != null) anim.seated = false;
         }
 
         // Escena del BAÑO del rancho: el jugador toca la puerta de la letrina, SALE EL VIEJO
@@ -831,47 +631,14 @@ namespace FolkloreArchives
             Transform oldLady = FindObj("OldLady_Storyteller");
             if (door == null) { _playerHint = null; yield break; }   // sin letrina no hay escena
 
-            // owner: "poné la vieja acá acostada" -- duerme hasta que el viejo la despierta (más
-            // abajo, cuando termina viejoKitchenPath).
-            if (oldLady != null) PlaceLyingInTent(oldLady, oldLadySleepPos, oldLadySleepYaw);
-
-            // si la puerta de la letrina es abrible (CorralGate, ver RanchoNpcSetup), la misma E
-            // de los golpes scripteados también la abriría -- apagada mientras dura el susto, se
-            // rehabilita cuando volvés a moverte libre (más abajo).
-            var doorGate = door.GetComponent<CorralGate>();
-            if (doorGate != null) doorGate.enabled = false;
-            var knockClip = Resources.Load<AudioClip>("door_knock");
-
-            // owner: "la primera vez que toque la puerta que desde adentro el viejo diga ocupado,
-            // y al tocarla de nuevo que se abra... y salga el viejo tipo screamer". Dos golpes:
-            // 1) primer golpe: nadie sale, contesta "¡Ocupado!" desde adentro (la puerta NO se abre).
-            yield return WaitPlayerInteract(player, door.position, playerReach + 1.2f, "[E] Tocar la puerta");
-            _playerHint = null;
-            if (knockClip != null) AudioSource.PlayClipAtPoint(knockClip, door.position, 0.8f);
-            yield return SayFor("(Tocás la puerta del baño...)", 1.2f);
-            yield return SayFor("¡Ocupado!", 1.8f);   // voz del viejo, desde adentro (no se activa/muestra todavía)
-            yield return new WaitForSeconds(0.6f);
-
-            // 2) segundo golpe: RECIÉN ahí se abre la puerta y sale el viejo tipo screamer.
-            _playerHint = "[E] Tocar la puerta de nuevo";
+            // 1) tocás la puerta del baño
             yield return WaitPlayerInteract(player, door.position, playerReach + 1.2f, "[E] Tocar la puerta");
             _playerHint = null;
             PartyController.CinematicLock = true;   // scripteado a partir de acá
-            if (knockClip != null) AudioSource.PlayClipAtPoint(knockClip, door.position, 0.8f);
+            yield return SayFor("(Tocás la puerta del baño...)", 1.2f);
 
-            // SALE EL VIEJO (susto): se abre la puerta, se activa, te encara, flash negro + ladrido
-            // + el MISMO sonido de screamer que Richard en la YPF (owner: "que salte el mismo
-            // susto... el mismo ruido" -- Stage3_RichardScreamer en YpfStorySequence usa el clip
-            // Resources "jumpscare").
-            if (doorGate != null) doorGate.SetOpen(true);
-            if (oldMan != null)
-            {
-                oldMan.position = ranchoViejoPos;   // pose FIJA (owner) -- ver comentario del campo
-                oldMan.rotation = Quaternion.Euler(0f, ranchoViejoYaw, 0f);
-                oldMan.gameObject.SetActive(true);
-            }
-            var jumpscare = Resources.Load<AudioClip>("jumpscare");
-            if (jumpscare != null) AudioSource.PlayClipAtPoint(jumpscare, ranchoViejoPos, 1f);
+            // 2) SALE EL VIEJO (susto): se activa, te encara, flash negro + ladrido de Rufus
+            if (oldMan != null) { oldMan.gameObject.SetActive(true); FaceTarget(oldMan, player.position); }
             var black = MakeBlackOverlay();
             var img = black != null ? black.GetComponent<RawImage>() : null;
             if (img != null) img.color = Color.black;
@@ -881,47 +648,33 @@ namespace FolkloreArchives
             if (da != null) da.Bark();
 
             // 3) confrontación + pedido de la caña
-            yield return SayFor("¡¿Qué carajo pasa?!", 2.4f);
             yield return SayFor("¡¿Qué hacen acá?! ¡Esto es propiedad privada!", 3.2f);
             yield return SayFor("Perdón, señor... estamos acampando acá cerca.", 3.0f);
             yield return SayFor("¿No tendría una caña de pescar para prestarnos?", 3.2f);
             yield return SayFor("Cañas... las que usamos con mi mujer. Pregúntenle a ella, ya la despierto.", 4.0f);
 
-            // 4) el viejo camina HACIA LA VIEJA para despertarla -- el recorrido lo hace
-            // 'viejoKitchenPath' (owner: "la caminata hacia la vieja es la que te di, antes de ir
-            // a la cocina, después de entrar por la puerta del rancho"): cruza la puerta de la
-            // casa (se abre/cierra sola al pasar, ver ViejoWalkToKitchen) y llega hasta donde está
-            // ella. RECIÉN cuando llega se la despierta (dialogue) y ella sale a saludarte.
-            //
-            // owner: "mientras está yendo el viejo a la casa ya debería dejarme mover" -- se
-            // libera el control ACÁ (no al final de toda la charla con la vieja): caminás libre
-            // mientras él camina. Es un yield (no StartCoroutine): el SCRIPT espera a que él
-            // llegue antes de seguir con la vieja, pero vos ya te movés libre mientras tanto.
-            PartyController.CinematicLock = false;
-            if (doorGate != null) doorGate.enabled = true;   // la puerta de la letrina ya se abre/cierra libre
-            if (oldMan != null) yield return ViejoWalkToKitchen(oldMan);
+            // 4) el viejo va a buscar a la vieja
+            if (oldMan != null && oldLady != null)
+            {
+                float t = 0f;
+                while (t < 8f && Flat2(oldMan.position, oldLady.position) > 1.6f) { StepToward(oldMan, oldLady.position, 2.2f); t += Time.deltaTime; yield return null; }
+                FaceTarget(oldMan, oldLady.position);
+            }
             yield return SayFor("(El viejo entra y despierta a la vieja...)", 2.0f);
 
-            // se levanta (estaba acostada) en el mismo lugar, ANTES de caminar hacia el jugador.
+            // 5) la vieja viene hacia el jugador
             if (oldLady != null)
             {
-                var ladyAnim = oldLady.GetComponent<HumanWalkAnim>(); if (ladyAnim != null) ladyAnim.seated = false;
-                var ladyCc = oldLady.GetComponent<CharacterController>(); if (ladyCc != null) ladyCc.enabled = true;
-                PlaceStandingYaw(oldLady, oldLadySleepPos, oldLadySleepYaw);
+                float t = 0f;
+                while (t < 14f && Flat2(oldLady.position, player.position) > 2.4f) { StepToward(oldLady, player.position, 2.0f); t += Time.deltaTime; yield return null; }
+                FaceTarget(oldLady, player.position);
             }
-
-            // el viejo sigue de largo a la cocina de verdad -- EN PARALELO (no bloquea a la vieja
-            // caminando hacia vos, más abajo).
-            if (oldMan != null) StartCoroutine(WalkPath(oldMan, viejoToKitchenPath));
-
-            // 5) la vieja camina su recorrido FIJO (owner, TEST_PLAYER) hasta la puerta -- ya NO
-            // persigue tu posición en vivo; llega, se para, y RECIÉN AHÍ habla con los chicos.
-            if (oldLady != null) yield return WalkPath(oldLady, oldLadyGreetPath);
             yield return SayFor("Buenas... mucho gusto. ¿Qué necesitan, chicos?", 3.2f);
             yield return SayFor("Unas cañas para pescar, nos las olvidamos y vinimos a acampar.", 3.6f);
             yield return SayFor("Mmm... dale, se las presto. Pero a cambio de un favor.", 3.4f);
             yield return SayFor("Sáquenme las ovejas a pastar, ¿sí? Yo ya no puedo.", 3.4f);
 
+            PartyController.CinematicLock = false;   // volvés a moverte
             _playerHint = "Abrí la tranquera del corral para sacar las ovejas";
 
             // 6) abrir la TRANQUERA (la arma el botón de editor como "TranqueraCorral"). Esperamos
@@ -1435,72 +1188,6 @@ namespace FolkloreArchives
             if (tr == null) return;
             Vector3 look = target - tr.position; look.y = 0f;
             if (look.sqrMagnitude > 1e-4f) tr.rotation = Quaternion.LookRotation(look.normalized);
-        }
-
-        // índice (0-based) del punto de 'viejoKitchenPath' que cae en la puerta de la casa -- ahí
-        // se abre/cierra sola al pasar (ver ViejoWalkToKitchen). Si se agregan/sacan puntos antes
-        // de ese, actualizar este índice.
-        const int ViejoDoorPathIndex = 3;
-
-        // camina 'who' por una lista de puntos EN ORDEN (sin lógica de puertas); al llegar al
-        // último queda PARADO ahí, mirando su yaw. Genérico -- reusado por el tramo final del
-        // viejo (de la vieja a la cocina de verdad, ver viejoToKitchenPath).
-        IEnumerator WalkPath(Transform who, PathPoint[] path)
-        {
-            if (who == null || path == null) yield break;
-            foreach (var wp in path)
-            {
-                float t = 0f;
-                while (t < 12f && Flat2(who.position, wp.pos) > 0.5f) { StepToward(who, wp.pos, 2.2f); t += Time.deltaTime; yield return null; }
-            }
-            if (path.Length > 0)
-            {
-                var last = path[path.Length - 1];
-                PlaceStandingYaw(who, last.pos, last.yaw);
-            }
-        }
-
-        // el viejo camina el recorrido 'viejoKitchenPath' (owner, TEST_PLAYER) punto a punto hasta
-        // donde está la vieja; al pasar por la puerta de la casa (PuertaCasa, si es abrible) se
-        // abre sola y se cierra atrás suyo. Al llegar al último punto queda PARADO ahí, mirando el
-        // yaw de ese punto.
-        IEnumerator ViejoWalkToKitchen(Transform viejo)
-        {
-            if (viejo == null || viejoKitchenPath == null) yield break;
-            var houseDoorT = FindObj("PuertaCasa");
-            var houseDoorGate = houseDoorT != null ? houseDoorT.GetComponent<CorralGate>() : null;
-
-            for (int i = 0; i < viejoKitchenPath.Length; i++)
-            {
-                var wp = viejoKitchenPath[i];
-                bool isDoorLeg = i == ViejoDoorPathIndex && houseDoorGate != null;
-                bool opened = false;
-
-                float t = 0f;
-                while (t < 12f && Flat2(viejo.position, wp.pos) > 0.5f)
-                {
-                    // owner: "se está timeando mal, la puerta se abre antes de que llegue a ella"
-                    // -- antes se abría al ARRANCAR este tramo (podían faltar varios metros). Ahora
-                    // se abre recién cuando está cerca de VERDAD (mismo radio que CorralGate.reach).
-                    if (isDoorLeg && !opened && Flat2(viejo.position, wp.pos) <= 3.5f) { houseDoorGate.SetOpen(true); opened = true; }
-                    StepToward(viejo, wp.pos, 2.2f);
-                    t += Time.deltaTime;
-                    yield return null;
-                }
-
-                // y se cierra sola una vez que ya la cruzó.
-                if (isDoorLeg)
-                {
-                    if (!opened) houseDoorGate.SetOpen(true);   // por si arrancó ya cerca (guard)
-                    yield return new WaitForSeconds(0.6f);
-                    houseDoorGate.SetOpen(false);
-                }
-            }
-            if (viejoKitchenPath.Length > 0)
-            {
-                var last = viejoKitchenPath[viejoKitchenPath.Length - 1];
-                PlaceStandingYaw(viejo, last.pos, last.yaw);
-            }
         }
 
         // camina un NPC hasta 'dest' (sin armar carpa), lo deja mirando 'faceTarget', y avisa 'done'.
