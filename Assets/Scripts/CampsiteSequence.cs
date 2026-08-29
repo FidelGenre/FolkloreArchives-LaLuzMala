@@ -132,7 +132,7 @@ namespace FolkloreArchives
             // derecho" -- sin este punto el tramo de arriba corta en diagonal y no cruza el vano
             // de la puerta de la casa. Corregido (owner: "el viejo no está pasando por la puerta,
             // está atravesando la pared" -- el punto original cortaba la esquina).
-            new PathPoint { pos = new Vector3(136.2944f, 26.67501f, 126.4635f),  yaw = -178.355f },
+            new PathPoint { pos = new Vector3(136.2494f, 27.11404f, 125.6845f),  yaw = 175.885f },
             // owner: "cuando entra el viejo no está haciendo el recorrido, pasa la puerta y
             // desaparece -- primero debe ir hasta acá desde la puerta y terminar acá despertando a
             // la vieja". Los puntos de ADENTRO de la casa (después de la puerta) quedaron
