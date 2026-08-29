@@ -320,17 +320,19 @@ namespace FolkloreArchives.MapGen
                 EditorUtility.DisplayDialog("Puerta", "No encontré 'PuertaCasa' en la escena -- primero corré 'Armar puerta de la casa (abrible)'.", "OK");
                 return;
             }
+            // owner: le faltaba el CorralGate por completo (no se sabe por qué -- puede haberse
+            // quitado a mano sin querer, o algún Undo). Antes esto solo avisaba con un diálogo y
+            // no arreglaba nada; ahora lo AGREGA si falta, en vez de fallar.
             var gate = door.GetComponent<FolkloreArchives.CorralGate>();
-            if (gate == null)
-            {
-                EditorUtility.DisplayDialog("Puerta", "'PuertaCasa' no tiene un componente CorralGate.", "OK");
-                return;
-            }
+            bool wasMissing = gate == null;
+            if (gate == null) gate = door.gameObject.AddComponent<FolkloreArchives.CorralGate>();
             ApplyHouseDoorConfig(gate);
             EditorUtility.SetDirty(gate);
             Selection.activeGameObject = door.gameObject;
             EditorGUIUtility.PingObject(door);
-            Debug.Log("[Rancho] 'PuertaCasa' actualizada (hint, lado que abre, sonido). Rotación NO tocada.");
+            Debug.Log("[Rancho] 'PuertaCasa' actualizada (hint, lado que abre, sonido)." +
+                      (wasMissing ? " Le faltaba el CorralGate -- se le agregó de nuevo." : "") +
+                      " Rotación NO tocada.");
         }
 
         // owner: quiso acomodar "letrina.007" (la puerta del baño del rancho) y se le rompía la
