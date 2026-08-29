@@ -22,7 +22,7 @@ namespace FolkloreArchives.MapGen
     {
         const string Fbx = "Assets/ExternalAssets/OldManNPC/Character_32.fbx";
         const string Tex = "Assets/ExternalAssets/OldManNPC/Character_32.png";
-        const float  TargetHeight = 2.15f;  // hombre adulto (la vieja es 2.0; los amigos 2.2)
+        const float  TargetHeight = 2.2f;  // owner: "tan alto como todos los NPCs" -- igual a los amigos adultos (la vieja es 2.0, más baja a propósito)
         const string SheepObj = "Assets/ExternalAssets/Sheep/sheep.obj";
         const string SheepTex = "Assets/ExternalAssets/Sheep/sheep_tex.jpg";
         const float  SheepHeight = 1.6f;    // altura de la oveja (owner: "más grandes")
@@ -141,30 +141,51 @@ namespace FolkloreArchives.MapGen
             }
         }
 
-        // Arma una TRANQUERA abrible a partir del Cube.184 seleccionado (que es combined mesh y
-        // no se puede rotar). Lee su AABB/material, crea una réplica-plank con bisagra en un
-        // extremo (eje Y) + CorralGate, y DESACTIVA el original.
-        [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
-        static void BuildGate()
+        // Arma una puerta/tranquera ABRIBLE a partir del objeto seleccionado (normalmente un
+        // trozo de Combined Mesh que no se puede rotar/animar tal cual, como la puerta del
+        // corral o una puerta de casa). Lee su AABB/material, crea una réplica-plank (Cube) con
+        // bisagra en un EXTREMO (eje Y, como una puerta real) + CorralGate, y DESACTIVA el
+        // original. La réplica arranca en LA MISMA pose que el original (bounds calcados) --
+        // CorralGate graba esa pose como "cerrada" al entrar a Play. Reusado por la tranquera del
+        // corral y la puerta de la casa.
+        static GameObject BuildHingeDoor(GameObject sel, string name, float openDeg, string hintClosed, string hintOpen)
         {
-            var sel = Selection.activeGameObject;
-            if (sel == null) { EditorUtility.DisplayDialog("Tranquera", "Seleccioná primero la puerta del corral (Cube.184).", "OK"); return; }
             var rend = sel.GetComponent<Renderer>();
-            if (rend == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+            var mf = sel.GetComponent<MeshFilter>();
+            if (rend == null || mf == null || mf.sharedMesh == null) return null;
 
-            Bounds wb = rend.bounds;                 // AABB en mundo (la puerta)
-            Vector3 c = wb.center, s = wb.size;
-            bool longX = s.x >= s.z;                 // eje largo horizontal = a lo largo de la tranquera
+            // owner: la réplica salió "como un cuadrado" -- Cube.184 había quedado rotado en un
+            // ángulo cualquiera (no alineado a los ejes) mientras se probaba a mano, y el AABB de
+            // MUNDO (Renderer.bounds) se INFLA/deforma con la rotación (máximo a 45°) -> tamaño
+            // mal calculado. Fix: usar los bounds LOCALES del mesh (invariantes a la rotación) +
+            // conservar la orientación/ejes REALES del original, en vez de asumir mundo/ejes X-Z.
+            Bounds lb = mf.sharedMesh.bounds;
+            Vector3 s = Vector3.Scale(lb.size, sel.transform.lossyScale);   // tamaño real (sin distorsión)
+            Vector3 c = sel.transform.TransformPoint(lb.center);           // centro en MUNDO
+
+            bool longX = s.x >= s.z;                 // eje largo LOCAL del original = ancho de la puerta
             float length = longX ? s.x : s.z;
-            Vector3 longDir = longX ? Vector3.right : Vector3.forward;
+            Vector3 longDir = longX ? sel.transform.right : sel.transform.forward;
+            longDir.y = 0f;
+            if (longDir.sqrMagnitude < 1e-6f) longDir = sel.transform.right;
+            longDir.Normalize();
             Vector3 hinge = c - longDir * (length * 0.5f);   // bisagra en un EXTREMO
 
-            var mat = rend.sharedMaterial;
+            // owner: "no se está poniendo el material original" (sigue negro incluso después de
+            // NappinUrp -- ese material tiene algo raro que la conversión estándar no arregla).
+            // En vez de perseguirlo, uso directo el material de madera YA PROBADO del proyecto
+            // (el mismo que usan las vallas de los caminos, FenceBuilder.cs) -- URP/Lit simple,
+            // sin sorpresas.
+            var fenceTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ExternalAssets/WoodenFence/textures/low_wooden_wall.jpg");
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (fenceTex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", fenceTex);
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+            mat = BuilderUtils.SaveMaterialStable(mat, "Assets/Settings/WoodenFence.mat");
 
-            var prev = FindByName("TranqueraCorral");
+            var prev = FindByName(name);
             if (prev != null) Object.DestroyImmediate(prev.gameObject);
 
-            var pivot = new GameObject("TranqueraCorral");
+            var pivot = new GameObject(name);
             pivot.transform.position = hinge;
             pivot.transform.rotation = Quaternion.identity;
 
@@ -172,19 +193,173 @@ namespace FolkloreArchives.MapGen
             plank.name = "Plank";
             plank.transform.SetParent(pivot.transform, true);
             plank.transform.position = c;
-            plank.transform.rotation = Quaternion.identity;
-            plank.transform.localScale = s;          // pivot con escala 1 -> tamaño mundo = s
+            plank.transform.rotation = sel.transform.rotation;   // MISMA orientación que el original
+            plank.transform.localScale = s;
             if (mat != null) plank.GetComponent<Renderer>().sharedMaterial = mat;
 
-            pivot.AddComponent<FolkloreArchives.CorralGate>();
+            var gate = pivot.AddComponent<FolkloreArchives.CorralGate>();
+            gate.openDeg = openDeg;
+            gate.hintClosed = hintClosed;
+            gate.hintOpen = hintOpen;
 
             sel.SetActive(false);   // ocultamos la puerta combined original
 
-            Undo.RegisterCreatedObjectUndo(pivot, "Armar tranquera");
+            Undo.RegisterCreatedObjectUndo(pivot, "Armar " + name);
             Selection.activeGameObject = pivot;
             EditorGUIUtility.PingObject(pivot);
-            Debug.Log("[Rancho] 'TranqueraCorral' armada (bisagra en un extremo, eje Y). Original " +
+            return pivot;
+        }
+
+        // owner: el intento con el modelo real (wooden_fence_closed) dio demasiadas vueltas
+        // (Static, rotación, pivote) sin llegar a verse -- REVERTIDO al cubo simple
+        // (BuildHingeDoor), que sí funciona de forma confiable (aunque sin relieve de tablones).
+        // Si más adelante se quiere retomar el asset real, la versión que se probó queda en el
+        // historial de git (buscar "wooden_fence_closed" en los commits de este archivo).
+        [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
+        static void BuildGate()
+        {
+            var sel = Selection.activeGameObject;
+            if (sel == null) { EditorUtility.DisplayDialog("Tranquera", "Seleccioná primero la puerta del corral (Cube.184).", "OK"); return; }
+            if (sel.GetComponent<Renderer>() == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+            var pivot = BuildHingeDoor(sel, "TranqueraCorral", 95f, "[E] Abrir la tranquera", "[E] Cerrar la tranquera");
+            if (pivot == null) return;
+            Debug.Log("[Rancho] 'TranqueraCorral' armada (cubo simple, bisagra en un extremo). Original " +
                       sel.name + " desactivado. Ajustá openDeg (+/-) si abre para el lado equivocado.");
+        }
+
+        // owner: "la puerta debería estar cerrada cuando voy a golpearla y también debería poder
+        // abrir y cerrarse" -- v1 (BuildHingeDoor con un Cube genérico, como la tranquera) salió
+        // FEA: el Cube toma el material con UVs de caja (se veía negra) y el AABB copiaba el
+        // bounds del original YA abierto. Mejor: "Door04_pr" tiene un PREFAB PROPIO en el pack
+        // ("Assets/ALP_Assets/country house01/Prefabs/Door04_pr.prefab") con la malla real +
+        // picaporte + colliders, y el AUTOR ya puso el pivote (0,0,0 local) en la BISAGRA (no en
+        // el centro) -- pensado justamente para poder rotarlo. En vez de aproximar con un cubo,
+        // se reinstancia ESE prefab fresco (sin static-batch) en el mismo lugar del original y se
+        // le cuelga CorralGate directo -- misma malla y textura que el original, sin cubo.
+        const string HouseDoorPrefabPath = "Assets/ALP_Assets/country house01/Prefabs/Door04_pr.prefab";
+
+        [MenuItem("Folklore/Armar puerta de la casa (abrible)")]
+        static void BuildHouseDoor()
+        {
+            var old = Selection.activeGameObject;
+            if (old == null) { EditorUtility.DisplayDialog("Puerta", "Seleccioná primero la puerta de la casa (Door04_pr) en la Hierarchy.", "OK"); return; }
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HouseDoorPrefabPath);
+            if (prefab == null) { EditorUtility.DisplayDialog("Puerta", "No encontré " + HouseDoorPrefabPath, "OK"); return; }
+
+            // transform MUNDO del viejo (ahí la dejamos) -- mismo criterio que LetrinaFixer.
+            var ot = old.transform;
+            Vector3 wp = ot.position; Quaternion wr = ot.rotation; Vector3 ws = ot.lossyScale;
+
+            var prev = FindByName("PuertaCasa");
+            if (prev != null) Object.DestroyImmediate(prev.gameObject);
+
+            var fresh = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            fresh.name = "PuertaCasa";
+            PrefabUtility.UnpackPrefabInstance(fresh, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            fresh.transform.position = wp;
+            fresh.transform.rotation = wr;
+            fresh.transform.localScale = ws;
+
+            // el prefab autoral trae m_StaticEditorFlags=31 (Batching Static incluido) -- si lo
+            // dejamos así, Unity la vuelve a static-batchear al entrar a Play y quedamos EXACTO en
+            // el mismo problema (Combined Mesh, no rotable). Sacar el flag en TODA la jerarquía.
+            foreach (var t in fresh.GetComponentsInChildren<Transform>(true))
+                GameObjectUtility.SetStaticEditorFlags(t.gameObject, (StaticEditorFlags)0);
+
+            // el material del prefab tal cual viene del pack (Standard) sale MAGENTA en URP -- el
+            // resto de la casa lo convierte al vuelo con HouseBuilder.NappinUrp (cacheado por
+            // material -> mismo "nap_DoorsMap01" que ya usa el resto de la casa, si Generate ya
+            // corrió en esta sesión del Editor).
+            foreach (var r in fresh.GetComponentsInChildren<Renderer>(true))
+            {
+                var src = r.sharedMaterials;
+                for (int i = 0; i < src.Length; i++) src[i] = HouseBuilder.NappinUrp(src[i]);
+                r.sharedMaterials = src;
+            }
+
+            var gate = fresh.AddComponent<FolkloreArchives.CorralGate>();
+            ApplyHouseDoorConfig(gate);
+
+            old.SetActive(false);   // la puerta combined original queda desactivada
+
+            Undo.RegisterCreatedObjectUndo(fresh, "Armar puerta de la casa");
+            Selection.activeGameObject = fresh;
+            EditorGUIUtility.PingObject(fresh);
+            Debug.Log("[Rancho] 'PuertaCasa' repuesta con el PREFAB real (Door04_pr: malla + picaporte + " +
+                      "colliders) en " + wp + ". Original " + old.name + " desactivado. Arranca CERRADA " +
+                      "con la pose que tenga al entrar a Play -- el pivote del prefab YA está en la " +
+                      "bisagra (autoral), así que si se ve entreabierta simplemente rotá 'PuertaCasa' en " +
+                      "el Editor hasta que cierre bien, ANTES de dar Play. Ajustá openDeg (+/-) en el " +
+                      "CorralGate si abre para el lado equivocado.");
+        }
+
+        // valores de config de la puerta de la casa (hint/lado que abre/sonido) -- separado de
+        // BuildHouseDoor para poder reaplicarlos SIN reconstruir el objeto (ver botón de abajo).
+        static void ApplyHouseDoorConfig(FolkloreArchives.CorralGate gate)
+        {
+            gate.hintClosed = "[E] Abrir la puerta";
+            gate.hintOpen   = "[E] Cerrar la puerta";
+            gate.openDeg = -100f;   // owner: abría para ADENTRO -- invertido para que abra hacia afuera
+            gate.openClipName  = "door_open";    // owner: nada de sonido de puerta de auto -- puerta normal
+            gate.closeClipName = "door_close";
+        }
+
+        // owner: "no me aplicaste los cambios... sigue abriendo para adentro, sigue el ruido del
+        // auto, sigue diciendo tranquera" -- ese CorralGate ya estaba CREADO en la escena desde
+        // antes; cambiar los valores por default en el código NO actualiza un componente que ya
+        // existe (solo aplican a una instancia NUEVA). Este botón reaplica hint/openDeg/sonido a la
+        // "PuertaCasa" que YA está en la escena, SIN tocar su rotación (la "cerrada" ajustada a mano).
+        [MenuItem("Folklore/Actualizar puerta de la casa (config, sin rehacerla)")]
+        static void UpdateHouseDoorConfig()
+        {
+            var door = FindByName("PuertaCasa");
+            if (door == null)
+            {
+                EditorUtility.DisplayDialog("Puerta", "No encontré 'PuertaCasa' en la escena -- primero corré 'Armar puerta de la casa (abrible)'.", "OK");
+                return;
+            }
+            var gate = door.GetComponent<FolkloreArchives.CorralGate>();
+            if (gate == null)
+            {
+                EditorUtility.DisplayDialog("Puerta", "'PuertaCasa' no tiene un componente CorralGate.", "OK");
+                return;
+            }
+            ApplyHouseDoorConfig(gate);
+            EditorUtility.SetDirty(gate);
+            Selection.activeGameObject = door.gameObject;
+            EditorGUIUtility.PingObject(door);
+            Debug.Log("[Rancho] 'PuertaCasa' actualizada (hint, lado que abre, sonido). Rotación NO tocada.");
+        }
+
+        // owner: quiso acomodar "letrina.007" (la puerta del baño del rancho) y se le rompía la
+        // malla al rotarla -- mismo síntoma de siempre (Combined Mesh). Solución: correr primero
+        // "Reponer letrina (fresca con texturas)" (LetrinaFixer), que la deja con SU PROPIA malla
+        // (ya no combinada). Una vez limpia, hacerla abrible es directo: no hace falta reconstruir
+        // nada (a diferencia de la puerta de la casa), solo colgarle CorralGate.
+        [MenuItem("Folklore/Armar puerta de la letrina (abrible)")]
+        static void BuildLetrinaDoor()
+        {
+            var sel = Selection.activeGameObject;
+            if (sel == null) { EditorUtility.DisplayDialog("Letrina", "Seleccioná primero la puerta de la letrina (letrina.007) en la Hierarchy.", "OK"); return; }
+            if (sel.GetComponent<Renderer>() == null) { EditorUtility.DisplayDialog("Letrina", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+
+            var gate = sel.GetComponent<FolkloreArchives.CorralGate>();
+            if (gate == null) gate = Undo.AddComponent<FolkloreArchives.CorralGate>(sel);
+            gate.hintClosed = "[E] Abrir la puerta";
+            gate.hintOpen   = "[E] Cerrar la puerta";
+            gate.openDeg = -100f;   // mismo criterio que la puerta de la casa: para afuera
+            gate.openClipName  = "door_open";
+            gate.closeClipName = "door_close";
+            EditorUtility.SetDirty(sel);
+
+            Selection.activeGameObject = sel;
+            EditorGUIUtility.PingObject(sel);
+            Debug.Log("[Rancho] '" + sel.name + "' ahora es abrible (CorralGate). Arranca CERRADA con " +
+                      "la pose que tenga al entrar a Play -- dejala así en el Editor si ya se ve bien " +
+                      "cerrada. Ajustá openDeg (+/-) en el Inspector si abre para el lado equivocado. " +
+                      "(La secuencia del susto ya desactiva/reactiva este CorralGate sola alrededor del " +
+                      "golpe scripteado, para que esa E no la abra.)");
         }
 
         // pone N ovejas (sheep.obj) en un cluster cerca de la tranquera. La secuencia las
