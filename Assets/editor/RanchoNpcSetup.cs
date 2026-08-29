@@ -154,14 +154,17 @@ namespace FolkloreArchives.MapGen
             var mf = sel.GetComponent<MeshFilter>();
             if (rend == null || mf == null || mf.sharedMesh == null) return null;
 
-            // owner: la réplica salió "como un cuadrado" -- Cube.184 había quedado rotado en un
-            // ángulo cualquiera (no alineado a los ejes) mientras se probaba a mano, y el AABB de
-            // MUNDO (Renderer.bounds) se INFLA/deforma con la rotación (máximo a 45°) -> tamaño
-            // mal calculado. Fix: usar los bounds LOCALES del mesh (invariantes a la rotación) +
-            // conservar la orientación/ejes REALES del original, en vez de asumir mundo/ejes X-Z.
-            Bounds lb = mf.sharedMesh.bounds;
-            Vector3 s = Vector3.Scale(lb.size, sel.transform.lossyScale);   // tamaño real (sin distorsión)
-            Vector3 c = sel.transform.TransformPoint(lb.center);           // centro en MUNDO
+            // owner: "hiciste cagada de nuevo, mira ahora desapareció la tranquera" -- Cube.184 es
+            // Combined Mesh (static-batcheado): sus vértices YA están horneados en otro lado, así
+            // que mf.sharedMesh.bounds (bounds LOCALES) no tiene ninguna relación confiable con la
+            // posición/tamaño real -- daba una posición absurda (miles de unidades de distancia).
+            // Volvemos a Renderer.bounds (AABB de MUNDO), que Unity SIEMPRE calcula bien sin
+            // importar el batching -- es la única fuente confiable acá. El motivo original del
+            // cambio (se inflaba con la rotación) no aplica en la práctica: el objeto real casi no
+            // está rotado (pocos grados), así que la inflación es despreciable.
+            Bounds wb = rend.bounds;
+            Vector3 c = wb.center;
+            Vector3 s = wb.size;
 
             bool longX = s.x >= s.z;                 // eje largo LOCAL del original = ancho de la puerta
             float length = longX ? s.x : s.z;
