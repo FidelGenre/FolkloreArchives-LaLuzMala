@@ -259,15 +259,38 @@ namespace FolkloreArchives.MapGen
             var instRends = inst.GetComponentsInChildren<Renderer>();
             if (instRends.Length == 0)
                 Debug.LogWarning("[Rancho] wooden_fence_closed no tiene Renderers -- ¿el FBX importó bien? La 'Plank' va a quedar invisible.");
+            float scaleFactor = 1f;
             if (instRends.Length > 0)
             {
                 Bounds ib = instRends[0].bounds;
                 for (int i = 1; i < instRends.Length; i++) ib.Encapsulate(instRends[i].bounds);
                 float assetWidth = Mathf.Max(ib.size.x, ib.size.z);
-                if (assetWidth > 0.001f) inst.transform.localScale = Vector3.one * (length / assetWidth);
+                if (assetWidth > 0.001f) scaleFactor = length / assetWidth;
+                // owner: "justo me había aparecido bien y toqué armar tranquera y desapareció", sin
+                // ningún error -- sospecha: un factor de escala descabellado (si assetWidth salió
+                // mal calculado) manda la malla a un tamaño imperceptible/gigante. Clamp defensivo
+                // + log para diagnosticar si vuelve a pasar.
+                scaleFactor = Mathf.Clamp(scaleFactor, 0.05f, 20f);
             }
-            inst.transform.position = c;
-            inst.transform.rotation = sel.transform.rotation;   // misma orientación que Cube.184
+            inst.transform.localScale = Vector3.one * scaleFactor;
+            inst.transform.rotation = sel.transform.rotation;   // orientación ANTES de centrar
+
+            // centrar la malla de VERDAD en 'c' -- si el pivote del asset no está en el centro
+            // geométrico (común en modelos importados), mover solo el ROOT a 'c' puede dejar la
+            // malla visible bien lejos de ahí. Se mide el centro real DESPUÉS de escalar/rotar y
+            // se corrige con un desplazamiento, así da igual dónde esté el pivote del asset.
+            if (instRends.Length > 0)
+            {
+                Bounds ib2 = instRends[0].bounds;
+                for (int i = 1; i < instRends.Length; i++) ib2.Encapsulate(instRends[i].bounds);
+                inst.transform.position += (c - ib2.center);
+            }
+            else
+            {
+                inst.transform.position = c;
+            }
+            Debug.Log("[Rancho] Plank: scaleFactor=" + scaleFactor + " renderers=" + instRends.Length +
+                      " posición final=" + inst.transform.position);
 
             // textura del pack (misma que usa FenceBuilder para las vallas de los caminos),
             // material URP cacheado/estable (mismo .mat, no duplica).
