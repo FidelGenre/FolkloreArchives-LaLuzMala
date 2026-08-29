@@ -166,12 +166,16 @@ namespace FolkloreArchives.MapGen
             Vector3 c = wb.center;
             Vector3 s = wb.size;
 
-            bool longX = s.x >= s.z;                 // eje largo LOCAL del original = ancho de la puerta
+            // owner: "sos estupido o que" -- el bloque salía deformado (ejes permutados) porque
+            // mezclaba 's' (tamaño en ejes de MUNDO) con una rotación NO alineada a los ejes
+            // (sel.transform.rotation, que para este objeto combinado ni siquiera es confiable,
+            // ver arriba). Escalar en espacio LOCAL rotado usando un tamaño calculado en espacio de
+            // MUNDO es matemáticamente incoherente salvo que la rotación sea 0/90/180/270°. Fix:
+            // todo en ejes de MUNDO -- el "Plank" queda SIN rotación propia (alineado a mundo), así
+            // 's' (AABB de mundo) es directamente su escala local, sin mezclar espacios.
+            bool longX = s.x >= s.z;
             float length = longX ? s.x : s.z;
-            Vector3 longDir = longX ? sel.transform.right : sel.transform.forward;
-            longDir.y = 0f;
-            if (longDir.sqrMagnitude < 1e-6f) longDir = sel.transform.right;
-            longDir.Normalize();
+            Vector3 longDir = longX ? Vector3.right : Vector3.forward;   // eje de MUNDO, coherente con 's'
             Vector3 hinge = c - longDir * (length * 0.5f);   // bisagra en un EXTREMO
 
             // owner: "no se está poniendo el material original" (sigue negro incluso después de
@@ -196,7 +200,7 @@ namespace FolkloreArchives.MapGen
             plank.name = "Plank";
             plank.transform.SetParent(pivot.transform, true);
             plank.transform.position = c;
-            plank.transform.rotation = sel.transform.rotation;   // MISMA orientación que el original
+            plank.transform.rotation = Quaternion.identity;   // alineado a MUNDO -- coherente con 's' (AABB de mundo)
             plank.transform.localScale = s;
             if (mat != null) plank.GetComponent<Renderer>().sharedMaterial = mat;
 
