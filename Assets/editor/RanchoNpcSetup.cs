@@ -241,6 +241,7 @@ namespace FolkloreArchives.MapGen
         [MenuItem("Folklore/Armar puerta de la casa (abrible)")]
         static void BuildHouseDoor()
         {
+            Debug.Log("[Rancho] BuildHouseDoor: arrancó."); // marca de diagnóstico -- si no ves esto en la Console, el botón no está ejecutando este método.
             var old = Selection.activeGameObject;
             if (old == null) { EditorUtility.DisplayDialog("Puerta", "Seleccioná primero la puerta de la casa (Door04_pr) en la Hierarchy.", "OK"); return; }
 
