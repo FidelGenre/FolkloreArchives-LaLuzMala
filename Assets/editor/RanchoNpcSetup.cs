@@ -217,21 +217,122 @@ namespace FolkloreArchives.MapGen
             return pivot;
         }
 
-        // owner: el intento con el modelo real (wooden_fence_closed) dio demasiadas vueltas
-        // (Static, rotación, pivote) sin llegar a verse -- REVERTIDO al cubo simple
-        // (BuildHingeDoor), que sí funciona de forma confiable (aunque sin relieve de tablones).
-        // Si más adelante se quiere retomar el asset real, la versión que se probó queda en el
-        // historial de git (buscar "wooden_fence_closed" en los commits de este archivo).
+        // owner: "ni el asset real, está con esto procedural" -- retomamos wooden_fence_closed.fbx,
+        // esta vez con TODO lo aprendido del intento anterior:
+        //  - tamaño/posición se leen de Cube.184 con Renderer.bounds en ejes de MUNDO (confiable
+        //    incluso siendo Combined Mesh) -- NUNCA sel.transform.rotation/right/forward (no son
+        //    confiables para este objeto, ver el bug del bloque deformado más arriba).
+        //  - el asset se reinstancia fresco (AssetDatabase.Refresh -- nunca se había cargado antes),
+        //    se desempaqueta y se le saca el Static que trae de fábrica (si no, se re-batchea al
+        //    entrar a Play y queda invisible/roto, mismo bug que tuvo la puerta de la casa).
+        //  - rotación FORZADA parada y mirando 'longDir' (nunca copiada del original).
+        //  - centrado por bounds reales DESPUÉS de escalar/rotar (compensa que el pivote del asset
+        //    no esté en su centro geométrico).
+        //  - material de madera YA PROBADO (el mismo de las vallas de los caminos), no el que trae
+        //    el FBX (salía negro/roto).
+        const string TranqueraAssetFbx = "Assets/ExternalAssets/WoodenFence/models/wooden_fence_closed.fbx";
+        const string TranqueraAssetTex = "Assets/ExternalAssets/WoodenFence/textures/low_wooden_wall.jpg";
+
         [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
         static void BuildGate()
         {
             var sel = Selection.activeGameObject;
             if (sel == null) { EditorUtility.DisplayDialog("Tranquera", "Seleccioná primero la puerta del corral (Cube.184).", "OK"); return; }
-            if (sel.GetComponent<Renderer>() == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
-            var pivot = BuildHingeDoor(sel, "TranqueraCorral", 95f, "[E] Abrir la tranquera", "[E] Cerrar la tranquera");
-            if (pivot == null) return;
-            Debug.Log("[Rancho] 'TranqueraCorral' armada (cubo simple, bisagra en un extremo). Original " +
-                      sel.name + " desactivado. Ajustá openDeg (+/-) si abre para el lado equivocado.");
+            var rend = sel.GetComponent<Renderer>();
+            if (rend == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+
+            // tamaño/posición REALES en ejes de MUNDO (Renderer.bounds -- confiable pese al
+            // Combined Mesh). NO usar sel.transform.rotation/right/forward para nada acá.
+            Bounds wb = rend.bounds;
+            Vector3 c = wb.center;
+            Vector3 s = wb.size;
+            bool longX = s.x >= s.z;
+            float length = longX ? s.x : s.z;
+            Vector3 longDir = longX ? Vector3.right : Vector3.forward;
+            Vector3 hinge = c - longDir * (length * 0.5f);
+
+            AssetDatabase.Refresh();
+            var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraAssetFbx);
+            if (fbx == null) { EditorUtility.DisplayDialog("Tranquera", "No encontré " + TranqueraAssetFbx + " (¿está el pack WoodenFence en el proyecto?).", "OK"); return; }
+
+            var prev = FindByName("TranqueraCorral");
+            if (prev != null) Object.DestroyImmediate(prev.gameObject);
+
+            var pivot = new GameObject("TranqueraCorral");
+            pivot.transform.position = hinge;
+            pivot.transform.rotation = Quaternion.identity;
+
+            var inst = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
+            if (inst == null)
+            {
+                Object.DestroyImmediate(pivot);
+                EditorUtility.DisplayDialog("Tranquera", "PrefabUtility.InstantiatePrefab devolvió null para " + TranqueraAssetFbx + " -- revisá la Console.", "OK");
+                return;
+            }
+            inst.name = "Plank";
+            PrefabUtility.UnpackPrefabInstance(inst, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            inst.transform.SetParent(pivot.transform, true);
+
+            // saca el Static que el prefab trae de fábrica en TODA la jerarquía (si no, Unity la
+            // vuelve a static-batchear al entrar a Play y queda invisible/rota).
+            GameObjectUtility.SetStaticEditorFlags(pivot, (StaticEditorFlags)0);
+            foreach (var tr in inst.GetComponentsInChildren<Transform>(true))
+                GameObjectUtility.SetStaticEditorFlags(tr.gameObject, (StaticEditorFlags)0);
+
+            var instRends = inst.GetComponentsInChildren<Renderer>();
+            if (instRends.Length == 0)
+                Debug.LogWarning("[Rancho] wooden_fence_closed no tiene Renderers -- ¿el FBX importó bien?");
+            float scaleFactor = 1f;
+            if (instRends.Length > 0)
+            {
+                Bounds ib = instRends[0].bounds;
+                for (int i = 1; i < instRends.Length; i++) ib.Encapsulate(instRends[i].bounds);
+                float assetWidth = Mathf.Max(ib.size.x, ib.size.z);
+                if (assetWidth > 0.001f) scaleFactor = length / assetWidth;
+                scaleFactor = Mathf.Clamp(scaleFactor, 0.05f, 20f);
+            }
+            inst.transform.localScale = Vector3.one * scaleFactor;
+            // parado derecho, mirando la dirección larga -- NUNCA copiar la rotación del original.
+            inst.transform.rotation = Quaternion.LookRotation(longDir, Vector3.up);
+
+            // centrar por bounds REALES (después de escalar/rotar) -- compensa un pivote de asset
+            // que no esté en el centro geométrico.
+            if (instRends.Length > 0)
+            {
+                Bounds ib2 = instRends[0].bounds;
+                for (int i = 1; i < instRends.Length; i++) ib2.Encapsulate(instRends[i].bounds);
+                inst.transform.position += (c - ib2.center);
+            }
+            else
+            {
+                inst.transform.position = c;
+            }
+
+            // material de madera YA PROBADO (el del FBX podía salir negro/roto).
+            var fenceTex = AssetDatabase.LoadAssetAtPath<Texture2D>(TranqueraAssetTex);
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (fenceTex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", fenceTex);
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+            mat = BuilderUtils.SaveMaterialStable(mat, "Assets/Settings/WoodenFence.mat");
+            foreach (var r in instRends)
+            {
+                var arr = new Material[r.sharedMaterials.Length];
+                for (int k = 0; k < arr.Length; k++) arr[k] = mat;
+                r.sharedMaterials = arr;
+            }
+
+            var gate = pivot.AddComponent<FolkloreArchives.CorralGate>();
+            gate.openDeg = 95f;
+            gate.hintClosed = "[E] Abrir la tranquera";
+            gate.hintOpen = "[E] Cerrar la tranquera";
+
+            sel.SetActive(false);   // ocultamos la puerta combined original
+
+            Undo.RegisterCreatedObjectUndo(pivot, "Armar tranquera");
+            Selection.activeGameObject = pivot;
+            EditorGUIUtility.PingObject(pivot);
+            Debug.Log("[Rancho] 'TranqueraCorral' armada con el modelo REAL (wooden_fence_closed) en " +
+                      hinge + ". Original " + sel.name + " desactivado.");
         }
 
         // owner: "no me está saliendo la opción [de abrir la tranquera]" -- a TranqueraCorral se le
