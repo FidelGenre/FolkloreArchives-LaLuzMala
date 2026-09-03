@@ -98,8 +98,8 @@ namespace FolkloreArchives
         // números NO son estables: cada vez que se repone/regenera la letrina, Unity puede
         // reasignarlos a piezas distintas (puerta vs. estructura), haciendo que el viejo apareciera
         // en cualquier lado. Con esto fijo, no depende más de qué pieza se llame cómo.
-        public Vector3 ranchoViejoPos = new Vector3(91.89404f, 27.72167f, 136.2984f);
-        public float   ranchoViejoYaw = -98.755f;
+        public Vector3 ranchoViejoPos = new Vector3(91.59354f, 27.66895f, 137.5355f);
+        public float   ranchoViejoYaw = -92.435f;
 
         // dónde/cómo está ACOSTADA la vieja (dormida) hasta que el viejo la despierta (owner,
         // Inspector). Coincide con el final de viejoKitchenPath -- ahí es donde el viejo la
