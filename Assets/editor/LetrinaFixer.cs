@@ -110,6 +110,17 @@ namespace FolkloreArchives.MapGen
             }
             Vector3 anchor = bb.HasValue ? bb.Value.center : pieces[0].position;
 
+            // owner: "la dejaste enterrada" -- alinear por el CENTRO del bounds (altura media de
+            // toda la estructura, techo+paredes) contra LetrinaAnchorPos (altura de los PIES del
+            // TEST_PLAYER, a nivel de piso) hundía todo el grupo esa diferencia de altura. La
+            // referencia correcta es la PUERTA ("letrina.007") -- es lo que el owner tenía al
+            // lado parado en el piso -- así que alineamos ESA pieza puntual contra wp, no el
+            // centro del bounds. El resto de las piezas se mueve rígido con ella (mismo layout).
+            Transform doorPiece = null;
+            foreach (var p in pieces)
+                if (p.name.Equals("letrina.007", System.StringComparison.OrdinalIgnoreCase)) { doorPiece = p; break; }
+            Vector3 refPos = doorPiece != null ? doorPiece.position : anchor;
+
             // grupo nuevo en el anchor; metemos las piezas manteniendo su layout (worldPositionStays)
             var group = new GameObject("Letrina_Fresca");
             group.transform.position = anchor;
@@ -118,8 +129,8 @@ namespace FolkloreArchives.MapGen
 
             Object.DestroyImmediate(farm);   // tiramos el resto de la granja
 
-            // 5) mover el grupo a donde tenías la rota (dejo rotación/escala AUTORAL: derecha y tamaño OK)
-            group.transform.position = wp;
+            // 5) mover el grupo entero para que la PUERTA (no el centro del bounds) quede en wp
+            group.transform.position += (wp - refPos);
 
             // 6) re-aplicar los materiales URP por nombre (evita magenta si el FBX trae built-in)
             foreach (var r in group.GetComponentsInChildren<Renderer>(true))
