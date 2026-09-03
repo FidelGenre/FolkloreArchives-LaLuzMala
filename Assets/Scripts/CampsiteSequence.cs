@@ -953,7 +953,10 @@ namespace FolkloreArchives
                 float tl = 0f;
                 while (tl < 12f && Flat2(oldLady.position, last.pos) > 0.5f)
                 {
-                    if (houseGateForLady != null && !ladyDoorOpened && Flat2(oldLady.position, last.pos) <= 3.5f) { houseGateForLady.SetOpen(true); ladyDoorOpened = true; }
+                    // owner: "sigue abriéndose antes de que llegue la vieja, un poquito más demora
+                    // la abertura" -- radio más chico (1.8m en vez de 3.5m), se abre más cerca de
+                    // verdad.
+                    if (houseGateForLady != null && !ladyDoorOpened && Flat2(oldLady.position, last.pos) <= 1.8f) { houseGateForLady.SetOpen(true); ladyDoorOpened = true; }
                     StepToward(oldLady, last.pos, 2.2f);
                     tl += Time.deltaTime;
                     yield return null;
