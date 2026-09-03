@@ -128,11 +128,11 @@ namespace FolkloreArchives
             new PathPoint { pos = new Vector3(90.70193f, 28.17672f, 134.9482f),  yaw = 170.605f },
             new PathPoint { pos = new Vector3(91.38409f, 28.45722f, 129.4504f),  yaw = 90.525f },
             new PathPoint { pos = new Vector3(103.9425f, 27.63788f, 129.6086f),  yaw = 92.365f },
-            // owner: "necesito que pase por esa coordenada que ahí está la puerta, si no sigue
-            // derecho" -- sin este punto el tramo de arriba corta en diagonal y no cruza el vano
-            // de la puerta de la casa. Corregido (owner: "el viejo no está pasando por la puerta,
-            // está atravesando la pared" -- el punto original cortaba la esquina).
-            new PathPoint { pos = new Vector3(136.2494f, 27.11404f, 125.6845f),  yaw = 175.885f },
+            // owner: "ahí tenés el viejo antes de llegar a la puerta y en la puerta" -- reajustado
+            // tras mover PuertaCasa a su posición fija (el punto viejo quedó desactualizado, el
+            // viejo no entraba y atravesaba la pared).
+            new PathPoint { pos = new Vector3(129.2755f, 26.62954f, 127.977f),   yaw = 99.965f },   // antes de la puerta
+            new PathPoint { pos = new Vector3(136.3731f, 26.66633f, 126.4762f), yaw = 178.605f },   // en la puerta
             // owner: "cuando entra el viejo no está haciendo el recorrido, pasa la puerta y
             // desaparece -- primero debe ir hasta acá desde la puerta y terminar acá despertando a
             // la vieja". Los puntos de ADENTRO de la casa (después de la puerta) quedaron
@@ -1465,7 +1465,7 @@ namespace FolkloreArchives
         // índice (0-based) del punto de 'viejoKitchenPath' que cae en la puerta de la casa -- ahí
         // se abre/cierra sola al pasar (ver ViejoWalkToKitchen). Si se agregan/sacan puntos antes
         // de ese, actualizar este índice.
-        const int ViejoDoorPathIndex = 3;
+        const int ViejoDoorPathIndex = 4;   // se agregó un punto "antes de la puerta" -- pasó de índice 3 a 4
 
         // camina 'who' por una lista de puntos EN ORDEN (sin lógica de puertas); al llegar al
         // último queda PARADO ahí, mirando su yaw. Genérico -- reusado por el tramo final del
