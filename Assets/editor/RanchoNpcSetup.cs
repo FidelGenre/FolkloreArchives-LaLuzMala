@@ -233,13 +233,32 @@ namespace FolkloreArchives.MapGen
         const string TranqueraAssetFbx = "Assets/ExternalAssets/WoodenFence/models/wooden_fence_closed.fbx";
         const string TranqueraAssetTex = "Assets/ExternalAssets/WoodenFence/textures/low_wooden_wall.jpg";
 
+        const string GatePieceName = "Cube.184";
+
         [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
-        static void BuildGate()
+        static void BuildGate() => BuildGateInternal(interactive: true);
+
+        // interactive:true = botón manual (diálogos + Undo + Selection). interactive:false =
+        // llamada automática desde Generate -- owner: "no quiero tener que tocar todas las
+        // cosas y armar de nuevo, quiero que las puertas sean parte del mapa". Ya no depende de
+        // Selection: busca "Cube.184" (la puerta del corral) por nombre.
+        public static void BuildGateInternal(bool interactive)
         {
-            var sel = Selection.activeGameObject;
-            if (sel == null) { EditorUtility.DisplayDialog("Tranquera", "Seleccioná primero la puerta del corral (Cube.184).", "OK"); return; }
+            var selT = FindByName(GatePieceName);
+            if (selT == null)
+            {
+                if (interactive) EditorUtility.DisplayDialog("Tranquera", "No encontré '" + GatePieceName + "' (la puerta del corral) en la escena.", "OK");
+                else Debug.LogWarning("[Rancho] Auto: no encontré '" + GatePieceName + "' (puerta del corral).");
+                return;
+            }
+            var sel = selT.gameObject;
             var rend = sel.GetComponent<Renderer>();
-            if (rend == null) { EditorUtility.DisplayDialog("Tranquera", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+            if (rend == null)
+            {
+                if (interactive) EditorUtility.DisplayDialog("Tranquera", "'" + GatePieceName + "' no tiene Renderer.", "OK");
+                else Debug.LogWarning("[Rancho] Auto: '" + GatePieceName + "' no tiene Renderer.");
+                return;
+            }
 
             // tamaño/posición REALES en ejes de MUNDO (Renderer.bounds -- confiable pese al
             // Combined Mesh). NO usar sel.transform.rotation/right/forward para nada acá.
@@ -253,7 +272,12 @@ namespace FolkloreArchives.MapGen
 
             AssetDatabase.Refresh();
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraAssetFbx);
-            if (fbx == null) { EditorUtility.DisplayDialog("Tranquera", "No encontré " + TranqueraAssetFbx + " (¿está el pack WoodenFence en el proyecto?).", "OK"); return; }
+            if (fbx == null)
+            {
+                if (interactive) EditorUtility.DisplayDialog("Tranquera", "No encontré " + TranqueraAssetFbx + " (¿está el pack WoodenFence en el proyecto?).", "OK");
+                else Debug.LogWarning("[Rancho] Auto: no encontré " + TranqueraAssetFbx);
+                return;
+            }
 
             var prev = FindByName("TranqueraCorral");
             if (prev != null) Object.DestroyImmediate(prev.gameObject);
@@ -266,7 +290,8 @@ namespace FolkloreArchives.MapGen
             if (inst == null)
             {
                 Object.DestroyImmediate(pivot);
-                EditorUtility.DisplayDialog("Tranquera", "PrefabUtility.InstantiatePrefab devolvió null para " + TranqueraAssetFbx + " -- revisá la Console.", "OK");
+                if (interactive) EditorUtility.DisplayDialog("Tranquera", "PrefabUtility.InstantiatePrefab devolvió null para " + TranqueraAssetFbx + " -- revisá la Console.", "OK");
+                else Debug.LogWarning("[Rancho] Auto: InstantiatePrefab devolvió null para " + TranqueraAssetFbx);
                 return;
             }
             inst.name = "Plank";
@@ -328,11 +353,14 @@ namespace FolkloreArchives.MapGen
 
             sel.SetActive(false);   // ocultamos la puerta combined original
 
+            Debug.Log("[Rancho] 'TranqueraCorral' armada con el modelo REAL (wooden_fence_closed) en " +
+                      hinge + ". Original " + sel.name + " desactivado.");
+
+            if (!interactive) return;   // el resto (Undo/Selection) es solo para el botón manual
+
             Undo.RegisterCreatedObjectUndo(pivot, "Armar tranquera");
             Selection.activeGameObject = pivot;
             EditorGUIUtility.PingObject(pivot);
-            Debug.Log("[Rancho] 'TranqueraCorral' armada con el modelo REAL (wooden_fence_closed) en " +
-                      hinge + ". Original " + sel.name + " desactivado.");
         }
 
         // owner: "no me está saliendo la opción [de abrir la tranquera]" -- a TranqueraCorral se le
@@ -373,13 +401,23 @@ namespace FolkloreArchives.MapGen
         // le cuelga CorralGate directo -- misma malla y textura que el original, sin cubo.
         const string HouseDoorPrefabPath = "Assets/ALP_Assets/country house01/Prefabs/Door04_pr.prefab";
 
+        // owner: "no quiero tener que tocar todas las cosas y armar de nuevo, quiero que las
+        // puertas sean parte del mapa" -- llamada automática desde HouseBuilder al final de
+        // Generate (ver EnsureAllRanchoDoors), además del botón manual de siempre.
         [MenuItem("Folklore/Armar puerta de la casa (abrible)")]
-        static void BuildHouseDoor()
+        public static void BuildHouseDoor() => BuildHouseDoorInternal(interactive: true);
+
+        public static void BuildHouseDoorInternal(bool interactive)
         {
-            Debug.Log("[Rancho] BuildHouseDoor: arrancó."); // marca de diagnóstico -- si no ves esto en la Console, el botón no está ejecutando este método.
+            if (interactive) Debug.Log("[Rancho] BuildHouseDoor: arrancó."); // marca de diagnóstico -- si no ves esto en la Console, el botón no está ejecutando este método.
 
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HouseDoorPrefabPath);
-            if (prefab == null) { EditorUtility.DisplayDialog("Puerta", "No encontré " + HouseDoorPrefabPath, "OK"); return; }
+            if (prefab == null)
+            {
+                if (interactive) EditorUtility.DisplayDialog("Puerta", "No encontré " + HouseDoorPrefabPath, "OK");
+                else Debug.LogWarning("[Rancho] Auto: no encontré " + HouseDoorPrefabPath);
+                return;
+            }
 
             // owner: "cuando toco esos botones aparecen en cualquier lado las cosas" -- leer la
             // posición de Door04_pr EN VIVO la hacía depender de dónde haya quedado ese objeto
@@ -433,15 +471,14 @@ namespace FolkloreArchives.MapGen
                 deactivated++;
             }
 
+            Debug.Log("[Rancho] 'PuertaCasa' repuesta con el PREFAB real (Door04_pr: malla + picaporte + " +
+                      "colliders) en " + wp + ". " + deactivated + " 'Door04_pr' vieja(s) desactivada(s).");
+
+            if (!interactive) return;   // el resto (Undo/Selection/diálogo) es solo para el botón manual
+
             Undo.RegisterCreatedObjectUndo(fresh, "Armar puerta de la casa");
             Selection.activeGameObject = fresh;
             EditorGUIUtility.PingObject(fresh);
-            Debug.Log("[Rancho] 'PuertaCasa' repuesta con el PREFAB real (Door04_pr: malla + picaporte + " +
-                      "colliders) en " + wp + ". " + deactivated + " 'Door04_pr' vieja(s) desactivada(s). " +
-                      "Arranca CERRADA con la pose fija de arriba -- si alguna vez se ve entreabierta, " +
-                      "rotá 'PuertaCasa' en el Editor hasta que cierre bien, ANTES de dar Play, y avisá el " +
-                      "valor nuevo para actualizar el fijo. Ajustá openDeg (+/-) en el CorralGate si abre " +
-                      "para el lado equivocado.");
             // owner: dudas de si el botón corre o no -- ventana bien visible, imposible de no ver,
             // en vez de un log que hay que ir a buscar.
             EditorUtility.DisplayDialog("Puerta", "'PuertaCasa' lista en " + wp + ".\n" +
@@ -493,15 +530,45 @@ namespace FolkloreArchives.MapGen
         // "Reponer letrina (fresca con texturas)" (LetrinaFixer), que la deja con SU PROPIA malla
         // (ya no combinada). Una vez limpia, hacerla abrible es directo: no hace falta reconstruir
         // nada (a diferencia de la puerta de la casa), solo colgarle CorralGate.
+        // owner: "no quiero tener que tocar todas las cosas y armar de nuevo, quiero que las
+        // puertas sean parte del mapa" -- ya no depende de tener nada seleccionado: primero
+        // repone la letrina fresca sola (LetrinaFixer, busca "letrina*" por nombre) y después
+        // busca la pieza de la puerta ("letrina.007") DENTRO del grupo recién repuesto.
+        const string LetrinaDoorPieceName = "letrina.007";
+
         [MenuItem("Folklore/Armar puerta de la letrina (abrible)")]
-        static void BuildLetrinaDoor()
+        public static void BuildLetrinaDoor() => BuildLetrinaDoorInternal(interactive: true);
+
+        public static void BuildLetrinaDoorInternal(bool interactive)
         {
-            var sel = Selection.activeGameObject;
-            if (sel == null) { EditorUtility.DisplayDialog("Letrina", "Seleccioná primero la puerta de la letrina (letrina.007) en la Hierarchy.", "OK"); return; }
-            if (sel.GetComponent<Renderer>() == null) { EditorUtility.DisplayDialog("Letrina", "El objeto seleccionado no tiene Renderer.", "OK"); return; }
+            FolkloreArchives.MapGen.LetrinaFixer.ReplaceLetrinaInternal(interactive);
+
+            var group = FindByName("Letrina_Fresca");
+            if (group == null)
+            {
+                if (interactive) EditorUtility.DisplayDialog("Letrina", "No se pudo reponer 'Letrina_Fresca' -- revisá la Console.", "OK");
+                else Debug.LogWarning("[Rancho] Auto: no encontré 'Letrina_Fresca' después de reponerla.");
+                return;
+            }
+
+            Transform sel = null;
+            foreach (var t in group.GetComponentsInChildren<Transform>(true))
+                if (t.name.Equals(LetrinaDoorPieceName, System.StringComparison.OrdinalIgnoreCase)) { sel = t; break; }
+            if (sel == null)
+            {
+                if (interactive) EditorUtility.DisplayDialog("Letrina", "No encontré '" + LetrinaDoorPieceName + "' dentro de 'Letrina_Fresca'.", "OK");
+                else Debug.LogWarning("[Rancho] Auto: no encontré '" + LetrinaDoorPieceName + "' dentro de 'Letrina_Fresca'.");
+                return;
+            }
+            if (sel.GetComponent<Renderer>() == null)
+            {
+                if (interactive) EditorUtility.DisplayDialog("Letrina", "'" + LetrinaDoorPieceName + "' no tiene Renderer.", "OK");
+                else Debug.LogWarning("[Rancho] Auto: '" + LetrinaDoorPieceName + "' no tiene Renderer.");
+                return;
+            }
 
             var gate = sel.GetComponent<FolkloreArchives.CorralGate>();
-            if (gate == null) gate = Undo.AddComponent<FolkloreArchives.CorralGate>(sel);
+            if (gate == null) gate = sel.gameObject.AddComponent<FolkloreArchives.CorralGate>();
             gate.hintClosed = "[E] Abrir la puerta";
             gate.hintOpen   = "[E] Cerrar la puerta";
             gate.openDeg = -100f;   // mismo criterio que la puerta de la casa: para afuera
@@ -509,13 +576,16 @@ namespace FolkloreArchives.MapGen
             gate.closeClipName = "door_close";
             EditorUtility.SetDirty(sel);
 
-            Selection.activeGameObject = sel;
+            Debug.Log("[Rancho] '" + sel.name + "' (dentro de Letrina_Fresca) ahora es abrible (CorralGate). " +
+                      "Arranca CERRADA con la pose que tenga al entrar a Play. Ajustá openDeg (+/-) en el " +
+                      "Inspector si abre para el lado equivocado. (La secuencia del susto ya " +
+                      "desactiva/reactiva este CorralGate sola alrededor del golpe scripteado.)");
+
+            if (!interactive) return;   // el resto (Selection/diálogo) es solo para el botón manual
+
+            Selection.activeGameObject = sel.gameObject;
             EditorGUIUtility.PingObject(sel);
-            Debug.Log("[Rancho] '" + sel.name + "' ahora es abrible (CorralGate). Arranca CERRADA con " +
-                      "la pose que tenga al entrar a Play -- dejala así en el Editor si ya se ve bien " +
-                      "cerrada. Ajustá openDeg (+/-) en el Inspector si abre para el lado equivocado. " +
-                      "(La secuencia del susto ya desactiva/reactiva este CorralGate sola alrededor del " +
-                      "golpe scripteado, para que esa E no la abra.)");
+            EditorUtility.DisplayDialog("Letrina", "'" + sel.name + "' lista, abrible.", "OK");
         }
 
         // pone N ovejas (sheep.obj) en un cluster cerca de la tranquera. La secuencia las
@@ -606,6 +676,23 @@ namespace FolkloreArchives.MapGen
             foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 if (t != null && t.name == name) return t;
             return null;
+        }
+
+        // owner: "no quiero tener que tocar todas las cosas y armar de nuevo, quiero que las
+        // puertas sean parte del mapa pero como están ahora" -- punto único de entrada: arma las
+        // TRES puertas del rancho (casa, letrina, tranquera) sin depender de ninguna selección
+        // manual. La llama HouseBuilder.BuildBarn() automáticamente al final de cada Generate;
+        // también puede correrse sola desde el menú para repararlas sin regenerar todo el mapa.
+        [MenuItem("Folklore/Armar TODAS las puertas del rancho (casa + letrina + tranquera)")]
+        public static void EnsureAllRanchoDoorsMenu() => EnsureAllRanchoDoors(interactive: true);
+
+        public static void EnsureAllRanchoDoors(bool interactive)
+        {
+            BuildHouseDoorInternal(interactive: false);
+            BuildLetrinaDoorInternal(interactive: false);
+            BuildGateInternal(interactive: false);
+            Debug.Log("[Rancho] EnsureAllRanchoDoors: casa + letrina + tranquera listas.");
+            if (interactive) EditorUtility.DisplayDialog("Puertas del rancho", "Casa, letrina y tranquera listas y abribles.", "OK");
         }
     }
 }

@@ -9,8 +9,13 @@
 //  (por nombre) del objeto viejo, así queda con textura y se puede
 //  mover libremente.
 //
-//  USO: seleccioná la letrina rota en la Hierarchy y corré
-//       Folklore ▸ Reponer letrina (fresca con texturas).
+//  USO: Folklore ▸ Reponer letrina (fresca con texturas) -- ya NO hace falta
+//       seleccionar nada: busca sola las piezas "letrina*" activas en la
+//       escena (las que dejó AbandonedFarmBuilder, Combined Mesh) y las
+//       repone. También la llama sola HouseBuilder en cada Generate (ver
+//       RanchoNpcSetup.EnsureAllRanchoDoors) -- owner: "no quiero tener que
+//       tocar todas las cosas y armar de nuevo, quiero que las puertas sean
+//       parte del mapa".
 // ============================================================
 using System.Collections.Generic;
 using UnityEngine;
@@ -23,29 +28,61 @@ namespace FolkloreArchives.MapGen
         const string Fbx = "Assets/ExternalAssets/AbandonedFarm/AbandonedFarm.fbx";
 
         [MenuItem("Folklore/Reponer letrina (fresca con texturas)")]
-        static void ReplaceLetrina()
+        static void ReplaceLetrinaMenu() => ReplaceLetrinaInternal(interactive: true);
+
+        // interactive:true = botón manual (diálogos + Undo + Selection). interactive:false =
+        // llamada automática desde Generate (solo logs, nunca bloquea con un diálogo).
+        public static void ReplaceLetrinaInternal(bool interactive)
         {
-            var old = Selection.activeGameObject;
-            if (old == null)
+            // 1) juntar las piezas VIEJAS "letrina*" activas en la escena -- ya no depende de
+            // selección: son las que dejó AbandonedFarmBuilder (Combined Mesh) o, si esto ya se
+            // corrió antes en esta sesión, cualquier resto que haya quedado activo.
+            var old = new List<Transform>();
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
-                EditorUtility.DisplayDialog("Letrina",
-                    "Seleccioná primero la letrina rota en la Hierarchy y volvé a correr esto.", "OK");
+                if (t == null || !t.gameObject.activeSelf) continue;
+                if (t.name == "Letrina_Fresca" || (t.parent != null && t.root.name == "Letrina_Fresca")) continue;
+                if (!t.name.ToLowerInvariant().StartsWith("letrina")) continue;
+                old.Add(t);
+            }
+            if (old.Count == 0)
+            {
+                if (interactive)
+                    EditorUtility.DisplayDialog("Letrina", "No encontré piezas 'letrina*' activas en la escena.", "OK");
+                else
+                    Debug.Log("[Letrina] Auto: no hay piezas 'letrina*' activas para reponer (¿ya está reemplazada?).");
                 return;
             }
 
-            // 1) transform MUNDO del viejo (donde la querés dejar)
-            var ot = old.transform;
-            Vector3 wp = ot.position; Quaternion wr = ot.rotation; Vector3 ws = ot.lossyScale;
+            // posición ancla: centro por bounds de TODAS las piezas viejas (reemplaza la vieja
+            // dependencia de "la posición del objeto seleccionado")
+            Bounds? oldBb = null;
+            foreach (var p in old)
+            {
+                var rr = p.GetComponent<Renderer>();
+                if (rr == null) continue;
+                if (oldBb == null) oldBb = rr.bounds; else { var b = oldBb.Value; b.Encapsulate(rr.bounds); oldBb = b; }
+            }
+            Vector3 wp = oldBb.HasValue ? oldBb.Value.center : old[0].position;
 
-            // 2) materiales URP correctos (por nombre) del objeto viejo — para no quedar en magenta
+            // 2) materiales URP correctos (por nombre) de las piezas viejas — para no quedar en magenta
             var mats = new Dictionary<string, Material>();
-            foreach (var r in old.GetComponentsInChildren<Renderer>(true))
+            foreach (var p in old)
+            {
+                var r = p.GetComponent<Renderer>();
+                if (r == null) continue;
                 foreach (var m in r.sharedMaterials)
                     if (m != null && !mats.ContainsKey(m.name)) mats[m.name] = m;
+            }
 
             // 3) instanciar la granja fresca del FBX y DESEMPAQUETARLA (si no, no se puede reparentar)
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(Fbx);
-            if (fbx == null) { EditorUtility.DisplayDialog("Letrina", "No encontré " + Fbx, "OK"); return; }
+            if (fbx == null)
+            {
+                if (interactive) EditorUtility.DisplayDialog("Letrina", "No encontré " + Fbx, "OK");
+                else Debug.LogWarning("[Letrina] Auto: no encontré " + Fbx);
+                return;
+            }
             var farm = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
             PrefabUtility.UnpackPrefabInstance(farm, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
 
@@ -56,7 +93,8 @@ namespace FolkloreArchives.MapGen
             if (pieces.Count == 0)
             {
                 Object.DestroyImmediate(farm);
-                EditorUtility.DisplayDialog("Letrina", "No encontré piezas 'letrina*' dentro del FBX.", "OK");
+                if (interactive) EditorUtility.DisplayDialog("Letrina", "No encontré piezas 'letrina*' dentro del FBX.", "OK");
+                else Debug.LogWarning("[Letrina] Auto: no encontré piezas 'letrina*' dentro del FBX.");
                 return;
             }
 
@@ -104,13 +142,14 @@ namespace FolkloreArchives.MapGen
                 deactivated++;
             }
 
+            Debug.Log("[Letrina] Repuesta 'Letrina_Fresca' (" + pieces.Count + " piezas) en " + wp +
+                      ". " + deactivated + " pieza(s) 'letrina*' vieja(s) quedaron DESACTIVADAS.");
+
+            if (!interactive) return;   // el resto (Undo/Selection) es solo para el botón manual
+
             Undo.RegisterCreatedObjectUndo(group, "Reponer letrina");
             Selection.activeGameObject = group;
             EditorGUIUtility.PingObject(group);
-            Debug.Log("[Letrina] Repuesta 'Letrina_Fresca' (" + pieces.Count + " piezas) en " + wp +
-                      ". " + deactivated + " pieza(s) 'letrina*' vieja(s) quedaron DESACTIVADAS " +
-                      "(no solo la seleccionada); si quedó bien, borralas. Ajustá Y y rotación si hace falta.");
-            _ = wr; _ = ws;
         }
     }
 }

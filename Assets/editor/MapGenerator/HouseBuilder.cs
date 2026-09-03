@@ -345,7 +345,18 @@ namespace FolkloreArchives.MapGen
         const bool UseAbandonedFarm = true;
         static void BuildBarn(Transform parent, Terrain terrain)
         {
-            if (UseAbandonedFarm) { AbandonedFarmBuilder.Build(parent, terrain); ChickenCoopBuilder.Build(parent, terrain); CorralBuilder.Build(parent, terrain); return; }
+            if (UseAbandonedFarm)
+            {
+                AbandonedFarmBuilder.Build(parent, terrain);
+                ChickenCoopBuilder.Build(parent, terrain);
+                CorralBuilder.Build(parent, terrain);
+                // owner: "no quiero tener que tocar todas las cosas y armar de nuevo, quiero que
+                // las puertas sean parte del mapa pero como están ahora" -- arma las 3 puertas
+                // abribles (casa/letrina/tranquera) SOLAS acá, en cada Generate, sin depender de
+                // los botones manuales de Folklore/Armar... (RanchoNpcSetup.EnsureAllRanchoDoors).
+                RanchoNpcSetup.EnsureAllRanchoDoors(interactive: false);
+                return;
+            }
 
             var g = BuilderUtils.Group(parent, "OldLadyBarn", Vector3.zero);
             Vector2 c = MapLayout.OldLadyBarnCenter;
