@@ -386,7 +386,7 @@ namespace FolkloreArchives.MapGen
             // (cambia con cada Generate, y una vez se movió sin querer probando el Static). FIJA
             // con las coordenadas de MUNDO ya confirmadas varias veces por el owner -- ya no hace
             // falta seleccionar nada para correr este botón.
-            Vector3 wp = new Vector3(135.196f, 27.9111f, 125.3751f);
+            Vector3 wp = new Vector3(135.324f, 27.9111f, 125.3751f);   // owner: "la tuve que mover un poquito"
             Quaternion wr = Quaternion.Euler(0f, 88.318f, 0f);   // pose CERRADA confirmada por el owner
             Vector3 ws = Vector3.one * 1.35f;
 
