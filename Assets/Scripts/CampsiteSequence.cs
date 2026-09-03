@@ -1514,6 +1514,11 @@ namespace FolkloreArchives
             var houseDoorT = FindObj("PuertaCasa");
             var houseDoorGate = houseDoorT != null ? houseDoorT.GetComponent<CorralGate>() : null;
 
+            // owner: "le cerraste la puerta al viejo antes de que pase y se bugueó" (terminó arriba
+            // del techo -- el collider cerrándose lo empujó). Cerrarla apenas llegaba AL punto de la
+            // puerta lo dejaba parado justo en el medio del vano. Fix: recién se cierra cuando YA
+            // llegó al punto SIGUIENTE (bien lejos de la puerta, terminó de cruzarla de verdad).
+            bool doorNeedsClose = false;
             for (int i = 0; i < viejoKitchenPath.Length; i++)
             {
                 var wp = viejoKitchenPath[i];
@@ -1532,14 +1537,18 @@ namespace FolkloreArchives
                     yield return null;
                 }
 
-                // y se cierra sola una vez que ya la cruzó.
                 if (isDoorLeg)
                 {
                     if (!opened) houseDoorGate.SetOpen(true);   // por si arrancó ya cerca (guard)
-                    yield return new WaitForSeconds(0.6f);
+                    doorNeedsClose = true;   // se cierra en el PRÓXIMO punto, no acá mismo
+                }
+                else if (doorNeedsClose)
+                {
                     houseDoorGate.SetOpen(false);
+                    doorNeedsClose = false;
                 }
             }
+            if (doorNeedsClose && houseDoorGate != null) houseDoorGate.SetOpen(false);   // por si la puerta era el último punto del recorrido
             if (viejoKitchenPath.Length > 0)
             {
                 var last = viejoKitchenPath[viejoKitchenPath.Length - 1];
