@@ -135,6 +135,10 @@ namespace FolkloreArchives
             // puerta mientras se abre" -- más cerca/pegado a la puerta, el viejo llegaba a cruzarla
             // antes de que terminara de abrirse (la animación tarda 0.7s). Con más distancia atrás,
             // el trigger de apertura (a 3.5m) le da tiempo de sobra.
+            // owner: "hacé que el viejo vaya más por ahí, antes de llegar a lo que está antes de la
+            // puerta" -- el tramo largo y recto desde el punto de arriba (103.94, 129.6) rodeaba la
+            // pared en el camino. Punto intermedio para enderezar el recorrido.
+            new PathPoint { pos = new Vector3(126.8722f, 26.46656f, 130.9649f), yaw = 99.485f },
             new PathPoint { pos = new Vector3(136.402f, 26.44961f, 128.4976f),  yaw = 179.325f },   // antes de la puerta
             new PathPoint { pos = new Vector3(136.3731f, 26.66633f, 126.4762f), yaw = 178.605f },   // en la puerta
             // owner: "cuando entra el viejo no está haciendo el recorrido, pasa la puerta y
@@ -1469,7 +1473,7 @@ namespace FolkloreArchives
         // índice (0-based) del punto de 'viejoKitchenPath' que cae en la puerta de la casa -- ahí
         // se abre/cierra sola al pasar (ver ViejoWalkToKitchen). Si se agregan/sacan puntos antes
         // de ese, actualizar este índice.
-        const int ViejoDoorPathIndex = 4;   // se agregó un punto "antes de la puerta" -- pasó de índice 3 a 4
+        const int ViejoDoorPathIndex = 5;   // se agregaron 2 puntos antes de la puerta -- pasó de 3 a 5
 
         // camina 'who' por una lista de puntos EN ORDEN (sin lógica de puertas); al llegar al
         // último queda PARADO ahí, mirando su yaw. Genérico -- reusado por el tramo final del
