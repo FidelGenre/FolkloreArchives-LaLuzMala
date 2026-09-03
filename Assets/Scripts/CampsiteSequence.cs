@@ -920,11 +920,28 @@ namespace FolkloreArchives
             // RANCHO/casa, "PuertaCasa" -- no la de la letrina). Solo la abrís VOS con E, nada la
             // abría para ella. Se abre sola antes de que camine y se cierra atrás suyo, mismo
             // criterio que el viejo con esta misma puerta (ver ViejoWalkToKitchen).
+            // owner: "se abre mucho antes de que llegue la vieja y cuando se para en la puerta se
+            // cierra" -- abrirla al ARRANCAR todo el recorrido (3 puntos) la dejaba abierta desde
+            // muy lejos, y cerrarla apenas termina de caminar la cerraba justo con ella parada ahí.
+            // Fix: camina TODOS los puntos menos el último normal, recién ANTES del último tramo
+            // (el más cercano a la puerta) se abre, y queda ABIERTA (no se cierra sola -- ella salió
+            // por ahí a saludarte, tiene sentido que quede abierta).
             var houseDoorForLady = FindObj("PuertaCasa");
             var houseGateForLady = houseDoorForLady != null ? houseDoorForLady.GetComponent<CorralGate>() : null;
-            if (houseGateForLady != null) houseGateForLady.SetOpen(true);
-            if (oldLady != null) yield return WalkPath(oldLady, oldLadyGreetPath);
-            if (houseGateForLady != null) { yield return new WaitForSeconds(0.6f); houseGateForLady.SetOpen(false); }
+            if (oldLady != null && oldLadyGreetPath != null && oldLadyGreetPath.Length > 0)
+            {
+                for (int i = 0; i < oldLadyGreetPath.Length - 1; i++)
+                {
+                    var wp = oldLadyGreetPath[i];
+                    float t = 0f;
+                    while (t < 12f && Flat2(oldLady.position, wp.pos) > 0.5f) { StepToward(oldLady, wp.pos, 2.2f); t += Time.deltaTime; yield return null; }
+                }
+                if (houseGateForLady != null) houseGateForLady.SetOpen(true);
+                var last = oldLadyGreetPath[oldLadyGreetPath.Length - 1];
+                float tl = 0f;
+                while (tl < 12f && Flat2(oldLady.position, last.pos) > 0.5f) { StepToward(oldLady, last.pos, 2.2f); tl += Time.deltaTime; yield return null; }
+                PlaceStandingYaw(oldLady, last.pos, last.yaw);
+            }
             yield return SayFor("Buenas... mucho gusto. ¿Qué necesitan, chicos?", 3.2f);
             yield return SayFor("Unas cañas para pescar, nos las olvidamos y vinimos a acampar.", 3.6f);
             yield return SayFor("Mmm... dale, se las presto. Pero a cambio de un favor.", 3.4f);
