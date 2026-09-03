@@ -131,7 +131,11 @@ namespace FolkloreArchives
             // owner: "ahí tenés el viejo antes de llegar a la puerta y en la puerta" -- reajustado
             // tras mover PuertaCasa a su posición fija (el punto viejo quedó desactualizado, el
             // viejo no entraba y atravesaba la pared).
-            new PathPoint { pos = new Vector3(129.2755f, 26.62954f, 127.977f),   yaw = 99.965f },   // antes de la puerta
+            // owner: "cambiá 'antes de la puerta' que vaya hasta ahí el viejo, si no atraviesa la
+            // puerta mientras se abre" -- más cerca/pegado a la puerta, el viejo llegaba a cruzarla
+            // antes de que terminara de abrirse (la animación tarda 0.7s). Con más distancia atrás,
+            // el trigger de apertura (a 3.5m) le da tiempo de sobra.
+            new PathPoint { pos = new Vector3(136.402f, 26.44961f, 128.4976f),  yaw = 179.325f },   // antes de la puerta
             new PathPoint { pos = new Vector3(136.3731f, 26.66633f, 126.4762f), yaw = 178.605f },   // en la puerta
             // owner: "cuando entra el viejo no está haciendo el recorrido, pasa la puerta y
             // desaparece -- primero debe ir hasta acá desde la puerta y terminar acá despertando a
