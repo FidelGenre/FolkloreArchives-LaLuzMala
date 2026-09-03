@@ -442,6 +442,10 @@ namespace FolkloreArchives.MapGen
                       "rotá 'PuertaCasa' en el Editor hasta que cierre bien, ANTES de dar Play, y avisá el " +
                       "valor nuevo para actualizar el fijo. Ajustá openDeg (+/-) en el CorralGate si abre " +
                       "para el lado equivocado.");
+            // owner: dudas de si el botón corre o no -- ventana bien visible, imposible de no ver,
+            // en vez de un log que hay que ir a buscar.
+            EditorUtility.DisplayDialog("Puerta", "'PuertaCasa' lista en " + wp + ".\n" +
+                      deactivated + " 'Door04_pr' vieja(s) desactivada(s).", "OK");
         }
 
         // valores de config de la puerta de la casa (hint/lado que abre/sonido) -- separado de
