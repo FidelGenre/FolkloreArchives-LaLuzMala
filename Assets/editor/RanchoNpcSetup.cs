@@ -377,15 +377,18 @@ namespace FolkloreArchives.MapGen
         static void BuildHouseDoor()
         {
             Debug.Log("[Rancho] BuildHouseDoor: arrancó."); // marca de diagnóstico -- si no ves esto en la Console, el botón no está ejecutando este método.
-            var old = Selection.activeGameObject;
-            if (old == null) { EditorUtility.DisplayDialog("Puerta", "Seleccioná primero la puerta de la casa (Door04_pr) en la Hierarchy.", "OK"); return; }
 
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HouseDoorPrefabPath);
             if (prefab == null) { EditorUtility.DisplayDialog("Puerta", "No encontré " + HouseDoorPrefabPath, "OK"); return; }
 
-            // transform MUNDO del viejo (ahí la dejamos) -- mismo criterio que LetrinaFixer.
-            var ot = old.transform;
-            Vector3 wp = ot.position; Quaternion wr = ot.rotation; Vector3 ws = ot.lossyScale;
+            // owner: "cuando toco esos botones aparecen en cualquier lado las cosas" -- leer la
+            // posición de Door04_pr EN VIVO la hacía depender de dónde haya quedado ese objeto
+            // (cambia con cada Generate, y una vez se movió sin querer probando el Static). FIJA
+            // con las coordenadas de MUNDO ya confirmadas varias veces por el owner -- ya no hace
+            // falta seleccionar nada para correr este botón.
+            Vector3 wp = new Vector3(135.196f, 27.9111f, 125.3751f);
+            Quaternion wr = Quaternion.Euler(0f, 88.318f, 0f);   // pose CERRADA confirmada por el owner
+            Vector3 ws = Vector3.one * 1.35f;
 
             var prev = FindByName("PuertaCasa");
             if (prev != null) Object.DestroyImmediate(prev.gameObject);
@@ -417,17 +420,28 @@ namespace FolkloreArchives.MapGen
             var gate = fresh.AddComponent<FolkloreArchives.CorralGate>();
             ApplyHouseDoorConfig(gate);
 
-            old.SetActive(false);   // la puerta combined original queda desactivada
+            // desactiva TODAS las "Door04_pr" activas que haya en la escena (el original sin
+            // arreglar -- puede haber vuelto a aparecer con un Generate, o haber quedado
+            // duplicada). Ya no depende de tener una seleccionada.
+            int deactivated = 0;
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (t == null || !t.gameObject.activeSelf) continue;
+                if (t.gameObject == fresh) continue;
+                if (t.name != "Door04_pr") continue;
+                t.gameObject.SetActive(false);
+                deactivated++;
+            }
 
             Undo.RegisterCreatedObjectUndo(fresh, "Armar puerta de la casa");
             Selection.activeGameObject = fresh;
             EditorGUIUtility.PingObject(fresh);
             Debug.Log("[Rancho] 'PuertaCasa' repuesta con el PREFAB real (Door04_pr: malla + picaporte + " +
-                      "colliders) en " + wp + ". Original " + old.name + " desactivado. Arranca CERRADA " +
-                      "con la pose que tenga al entrar a Play -- el pivote del prefab YA está en la " +
-                      "bisagra (autoral), así que si se ve entreabierta simplemente rotá 'PuertaCasa' en " +
-                      "el Editor hasta que cierre bien, ANTES de dar Play. Ajustá openDeg (+/-) en el " +
-                      "CorralGate si abre para el lado equivocado.");
+                      "colliders) en " + wp + ". " + deactivated + " 'Door04_pr' vieja(s) desactivada(s). " +
+                      "Arranca CERRADA con la pose fija de arriba -- si alguna vez se ve entreabierta, " +
+                      "rotá 'PuertaCasa' en el Editor hasta que cierre bien, ANTES de dar Play, y avisá el " +
+                      "valor nuevo para actualizar el fijo. Ajustá openDeg (+/-) en el CorralGate si abre " +
+                      "para el lado equivocado.");
         }
 
         // valores de config de la puerta de la casa (hint/lado que abre/sonido) -- separado de
