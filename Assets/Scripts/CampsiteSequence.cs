@@ -944,10 +944,21 @@ namespace FolkloreArchives
                     float t = 0f;
                     while (t < 12f && Flat2(oldLady.position, wp.pos) > 0.5f) { StepToward(oldLady, wp.pos, 2.2f); t += Time.deltaTime; yield return null; }
                 }
-                if (houseGateForLady != null) houseGateForLady.SetOpen(true);
+                // owner: "hacé que sea un poco más adelante, cuando llega a la puerta casi" -- abrir
+                // apenas ARRANCA el último tramo seguía siendo muy pronto. Ahora, como con el viejo,
+                // se dispara por DISTANCIA real al punto final (3.5m), recién cuando está cerca de
+                // verdad.
                 var last = oldLadyGreetPath[oldLadyGreetPath.Length - 1];
+                bool ladyDoorOpened = false;
                 float tl = 0f;
-                while (tl < 12f && Flat2(oldLady.position, last.pos) > 0.5f) { StepToward(oldLady, last.pos, 2.2f); tl += Time.deltaTime; yield return null; }
+                while (tl < 12f && Flat2(oldLady.position, last.pos) > 0.5f)
+                {
+                    if (houseGateForLady != null && !ladyDoorOpened && Flat2(oldLady.position, last.pos) <= 3.5f) { houseGateForLady.SetOpen(true); ladyDoorOpened = true; }
+                    StepToward(oldLady, last.pos, 2.2f);
+                    tl += Time.deltaTime;
+                    yield return null;
+                }
+                if (houseGateForLady != null && !ladyDoorOpened) houseGateForLady.SetOpen(true);   // por si ya arrancó cerca
                 PlaceStandingYaw(oldLady, last.pos, last.yaw);
             }
             yield return SayFor("Buenas... mucho gusto. ¿Qué necesitan, chicos?", 3.2f);
