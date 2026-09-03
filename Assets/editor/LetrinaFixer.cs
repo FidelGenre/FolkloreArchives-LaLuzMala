@@ -1,13 +1,15 @@
 // ============================================================
 //  FOLKLORE ARCHIVES - LA LUZ MALA
 //  LetrinaFixer.cs — repone una LETRINA "fresca" (sin static-batch)
-//  del FBX original de la granja, en el MISMO lugar donde el owner
-//  dejó la letrina rota. La letrina de la escena quedó como
-//  "Combined Mesh (root: scene)": al moverla se rompe/deja de
-//  texturizar porque sus vértices están horneados en el batch. Este
-//  botón instancia una copia limpia y le re-aplica los materiales URP
-//  (por nombre) del objeto viejo, así queda con textura y se puede
-//  mover libremente.
+//  del FBX original de la granja, en LetrinaAnchorPos (posición de MUNDO
+//  fija, confirmada por el owner con TEST_PLAYER -- NO se lee de las
+//  piezas "letrina*" que deja AbandonedFarmBuilder, esos números NO son
+//  estables entre Generate y Generate, ver el bug "me pusiste la letrina
+//  en otro lugar"). La letrina de la escena queda como "Combined Mesh
+//  (root: scene)": al moverla se rompe/deja de texturizar porque sus
+//  vértices están horneados en el batch. Este botón instancia una copia
+//  limpia y le re-aplica los materiales URP (por nombre) del objeto
+//  viejo, así queda con textura y se puede mover libremente.
 //
 //  USO: Folklore ▸ Reponer letrina (fresca con texturas) -- ya NO hace falta
 //       seleccionar nada: busca sola las piezas "letrina*" activas en la
@@ -26,6 +28,13 @@ namespace FolkloreArchives.MapGen
     public static class LetrinaFixer
     {
         const string Fbx = "Assets/ExternalAssets/AbandonedFarm/AbandonedFarm.fbx";
+
+        // owner: "me pusiste la letrina en otro lugar completamente distinto" -- calcular el
+        // ancla desde la posición de las piezas "letrina*" que deja la granja recién instanciada
+        // era exactamente el bug que YA estaba documentado en CampsiteSequence.cs (esos números
+        // NO son estables entre Generate y Generate). FIJA con la posición de MUNDO confirmada
+        // por el owner (TEST_PLAYER parado ahí) -- mismo criterio que houseDoorPos/ranchoViejoPos.
+        static readonly Vector3 LetrinaAnchorPos = new Vector3(93.96023f, 27.17502f, 137.0582f);
 
         [MenuItem("Folklore/Reponer letrina (fresca con texturas)")]
         static void ReplaceLetrinaMenu() => ReplaceLetrinaInternal(interactive: true);
@@ -54,16 +63,9 @@ namespace FolkloreArchives.MapGen
                 return;
             }
 
-            // posición ancla: centro por bounds de TODAS las piezas viejas (reemplaza la vieja
-            // dependencia de "la posición del objeto seleccionado")
-            Bounds? oldBb = null;
-            foreach (var p in old)
-            {
-                var rr = p.GetComponent<Renderer>();
-                if (rr == null) continue;
-                if (oldBb == null) oldBb = rr.bounds; else { var b = oldBb.Value; b.Encapsulate(rr.bounds); oldBb = b; }
-            }
-            Vector3 wp = oldBb.HasValue ? oldBb.Value.center : old[0].position;
+            // posición ancla: FIJA (LetrinaAnchorPos, ver arriba) -- NO se lee de las piezas
+            // viejas, esos números no son estables entre Generates.
+            Vector3 wp = LetrinaAnchorPos;
 
             // 2) materiales URP correctos (por nombre) de las piezas viejas — para no quedar en magenta
             var mats = new Dictionary<string, Material>();
