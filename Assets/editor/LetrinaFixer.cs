@@ -43,6 +43,17 @@ namespace FolkloreArchives.MapGen
         // llamada automática desde Generate (solo logs, nunca bloquea con un diálogo).
         public static void ReplaceLetrinaInternal(bool interactive)
         {
+            // 0) owner: "letrina.007 no tiene CorralGate" -- cada corrida vieja de este método
+            // dejaba su "Letrina_Fresca" DESACTIVADO pero nunca lo destruía (a diferencia de
+            // PuertaCasa/TranqueraCorral, que sí se destruyen antes de rehacerse). Con varios
+            // Generates quedaban VARIOS objetos con el mismo nombre "Letrina_Fresca" (uno activo,
+            // el resto viejos desactivados) -- y FindByName("Letrina_Fresca") en
+            // BuildLetrinaDoorInternal podía agarrar uno viejo por error, colgando el CorralGate
+            // en un objeto que no es el que se ve en pantalla. Destruimos TODOS los viejos acá.
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (t != null && t.name == "Letrina_Fresca")
+                    Object.DestroyImmediate(t.gameObject);
+
             // 1) juntar las piezas VIEJAS "letrina*" activas en la escena -- ya no depende de
             // selección: son las que dejó AbandonedFarmBuilder (Combined Mesh) o, si esto ya se
             // corrió antes en esta sesión, cualquier resto que haya quedado activo.
