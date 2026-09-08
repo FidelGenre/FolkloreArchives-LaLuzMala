@@ -32,9 +32,14 @@ namespace FolkloreArchives.MapGen
         // owner: "me pusiste la letrina en otro lugar completamente distinto" -- calcular el
         // ancla desde la posición de las piezas "letrina*" que deja la granja recién instanciada
         // era exactamente el bug que YA estaba documentado en CampsiteSequence.cs (esos números
-        // NO son estables entre Generate y Generate). FIJA con la posición de MUNDO confirmada
-        // por el owner (TEST_PLAYER parado ahí) -- mismo criterio que houseDoorPos/ranchoViejoPos.
-        static readonly Vector3 LetrinaAnchorPos = new Vector3(93.96023f, 27.17502f, 137.0582f);
+        // NO son estables entre Generate y Generate). FIJA con la posición/rotación de MUNDO
+        // confirmada por el owner -- mismo criterio que houseDoorPos/ranchoViejoPos. Ajustada de
+        // nuevo por el owner ("esas posiciones que te envie son las que quiero", corrigiendo que
+        // quedaba clavada contra el granero): estos valores son los del GRUPO entero
+        // ("Letrina_Fresca"), no de una pieza individual -- ya no se alinea por la puerta, se
+        // pone el grupo directo en esta posición/rotación.
+        static readonly Vector3 LetrinaAnchorPos = new Vector3(93.202f, 29.185f, 137.6882f);
+        const float LetrinaAnchorYaw = -4.809f;
 
         [MenuItem("Folklore/Reponer letrina (fresca con texturas)")]
         static void ReplaceLetrinaMenu() => ReplaceLetrinaInternal(interactive: true);
@@ -73,10 +78,6 @@ namespace FolkloreArchives.MapGen
                     Debug.Log("[Letrina] Auto: no hay piezas 'letrina*' activas para reponer (¿ya está reemplazada?).");
                 return;
             }
-
-            // posición ancla: FIJA (LetrinaAnchorPos, ver arriba) -- NO se lee de las piezas
-            // viejas, esos números no son estables entre Generates.
-            Vector3 wp = LetrinaAnchorPos;
 
             // 2) materiales URP correctos (por nombre) de las piezas viejas — para no quedar en magenta
             var mats = new Dictionary<string, Material>();
@@ -121,17 +122,6 @@ namespace FolkloreArchives.MapGen
             }
             Vector3 anchor = bb.HasValue ? bb.Value.center : pieces[0].position;
 
-            // owner: "la dejaste enterrada" -- alinear por el CENTRO del bounds (altura media de
-            // toda la estructura, techo+paredes) contra LetrinaAnchorPos (altura de los PIES del
-            // TEST_PLAYER, a nivel de piso) hundía todo el grupo esa diferencia de altura. La
-            // referencia correcta es la PUERTA ("letrina.007") -- es lo que el owner tenía al
-            // lado parado en el piso -- así que alineamos ESA pieza puntual contra wp, no el
-            // centro del bounds. El resto de las piezas se mueve rígido con ella (mismo layout).
-            Transform doorPiece = null;
-            foreach (var p in pieces)
-                if (p.name.Equals("letrina.007", System.StringComparison.OrdinalIgnoreCase)) { doorPiece = p; break; }
-            Vector3 refPos = doorPiece != null ? doorPiece.position : anchor;
-
             // grupo nuevo en el anchor; metemos las piezas manteniendo su layout (worldPositionStays)
             var group = new GameObject("Letrina_Fresca");
             group.transform.position = anchor;
@@ -140,8 +130,13 @@ namespace FolkloreArchives.MapGen
 
             Object.DestroyImmediate(farm);   // tiramos el resto de la granja
 
-            // 5) mover el grupo entero para que la PUERTA (no el centro del bounds) quede en wp
-            group.transform.position += (wp - refPos);
+            // 5) owner: "esas posiciones que te envie son las que quiero" -- posición/rotación
+            // del GRUPO ENTERO fijas en LetrinaAnchorPos/LetrinaAnchorYaw (ver arriba), en vez de
+            // alinear por una pieza puntual. Las piezas ya están adentro del grupo con su layout
+            // relativo intacto (paso anterior), así que esto las mueve/rota todas juntas, rígido.
+            group.transform.position = LetrinaAnchorPos;
+            group.transform.rotation = Quaternion.Euler(0f, LetrinaAnchorYaw, 0f);
+            Vector3 wp = LetrinaAnchorPos;
 
             // 6) re-aplicar los materiales URP por nombre (evita magenta si el FBX trae built-in)
             foreach (var r in group.GetComponentsInChildren<Renderer>(true))
