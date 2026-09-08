@@ -41,6 +41,14 @@ namespace FolkloreArchives.MapGen
         static readonly Vector3 LetrinaAnchorPos = new Vector3(93.202f, 29.185f, 137.6882f);
         const float LetrinaAnchorYaw = -4.809f;
 
+        // owner: "asi es como deberia aparecer la puerta letrina... porque ahora esta apareciendo
+        // abierta" -- pose LOCAL (dentro de Letrina_Fresca) de la pieza de la puerta, CERRADA,
+        // confirmada por el owner. Se fuerza directo sobre "letrina.007" después de armar el
+        // grupo, sin depender de qué rotación relativa haya traído el FBX -- CorralGate graba
+        // ESTA pose como "cerrada" al entrar a Play.
+        static readonly Vector3 LetrinaDoorLocalPos = new Vector3(-0.992f, -1.410509f, -0.62f);
+        static readonly Quaternion LetrinaDoorLocalRot = Quaternion.Euler(-90.137f, 4.798996f, -96.54599f);
+
         [MenuItem("Folklore/Reponer letrina (fresca con texturas)")]
         static void ReplaceLetrinaMenu() => ReplaceLetrinaInternal(interactive: true);
 
@@ -137,6 +145,17 @@ namespace FolkloreArchives.MapGen
             group.transform.position = LetrinaAnchorPos;
             group.transform.rotation = Quaternion.Euler(0f, LetrinaAnchorYaw, 0f);
             Vector3 wp = LetrinaAnchorPos;
+
+            // 5b) owner: "ahora esta apareciendo abierta" -- forzar la pose LOCAL de la puerta
+            // (letrina.007) a la que el owner confirmó como CERRADA, sin importar qué relación
+            // haya traído el FBX contra el resto de las piezas.
+            foreach (var t in pieces)
+                if (t.name.Equals("letrina.007", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    t.localPosition = LetrinaDoorLocalPos;
+                    t.localRotation = LetrinaDoorLocalRot;
+                    break;
+                }
 
             // 6) re-aplicar los materiales URP por nombre (evita magenta si el FBX trae built-in)
             foreach (var r in group.GetComponentsInChildren<Renderer>(true))
