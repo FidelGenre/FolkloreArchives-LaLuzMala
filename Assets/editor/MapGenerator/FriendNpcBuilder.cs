@@ -119,7 +119,11 @@ namespace FolkloreArchives.MapGen
             // asiento que nunca tuvo un amigo decorativo antes (sin precedente) -- sin
             // override, cae al fallback de la fórmula (seat - SeatRootOffset). Va a
             // necesitar el mismo ajuste en vivo que todos los demás asientos.
-            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.4f, -4.5f,  3.0f, 100f, MaleCasualLimbs),
+            // owner: "el male green y el otro male necesito que sean un poco mas
+            // altos que el personaje principal" -- el jugador (TEST_PLAYER) mide
+            // 2.4m (mismo valor que compartían los 3 amigos). Subido a 2.55m (~6%
+            // más) para los dos varones nomás -- Friend_FemaleSec queda en 2.4.
+            new FriendDef("Friend_MaleCasual",   Dir + "MaleCasual/male_casual.fbx",           Dir + "MaleCasual/man_tex.png",           2.55f, -4.5f,  3.0f, 100f, MaleCasualLimbs),
             // al costado norte de la ruta, mirando hacia el auto (+X)
             // owner: "tiene las piernas alrevez" sentado -- rig Mixamo, eje del muslo
             // orientado al revés que el de Vinrax. Ángulo +55 sigue siendo válido (es
@@ -129,7 +133,7 @@ namespace FolkloreArchives.MapGen
             // de la propia (que era de rearLeft, donde ahora se sienta el jugador real
             // -- de ahí "encima del malegreen"). Sigue siendo una aproximación, no
             // ajustada en vivo para ESTE personaje en ESTE asiento todavía.
-            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.4f, -5.0f, -3.0f,  80f, MixamoLimbs)
+            new FriendDef("Friend_MaleGreenJkt", Dir + "MaleGreenJacket/BlackMan_W_Mullet.fbx", Dir + "MaleGreenJacket/BMMtxt.png",        2.55f, -5.0f, -3.0f,  80f, MixamoLimbs)
                 { seatPosOverride = new Vector3(0.6090f, -0.1883f, -0.7f), seatedThighAngleOverride = 55f, seatedModelDropOverride = -0.5f },
             // un poco más atrás, entre los otros dos, mirando hacia el auto (+X) --
             // owner: "descargue esa chica descomprimila y reemplazala por la que ya
