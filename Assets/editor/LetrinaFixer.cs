@@ -141,6 +141,21 @@ namespace FolkloreArchives.MapGen
                 if (changed) r.sharedMaterials = src;
             }
 
+            // 6b) owner: "no me esta dando la opcion... esta para atras atravezando" -- la granja
+            // ORIGINAL le agrega un MeshCollider a cada pieza en AbandonedFarmBuilder.AddColliders
+            // (para no atravesarla), pero esta copia fresca se instancia APARTE (una segunda copia
+            // del FBX, ver arriba) y nunca pasa por ese paso -- quedaba sin colisión. Mismo criterio:
+            // MeshCollider por pieza con malla, si no tiene ya uno.
+            int colliders = 0;
+            foreach (var mf in group.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (mf.sharedMesh == null) continue;
+                if (mf.GetComponent<Collider>() != null) continue;
+                var mc = mf.gameObject.AddComponent<MeshCollider>();
+                mc.sharedMesh = mf.sharedMesh;
+                colliders++;
+            }
+
             // 7) apagamos TODAS las piezas "letrina*" viejas que sigan activas (antes solo apagaba
             // la seleccionada -- si se corría esto con OTRA pieza seleccionada, el resto de las
             // viejas quedaban activas superpuestas con las frescas, causando duplicados confusos:
@@ -155,8 +170,8 @@ namespace FolkloreArchives.MapGen
                 deactivated++;
             }
 
-            Debug.Log("[Letrina] Repuesta 'Letrina_Fresca' (" + pieces.Count + " piezas) en " + wp +
-                      ". " + deactivated + " pieza(s) 'letrina*' vieja(s) quedaron DESACTIVADAS.");
+            Debug.Log("[Letrina] Repuesta 'Letrina_Fresca' (" + pieces.Count + " piezas, " + colliders +
+                      " colliders) en " + wp + ". " + deactivated + " pieza(s) 'letrina*' vieja(s) quedaron DESACTIVADAS.");
 
             if (!interactive) return;   // el resto (Undo/Selection) es solo para el botón manual
 
