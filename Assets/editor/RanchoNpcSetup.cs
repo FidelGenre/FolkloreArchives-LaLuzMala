@@ -244,15 +244,21 @@ namespace FolkloreArchives.MapGen
 
         // owner: "no esta apareciendo la tranquera... sigue sin aparecer" -- mismo bug que ya
         // tuvo la letrina: Cube.184 (nombre auto-generado por Unity al importar el FBX) NO es
-        // estable como referencia de POSICIÓN entre Generates -- salió armada a 60+ unidades de
-        // 'corralGateStand' (donde el owner ya tenía confirmado que había que pararse para
-        // abrirla). FIJA con la posición de MUNDO confirmada por el owner (TEST_PLAYER parado en
-        // el hueco de la tranquera) -- mismo criterio que houseDoorPos/LetrinaAnchorPos. La
-        // ROTACIÓN del panel sigue saliendo de la FORMA de Cube.184 (longDir, ver BuildGateInternal
-        // más abajo) -- usar el yaw del TEST_PLAYER ahí dejaba el panel de canto, casi invisible.
-        // Cube.184 se sigue usando para el tamaño (ancho del hueco a cubrir) y para la forma, no
-        // para dónde ponerla.
+        // estable como referencia entre Generates -- salió armada a 60+ unidades de
+        // 'corralGateStand', y después "diminuta y de lado" (su TAMAÑO y FORMA tampoco son de
+        // fiar -- probablemente ya ni es el mismo objeto). FIJA con la posición de MUNDO
+        // confirmada por el owner (TEST_PLAYER parado en el hueco de la tranquera) -- mismo
+        // criterio que houseDoorPos/LetrinaAnchorPos. Cube.184 ya NO se usa para tamaño ni forma
+        // -- solo para encontrar y desactivar la pieza combinada vieja (ver BuildGateInternal).
         static readonly Vector3 GateAnchorPos = new Vector3(115.6252f, 26.95807f, 150.5241f);
+        // yaw confirmado por el owner con TEST_PLAYER (dirección real hacia la que debe mirar la
+        // tranquera) -- FenceYawTweak-style: 'axisYawFix' (más abajo, calculado del mesh CRUDO
+        // del propio asset, no de Cube.184) corrige si el largo del mesh viene en X o en Z.
+        const float GateAnchorYaw = -99.555f;
+        // altura real objetivo del panel -- mismo criterio que FenceBuilder.FenceTargetHeight
+        // (1.2m para la valla baja): una tranquera de campo ronda 1.2-1.5m. Ajustable si al
+        // verla en el Editor queda chica/grande.
+        const float GateTargetHeight = 1.3f;
 
         [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
         static void BuildGate() => BuildGateInternal(interactive: true);
@@ -279,20 +285,9 @@ namespace FolkloreArchives.MapGen
                 return;
             }
 
-            // tamaño Y FORMA de Cube.184 (Renderer.bounds -- confiable pese al Combined Mesh) para
-            // escalar el ancho del panel Y para orientarlo (longDir: hacia dónde mira el lado
-            // ANCHO del panel, no el angosto -- si no, queda de canto y prácticamente invisible).
-            // La forma no depende de si la POSICIÓN de Cube.184 está mal (ese es un problema de
-            // TRASLACIÓN, no de aspecto), así que se puede seguir usando para esto aunque la
-            // posición/pivote salga fijo de GateAnchorPos (ver arriba -- Cube.184 no es estable
-            // como referencia de posición entre Generates, mismo bug que ya tuvo la letrina).
-            Bounds wb = rend.bounds;
-            Vector3 s = wb.size;
-            bool longX = s.x >= s.z;
-            float length = longX ? s.x : s.z;
-            Vector3 longDir = longX ? Vector3.right : Vector3.forward;
+            // Cube.184 ya solo se usa para confirmar que hay algo que desactivar al final (ver
+            // 'sel' más abajo) -- ni su tamaño ni su forma se usan más (ver arriba).
             Vector3 hinge = GateAnchorPos;
-            Quaternion gateRot = Quaternion.LookRotation(longDir, Vector3.up);   // GateAnchorYaw NO se usa para esto -- dejaba el panel de canto (casi invisible)
 
             AssetDatabase.Refresh();
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraAssetFbx);
@@ -331,19 +326,30 @@ namespace FolkloreArchives.MapGen
             var instRends = inst.GetComponentsInChildren<Renderer>();
             if (instRends.Length == 0)
                 Debug.LogWarning("[Rancho] wooden_fence_closed no tiene Renderers -- ¿el FBX importó bien?");
+
+            // owner: "esta diminuto y de lado" -- escalar contra Cube.184 (tamaño Y forma de un
+            // objeto que ya demostró no ser confiable) daba un panel minúsculo mal orientado.
+            // Mismo criterio ROBUSTO que FenceBuilder.cs (las vallas que SÍ se ven bien en el
+            // mapa): medir los bounds CRUDOS del propio asset (sin escalar) y escalar uniforme
+            // para que la ALTURA quede en GateTargetHeight -- no depende de ningún otro objeto.
             float scaleFactor = 1f;
+            float axisYawFix = 0f;
             if (instRends.Length > 0)
             {
-                Bounds ib = instRends[0].bounds;
-                for (int i = 1; i < instRends.Length; i++) ib.Encapsulate(instRends[i].bounds);
-                float assetWidth = Mathf.Max(ib.size.x, ib.size.z);
-                if (assetWidth > 0.001f) scaleFactor = length / assetWidth;
-                scaleFactor = Mathf.Clamp(scaleFactor, 0.05f, 20f);
+                Bounds raw = instRends[0].bounds;
+                for (int i = 1; i < instRends.Length; i++) raw.Encapsulate(instRends[i].bounds);
+                scaleFactor = GateTargetHeight / Mathf.Max(0.001f, raw.size.y);
+                scaleFactor = Mathf.Clamp(scaleFactor, 0.02f, 50f);
+                // eje horizontal más largo del mesh CRUDO (auto-detecta si el FBX exportó el
+                // ancho del panel en X o en Z) -- mismo ajuste que FenceBuilder.axisYawFix, si no
+                // el panel queda de canto en vez de a lo ancho del hueco.
+                axisYawFix = raw.size.x >= raw.size.z ? 0f : 90f;
             }
             inst.transform.localScale = Vector3.one * scaleFactor;
-            // parado derecho, mirando 'longDir' (forma de Cube.184) -- NUNCA copiar la rotación
-            // del original, y NUNCA usar GateAnchorYaw acá (panel de canto, casi invisible).
-            inst.transform.rotation = gateRot;
+            // parado derecho, mirando GateAnchorYaw (dirección real confirmada por el owner con
+            // TEST_PLAYER) + axisYawFix (corrige el eje del mesh CRUDO, ver arriba) -- NUNCA
+            // copiar la rotación del original ni usar la forma de Cube.184 para esto.
+            inst.transform.rotation = Quaternion.Euler(0f, GateAnchorYaw + axisYawFix, 0f);
 
             // centrar por bounds REALES (después de escalar/rotar) en el ancla fija -- compensa
             // un pivote de asset que no esté en el centro geométrico.
