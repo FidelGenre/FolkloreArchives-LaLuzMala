@@ -219,16 +219,20 @@ namespace FolkloreArchives.MapGen
 
         // owner: "ni el asset real, está con esto procedural" -- retomamos wooden_fence_closed.fbx,
         // esta vez con TODO lo aprendido del intento anterior:
-        //  - TAMAÑO (ancho del panel) se lee de Cube.184 con Renderer.bounds en ejes de MUNDO
-        //    (confiable pese al Combined Mesh) -- NUNCA sel.transform.rotation/right/forward (no
-        //    son confiables para este objeto, ver el bug del bloque deformado más abajo). La
-        //    POSICIÓN/ROTACIÓN NO salen de Cube.184 (ver GateAnchorPos/GateAnchorYaw, ancla FIJA
-        //    confirmada por el owner con TEST_PLAYER -- Cube.184 no es estable como referencia de
-        //    posición entre Generates, salió armada a 60+ unidades de donde debía).
+        //  - TAMAÑO y FORMA (ancho vs. profundidad, para saber hacia dónde debe MIRAR el panel)
+        //    se leen de Cube.184 con Renderer.bounds en ejes de MUNDO (confiable pese al Combined
+        //    Mesh) -- NUNCA sel.transform.rotation/right/forward (no son confiables para este
+        //    objeto, ver el bug del bloque deformado más abajo). La POSICIÓN (dónde queda parado
+        //    el panel en el mapa) NO sale de Cube.184 (ver GateAnchorPos, ancla FIJA confirmada
+        //    por el owner con TEST_PLAYER -- Cube.184 no es estable como referencia de POSICIÓN
+        //    entre Generates, salió armada a 60+ unidades de donde debía; su FORMA sí sigue
+        //    siendo válida para orientar, eso es traslación-independiente).
         //  - el asset se reinstancia fresco (AssetDatabase.Refresh -- nunca se había cargado antes),
         //    se desempaqueta y se le saca el Static que trae de fábrica (si no, se re-batchea al
         //    entrar a Play y queda invisible/roto, mismo bug que tuvo la puerta de la casa).
-        //  - rotación FORZADA a GateAnchorYaw (nunca copiada del original).
+        //  - rotación FORZADA parada y mirando 'longDir' (nunca copiada del original ni de
+        //    GateAnchorYaw -- usar la rotación del jugador dejaba el panel DE CANTO, casi
+        //    invisible).
         //  - centrado por bounds reales DESPUÉS de escalar/rotar, contra GateAnchorPos (compensa
         //    que el pivote del asset no esté en su centro geométrico).
         //  - material de madera YA PROBADO (el mismo de las vallas de los caminos), no el que trae
@@ -242,12 +246,13 @@ namespace FolkloreArchives.MapGen
         // tuvo la letrina: Cube.184 (nombre auto-generado por Unity al importar el FBX) NO es
         // estable como referencia de POSICIÓN entre Generates -- salió armada a 60+ unidades de
         // 'corralGateStand' (donde el owner ya tenía confirmado que había que pararse para
-        // abrirla). FIJA con la posición/rotación de MUNDO confirmada por el owner (TEST_PLAYER
-        // parado en el hueco de la tranquera) -- mismo criterio que houseDoorPos/LetrinaAnchorPos.
-        // Cube.184 se sigue usando SOLO para el tamaño (ancho del hueco a cubrir), no para dónde
-        // ponerla.
+        // abrirla). FIJA con la posición de MUNDO confirmada por el owner (TEST_PLAYER parado en
+        // el hueco de la tranquera) -- mismo criterio que houseDoorPos/LetrinaAnchorPos. La
+        // ROTACIÓN del panel sigue saliendo de la FORMA de Cube.184 (longDir, ver BuildGateInternal
+        // más abajo) -- usar el yaw del TEST_PLAYER ahí dejaba el panel de canto, casi invisible.
+        // Cube.184 se sigue usando para el tamaño (ancho del hueco a cubrir) y para la forma, no
+        // para dónde ponerla.
         static readonly Vector3 GateAnchorPos = new Vector3(115.6252f, 26.95807f, 150.5241f);
-        const float GateAnchorYaw = -99.555f;
 
         [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
         static void BuildGate() => BuildGateInternal(interactive: true);
@@ -274,15 +279,20 @@ namespace FolkloreArchives.MapGen
                 return;
             }
 
-            // tamaño de Cube.184 (Renderer.bounds -- confiable pese al Combined Mesh) SOLO para
-            // escalar el ancho del panel. La POSICIÓN/ROTACIÓN ya no salen de acá (ver
-            // GateAnchorPos/GateAnchorYaw arriba -- Cube.184 no es estable como referencia de
-            // posición entre Generates, mismo bug que ya tuvo la letrina).
+            // tamaño Y FORMA de Cube.184 (Renderer.bounds -- confiable pese al Combined Mesh) para
+            // escalar el ancho del panel Y para orientarlo (longDir: hacia dónde mira el lado
+            // ANCHO del panel, no el angosto -- si no, queda de canto y prácticamente invisible).
+            // La forma no depende de si la POSICIÓN de Cube.184 está mal (ese es un problema de
+            // TRASLACIÓN, no de aspecto), así que se puede seguir usando para esto aunque la
+            // posición/pivote salga fijo de GateAnchorPos (ver arriba -- Cube.184 no es estable
+            // como referencia de posición entre Generates, mismo bug que ya tuvo la letrina).
             Bounds wb = rend.bounds;
             Vector3 s = wb.size;
-            float length = Mathf.Max(s.x, s.z);
+            bool longX = s.x >= s.z;
+            float length = longX ? s.x : s.z;
+            Vector3 longDir = longX ? Vector3.right : Vector3.forward;
             Vector3 hinge = GateAnchorPos;
-            Quaternion gateRot = Quaternion.Euler(0f, GateAnchorYaw, 0f);
+            Quaternion gateRot = Quaternion.LookRotation(longDir, Vector3.up);   // GateAnchorYaw NO se usa para esto -- dejaba el panel de canto (casi invisible)
 
             AssetDatabase.Refresh();
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraAssetFbx);
@@ -331,7 +341,8 @@ namespace FolkloreArchives.MapGen
                 scaleFactor = Mathf.Clamp(scaleFactor, 0.05f, 20f);
             }
             inst.transform.localScale = Vector3.one * scaleFactor;
-            // parado derecho, mirando GateAnchorYaw -- NUNCA copiar la rotación del original.
+            // parado derecho, mirando 'longDir' (forma de Cube.184) -- NUNCA copiar la rotación
+            // del original, y NUNCA usar GateAnchorYaw acá (panel de canto, casi invisible).
             inst.transform.rotation = gateRot;
 
             // centrar por bounds REALES (después de escalar/rotar) en el ancla fija -- compensa
