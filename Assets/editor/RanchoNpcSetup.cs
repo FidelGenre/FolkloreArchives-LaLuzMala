@@ -688,9 +688,20 @@ namespace FolkloreArchives.MapGen
 
         public static void EnsureAllRanchoDoors(bool interactive)
         {
-            BuildHouseDoorInternal(interactive: false);
-            BuildLetrinaDoorInternal(interactive: false);
-            BuildGateInternal(interactive: false);
+            // owner: "no esta apareciendo la tranquera del corral" -- las 3 llamadas corrían en
+            // secuencia SIN try/catch: si la de la casa o la de la letrina tiraba una excepción
+            // (por lo que sea, un Generate con la granja en un estado raro, etc.), la de la
+            // tranquera NUNCA llegaba a ejecutarse. Cada una ahora es independiente: si una
+            // falla, se loguea el error completo y se sigue con las demás.
+            try { BuildHouseDoorInternal(interactive: false); }
+            catch (System.Exception e) { Debug.LogError("[Rancho] EnsureAllRanchoDoors: falló la puerta de la casa -- " + e); }
+
+            try { BuildLetrinaDoorInternal(interactive: false); }
+            catch (System.Exception e) { Debug.LogError("[Rancho] EnsureAllRanchoDoors: falló la puerta de la letrina -- " + e); }
+
+            try { BuildGateInternal(interactive: false); }
+            catch (System.Exception e) { Debug.LogError("[Rancho] EnsureAllRanchoDoors: falló la tranquera del corral -- " + e); }
+
             Debug.Log("[Rancho] EnsureAllRanchoDoors: casa + letrina + tranquera listas.");
             if (interactive) EditorUtility.DisplayDialog("Puertas del rancho", "Casa, letrina y tranquera listas y abribles.", "OK");
         }
