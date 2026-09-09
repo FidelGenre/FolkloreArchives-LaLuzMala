@@ -219,21 +219,35 @@ namespace FolkloreArchives.MapGen
 
         // owner: "ni el asset real, está con esto procedural" -- retomamos wooden_fence_closed.fbx,
         // esta vez con TODO lo aprendido del intento anterior:
-        //  - tamaño/posición se leen de Cube.184 con Renderer.bounds en ejes de MUNDO (confiable
-        //    incluso siendo Combined Mesh) -- NUNCA sel.transform.rotation/right/forward (no son
-        //    confiables para este objeto, ver el bug del bloque deformado más arriba).
+        //  - TAMAÑO (ancho del panel) se lee de Cube.184 con Renderer.bounds en ejes de MUNDO
+        //    (confiable pese al Combined Mesh) -- NUNCA sel.transform.rotation/right/forward (no
+        //    son confiables para este objeto, ver el bug del bloque deformado más abajo). La
+        //    POSICIÓN/ROTACIÓN NO salen de Cube.184 (ver GateAnchorPos/GateAnchorYaw, ancla FIJA
+        //    confirmada por el owner con TEST_PLAYER -- Cube.184 no es estable como referencia de
+        //    posición entre Generates, salió armada a 60+ unidades de donde debía).
         //  - el asset se reinstancia fresco (AssetDatabase.Refresh -- nunca se había cargado antes),
         //    se desempaqueta y se le saca el Static que trae de fábrica (si no, se re-batchea al
         //    entrar a Play y queda invisible/roto, mismo bug que tuvo la puerta de la casa).
-        //  - rotación FORZADA parada y mirando 'longDir' (nunca copiada del original).
-        //  - centrado por bounds reales DESPUÉS de escalar/rotar (compensa que el pivote del asset
-        //    no esté en su centro geométrico).
+        //  - rotación FORZADA a GateAnchorYaw (nunca copiada del original).
+        //  - centrado por bounds reales DESPUÉS de escalar/rotar, contra GateAnchorPos (compensa
+        //    que el pivote del asset no esté en su centro geométrico).
         //  - material de madera YA PROBADO (el mismo de las vallas de los caminos), no el que trae
         //    el FBX (salía negro/roto).
         const string TranqueraAssetFbx = "Assets/ExternalAssets/WoodenFence/models/wooden_fence_closed.fbx";
         const string TranqueraAssetTex = "Assets/ExternalAssets/WoodenFence/textures/low_wooden_wall.jpg";
 
         const string GatePieceName = "Cube.184";
+
+        // owner: "no esta apareciendo la tranquera... sigue sin aparecer" -- mismo bug que ya
+        // tuvo la letrina: Cube.184 (nombre auto-generado por Unity al importar el FBX) NO es
+        // estable como referencia de POSICIÓN entre Generates -- salió armada a 60+ unidades de
+        // 'corralGateStand' (donde el owner ya tenía confirmado que había que pararse para
+        // abrirla). FIJA con la posición/rotación de MUNDO confirmada por el owner (TEST_PLAYER
+        // parado en el hueco de la tranquera) -- mismo criterio que houseDoorPos/LetrinaAnchorPos.
+        // Cube.184 se sigue usando SOLO para el tamaño (ancho del hueco a cubrir), no para dónde
+        // ponerla.
+        static readonly Vector3 GateAnchorPos = new Vector3(115.6252f, 26.95807f, 150.5241f);
+        const float GateAnchorYaw = -99.555f;
 
         [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
         static void BuildGate() => BuildGateInternal(interactive: true);
@@ -260,15 +274,15 @@ namespace FolkloreArchives.MapGen
                 return;
             }
 
-            // tamaño/posición REALES en ejes de MUNDO (Renderer.bounds -- confiable pese al
-            // Combined Mesh). NO usar sel.transform.rotation/right/forward para nada acá.
+            // tamaño de Cube.184 (Renderer.bounds -- confiable pese al Combined Mesh) SOLO para
+            // escalar el ancho del panel. La POSICIÓN/ROTACIÓN ya no salen de acá (ver
+            // GateAnchorPos/GateAnchorYaw arriba -- Cube.184 no es estable como referencia de
+            // posición entre Generates, mismo bug que ya tuvo la letrina).
             Bounds wb = rend.bounds;
-            Vector3 c = wb.center;
             Vector3 s = wb.size;
-            bool longX = s.x >= s.z;
-            float length = longX ? s.x : s.z;
-            Vector3 longDir = longX ? Vector3.right : Vector3.forward;
-            Vector3 hinge = c - longDir * (length * 0.5f);
+            float length = Mathf.Max(s.x, s.z);
+            Vector3 hinge = GateAnchorPos;
+            Quaternion gateRot = Quaternion.Euler(0f, GateAnchorYaw, 0f);
 
             AssetDatabase.Refresh();
             var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraAssetFbx);
@@ -317,20 +331,20 @@ namespace FolkloreArchives.MapGen
                 scaleFactor = Mathf.Clamp(scaleFactor, 0.05f, 20f);
             }
             inst.transform.localScale = Vector3.one * scaleFactor;
-            // parado derecho, mirando la dirección larga -- NUNCA copiar la rotación del original.
-            inst.transform.rotation = Quaternion.LookRotation(longDir, Vector3.up);
+            // parado derecho, mirando GateAnchorYaw -- NUNCA copiar la rotación del original.
+            inst.transform.rotation = gateRot;
 
-            // centrar por bounds REALES (después de escalar/rotar) -- compensa un pivote de asset
-            // que no esté en el centro geométrico.
+            // centrar por bounds REALES (después de escalar/rotar) en el ancla fija -- compensa
+            // un pivote de asset que no esté en el centro geométrico.
             if (instRends.Length > 0)
             {
                 Bounds ib2 = instRends[0].bounds;
                 for (int i = 1; i < instRends.Length; i++) ib2.Encapsulate(instRends[i].bounds);
-                inst.transform.position += (c - ib2.center);
+                inst.transform.position += (hinge - ib2.center);
             }
             else
             {
-                inst.transform.position = c;
+                inst.transform.position = hinge;
             }
 
             // material de madera YA PROBADO (el del FBX podía salir negro/roto).
