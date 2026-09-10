@@ -217,48 +217,26 @@ namespace FolkloreArchives.MapGen
             return pivot;
         }
 
-        // owner: "ni el asset real, está con esto procedural" -- retomamos wooden_fence_closed.fbx,
-        // esta vez con TODO lo aprendido del intento anterior:
-        //  - TAMAÑO y FORMA (ancho vs. profundidad, para saber hacia dónde debe MIRAR el panel)
-        //    se leen de Cube.184 con Renderer.bounds en ejes de MUNDO (confiable pese al Combined
-        //    Mesh) -- NUNCA sel.transform.rotation/right/forward (no son confiables para este
-        //    objeto, ver el bug del bloque deformado más abajo). La POSICIÓN (dónde queda parado
-        //    el panel en el mapa) NO sale de Cube.184 (ver GateAnchorPos, ancla FIJA confirmada
-        //    por el owner con TEST_PLAYER -- Cube.184 no es estable como referencia de POSICIÓN
-        //    entre Generates, salió armada a 60+ unidades de donde debía; su FORMA sí sigue
-        //    siendo válida para orientar, eso es traslación-independiente).
-        //  - el asset se reinstancia fresco (AssetDatabase.Refresh -- nunca se había cargado antes),
-        //    se desempaqueta y se le saca el Static que trae de fábrica (si no, se re-batchea al
-        //    entrar a Play y queda invisible/roto, mismo bug que tuvo la puerta de la casa).
-        //  - rotación FORZADA parada y mirando 'longDir' (nunca copiada del original ni de
-        //    GateAnchorYaw -- usar la rotación del jugador dejaba el panel DE CANTO, casi
-        //    invisible).
-        //  - centrado por bounds reales DESPUÉS de escalar/rotar, contra GateAnchorPos (compensa
-        //    que el pivote del asset no esté en su centro geométrico).
-        //  - material de madera YA PROBADO (el mismo de las vallas de los caminos), no el que trae
-        //    el FBX (salía negro/roto).
-        const string TranqueraAssetFbx = "Assets/ExternalAssets/WoodenFence/models/wooden_fence_closed.fbx";
-        const string TranqueraAssetTex = "Assets/ExternalAssets/WoodenFence/textures/low_wooden_wall.jpg";
-
+        // owner: "el asset wooden_fence_closed no sirve" + "punto 2" (una sola hoja, tipo
+        // tranquera de campo que gira desde un extremo). Historial: wooden_fence_closed salía
+        // "diminuto y de lado"; antes de eso todo lo que se calculaba a partir de "Cube.184"
+        // (posición, tamaño, forma) resultó no ser confiable -- ese nombre auto-generado no es
+        // estable entre Generates y probablemente ya ni es el mismo objeto. Ahora:
+        //  - se usa PT_Modular_Gate_Wood_01 del pack Polytope (YA usado en ForestBuilder), que
+        //    es un portón de madera de verdad. Se instancia entero y se deja SOLO una hoja
+        //    (PT_Modular_Gate_Wood_01_left); el resto (otra hoja + postes) se tira.
+        //  - sin escalar: el pack Polytope ya está a escala real (se usa así en el bosque).
+        //  - posición FIJA en GateAnchorPos + yaw del owner (TEST_PLAYER parado en el hueco de
+        //    la tranquera) -- mismo criterio que houseDoorPos/LetrinaAnchorPos.
+        //  - materiales pasados por HouseBuilder.NappinUrp (por si el pack trae Standard -> URP,
+        //    igual que la puerta de la casa).
+        //  - Cube.184 SOLO se usa para desactivar la pieza combinada vieja si todavía está (no
+        //    es crítico si no aparece).
+        const string TranqueraGatePrefab = "Assets/Polytope Studio/Lowpoly_Village/Prefabs/Modular/Fence/PT_Modular_Gate_Wood_01.prefab";
+        const string TranqueraLeafName   = "PT_Modular_Gate_Wood_01_left";
         const string GatePieceName = "Cube.184";
-
-        // owner: "no esta apareciendo la tranquera... sigue sin aparecer" -- mismo bug que ya
-        // tuvo la letrina: Cube.184 (nombre auto-generado por Unity al importar el FBX) NO es
-        // estable como referencia entre Generates -- salió armada a 60+ unidades de
-        // 'corralGateStand', y después "diminuta y de lado" (su TAMAÑO y FORMA tampoco son de
-        // fiar -- probablemente ya ni es el mismo objeto). FIJA con la posición de MUNDO
-        // confirmada por el owner (TEST_PLAYER parado en el hueco de la tranquera) -- mismo
-        // criterio que houseDoorPos/LetrinaAnchorPos. Cube.184 ya NO se usa para tamaño ni forma
-        // -- solo para encontrar y desactivar la pieza combinada vieja (ver BuildGateInternal).
         static readonly Vector3 GateAnchorPos = new Vector3(115.6252f, 26.95807f, 150.5241f);
-        // yaw confirmado por el owner con TEST_PLAYER (dirección real hacia la que debe mirar la
-        // tranquera) -- FenceYawTweak-style: 'axisYawFix' (más abajo, calculado del mesh CRUDO
-        // del propio asset, no de Cube.184) corrige si el largo del mesh viene en X o en Z.
         const float GateAnchorYaw = -99.555f;
-        // altura real objetivo del panel -- mismo criterio que FenceBuilder.FenceTargetHeight
-        // (1.2m para la valla baja): una tranquera de campo ronda 1.2-1.5m. Ajustable si al
-        // verla en el Editor queda chica/grande.
-        const float GateTargetHeight = 1.3f;
 
         [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
         static void BuildGate() => BuildGateInternal(interactive: true);
@@ -269,123 +247,88 @@ namespace FolkloreArchives.MapGen
         // Selection: busca "Cube.184" (la puerta del corral) por nombre.
         public static void BuildGateInternal(bool interactive)
         {
-            var selT = FindByName(GatePieceName);
-            if (selT == null)
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraGatePrefab);
+            if (prefab == null)
             {
-                if (interactive) EditorUtility.DisplayDialog("Tranquera", "No encontré '" + GatePieceName + "' (la puerta del corral) en la escena.", "OK");
-                else Debug.LogWarning("[Rancho] Auto: no encontré '" + GatePieceName + "' (puerta del corral).");
-                return;
-            }
-            var sel = selT.gameObject;
-            var rend = sel.GetComponent<Renderer>();
-            if (rend == null)
-            {
-                if (interactive) EditorUtility.DisplayDialog("Tranquera", "'" + GatePieceName + "' no tiene Renderer.", "OK");
-                else Debug.LogWarning("[Rancho] Auto: '" + GatePieceName + "' no tiene Renderer.");
-                return;
-            }
-
-            // Cube.184 ya solo se usa para confirmar que hay algo que desactivar al final (ver
-            // 'sel' más abajo) -- ni su tamaño ni su forma se usan más (ver arriba).
-            Vector3 hinge = GateAnchorPos;
-
-            AssetDatabase.Refresh();
-            var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraAssetFbx);
-            if (fbx == null)
-            {
-                if (interactive) EditorUtility.DisplayDialog("Tranquera", "No encontré " + TranqueraAssetFbx + " (¿está el pack WoodenFence en el proyecto?).", "OK");
-                else Debug.LogWarning("[Rancho] Auto: no encontré " + TranqueraAssetFbx);
+                if (interactive) EditorUtility.DisplayDialog("Tranquera", "No encontré " + TranqueraGatePrefab, "OK");
+                else Debug.LogWarning("[Rancho] Auto: no encontré " + TranqueraGatePrefab);
                 return;
             }
 
             var prev = FindByName("TranqueraCorral");
             if (prev != null) Object.DestroyImmediate(prev.gameObject);
 
-            var pivot = new GameObject("TranqueraCorral");
-            pivot.transform.position = hinge;
-            pivot.transform.rotation = Quaternion.identity;
-
-            var inst = (GameObject)PrefabUtility.InstantiatePrefab(fbx);
-            if (inst == null)
+            // instanciar el portón entero, desempaquetar y quedarse SOLO con una hoja
+            var full = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            if (full == null)
             {
-                Object.DestroyImmediate(pivot);
-                if (interactive) EditorUtility.DisplayDialog("Tranquera", "PrefabUtility.InstantiatePrefab devolvió null para " + TranqueraAssetFbx + " -- revisá la Console.", "OK");
-                else Debug.LogWarning("[Rancho] Auto: InstantiatePrefab devolvió null para " + TranqueraAssetFbx);
+                if (interactive) EditorUtility.DisplayDialog("Tranquera", "InstantiatePrefab devolvió null para " + TranqueraGatePrefab, "OK");
+                else Debug.LogWarning("[Rancho] Auto: InstantiatePrefab null para " + TranqueraGatePrefab);
                 return;
             }
-            inst.name = "Plank";
-            PrefabUtility.UnpackPrefabInstance(inst, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-            inst.transform.SetParent(pivot.transform, true);
+            PrefabUtility.UnpackPrefabInstance(full, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
 
-            // saca el Static que el prefab trae de fábrica en TODA la jerarquía (si no, Unity la
-            // vuelve a static-batchear al entrar a Play y queda invisible/rota).
-            GameObjectUtility.SetStaticEditorFlags(pivot, (StaticEditorFlags)0);
-            foreach (var tr in inst.GetComponentsInChildren<Transform>(true))
+            Transform leaf = null;
+            foreach (var t in full.GetComponentsInChildren<Transform>(true))
+                if (t.name == TranqueraLeafName) { leaf = t; break; }
+            if (leaf == null)
+            {
+                Object.DestroyImmediate(full);
+                if (interactive) EditorUtility.DisplayDialog("Tranquera", "No encontré la hoja '" + TranqueraLeafName + "' dentro del portón.", "OK");
+                else Debug.LogWarning("[Rancho] Auto: no encontré '" + TranqueraLeafName + "' en el portón.");
+                return;
+            }
+
+            // pivote nuevo en el ancla; la hoja cuelga de ahí y gira sobre el eje Y del pivote
+            var pivot = new GameObject("TranqueraCorral");
+            pivot.transform.position = GateAnchorPos;
+            pivot.transform.rotation = Quaternion.identity;
+
+            leaf.SetParent(pivot.transform, true);
+            leaf.name = "Plank";
+            Object.DestroyImmediate(full);   // tiramos el resto del portón (la otra hoja + postes)
+
+            // sin Static (si no, se re-batchea al entrar a Play y queda invisible/rota)
+            foreach (var tr in pivot.GetComponentsInChildren<Transform>(true))
                 GameObjectUtility.SetStaticEditorFlags(tr.gameObject, (StaticEditorFlags)0);
 
-            var instRends = inst.GetComponentsInChildren<Renderer>();
-            if (instRends.Length == 0)
-                Debug.LogWarning("[Rancho] wooden_fence_closed no tiene Renderers -- ¿el FBX importó bien?");
-
-            // owner: "esta diminuto y de lado" -- escalar contra Cube.184 (tamaño Y forma de un
-            // objeto que ya demostró no ser confiable) daba un panel minúsculo mal orientado.
-            // Mismo criterio ROBUSTO que FenceBuilder.cs (las vallas que SÍ se ven bien en el
-            // mapa): medir los bounds CRUDOS del propio asset (sin escalar) y escalar uniforme
-            // para que la ALTURA quede en GateTargetHeight -- no depende de ningún otro objeto.
-            float scaleFactor = 1f;
-            float axisYawFix = 0f;
-            if (instRends.Length > 0)
+            // materiales -> URP (por si el pack Polytope trae Standard y sale magenta), igual
+            // que la puerta de la casa.
+            foreach (var r in leaf.GetComponentsInChildren<Renderer>(true))
             {
-                Bounds raw = instRends[0].bounds;
-                for (int i = 1; i < instRends.Length; i++) raw.Encapsulate(instRends[i].bounds);
-                scaleFactor = GateTargetHeight / Mathf.Max(0.001f, raw.size.y);
-                scaleFactor = Mathf.Clamp(scaleFactor, 0.02f, 50f);
-                // eje horizontal más largo del mesh CRUDO (auto-detecta si el FBX exportó el
-                // ancho del panel en X o en Z) -- mismo ajuste que FenceBuilder.axisYawFix, si no
-                // el panel queda de canto en vez de a lo ancho del hueco.
-                axisYawFix = raw.size.x >= raw.size.z ? 0f : 90f;
-            }
-            inst.transform.localScale = Vector3.one * scaleFactor;
-            // parado derecho, mirando GateAnchorYaw (dirección real confirmada por el owner con
-            // TEST_PLAYER) + axisYawFix (corrige el eje del mesh CRUDO, ver arriba) -- NUNCA
-            // copiar la rotación del original ni usar la forma de Cube.184 para esto.
-            inst.transform.rotation = Quaternion.Euler(0f, GateAnchorYaw + axisYawFix, 0f);
-
-            // centrar por bounds REALES (después de escalar/rotar) en el ancla fija -- compensa
-            // un pivote de asset que no esté en el centro geométrico.
-            if (instRends.Length > 0)
-            {
-                Bounds ib2 = instRends[0].bounds;
-                for (int i = 1; i < instRends.Length; i++) ib2.Encapsulate(instRends[i].bounds);
-                inst.transform.position += (hinge - ib2.center);
-            }
-            else
-            {
-                inst.transform.position = hinge;
+                var src = r.sharedMaterials;
+                for (int i = 0; i < src.Length; i++) src[i] = HouseBuilder.NappinUrp(src[i]);
+                r.sharedMaterials = src;
             }
 
-            // material de madera YA PROBADO (el del FBX podía salir negro/roto).
-            var fenceTex = AssetDatabase.LoadAssetAtPath<Texture2D>(TranqueraAssetTex);
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            if (fenceTex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", fenceTex);
-            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
-            mat = BuilderUtils.SaveMaterialStable(mat, "Assets/Settings/WoodenFence.mat");
-            foreach (var r in instRends)
+            // acomodar la hoja: centro sobre el ancla (X/Z) y base apoyada en el piso del ancla
+            // (Y). Todo con el pivote todavía SIN rotar, así los bounds de mundo son directos.
+            var leafRends = leaf.GetComponentsInChildren<Renderer>(true);
+            if (leafRends.Length > 0)
             {
-                var arr = new Material[r.sharedMaterials.Length];
-                for (int k = 0; k < arr.Length; k++) arr[k] = mat;
-                r.sharedMaterials = arr;
+                Bounds lb = leafRends[0].bounds;
+                for (int i = 1; i < leafRends.Length; i++) lb.Encapsulate(leafRends[i].bounds);
+                leaf.position += new Vector3(GateAnchorPos.x - lb.center.x, 0f, GateAnchorPos.z - lb.center.z);
+                Bounds lb2 = leafRends[0].bounds;
+                for (int i = 1; i < leafRends.Length; i++) lb2.Encapsulate(leafRends[i].bounds);
+                leaf.position += Vector3.up * (GateAnchorPos.y - lb2.min.y);
             }
+
+            // recién ahora rotar el conjunto hacia donde miró el owner (TEST_PLAYER)
+            pivot.transform.rotation = Quaternion.Euler(0f, GateAnchorYaw, 0f);
 
             var gate = pivot.AddComponent<FolkloreArchives.CorralGate>();
             gate.openDeg = 95f;
             gate.hintClosed = "[E] Abrir la tranquera";
             gate.hintOpen = "[E] Cerrar la tranquera";
 
-            sel.SetActive(false);   // ocultamos la puerta combined original
+            // desactivar la pieza combinada vieja si todavía está (no es crítico si no aparece)
+            var oldPiece = FindByName(GatePieceName);
+            if (oldPiece != null) oldPiece.gameObject.SetActive(false);
 
-            Debug.Log("[Rancho] 'TranqueraCorral' armada con el modelo REAL (wooden_fence_closed) en " +
-                      hinge + ". Original " + sel.name + " desactivado.");
+            Debug.Log("[Rancho] 'TranqueraCorral' armada con PT_Modular_Gate_Wood_01 (una hoja) en " +
+                      GateAnchorPos + ", yaw " + GateAnchorYaw + ". " +
+                      (oldPiece != null ? "Cube.184 vieja desactivada." : "(no había Cube.184 vieja para desactivar)"));
 
             if (!interactive) return;   // el resto (Undo/Selection) es solo para el botón manual
 
