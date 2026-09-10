@@ -221,12 +221,14 @@ namespace FolkloreArchives.MapGen
         // wooden_fence_closed saliera "diminuto y de lado" y PT_Modular_Gate_Wood_01 quedara
         // feo/torcido, la tranquera se arma PROCEDURAL con cubos: 2 parantes verticales + 4
         // travesaños + 1 refuerzo diagonal, tipo tranquera de campo. Gira desde un extremo
-        // (bisagra en x=0 local). Posición FIJA en GateAnchorPos + yaw del owner (TEST_PLAYER
-        // parado en el hueco). Cube.184 solo se usa para desactivar la pieza vieja si todavía
-        // está (no es crítico). Es un placeholder -- se puede reemplazar por un asset después.
+        // (bisagra en x=0 local). Es un placeholder -- se puede reemplazar por un asset después.
+        // Pos/rot/escala FIJAS: las dejó el owner a mano en el Editor y las pasó por Inspector
+        // ("toma") -- misma idea que la letrina. Cube.184 solo se usa para desactivar la pieza
+        // vieja si todavía está (no es crítico).
         const string GatePieceName = "Cube.184";
-        static readonly Vector3 GateAnchorPos = new Vector3(115.6252f, 26.95807f, 150.5241f);
-        const float GateAnchorYaw = -99.555f;
+        static readonly Vector3 GateAnchorPos   = new Vector3(115.6f, 26.95807f, 148.5784f);
+        const float GateAnchorYaw = -93.633f;
+        static readonly Vector3 GateAnchorScale = new Vector3(1.275079f, 1f, 1.3652f);
         const float GateWidth  = 2.8f;    // ancho de la hoja
         const float GateHeight = 1.15f;   // alto
         const float GateStile  = 0.09f;   // grosor de los parantes verticales
@@ -271,8 +273,9 @@ namespace FolkloreArchives.MapGen
             var brace = MakeGateBar(pivot.transform, mat, "brace", new Vector3(w * 0.5f, h * 0.5f, 0f), new Vector3(diag, GateRail, GateRail));
             brace.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(h, w) * Mathf.Rad2Deg);
 
-            // recién ahora orientar el conjunto hacia donde miró el owner (TEST_PLAYER)
+            // recién ahora orientar y escalar el conjunto con lo que dejó el owner a mano
             pivot.transform.rotation = Quaternion.Euler(0f, GateAnchorYaw, 0f);
+            pivot.transform.localScale = GateAnchorScale;
 
             var gate = pivot.AddComponent<FolkloreArchives.CorralGate>();
             gate.openDeg = 95f;
