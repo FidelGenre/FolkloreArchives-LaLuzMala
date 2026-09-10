@@ -217,104 +217,61 @@ namespace FolkloreArchives.MapGen
             return pivot;
         }
 
-        // owner: "el asset wooden_fence_closed no sirve" + "punto 2" (una sola hoja, tipo
-        // tranquera de campo que gira desde un extremo). Historial: wooden_fence_closed salía
-        // "diminuto y de lado"; antes de eso todo lo que se calculaba a partir de "Cube.184"
-        // (posición, tamaño, forma) resultó no ser confiable -- ese nombre auto-generado no es
-        // estable entre Generates y probablemente ya ni es el mismo objeto. Ahora:
-        //  - se usa PT_Modular_Gate_Wood_01 del pack Polytope (YA usado en ForestBuilder), que
-        //    es un portón de madera de verdad. Se instancia entero y se deja SOLO una hoja
-        //    (PT_Modular_Gate_Wood_01_left); el resto (otra hoja + postes) se tira.
-        //  - sin escalar: el pack Polytope ya está a escala real (se usa así en el bosque).
-        //  - posición FIJA en GateAnchorPos + yaw del owner (TEST_PLAYER parado en el hueco de
-        //    la tranquera) -- mismo criterio que houseDoorPos/LetrinaAnchorPos.
-        //  - materiales pasados por HouseBuilder.NappinUrp (por si el pack trae Standard -> URP,
-        //    igual que la puerta de la casa).
-        //  - Cube.184 SOLO se usa para desactivar la pieza combinada vieja si todavía está (no
-        //    es crítico si no aparece).
-        const string TranqueraGatePrefab = "Assets/Polytope Studio/Lowpoly_Village/Prefabs/Modular/Fence/PT_Modular_Gate_Wood_01.prefab";
-        const string TranqueraLeafName   = "PT_Modular_Gate_Wood_01_left";
+        // owner: "es horrible, hace un procedural nomás por ahora" -- después de que
+        // wooden_fence_closed saliera "diminuto y de lado" y PT_Modular_Gate_Wood_01 quedara
+        // feo/torcido, la tranquera se arma PROCEDURAL con cubos: 2 parantes verticales + 4
+        // travesaños + 1 refuerzo diagonal, tipo tranquera de campo. Gira desde un extremo
+        // (bisagra en x=0 local). Posición FIJA en GateAnchorPos + yaw del owner (TEST_PLAYER
+        // parado en el hueco). Cube.184 solo se usa para desactivar la pieza vieja si todavía
+        // está (no es crítico). Es un placeholder -- se puede reemplazar por un asset después.
         const string GatePieceName = "Cube.184";
         static readonly Vector3 GateAnchorPos = new Vector3(115.6252f, 26.95807f, 150.5241f);
         const float GateAnchorYaw = -99.555f;
+        const float GateWidth  = 2.8f;    // ancho de la hoja
+        const float GateHeight = 1.15f;   // alto
+        const float GateStile  = 0.09f;   // grosor de los parantes verticales
+        const float GateRail   = 0.07f;   // grosor de los travesaños
 
         [MenuItem("Folklore/Armar tranquera del corral (abrible)")]
         static void BuildGate() => BuildGateInternal(interactive: true);
 
         // interactive:true = botón manual (diálogos + Undo + Selection). interactive:false =
         // llamada automática desde Generate -- owner: "no quiero tener que tocar todas las
-        // cosas y armar de nuevo, quiero que las puertas sean parte del mapa". Ya no depende de
-        // Selection: busca "Cube.184" (la puerta del corral) por nombre.
+        // cosas y armar de nuevo, quiero que las puertas sean parte del mapa".
         public static void BuildGateInternal(bool interactive)
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TranqueraGatePrefab);
-            if (prefab == null)
-            {
-                if (interactive) EditorUtility.DisplayDialog("Tranquera", "No encontré " + TranqueraGatePrefab, "OK");
-                else Debug.LogWarning("[Rancho] Auto: no encontré " + TranqueraGatePrefab);
-                return;
-            }
-
             var prev = FindByName("TranqueraCorral");
             if (prev != null) Object.DestroyImmediate(prev.gameObject);
 
-            // instanciar el portón entero, desempaquetar y quedarse SOLO con una hoja
-            var full = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-            if (full == null)
-            {
-                if (interactive) EditorUtility.DisplayDialog("Tranquera", "InstantiatePrefab devolvió null para " + TranqueraGatePrefab, "OK");
-                else Debug.LogWarning("[Rancho] Auto: InstantiatePrefab null para " + TranqueraGatePrefab);
-                return;
-            }
-            PrefabUtility.UnpackPrefabInstance(full, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            // material de madera (el mismo YA PROBADO de las vallas de los caminos)
+            var woodTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ExternalAssets/WoodenFence/textures/low_wooden_wall.jpg");
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (woodTex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", woodTex);
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.1f);
+            mat = BuilderUtils.SaveMaterialStable(mat, "Assets/Settings/WoodenFence.mat");
 
-            Transform leaf = null;
-            foreach (var t in full.GetComponentsInChildren<Transform>(true))
-                if (t.name == TranqueraLeafName) { leaf = t; break; }
-            if (leaf == null)
-            {
-                Object.DestroyImmediate(full);
-                if (interactive) EditorUtility.DisplayDialog("Tranquera", "No encontré la hoja '" + TranqueraLeafName + "' dentro del portón.", "OK");
-                else Debug.LogWarning("[Rancho] Auto: no encontré '" + TranqueraLeafName + "' en el portón.");
-                return;
-            }
-
-            // pivote nuevo en el ancla; la hoja cuelga de ahí y gira sobre el eje Y del pivote
+            // pivote en la BISAGRA (x=0 local); la hoja se arma hacia +X y la base apoya en y=0
+            // (= GateAnchorPos.y, nivel del piso donde paró el TEST_PLAYER).
             var pivot = new GameObject("TranqueraCorral");
             pivot.transform.position = GateAnchorPos;
             pivot.transform.rotation = Quaternion.identity;
 
-            leaf.SetParent(pivot.transform, true);
-            leaf.name = "Plank";
-            Object.DestroyImmediate(full);   // tiramos el resto del portón (la otra hoja + postes)
-
-            // sin Static (si no, se re-batchea al entrar a Play y queda invisible/rota)
-            foreach (var tr in pivot.GetComponentsInChildren<Transform>(true))
-                GameObjectUtility.SetStaticEditorFlags(tr.gameObject, (StaticEditorFlags)0);
-
-            // materiales -> URP (por si el pack Polytope trae Standard y sale magenta), igual
-            // que la puerta de la casa.
-            foreach (var r in leaf.GetComponentsInChildren<Renderer>(true))
+            float w = GateWidth, h = GateHeight;
+            // parantes verticales: uno en la bisagra (x=0), otro en la punta (x=w)
+            MakeGateBar(pivot.transform, mat, "stile_hinge", new Vector3(0f, h * 0.5f, 0f), new Vector3(GateStile, h, GateStile));
+            MakeGateBar(pivot.transform, mat, "stile_end",   new Vector3(w,  h * 0.5f, 0f), new Vector3(GateStile, h, GateStile));
+            // 4 travesaños horizontales repartidos en altura
+            for (int i = 0; i < 4; i++)
             {
-                var src = r.sharedMaterials;
-                for (int i = 0; i < src.Length; i++) src[i] = HouseBuilder.NappinUrp(src[i]);
-                r.sharedMaterials = src;
+                float y = Mathf.Lerp(GateRail, h - GateRail, i / 3f);
+                MakeGateBar(pivot.transform, mat, "rail_" + i, new Vector3(w * 0.5f, y, 0f), new Vector3(w, GateRail, GateRail));
             }
+            // refuerzo diagonal esquina-a-esquina
+            float diag = Mathf.Sqrt(w * w + h * h);
+            var brace = MakeGateBar(pivot.transform, mat, "brace", new Vector3(w * 0.5f, h * 0.5f, 0f), new Vector3(diag, GateRail, GateRail));
+            brace.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(h, w) * Mathf.Rad2Deg);
 
-            // acomodar la hoja: centro sobre el ancla (X/Z) y base apoyada en el piso del ancla
-            // (Y). Todo con el pivote todavía SIN rotar, así los bounds de mundo son directos.
-            var leafRends = leaf.GetComponentsInChildren<Renderer>(true);
-            if (leafRends.Length > 0)
-            {
-                Bounds lb = leafRends[0].bounds;
-                for (int i = 1; i < leafRends.Length; i++) lb.Encapsulate(leafRends[i].bounds);
-                leaf.position += new Vector3(GateAnchorPos.x - lb.center.x, 0f, GateAnchorPos.z - lb.center.z);
-                Bounds lb2 = leafRends[0].bounds;
-                for (int i = 1; i < leafRends.Length; i++) lb2.Encapsulate(leafRends[i].bounds);
-                leaf.position += Vector3.up * (GateAnchorPos.y - lb2.min.y);
-            }
-
-            // recién ahora rotar el conjunto hacia donde miró el owner (TEST_PLAYER)
+            // recién ahora orientar el conjunto hacia donde miró el owner (TEST_PLAYER)
             pivot.transform.rotation = Quaternion.Euler(0f, GateAnchorYaw, 0f);
 
             var gate = pivot.AddComponent<FolkloreArchives.CorralGate>();
@@ -326,15 +283,29 @@ namespace FolkloreArchives.MapGen
             var oldPiece = FindByName(GatePieceName);
             if (oldPiece != null) oldPiece.gameObject.SetActive(false);
 
-            Debug.Log("[Rancho] 'TranqueraCorral' armada con PT_Modular_Gate_Wood_01 (una hoja) en " +
+            Debug.Log("[Rancho] 'TranqueraCorral' procedural (2 parantes + 4 travesaños + refuerzo) en " +
                       GateAnchorPos + ", yaw " + GateAnchorYaw + ". " +
-                      (oldPiece != null ? "Cube.184 vieja desactivada." : "(no había Cube.184 vieja para desactivar)"));
+                      (oldPiece != null ? "Cube.184 vieja desactivada." : "(sin Cube.184 vieja)"));
 
             if (!interactive) return;   // el resto (Undo/Selection) es solo para el botón manual
 
             Undo.RegisterCreatedObjectUndo(pivot, "Armar tranquera");
             Selection.activeGameObject = pivot;
             EditorGUIUtility.PingObject(pivot);
+        }
+
+        // un "palo" (Cube primitivo) hijo del pivote, con material y sin marca de Static.
+        static GameObject MakeGateBar(Transform parent, Material mat, string name, Vector3 localPos, Vector3 localScale)
+        {
+            var c = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            c.name = name;
+            c.transform.SetParent(parent, false);
+            c.transform.localPosition = localPos;
+            c.transform.localRotation = Quaternion.identity;
+            c.transform.localScale = localScale;
+            c.GetComponent<Renderer>().sharedMaterial = mat;
+            GameObjectUtility.SetStaticEditorFlags(c, (StaticEditorFlags)0);
+            return c;
         }
 
         // owner: "no me está saliendo la opción [de abrir la tranquera]" -- a TranqueraCorral se le
