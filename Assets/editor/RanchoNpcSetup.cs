@@ -538,12 +538,26 @@ namespace FolkloreArchives.MapGen
 
         // pone N ovejas (sheep.obj) en un cluster cerca de la tranquera. La secuencia las
         // mueve al pastizal cuando abrís la tranquera. Grupo "Ovejas" con hijos "Oveja_i".
+        //
+        // owner: "se quedaron quietas las ovejas no fueron a pastar" -- CampsiteSequence busca
+        // el grupo EXACTO "Ovejas" (FindObj("Ovejas")) y si no lo encuentra, salta DIRECTO a
+        // "Volvé con la vieja" sin caminar nada, en silencio. Este botón era manual-only (nunca
+        // corría en Generate) -- las ovejas "Sheep"/"Sheep (1)"/etc. que se ven en el corral son
+        // decorativas de la granja (AbandonedFarm), NO este grupo. Ahora se arma solo, como las
+        // puertas (ver RanchoNpcSetup.EnsureAllRanchoDoors / HouseBuilder.BuildBarn).
         [MenuItem("Folklore/Poner ovejas en el corral")]
-        static void PlaceSheep()
+        public static void PlaceSheep() => PlaceSheepInternal(interactive: true);
+
+        public static void PlaceSheepInternal(bool interactive)
         {
             AssetDatabase.Refresh();
             var obj = AssetDatabase.LoadAssetAtPath<GameObject>(SheepObj);
-            if (obj == null) { EditorUtility.DisplayDialog("Ovejas", "No encontré " + SheepObj + " (¿lo importó Unity?).", "OK"); return; }
+            if (obj == null)
+            {
+                if (interactive) EditorUtility.DisplayDialog("Ovejas", "No encontré " + SheepObj + " (¿lo importó Unity?).", "OK");
+                else Debug.LogWarning("[Rancho] Auto: no encontré " + SheepObj);
+                return;
+            }
 
             var prev = FindByName("Ovejas");
             if (prev != null) Object.DestroyImmediate(prev.gameObject);
@@ -570,10 +584,14 @@ namespace FolkloreArchives.MapGen
                 s.transform.position = p;
                 s.transform.rotation = Quaternion.Euler(0f, i * 63f, 0f);
             }
+
+            Debug.Log("[Rancho] " + N + " ovejas puestas en 'Ovejas' cerca del corral.");
+
+            if (!interactive) return;   // el resto (Undo/Selection) es solo para el botón manual
+
             Undo.RegisterCreatedObjectUndo(group, "Poner ovejas");
             Selection.activeGameObject = group;
             EditorGUIUtility.PingObject(group);
-            Debug.Log("[Rancho] " + N + " ovejas puestas en 'Ovejas' cerca del corral. Movelas si hace falta.");
         }
 
         static GameObject BuildSheep(GameObject obj, Material mat, int idx)
@@ -650,8 +668,14 @@ namespace FolkloreArchives.MapGen
             try { BuildGateInternal(interactive: false); }
             catch (System.Exception e) { Debug.LogError("[Rancho] EnsureAllRanchoDoors: falló la tranquera del corral -- " + e); }
 
-            Debug.Log("[Rancho] EnsureAllRanchoDoors: casa + letrina + tranquera listas.");
-            if (interactive) EditorUtility.DisplayDialog("Puertas del rancho", "Casa, letrina y tranquera listas y abribles.", "OK");
+            // owner: "se quedaron quietas las ovejas no fueron a pastar" -- PlaceSheep() (el
+            // grupo "Ovejas" que SÍ controla CampsiteSequence, distinto de las ovejas decorativas
+            // de la granja) era manual-only, nunca corría en Generate. Va acá también.
+            try { PlaceSheepInternal(interactive: false); }
+            catch (System.Exception e) { Debug.LogError("[Rancho] EnsureAllRanchoDoors: fallaron las ovejas -- " + e); }
+
+            Debug.Log("[Rancho] EnsureAllRanchoDoors: casa + letrina + tranquera + ovejas listas.");
+            if (interactive) EditorUtility.DisplayDialog("Puertas del rancho", "Casa, letrina, tranquera y ovejas listas.", "OK");
         }
     }
 }
