@@ -585,7 +585,27 @@ namespace FolkloreArchives.MapGen
                 s.transform.rotation = Quaternion.Euler(0f, i * 63f, 0f);
             }
 
-            Debug.Log("[Rancho] " + N + " ovejas puestas en 'Ovejas' cerca del corral.");
+            // owner: "ya habian 3 las quito o que?" -- esas "Sheep"/"Sheep (1)"/"Sheep (2)" son
+            // decoración fija del propio AbandonedFarm.fbx (ya paradas ahí en el corral, sin
+            // relación con la misión) -- quedaban superpuestas con el rebaño nuevo. Se desactivan
+            // las que estén CERCA del corral (por posición, no solo por nombre -- ChickenCoopBuilder
+            // también pone una "Sheep" ambiental lejos, cerca del gallinero -- SheepSpot (189,172),
+            // ésa se deja).
+            int hiddenDecor = 0;
+            foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (t == null || !t.gameObject.activeSelf) continue;
+                if (t.IsChildOf(group.transform)) continue;
+                bool looksLikeSheep = t.name == "Sheep" || (t.name.StartsWith("Sheep (") && t.name.EndsWith(")"));
+                if (!looksLikeSheep) continue;
+                float d = Vector2.Distance(new Vector2(t.position.x, t.position.z), new Vector2(baseP.x, baseP.z));
+                if (d > 20f) continue;   // lejos del corral -- no tocar (ej. la del gallinero)
+                t.gameObject.SetActive(false);
+                hiddenDecor++;
+            }
+
+            Debug.Log("[Rancho] " + N + " ovejas puestas en 'Ovejas' cerca del corral. " +
+                      hiddenDecor + " oveja(s) decorativa(s) de la granja (superpuestas en el corral) desactivadas.");
 
             if (!interactive) return;   // el resto (Undo/Selection) es solo para el botón manual
 
