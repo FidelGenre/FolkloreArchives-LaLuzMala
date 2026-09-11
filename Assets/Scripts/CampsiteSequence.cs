@@ -91,7 +91,7 @@ namespace FolkloreArchives
         public Vector3 houseDoorPos = new Vector3(136.1347f, 27.24684f, 125.4351f); // puerta de la casa: tocás acá (owner TEST_PLAYER)
         public float   houseDoorYaw = -178.982f;
         public Vector3 corralGateStand = new Vector3(116.6176f, 26.97f, 149.8931f);  // parado acá para abrir la tranquera (owner)
-        public Vector3 sheepPasturePos = new Vector3(124.067f, 26.1109f, 167.3692f); // las ovejas van a pastar acá (owner)
+        public Vector3 sheepPasturePos = new Vector3(124.6704f, 26.02135f, 165.3348f); // las ovejas van a pastar acá, justo pasando la tranquera (owner TEST_PLAYER)
 
         // dónde/cómo aparece el viejo al salir de la letrina (owner, Inspector). FIJO a propósito
         // -- antes se calculaba en RanchoNpcSetup a partir de "letrina.007"/"letrina.006", pero esos
