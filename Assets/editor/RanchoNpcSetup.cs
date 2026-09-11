@@ -643,6 +643,13 @@ namespace FolkloreArchives.MapGen
             }
             var col = go.AddComponent<CapsuleCollider>();
             col.height = SheepHeight; col.radius = SheepHeight * 0.4f; col.center = new Vector3(0f, SheepHeight * 0.5f, 0f);
+
+            // owner: "necesito que las ovejas tengan huesos como el perro no que se muevan todas
+            // duras" -- sheep.obj no tiene esqueleto (formato OBJ, sin huesos posibles), así que
+            // en vez de patas se bambolea el "Model" entero al caminar (ver SheepWalkAnim.cs).
+            var walk = go.AddComponent<FolkloreArchives.SheepWalkAnim>();
+            walk.model = model.transform;
+
             return go;
         }
 
