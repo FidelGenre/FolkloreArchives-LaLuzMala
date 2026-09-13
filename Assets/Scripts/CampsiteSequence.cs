@@ -93,6 +93,20 @@ namespace FolkloreArchives
         public Vector3 corralGateStand = new Vector3(116.6176f, 26.97f, 149.8931f);  // parado acá para abrir la tranquera (owner)
         public Vector3 sheepPasturePos = new Vector3(124.6704f, 26.02135f, 165.3348f); // las ovejas van a pastar acá, justo pasando la tranquera (owner TEST_PLAYER)
 
+        // owner: "no estan saliendo por la puerta por donde deberian ir" -- StepToward camina en
+        // línea recta (solo esquiva el auto, no paredes/cercos), así que ir directo del corral a
+        // sheepPasturePos las hacía atravesar la tranquera/cerco en vez de cruzar por el hueco.
+        // Recorrido FIJO (TEST_PLAYER) desde el corral, cruzando la tranquera, hasta cerca del
+        // pastizal -- cada oveja lo camina entero antes de acomodarse en sheepPasturePos.
+        public Vector3[] sheepGatePath =
+        {
+            new Vector3(111.7945f, 26.9557f,  150.1452f),
+            new Vector3(116.2192f, 26.95285f, 150.0404f),
+            new Vector3(118.9208f, 26.8629f,  150.1147f),
+            new Vector3(126.7304f, 25.76465f, 161.682f),
+            new Vector3(123.5256f, 26.16027f, 164.9562f),
+        };
+
         // dónde/cómo aparece el viejo al salir de la letrina (owner, Inspector). FIJO a propósito
         // -- antes se calculaba en RanchoNpcSetup a partir de "letrina.007"/"letrina.006", pero esos
         // números NO son estables: cada vez que se repone/regenera la letrina, Unity puede
@@ -981,20 +995,33 @@ namespace FolkloreArchives
                 _playerHint = null;
                 yield return SayFor("¡Vamos, ovejas! A pastar...", 2.2f);
 
-                // las ovejas (grupo "Ovejas", lo pone el botón de editor) salen al pastizal
+                // las ovejas (grupo "Ovejas", lo pone el botón de editor) salen al pastizal --
+                // cruzando la tranquera por 'sheepGatePath' (owner: "no estan saliendo por la
+                // puerta por donde deberian ir"), no en línea recta contra sheepPasturePos.
                 Transform flockRoot = FindObj("Ovejas");
                 if (flockRoot != null)
                 {
                     var flock = new List<Transform>();
                     foreach (Transform s in flockRoot) flock.Add(s);
+                    var wpIdx = new int[flock.Count];   // qué punto de sheepGatePath le toca a cada oveja
                     float t = 0f;
-                    while (t < 22f)
+                    while (t < 35f)
                     {
                         bool all = true;
                         for (int i = 0; i < flock.Count; i++)
                         {
-                            Vector3 dest = sheepPasturePos + Right(0f) * ((i - (flock.Count - 1) * 0.5f) * 1.3f);
-                            if (Flat2(flock[i].position, dest) > 1.0f) { StepToward(flock[i], dest, 1.7f); all = false; }
+                            Vector3 finalDest = sheepPasturePos + Right(0f) * ((i - (flock.Count - 1) * 0.5f) * 1.3f);
+                            Vector3 dest = wpIdx[i] < sheepGatePath.Length ? sheepGatePath[wpIdx[i]] : finalDest;
+                            if (Flat2(flock[i].position, dest) > 1.0f)
+                            {
+                                StepToward(flock[i], dest, 1.7f);
+                                all = false;
+                            }
+                            else if (wpIdx[i] < sheepGatePath.Length)
+                            {
+                                wpIdx[i]++;   // llegó a este punto del camino -- pasa al siguiente
+                                all = false;
+                            }
                         }
                         if (all) break;
                         t += Time.deltaTime;
