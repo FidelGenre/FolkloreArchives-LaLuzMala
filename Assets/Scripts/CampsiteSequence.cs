@@ -1004,13 +1004,23 @@ namespace FolkloreArchives
                     var flock = new List<Transform>();
                     foreach (Transform s in flockRoot) flock.Add(s);
                     var wpIdx = new int[flock.Count];   // qué punto de sheepGatePath le toca a cada oveja
+
+                    // owner: "salio volando una... las otras fueron encimadas, deberian salir
+                    // caminando una atras de otra y despues ponerse a los lados" -- salida
+                    // ESCALONADA (fila india, no las 4 arrancando juntas por el mismo camino
+                    // angosto -- eso las hacía pisarse/encimarse) + acomodo final en abanico
+                    // (no una fila perfecta clonada) con más separación entre ellas.
+                    const float StartDelay = 1.1f;
                     float t = 0f;
-                    while (t < 35f)
+                    while (t < 40f)
                     {
                         bool all = true;
                         for (int i = 0; i < flock.Count; i++)
                         {
-                            Vector3 finalDest = sheepPasturePos + Right(0f) * ((i - (flock.Count - 1) * 0.5f) * 1.3f);
+                            if (t < i * StartDelay) { all = false; continue; }   // todavía no le toca salir
+                            float side  = (i - (flock.Count - 1) * 0.5f) * 1.6f;
+                            float depth = Mathf.Abs(i - (flock.Count - 1) * 0.5f) * 0.5f;
+                            Vector3 finalDest = sheepPasturePos + Right(0f) * side + Right(90f) * depth;
                             Vector3 dest = wpIdx[i] < sheepGatePath.Length ? sheepGatePath[wpIdx[i]] : finalDest;
                             if (Flat2(flock[i].position, dest) > 1.0f)
                             {
@@ -1833,6 +1843,12 @@ namespace FolkloreArchives
         // altura del piso bajo 'p' (raycast). Fallback: 'fallbackY'. Si se pasa 'self', se apagan
         // sus colliders durante el raycast para que NO se pegue a sí mismo (era la causa de que
         // los personajes "subieran" ~2.4m por paso hasta el cielo).
+        //
+        // owner: "salio volando una de las ovejas" -- mismo síntoma pero por OTRO collider en
+        // movimiento: si el rayo pega contra la tranquera mientras se abre (pasa por encima de la
+        // oveja un instante), 'y' salta a la altura de la puerta en vez del piso real. Clamp: un
+        // paso normal no cambia la altura más de ~1m; si el rayo da más lejos que eso del
+        // fallback, se ignora (mejor quedarse en el fallback que salir disparado).
         static float GroundY(Vector3 p, float fallbackY, Transform self = null)
         {
             Collider[] cols = self != null ? self.GetComponentsInChildren<Collider>(true) : null;
@@ -1847,6 +1863,7 @@ namespace FolkloreArchives
                 y = hit.point.y;
             else if (Physics.Raycast(new Vector3(p.x, 400f, p.z), Vector3.down, out var hit2, 2000f))
                 y = hit2.point.y;
+            if (Mathf.Abs(y - fallbackY) > 1f) y = fallbackY;
             if (cols != null)
                 for (int i = 0; i < cols.Length; i++) if (cols[i] != null) cols[i].enabled = were[i];
             return y;
