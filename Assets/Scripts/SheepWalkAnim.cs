@@ -20,10 +20,10 @@ namespace FolkloreArchives
     public class SheepWalkAnim : MonoBehaviour
     {
         public Transform model;              // el mesh (hijo "Model") que se bambolea -- NUNCA el root (lo usa la IA para posición/colisión)
-        public float bobHeight = 0.06f;       // cuánto sube/baja el cuerpo
-        public float rockAngle = 6f;          // cuánto se ladea de lado a lado
-        public float cadence = 7f;            // velocidad del ciclo al caminar
-        public float moveThreshold = 0.15f;   // m/s para considerar que se está moviendo
+        public float bobHeight = 0.11f;       // cuánto sube/baja el cuerpo (owner: "tampoco estan moviendo los pies" -- más notorio)
+        public float rockAngle = 10f;         // cuánto se ladea de lado a lado
+        public float cadence = 8f;            // velocidad del ciclo al caminar
+        public float moveThreshold = 0.1f;    // m/s para considerar que se está moviendo
 
         Vector3 baseLocalPos;
         Quaternion baseLocalRot;

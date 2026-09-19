@@ -26,6 +26,10 @@ namespace FolkloreArchives.MapGen
         const string SheepObj = "Assets/ExternalAssets/Sheep/sheep.obj";
         const string SheepTex = "Assets/ExternalAssets/Sheep/sheep_tex.jpg";
         const float  SheepHeight = 1.6f;    // altura de la oveja (owner: "más grandes")
+        // owner: "no estan apuntando hacia donde caminan... van de lado" -- ajuste de yaw del
+        // mesh CRUDO contra el root que mueve la IA (ver BuildSheep). Probar 180 primero (el
+        // caso más común); si sigue mal, 90/-90/0 -- es de tanteo rápido, no hace falta Blender.
+        const float  SheepModelYawOffset = 180f;
 
         // el pack "Characters PSX" usa rig Mixamo (mixamorig:*): mismos limbs que el amigo
         // "green jacket". HumanWalkAnim con esto = camina + brazos a los lados (no T-pose).
@@ -621,7 +625,13 @@ namespace FolkloreArchives.MapGen
             model.name = "Model";
             model.transform.SetParent(go.transform);
             model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.identity;
+            // owner: "no estan apuntando hacia donde caminan... van de lado" -- StepToward gira
+            // el ROOT (Oveja_i) hacia la dirección de movimiento asumiendo que "adelante" es +Z
+            // local (Quaternion.LookRotation), pero el mesh crudo de sheep.obj mira para OTRO
+            // lado (parece -Z, típico de exports que no vienen ya orientados "a la Unity") --
+            // por eso el root apunta bien pero se VE caminando de costado/al revés. Se corrige
+            // con un offset FIJO en el "Model" (hijo), no en el root que mueve la IA.
+            model.transform.localRotation = Quaternion.Euler(0f, SheepModelYawOffset, 0f);
             model.transform.localScale = Vector3.one;
 
             var rends = model.GetComponentsInChildren<Renderer>();
