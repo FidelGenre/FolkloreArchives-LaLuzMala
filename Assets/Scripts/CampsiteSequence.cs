@@ -1041,8 +1041,26 @@ namespace FolkloreArchives
                 }
             }
             _playerHint = "Volvé con la vieja";
-            // (sigue: caja del granero (screamer) -> arreglar el baño -> mates + historia de la Luz
-            //  Mala -> volver al campamento. FALTAN coordenadas.)
+
+            // 7) owner: "el toolbox debería ir luego de abrir la puerta y que vayan a pastar las
+            // ovejas, a la puerta de nuevo a hablar con la vieja y ahí me lo pedirá" -- ella se
+            // queda PARADA donde terminó oldLadyGreetPath (no se mueve durante lo de las ovejas),
+            // así que "volver" es solo caminar hasta donde ya está. Proximidad, sin E (como
+            // cuando salió a saludar la primera vez).
+            if (oldLady != null)
+            {
+                float tw2 = 0f;
+                while (tw2 < 60f && Flat2(player.position, oldLady.position) > 2.5f) { tw2 += Time.deltaTime; yield return null; }
+                _playerHint = null;
+                yield return SayFor("Ahh, volvieron. Gracias por las ovejas, muchachos.", 3.0f);
+                yield return SayFor("Ya que están acá... ¿me podrían alcanzar la caja de herramientas? Se quedó arriba del galpón.", 4.4f);
+                yield return SayFor("Ojo con las gallinas, que son bravas.", 2.2f);
+                _playerHint = "Andá a buscar la caja de herramientas al granero";
+            }
+            // (sigue: ir a buscar la caja de herramientas -- arriba del granero, con el susto de
+            // las gallinas -- traérsela a la vieja -> arreglar el baño -> mates + historia de la
+            // Luz Mala -> volver al campamento. FALTAN coordenadas de la caja / el granero / el
+            // disparador del susto.)
         }
 
         // busca un objeto por nombre en la escena (incluye inactivos, ej. RanchoViejo desactivado).
