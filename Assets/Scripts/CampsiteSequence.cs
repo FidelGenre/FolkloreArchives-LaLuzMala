@@ -107,6 +107,13 @@ namespace FolkloreArchives
             new Vector3(123.5256f, 26.16027f, 164.9562f),
         };
 
+        // ---- caja de herramientas del ático (owner TEST_PLAYER) ----
+        // al entrar al ático del granero, cerca de este punto salta el susto de la gallina; la
+        // caja de herramientas ("CajaHerramientas", la arma RanchoNpcSetup.PlaceToolboxInternal)
+        // está un poco más adelante, sobre la mesa.
+        public Vector3 atticScreamerPos = new Vector3(104.0223f, 34.14001f, 140.9066f);
+        public Vector3 toolboxPos = new Vector3(112.6553f, 34.93675f, 139.7323f);
+
         // dónde/cómo aparece el viejo al salir de la letrina (owner, Inspector). FIJO a propósito
         // -- antes se calculaba en RanchoNpcSetup a partir de "letrina.007"/"letrina.006", pero esos
         // números NO son estables: cada vez que se repone/regenera la letrina, Unity puede
@@ -1056,11 +1063,46 @@ namespace FolkloreArchives
                 yield return SayFor("Ya que están acá... ¿me podrían alcanzar la caja de herramientas? Se quedó arriba del galpón.", 4.4f);
                 yield return SayFor("Ojo con las gallinas, que son bravas.", 2.2f);
                 _playerHint = "Andá a buscar la caja de herramientas al granero";
+
+                // 8) subís al ático del granero: cerca de la entrada te salta una gallina
+                // (susto, mismo clip "jumpscare" que Richard en la YPF/el viejo en la letrina) y
+                // seguís hasta la mesa a agarrar la caja.
+                Transform toolbox = FindObj("CajaHerramientas");
+                bool screamed = false;
+                float tAttic = 0f;
+                while (tAttic < 120f)
+                {
+                    if (!screamed && Flat2(player.position, atticScreamerPos) <= 2.5f)
+                    {
+                        screamed = true;
+                        var jump = Resources.Load<AudioClip>("jumpscare");
+                        if (jump != null) AudioSource.PlayClipAtPoint(jump, atticScreamerPos, 0.8f);
+                        var da2 = op != null && op.dog != null ? op.dog.GetComponent<DogAudio>() : null;
+                        if (da2 != null) da2.Bark();
+                        yield return SayFor("¡Aaagh! ¡Pollo de mierda!", 1.8f);
+                    }
+                    float toolboxDist = Flat2(player.position, toolboxPos);
+                    if (toolboxDist <= playerReach + 0.6f) break;
+                    tAttic += Time.deltaTime;
+                    yield return null;
+                }
+                _playerHint = null;
+                if (toolbox != null) toolbox.gameObject.SetActive(false);
+                yield return SayFor("(Agarrás la caja de herramientas.)", 1.6f);
+
+                // 9) volver con la vieja a entregarle la caja -- de nuevo, ella sigue parada en
+                // el mismo lugar (no se mueve), así que es solo caminar hasta ahí.
+                if (oldLady != null)
+                {
+                    _playerHint = "Llevale la caja de herramientas a la vieja";
+                    float tw3 = 0f;
+                    while (tw3 < 90f && Flat2(player.position, oldLady.position) > 2.5f) { tw3 += Time.deltaTime; yield return null; }
+                    _playerHint = null;
+                    yield return SayFor("Ahí está, gracias muchachos. Justo lo que necesitaba.", 3.2f);
+                }
             }
-            // (sigue: ir a buscar la caja de herramientas -- arriba del granero, con el susto de
-            // las gallinas -- traérsela a la vieja -> arreglar el baño -> mates + historia de la
-            // Luz Mala -> volver al campamento. FALTAN coordenadas de la caja / el granero / el
-            // disparador del susto.)
+            // (sigue: arreglar el baño (minigame de la cadena) -> mates + historia de la Luz Mala
+            // -> volver al campamento. FALTAN coordenadas/diseño de esos tramos.)
         }
 
         // busca un objeto por nombre en la escena (incluye inactivos, ej. RanchoViejo desactivado).

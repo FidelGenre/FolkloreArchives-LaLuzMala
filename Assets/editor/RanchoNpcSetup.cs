@@ -663,6 +663,56 @@ namespace FolkloreArchives.MapGen
             return go;
         }
 
+        // owner: "aca sobre esta mesa del atico debe estar la caja de herramientas" -- no hay
+        // ningún asset de caja de herramientas en el proyecto (busqué); mismo criterio que la
+        // tranquera ("hace un procedural nomás por ahora"): un cajón simple con una asa, madera.
+        // CampsiteSequence.RanchoBathroomScene la busca por nombre ("CajaHerramientas") y la
+        // desactiva cuando la agarrás.
+        static readonly Vector3 ToolboxPos = new Vector3(112.6553f, 34.93675f + 0.11f, 139.7323f);   // owner TEST_PLAYER (pies), +alto medio del cajón
+        const float ToolboxYaw = -5.715f;   // owner TEST_PLAYER
+
+        [MenuItem("Folklore/Poner caja de herramientas en el ático")]
+        static void PlaceToolbox() => PlaceToolboxInternal(interactive: true);
+
+        public static void PlaceToolboxInternal(bool interactive)
+        {
+            var prev = FindByName("CajaHerramientas");
+            if (prev != null) Object.DestroyImmediate(prev.gameObject);
+
+            var woodTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/ExternalAssets/WoodenFence/textures/low_wooden_wall.jpg");
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            if (woodTex != null && mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", woodTex);
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.15f);
+            mat = BuilderUtils.SaveMaterialStable(mat, "Assets/Settings/WoodenFence.mat");
+
+            var box = new GameObject("CajaHerramientas");
+            box.transform.position = ToolboxPos;
+            box.transform.rotation = Quaternion.Euler(0f, ToolboxYaw, 0f);
+
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "body";
+            body.transform.SetParent(box.transform, false);
+            body.transform.localScale = new Vector3(0.5f, 0.22f, 0.28f);
+            body.GetComponent<Renderer>().sharedMaterial = mat;
+            GameObjectUtility.SetStaticEditorFlags(body, (StaticEditorFlags)0);
+
+            var handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            handle.name = "handle";
+            handle.transform.SetParent(box.transform, false);
+            handle.transform.localPosition = new Vector3(0f, 0.145f, 0f);
+            handle.transform.localScale = new Vector3(0.3f, 0.035f, 0.035f);
+            handle.GetComponent<Renderer>().sharedMaterial = mat;
+            GameObjectUtility.SetStaticEditorFlags(handle, (StaticEditorFlags)0);
+
+            Debug.Log("[Rancho] 'CajaHerramientas' puesta en " + ToolboxPos + " (ático del granero, sobre la mesa).");
+
+            if (!interactive) return;   // el resto (Undo/Selection) es solo para el botón manual
+
+            Undo.RegisterCreatedObjectUndo(box, "Poner caja de herramientas");
+            Selection.activeGameObject = box;
+            EditorGUIUtility.PingObject(box);
+        }
+
         static Texture2D LoadPointTex(string path)
         {
             var imp = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -711,8 +761,11 @@ namespace FolkloreArchives.MapGen
             try { PlaceSheepInternal(interactive: false); }
             catch (System.Exception e) { Debug.LogError("[Rancho] EnsureAllRanchoDoors: fallaron las ovejas -- " + e); }
 
-            Debug.Log("[Rancho] EnsureAllRanchoDoors: casa + letrina + tranquera + ovejas listas.");
-            if (interactive) EditorUtility.DisplayDialog("Puertas del rancho", "Casa, letrina, tranquera y ovejas listas.", "OK");
+            try { PlaceToolboxInternal(interactive: false); }
+            catch (System.Exception e) { Debug.LogError("[Rancho] EnsureAllRanchoDoors: falló la caja de herramientas -- " + e); }
+
+            Debug.Log("[Rancho] EnsureAllRanchoDoors: casa + letrina + tranquera + ovejas + caja de herramientas listas.");
+            if (interactive) EditorUtility.DisplayDialog("Puertas del rancho", "Casa, letrina, tranquera, ovejas y caja de herramientas listas.", "OK");
         }
     }
 }
