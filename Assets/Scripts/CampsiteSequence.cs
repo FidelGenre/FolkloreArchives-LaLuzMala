@@ -114,6 +114,11 @@ namespace FolkloreArchives
         public Vector3 atticScreamerPos = new Vector3(104.0223f, 34.14001f, 140.9066f);
         public Vector3 toolboxPos = new Vector3(112.6553f, 34.93675f, 139.7323f);
 
+        // ---- inodoro de la casa (owner TEST_PLAYER, yaw 88.605) ----
+        // parado acá, [E] arranca el minigame de la cadena (SkillCheck, estilo Dead by Daylight).
+        public Vector3 bathroomToiletPos = new Vector3(129.5372f, 27.16053f, 114.252f);
+        public int bathroomChainHits = 5;   // aciertos SEGUIDOS necesarios (errar = vuelve a 0)
+
         // dónde/cómo aparece el viejo al salir de la letrina (owner, Inspector). FIJO a propósito
         // -- antes se calculaba en RanchoNpcSetup a partir de "letrina.007"/"letrina.006", pero esos
         // números NO son estables: cada vez que se repone/regenera la letrina, Unity puede
@@ -1099,10 +1104,25 @@ namespace FolkloreArchives
                     while (tw3 < 90f && Flat2(player.position, oldLady.position) > 2.5f) { tw3 += Time.deltaTime; yield return null; }
                     _playerHint = null;
                     yield return SayFor("Ahí está, gracias muchachos. Justo lo que necesitaba.", 3.2f);
+                    yield return SayFor("Ya que tienen la caja... ¿me arreglan el inodoro? La cadena no engancha hace días.", 4.2f);
                 }
             }
-            // (sigue: arreglar el baño (minigame de la cadena) -> mates + historia de la Luz Mala
-            // -> volver al campamento. FALTAN coordenadas/diseño de esos tramos.)
+
+            // 10) arreglar el inodoro de la casa (owner TEST_PLAYER en bathroomToiletPos): [E] ->
+            // minigame tipo skill check de Dead by Daylight (SkillCheck.cs). Si errás, empieza de
+            // nuevo; no se sale hasta completarlo. El jugador queda quieto mientras tanto.
+            yield return WaitPlayerInteract(player, bathroomToiletPos, 1.6f, "[E] Arreglar la cadena del inodoro");
+            {
+                var pcc = player.GetComponent<CharacterController>();
+                bool wasOn = pcc != null && pcc.enabled;
+                if (pcc != null) pcc.enabled = false;
+                yield return SkillCheck.Run("TIRAR", bathroomChainHits);
+                if (pcc != null) pcc.enabled = wasOn;
+            }
+            yield return SayFor("(Tirás la cadena... y ahora sí, el agua corre.)", 2.6f);
+
+            // (sigue: mates + historia de la Luz Mala -> volver al campamento. FALTAN
+            // coordenadas/diseño de esos tramos.)
         }
 
         // busca un objeto por nombre en la escena (incluye inactivos, ej. RanchoViejo desactivado).
