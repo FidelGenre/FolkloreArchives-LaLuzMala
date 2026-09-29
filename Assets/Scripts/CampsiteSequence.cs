@@ -119,6 +119,14 @@ namespace FolkloreArchives
         public Vector3 bathroomToiletPos = new Vector3(129.5372f, 27.16053f, 114.252f);
         public int bathroomChainHits = 5;   // aciertos SEGUIDOS necesarios (errar = vuelve a 0)
 
+        // ---- mates + historia de la Luz Mala (owner TEST_PLAYER, adentro de la casa, al lado del fuego) ----
+        public Vector3 mateSeatPlayerPos = new Vector3(136.063f, 27.87542f, 113.6414f);   // se SIENTA el jugador 1
+        public float   mateSeatPlayerYaw = 149.085f;
+        public Vector3 mateSeatLadyPos   = new Vector3(138.0155f, 27.83342f, 112.066f);   // se sienta la vieja
+        public float   mateSeatLadyYaw   = -5.635f;
+        public Vector3 mateDogPos        = new Vector3(133.9579f, 27.88142f, 111.9065f);  // Rufus, en la silla
+        public float   mateDogYaw        = 65.965f;
+
         // dónde/cómo aparece el viejo al salir de la letrina (owner, Inspector). FIJO a propósito
         // -- antes se calculaba en RanchoNpcSetup a partir de "letrina.007"/"letrina.006", pero esos
         // números NO son estables: cada vez que se repone/regenera la letrina, Unity puede
@@ -1162,8 +1170,91 @@ namespace FolkloreArchives
                 yield return SayFor("(La vieja te da las cañas de pescar.)", 2.2f);
             }
 
-            // (sigue: mates + historia de la Luz Mala -> volver al campamento. FALTAN
-            // coordenadas/diseño de esos tramos.)
+            // 14) mates + historia de la Luz Mala, adentro al lado del fuego.
+            yield return MatesLuzMala(player, oldLady);
+
+            // 15) vuelven LIBRES caminando al campamento (owner). Llegar a la fogata cierra el
+            // capítulo del rancho.
+            _playerHint = "Volvé al campamento";
+            while (Flat2(player.position, playerSitPos) > 8f) yield return null;
+            _playerHint = null;
+            // (sigue: próximo capítulo en el campamento -- sin diseñar todavía.)
+        }
+
+        // la vieja invita mates, entra y se sienta; vos te sentás con [E], Rufus en su silla;
+        // ella cuenta la leyenda de la Luz Mala. Al final te parás y quedás libre.
+        IEnumerator MatesLuzMala(Transform player, Transform oldLady)
+        {
+            // la puerta de la casa queda abierta para que entren los dos
+            Transform houseDoorT = FindObj("PuertaCasa");
+            var houseDoor = houseDoorT != null ? houseDoorT.GetComponent<CorralGate>() : null;
+
+            bool ladySeated = oldLady == null;
+            if (oldLady != null)
+            {
+                yield return SayFor("Pasen, quédense a tomar unos mates antes de irse.", 3.2f);
+                if (houseDoor != null) houseDoor.SetOpen(true);
+                var la = oldLady.GetComponent<HumanWalkAnim>(); if (la != null) la.seated = false;
+                StartCoroutine(WalkNpcTo(oldLady, mateSeatLadyPos, mateSeatLadyPos + Fwd(mateSeatLadyYaw), () =>
+                {
+                    PlaceSeated(oldLady, mateSeatLadyPos, mateSeatLadyYaw);
+                    ladySeated = true;
+                }));
+            }
+
+            yield return WaitPlayerInteract(player, mateSeatPlayerPos, 1.3f, "[E] Sentarse");
+
+            // sentado: sin moverse, mirando para el lado de la silla
+            PartyController.CinematicLock = true;
+            var pcc = player.GetComponent<CharacterController>();
+            bool pccWas = pcc != null && pcc.enabled;
+            PlaceSeated(player, mateSeatPlayerPos, mateSeatPlayerYaw);
+            if (pcc != null) pcc.enabled = false;
+
+            // Rufus arriba de su silla. No tiene pose de sentado: usa la de echado (modo Idle).
+            Transform dog = op != null && op.dog != null ? op.dog.transform : null;
+            DogController dogCtl = dog != null ? dog.GetComponent<DogController>() : null;
+            CharacterController dcc = dog != null ? dog.GetComponent<CharacterController>() : null;
+            bool dccWas = dcc != null && dcc.enabled;
+            var dogModeWas = dogCtl != null ? dogCtl.mode : DogController.Mode.Follow;
+            if (dog != null)
+            {
+                if (dogCtl != null) { dogCtl.mode = DogController.Mode.Idle; dogCtl.scriptedSpeed = 0f; }
+                if (dcc != null) dcc.enabled = false;
+                PlaceStandingYaw(dog, mateDogPos, mateDogYaw);
+            }
+
+            // si la vieja todavía no llegó (se trabó), se sienta igual
+            float tw = 0f;
+            while (!ladySeated && tw < 6f) { tw += Time.deltaTime; yield return null; }
+            if (!ladySeated && oldLady != null) PlaceSeated(oldLady, mateSeatLadyPos, mateSeatLadyYaw);
+
+            // la charla (texto aprobado por el owner)
+            yield return SayFor("Siéntense, que el agua ya está caliente.", 2.8f);
+            yield return SayFor("(La vieja ceba un mate y te lo pasa.)", 2.4f);
+            yield return SayFor("Doña... anoche vimos una luz rara en el lago.", 3.0f);
+            yield return SayFor("...¿Una luz? ¿Blanca, que flotaba bajito?", 3.0f);
+            yield return SayFor("Sí. Rufus le ladró y se fue.", 2.6f);
+            yield return SayFor("Esa es la Luz Mala, m'hijo. Acá en el campo la conoce todo el mundo.", 3.8f);
+            yield return SayFor("Dicen que es el alma de algún cristiano que murió sin sepultura... y anda penando.", 4.4f);
+            yield return SayFor("Otros dicen que marca dónde hay un tesoro enterrado. Pero el que va a buscarlo no vuelve.", 4.6f);
+            yield return SayFor("Mi abuelo decía: si la ves, no la sigas. Rezá un Padrenuestro y mordé el cuchillo.", 4.4f);
+            yield return SayFor("Y los perros la ven antes que nosotros. Por eso ladran.", 3.4f);
+            yield return SayFor("(Rufus gime y mira hacia la ventana.)", 2.6f);
+            yield return SayFor("Bueno... vuelvan al campamento antes de que oscurezca, ¿eh?", 3.4f);
+            yield return SayFor("Y si la ven... no la miren mucho.", 3.0f);
+
+            // te parás adelante de la silla (no arriba) y quedás libre; Rufus baja al piso
+            var pa = player.GetComponent<HumanWalkAnim>(); if (pa != null) pa.seated = false;
+            PlaceStandingYaw(player, mateSeatPlayerPos + Fwd(mateSeatPlayerYaw) * 0.7f, mateSeatPlayerYaw);
+            if (pcc != null) pcc.enabled = pccWas;
+            if (dog != null)
+            {
+                PlaceStandingYaw(dog, mateSeatPlayerPos + Fwd(mateSeatPlayerYaw) * 0.7f + Right(mateSeatPlayerYaw) * 0.9f, mateSeatPlayerYaw);
+                if (dcc != null) dcc.enabled = dccWas;
+                if (dogCtl != null) { dogCtl.scriptedSpeed = -1f; dogCtl.mode = dogModeWas; }
+            }
+            PartyController.CinematicLock = false;
         }
 
         // mueve al perro (StepToward) y le pasa la velocidad real a su animación (Walk/Run)

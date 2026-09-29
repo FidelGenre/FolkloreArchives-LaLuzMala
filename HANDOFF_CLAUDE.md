@@ -195,11 +195,18 @@ fixes), en `CampsiteSequence.RanchoBathroomScene()`:
     pose ORIGINAL de cada oveja, guardada en `_sheepHome` antes de que salgan).
     El perro se mueve a mano con `DogController.scriptedSpeed` (>=0 = cinemática,
     -1 = normal). Después: `Cerrá la tranquera`.
-11. Volvés con la vieja → te da las cañas en la mano (solo diálogo, sin prop) →
-    **ACÁ TERMINA LO IMPLEMENTADO.**
+11. Volvés con la vieja → te da las cañas en la mano (solo diálogo, sin prop).
+12. Mates (`MatesLuzMala()`): la vieja invita, abre `PuertaCasa`, camina y se sienta
+    en `mateSeatLadyPos`; vos `[E] Sentarse` en `mateSeatPlayerPos`; Rufus arriba de
+    su silla en `mateDogPos` (pose de echado = `Mode.Idle` + `scriptedSpeed 0`, no hay
+    anim de sentado). Ella cuenta la leyenda (texto aprobado por el owner). Al
+    terminar te parás y quedás libre.
+13. "Volvé al campamento" — caminando libres; llegar a 8m de `playerSitPos` (tronco
+    de la fogata) cierra el capítulo → **ACÁ TERMINA LO IMPLEMENTADO.**
 
 ### Pendiente de diseño (sin coordenadas, sin lógica — el owner no las dio):
-1. ~~Arreglar el baño~~ — HECHO (paso 9).
+1. ~~Arreglar el baño~~ — HECHO (paso 9). ~~Mates + Luz Mala~~ y ~~volver al
+   campamento~~ — HECHOS (pasos 12-13). Lo que sigue en el campamento: sin diseñar.
 2. **Mates + historia de la Luz Mala** — escena sentados, la vieja/el viejo
    cuentan la leyenda de la Luz Mala (el fenómeno título del juego).
 3. **Volver al campamento** — cierra el capítulo del rancho.
