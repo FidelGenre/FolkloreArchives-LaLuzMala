@@ -1074,10 +1074,9 @@ namespace FolkloreArchives
                 // seguís hasta la mesa a agarrar la caja.
                 Transform toolbox = FindObj("CajaHerramientas");
                 bool screamed = false;
-                float tAttic = 0f;
-                while (tAttic < 120f)
+                while (true)   // sin timeout: la caja se agarra SOLO arriba, en toolboxPos
                 {
-                    if (!screamed && Flat2(player.position, atticScreamerPos) <= 2.5f)
+                    if (!screamed && Flat2(player.position, atticScreamerPos) <= 2.5f && SameFloor(player.position, atticScreamerPos))
                     {
                         screamed = true;
                         var jump = Resources.Load<AudioClip>("jumpscare");
@@ -1087,8 +1086,8 @@ namespace FolkloreArchives
                         yield return SayFor("¡Aaagh! ¡Pollo de mierda!", 1.8f);
                     }
                     float toolboxDist = Flat2(player.position, toolboxPos);
-                    if (toolboxDist <= playerReach + 0.6f) break;
-                    tAttic += Time.deltaTime;
+                    // SameFloor: sin esto se agarraba desde la planta baja (Flat2 ignora la altura)
+                    if (toolboxDist <= playerReach + 0.6f && SameFloor(player.position, toolboxPos)) break;
                     yield return null;
                 }
                 _playerHint = null;
@@ -2009,5 +2008,7 @@ namespace FolkloreArchives
         }
 
         static float Flat2(Vector3 a, Vector3 b) { a.y = 0f; b.y = 0f; return Vector3.Distance(a, b); }
+        // mismo piso: diferencia de altura chica (ej. ático del granero vs. planta baja, ~7m)
+        static bool SameFloor(Vector3 a, Vector3 b) => Mathf.Abs(a.y - b.y) <= 1.5f;
     }
 }
