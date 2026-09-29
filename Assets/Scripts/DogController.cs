@@ -61,6 +61,10 @@ namespace FolkloreArchives
         // esto quedaría desactualizado y pisaría la vista recién puesta al bajar.
         public void SetLookPitch(float p) { pitch = Mathf.Clamp(p, -80f, 80f); }
 
+        // >= 0: lo mueve una cinemática (posición a mano) y esta es su velocidad para la animación.
+        // -1 = normal (input / IA de Follow).
+        [System.NonSerialized] public float scriptedSpeed = -1f;
+
         // --- animación (perro riggeado: Idle/Walk/Run/Lie) ---
         Animator animator;
         int curAnim;
@@ -92,6 +96,9 @@ namespace FolkloreArchives
 
         void Update()
         {
+            // una cinemática lo está moviendo a mano (ej. CampsiteSequence arreando ovejas):
+            // no leer input/IA ni mover el CharacterController, solo animar a esa velocidad.
+            if (scriptedSpeed >= 0f) { UpdateAnim(scriptedSpeed); return; }
             // doble-tap de Espacio prende/apaga el vuelo de debug -- solo tiene
             // sentido controlado (Mode.Player); si se apaga el modo jugador con el
             // vuelo prendido, se apaga solo para no dejar la IA de Follow volando.

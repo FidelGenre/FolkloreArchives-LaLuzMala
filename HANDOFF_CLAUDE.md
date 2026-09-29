@@ -188,7 +188,15 @@ fixes), en `CampsiteSequence.RanchoBathroomScene()`:
    yaw 88.605) → `[E] Arreglar la cadena del inodoro` → minigame
    `Assets/Scripts/SkillCheck.cs` (skill check estilo Dead by Daylight: aguja que
    va y vuelve por un anillo, E dentro de la zona blanca = acierto, errar = progreso
-   a 0; `bathroomChainHits = 5` aciertos seguidos) → **ACÁ TERMINA LO IMPLEMENTADO.**
+   a 0; `bathroomChainHits = 5` aciertos seguidos).
+10. Volvés con la vieja → pide meter las ovejas al corral. "De a dos": vos abrís la
+    tranquera (si quedó abierta, alcanza con ir a `corralGateStand`) y Rufus las
+    arrea por detrás ladrando (`HerdSheepBack()`: `sheepGatePath` invertido + la
+    pose ORIGINAL de cada oveja, guardada en `_sheepHome` antes de que salgan).
+    El perro se mueve a mano con `DogController.scriptedSpeed` (>=0 = cinemática,
+    -1 = normal). Después: `Cerrá la tranquera`.
+11. Volvés con la vieja → te da las cañas en la mano (solo diálogo, sin prop) →
+    **ACÁ TERMINA LO IMPLEMENTADO.**
 
 ### Pendiente de diseño (sin coordenadas, sin lógica — el owner no las dio):
 1. ~~Arreglar el baño~~ — HECHO (paso 9).

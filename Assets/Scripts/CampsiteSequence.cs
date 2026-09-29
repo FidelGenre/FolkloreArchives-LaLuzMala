@@ -1015,6 +1015,9 @@ namespace FolkloreArchives
                 {
                     var flock = new List<Transform>();
                     foreach (Transform s in flockRoot) flock.Add(s);
+                    // dónde estaba cada una en el corral: a la vuelta (HerdSheepBack) vuelven ACÁ
+                    _sheepHome.Clear();
+                    foreach (var s in flock) _sheepHome[s] = new Pose(s.position, s.rotation);
                     var wpIdx = new int[flock.Count];   // qué punto de sheepGatePath le toca a cada oveja
 
                     // owner: "salio volando una... las otras fueron encimadas, deberian salir
@@ -1120,8 +1123,144 @@ namespace FolkloreArchives
             }
             yield return SayFor("(Tirás la cadena... y ahora sí, el agua corre.)", 2.6f);
 
+            // 11) volver con la vieja -> pide meter las ovejas al corral antes de dar las cañas.
+            if (oldLady != null)
+            {
+                _playerHint = "Volvé con la vieja";
+                while (Flat2(player.position, oldLady.position) > 2.5f) yield return null;
+                _playerHint = null;
+                yield return SayFor("¡Anda! Son unos genios, muchachos.", 2.6f);
+                yield return SayFor("Ya se está haciendo tarde... métanme las ovejas al corral y les doy las cañas.", 4.0f);
+            }
+
+            // 12) meter las ovejas, DE A DOS (owner): vos abrís la tranquera y Rufus va por atrás
+            // de las ovejas ladrando y arreándolas hasta el corral.
+            if (gate != null)
+            {
+                _playerHint = "Abrí la tranquera para meter las ovejas";
+                if (gate.IsOpen)   // quedó abierta desde que salieron: alcanza con ir a la tranquera
+                    while (Flat2(player.position, corralGateStand) > 2.5f) yield return null;
+                else
+                    while (!gate.IsOpen) yield return null;
+                _playerHint = null;
+                yield return SayFor("¡Rufus! ¡Traelas!", 1.8f);
+                yield return HerdSheepBack();
+                yield return SayFor("Listo, todas adentro.", 2.0f);
+
+                _playerHint = "Cerrá la tranquera";
+                while (gate.IsOpen) yield return null;
+                _playerHint = null;
+            }
+
+            // 13) volver con la vieja -> te da las cañas en la mano.
+            if (oldLady != null)
+            {
+                _playerHint = "Volvé con la vieja a buscar las cañas";
+                while (Flat2(player.position, oldLady.position) > 2.5f) yield return null;
+                _playerHint = null;
+                yield return SayFor("Gracias, chicos. Tomen, acá tienen las cañas. Cuídenmelas, eh.", 3.6f);
+                yield return SayFor("(La vieja te da las cañas de pescar.)", 2.2f);
+            }
+
             // (sigue: mates + historia de la Luz Mala -> volver al campamento. FALTAN
             // coordenadas/diseño de esos tramos.)
+        }
+
+        // mueve al perro (StepToward) y le pasa la velocidad real a su animación (Walk/Run)
+        void DogStep(Transform dog, DogController ctl, Vector3 target, float speed)
+        {
+            Vector3 before = dog.position;
+            StepToward(dog, target, speed);
+            if (ctl != null && Time.deltaTime > 0f) ctl.scriptedSpeed = Flat2(before, dog.position) / Time.deltaTime;
+        }
+
+        // dónde estaba cada oveja en el corral (se guarda justo antes de que salgan a pastar)
+        readonly Dictionary<Transform, Pose> _sheepHome = new Dictionary<Transform, Pose>();
+
+        // las ovejas vuelven del pastizal al corral (sheepGatePath AL REVÉS + su lugar original),
+        // de a una en fila india, y Rufus las arrea por detrás ladrando. El perro lo maneja la
+        // escena (sale de Follow/Player mientras dura) y al terminar vuelve a como estaba.
+        IEnumerator HerdSheepBack()
+        {
+            Transform flockRoot = FindObj("Ovejas");
+            if (flockRoot == null) yield break;
+            var flock = new List<Transform>();
+            foreach (Transform s in flockRoot) if (_sheepHome.ContainsKey(s)) flock.Add(s);
+            if (flock.Count == 0) yield break;
+
+            // camino de vuelta: el de salida invertido (empieza en el pastizal, termina en el corral)
+            var back = new Vector3[sheepGatePath.Length];
+            for (int i = 0; i < back.Length; i++) back[i] = sheepGatePath[sheepGatePath.Length - 1 - i];
+            Vector3 entry = back.Length > 0 ? back[0] : sheepPasturePos;
+            // sale primero la más cercana a la entrada del camino (no se cruzan entre ellas)
+            flock.Sort((a, b) => Flat2(a.position, entry).CompareTo(Flat2(b.position, entry)));
+
+            Transform dog = op != null && op.dog != null ? op.dog.transform : null;
+            DogController dogCtl = dog != null ? dog.GetComponent<DogController>() : null;
+            CharacterController dcc = dog != null ? dog.GetComponent<CharacterController>() : null;
+            DogAudio bark = dog != null ? dog.GetComponent<DogAudio>() : null;
+            bool dccWas = dcc != null && dcc.enabled;
+
+            if (dog != null)
+            {
+                if (dogCtl != null) dogCtl.scriptedSpeed = 0f;   // lo movemos a mano (anima caminar/correr)
+                if (dcc != null) dcc.enabled = false;
+                // 1) Rufus corre hasta ATRÁS del rebaño (del lado contrario a la tranquera)
+                Vector3 away = sheepPasturePos - entry; away.y = 0f;
+                if (away.sqrMagnitude < 0.01f) away = Vector3.forward;
+                Vector3 behind = sheepPasturePos + away.normalized * 4f;
+                float tRun = 0f;
+                while (tRun < 20f && Flat2(dog.position, behind) > 0.8f) { DogStep(dog, dogCtl, behind, 6f); tRun += Time.deltaTime; yield return null; }
+                if (dogCtl != null) dogCtl.scriptedSpeed = 0f;
+                if (bark != null) bark.Bark();
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            // 2) las ovejas vuelven escalonadas; el perro sigue a la más atrasada, ladrando
+            const float StartDelay = 1.1f;
+            var wpIdx = new int[flock.Count];
+            var home  = new bool[flock.Count];
+            float t = 0f, nextBark = 1.2f;
+            while (t < 60f)
+            {
+                bool all = true;
+                int rear = -1;
+                for (int i = 0; i < flock.Count; i++)
+                {
+                    if (home[i]) continue;
+                    all = false;
+                    if (t < i * StartDelay) continue;
+                    Vector3 dest = wpIdx[i] < back.Length ? back[wpIdx[i]] : _sheepHome[flock[i]].position;
+                    float reach = wpIdx[i] < back.Length ? 1.0f : 0.3f;
+                    if (Flat2(flock[i].position, dest) > reach) StepToward(flock[i], dest, 1.9f);
+                    else if (wpIdx[i] < back.Length) wpIdx[i]++;
+                    else { home[i] = true; flock[i].rotation = _sheepHome[flock[i]].rotation; }
+                }
+                if (all) break;
+                // la más atrasada es la ÚLTIMA en salir que todavía no llegó
+                for (int i = flock.Count - 1; i >= 0; i--) if (!home[i]) { rear = i; break; }
+
+                if (dog != null && rear >= 0)
+                {
+                    Transform s = flock[rear];
+                    Vector3 dest = wpIdx[rear] < back.Length ? back[wpIdx[rear]] : _sheepHome[s].position;
+                    Vector3 dir = dest - s.position; dir.y = 0f;
+                    if (dir.sqrMagnitude < 0.01f) dir = s.forward;
+                    Vector3 herd = s.position - dir.normalized * 2.4f;   // detrás de ella
+                    if (Flat2(dog.position, herd) > 0.4f) DogStep(dog, dogCtl, herd, 2.6f);
+                    else if (dogCtl != null) dogCtl.scriptedSpeed = 0f;
+                    if (t >= nextBark && bark != null) { bark.Bark(); nextBark = t + Random.Range(1.3f, 2.4f); }
+                }
+                t += Time.deltaTime;
+                yield return null;
+            }
+            // por si alguna se trabó: a su lugar
+            for (int i = 0; i < flock.Count; i++)
+                if (!home[i]) flock[i].SetPositionAndRotation(_sheepHome[flock[i]].position, _sheepHome[flock[i]].rotation);
+
+            // 3) Rufus vuelve a lo suyo (te sigue / lo controlás, como estaba)
+            if (dcc != null) dcc.enabled = dccWas;
+            if (dogCtl != null) dogCtl.scriptedSpeed = -1f;
         }
 
         // busca un objeto por nombre en la escena (incluye inactivos, ej. RanchoViejo desactivado).
