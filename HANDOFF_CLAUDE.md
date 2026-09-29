@@ -183,13 +183,15 @@ fixes), en `CampsiteSequence.RanchoBathroomScene()`:
    pide la caja de herramientas del granero, avisa de las gallinas.
 7. Subís al ático → cerca de `atticScreamerPos` salta el susto de la gallina →
    llegás a `toolboxPos` → agarrás la caja (se desactiva el objeto).
-8. Volvés con la vieja (proximidad) → se la entregás → **ACÁ TERMINA LO
-   IMPLEMENTADO.**
+8. Volvés con la vieja (proximidad) → se la entregás → te pide arreglar el inodoro.
+9. Vas al baño de la casa (`bathroomToiletPos = (129.5372, 27.16053, 114.252)`,
+   yaw 88.605) → `[E] Arreglar la cadena del inodoro` → minigame
+   `Assets/Scripts/SkillCheck.cs` (skill check estilo Dead by Daylight: aguja que
+   va y vuelve por un anillo, E dentro de la zona blanca = acierto, errar = progreso
+   a 0; `bathroomChainHits = 5` aciertos seguidos) → **ACÁ TERMINA LO IMPLEMENTADO.**
 
 ### Pendiente de diseño (sin coordenadas, sin lógica — el owner no las dio):
-1. **Arreglar el baño** — algún minigame con "la cadena" (¿tirar repetido con E?
-   ¿QTE? ¿mantener apretado? — sin definir. ¿Es la cadena de la letrina que ya
-   existe o algo nuevo del baño de la casa? — sin definir).
+1. ~~Arreglar el baño~~ — HECHO (paso 9).
 2. **Mates + historia de la Luz Mala** — escena sentados, la vieja/el viejo
    cuentan la leyenda de la Luz Mala (el fenómeno título del juego).
 3. **Volver al campamento** — cierra el capítulo del rancho.
